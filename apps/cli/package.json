@@ -1,0 +1,32 @@
+{
+  "name": "@imagine-studio/cli",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "imagine": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist .tsbuildinfo",
+    "dev": "tsc -b && node dist/index.js",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@imagine-studio/config": "workspace:*",
+    "@imagine-studio/core": "workspace:*",
+    "@imagine-studio/persistence": "workspace:*",
+    "@imagine-studio/providers": "workspace:*",
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0"
+  }
+}

@@ -1,0 +1,3 @@
+# imagine-studio
+
+A localized image and video generation studio shipping as Electron desktop and a Node CLI from one greenfield monorepo. Single-user, fully local: SQLite plus filesystem under `~/.imagine-studio/`, no remote backend, no auth. See [`architecture.md`](./architecture.md) for the tech stack and module layout, [`workplan.md`](./workplan.md) for the milestone sequence (M1 Foundation through M8 Polish), and [`design.md`](./design.md) for the visual system that lands at M4. This repository is currently at M1 (Foundation, no UI): workspace scaffolding, domain types, persistence migrations, config schema, provider skeletons, and an `imagine doctor` CLI command.
