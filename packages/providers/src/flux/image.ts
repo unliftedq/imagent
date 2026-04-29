@@ -1,35 +1,193 @@
-import type {
-  ImageCapabilities,
-  ImageGenerationResult,
-  ImageModelDef,
-  ImageProvider,
-  ImageRequest,
+import {
+  ProviderError,
+  ProviderRequestError,
+  ProviderTimeoutError,
+  ProviderAbortError,
+  applyImageDefaults,
+  isAbortError,
+  type ImageCapabilities,
+  type ImageGenerationResult,
+  type ImageModelDef,
+  type ImageOutput,
+  type ImageProvider,
+  type ImageRequest,
+  type Logger,
+  validateImageRequestAgainstModel,
 } from "@imagine-studio/core";
+import { z } from "zod";
 import { aggregateCapabilities } from "../openai/image.js";
+import { createHttpClient, type HttpClient } from "../http/index.js";
+
+const DEFAULT_FLUX_BASE_URL = "https://api.bfl.ai";
+// Polling envelope: 1s start, exponential to 5s, max 60s total.
+const POLL_INITIAL_MS = 1_000;
+const POLL_MAX_MS = 5_000;
+const POLL_TIMEOUT_MS = 60_000;
+const POLL_BACKOFF = 1.6;
 
 export interface FluxImageProviderOptions {
   apiKey: string;
-  baseUrl: string;
+  baseUrl?: string;
   models: ReadonlyMap<string, ImageModelDef>;
+  fetch?: typeof fetch;
+  logger?: Logger;
+  /** Override the polling envelope (mostly for tests). */
+  pollIntervalMs?: number;
+  pollTimeoutMs?: number;
+  /** Sleep injection for tests. */
+  sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
 }
 
-/**
- * Flux BFL image provider. Submit returns `{id, polling_url}`; M2 implements
- * the poll/download cycle. Same async shape as Seedance, so the polling logic
- * generalises.
- */
+const FluxSubmitResponseSchema = z.object({
+  id: z.string(),
+  polling_url: z.string(),
+});
+
+const FluxPollResponseSchema = z.object({
+  id: z.string().optional(),
+  status: z.string(),
+  result: z
+    .object({
+      sample: z.string().optional(),
+    })
+    .nullable()
+    .optional(),
+  progress: z.number().optional(),
+  error: z.string().nullable().optional(),
+  details: z.unknown().optional(),
+});
+
 export class FluxImageProvider implements ImageProvider {
   readonly id = "flux-bfl";
   readonly displayName = "Flux (BFL)";
-  readonly capabilities: ImageCapabilities;
   readonly models: ReadonlyMap<string, ImageModelDef>;
+  readonly capabilities: ImageCapabilities;
+  private readonly http: HttpClient;
+  private readonly baseUrl: string;
+  private readonly pollIntervalMs: number;
+  private readonly pollTimeoutMs: number;
+  private readonly sleep: (ms: number, signal?: AbortSignal) => Promise<void>;
 
-  constructor(private readonly options: FluxImageProviderOptions) {
+  constructor(options: FluxImageProviderOptions) {
     this.models = options.models;
     this.capabilities = aggregateCapabilities(options.models);
+    this.baseUrl = (options.baseUrl ?? DEFAULT_FLUX_BASE_URL).replace(/\/+$/, "");
+    this.http = createHttpClient({
+      vendorId: this.id,
+      headers: { "x-key": options.apiKey },
+      ...(options.fetch !== undefined ? { fetch: options.fetch } : {}),
+      ...(options.logger !== undefined ? { logger: options.logger } : {}),
+    });
+    this.pollIntervalMs = options.pollIntervalMs ?? POLL_INITIAL_MS;
+    this.pollTimeoutMs = options.pollTimeoutMs ?? POLL_TIMEOUT_MS;
+    this.sleep = options.sleep ?? defaultSleep;
   }
 
-  async generate(_req: ImageRequest, _signal?: AbortSignal): Promise<ImageGenerationResult> {
-    throw new Error("not implemented (M2)");
+  async generate(req: ImageRequest, signal?: AbortSignal): Promise<ImageGenerationResult> {
+    const model = this.models.get(req.model);
+    if (!model) {
+      throw new ProviderRequestError(`unknown model '${req.model}' for flux-bfl`, {
+        vendorId: this.id,
+      });
+    }
+    const merged = applyImageDefaults(req, model);
+    validateImageRequestAgainstModel(this.id, merged, model);
+
+    // BFL endpoints are model-named (`/v1/flux-pro-1.1`, etc.).
+    const url = `${this.baseUrl}/v1/${encodeURIComponent(model.id)}`;
+    const body = this.buildSubmitBody(merged);
+    const submitOpts: { signal?: AbortSignal; schema: typeof FluxSubmitResponseSchema } = {
+      schema: FluxSubmitResponseSchema,
+    };
+    if (signal) submitOpts.signal = signal;
+    const submit = await this.http.post<z.infer<typeof FluxSubmitResponseSchema>>(url, body, submitOpts);
+
+    // Poll until terminal.
+    const pollUrl = submit.polling_url;
+    const start = Date.now();
+    let interval = this.pollIntervalMs;
+    while (true) {
+      if (signal?.aborted) {
+        throw new ProviderAbortError(this.id, signal.reason);
+      }
+      if (Date.now() - start > this.pollTimeoutMs) {
+        throw new ProviderTimeoutError(`flux job ${submit.id} did not complete within ${this.pollTimeoutMs}ms`, {
+          vendorId: this.id,
+        });
+      }
+      await this.sleep(interval, signal);
+      const pollOpts: { signal?: AbortSignal; schema: typeof FluxPollResponseSchema } = {
+        schema: FluxPollResponseSchema,
+      };
+      if (signal) pollOpts.signal = signal;
+      const status = await this.http.get<z.infer<typeof FluxPollResponseSchema>>(pollUrl, pollOpts);
+
+      const s = status.status;
+      if (s === "Ready") {
+        const sample = status.result?.sample;
+        if (!sample) {
+          throw new ProviderError("flux Ready response missing result.sample url", {
+            vendorId: this.id,
+          });
+        }
+        const dl = await this.http.getBytes(sample, signal ? { signal } : {});
+        const out: ImageOutput = {
+          bytes: dl.bytes,
+          mimeType: dl.mimeType.startsWith("image/") ? dl.mimeType : "image/png",
+        };
+        return { outputs: [out] };
+      }
+      if (
+        s === "Error" ||
+        s === "Failed" ||
+        s === "Content Moderated" ||
+        s === "Request Moderated"
+      ) {
+        throw new ProviderError(`flux job ended in state '${s}': ${status.error ?? ""}`, {
+          vendorId: this.id,
+        });
+      }
+      // Pending / Processing / Queued / etc. — continue polling.
+      interval = Math.min(Math.round(interval * POLL_BACKOFF), POLL_MAX_MS);
+    }
+  }
+
+  private buildSubmitBody(req: ImageRequest): Record<string, unknown> {
+    const out: Record<string, unknown> = { prompt: req.prompt };
+    if (req.aspectRatio) out.aspect_ratio = req.aspectRatio;
+    if (req.size) {
+      const m = /^(\d+)x(\d+)$/.exec(req.size);
+      if (m) {
+        out.width = Number(m[1]);
+        out.height = Number(m[2]);
+      }
+    }
+    if (req.seed !== undefined) out.seed = req.seed;
+    if (req.raw) Object.assign(out, req.raw);
+    return out;
   }
 }
+
+async function defaultSleep(ms: number, signal?: AbortSignal): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const handle = setTimeout(() => {
+      if (signal) signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(handle);
+      reject(new ProviderAbortError("flux-bfl", signal?.reason));
+    };
+    if (signal) {
+      if (signal.aborted) {
+        clearTimeout(handle);
+        reject(new ProviderAbortError("flux-bfl", signal.reason));
+        return;
+      }
+      signal.addEventListener("abort", onAbort, { once: true });
+    }
+  });
+}
+
+// Re-export so tests don't need an extra import.
+export { isAbortError };

@@ -55,7 +55,8 @@ export function createImageRegistry(
   const out = new Map<string, ImageProvider>();
 
   if (secrets.openai) {
-    const models = resolveModelMap("openai", prefs.openai.models, catalog, "image");
+    const entries = ensureDefaultModel(prefs.openai.models, prefs.openai.defaultModel);
+    const models = resolveModelMap("openai", entries, catalog, "image");
     out.set(
       "openai",
       new OpenAIImageProvider({
@@ -82,12 +83,14 @@ export function createImageRegistry(
   }
 
   if (secrets.google) {
-    const models = resolveModelMap("google", prefs.google.models, catalog, "image");
+    const entries = ensureDefaultModel(prefs.google.models, prefs.google.defaultModel);
+    const models = resolveModelMap("google", entries, catalog, "image");
     out.set("google", new GoogleImageProvider({ apiKey: secrets.google.apiKey, models }));
   }
 
   if (secrets["flux-bfl"]) {
-    const models = resolveModelMap("flux-bfl", prefs["flux-bfl"].models, catalog, "image");
+    const entries = ensureDefaultModel(prefs["flux-bfl"].models, prefs["flux-bfl"].defaultModel);
+    const models = resolveModelMap("flux-bfl", entries, catalog, "image");
     out.set(
       "flux-bfl",
       new FluxImageProvider({
@@ -100,7 +103,8 @@ export function createImageRegistry(
 
   // Seedream image shares the volcengine secret with Seedance video.
   if (secrets.volcengine) {
-    const models = resolveModelMap("seedream", prefs.seedream.models, catalog, "image", {
+    const entries = ensureDefaultModel(prefs.seedream.models, prefs.seedream.defaultModel);
+    const models = resolveModelMap("seedream", entries, catalog, "image", {
       seedream: SEEDREAM_IMAGE_MODELS,
     });
     out.set(
@@ -125,7 +129,8 @@ export function createVideoRegistry(
   const out = new Map<string, VideoProvider>();
 
   if (secrets.volcengine) {
-    const models = resolveVideoModelMap("seedance", prefs.seedance.models, catalog, {
+    const entries = ensureDefaultModel(prefs.seedance.models, prefs.seedance.defaultModel);
+    const models = resolveVideoModelMap("seedance", entries, catalog, {
       seedance: SEEDANCE_VIDEO_MODELS,
     });
     out.set(
@@ -164,6 +169,23 @@ export function configuredProviderCount(secrets: ProviderSecrets): number {
 export const TOTAL_PROVIDER_COUNT = 6;
 
 // --- internal helpers ---------------------------------------------------
+
+/**
+ * Ensure the configured `defaultModel` (which doctor and `imagine generate`
+ * fall back to) is present in the resolved models list. Users with empty
+ * `models: []` still get a working registry against the catalog defaults.
+ */
+function ensureDefaultModel<T extends string | { id: string }>(
+  entries: readonly T[],
+  defaultModel: string | undefined,
+): readonly (string | T)[] {
+  if (!defaultModel) return entries;
+  for (const e of entries) {
+    const id = typeof e === "string" ? e : e.id;
+    if (id === defaultModel) return entries;
+  }
+  return [defaultModel as string, ...entries];
+}
 
 function resolveModelMap(
   providerId: string,

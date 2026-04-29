@@ -4,32 +4,55 @@ import type {
   ImageModelDef,
   ImageProvider,
   ImageRequest,
+  Logger,
 } from "@imagine-studio/core";
-import { aggregateCapabilities } from "../openai/image.js";
+import { OpenAIImageProvider } from "../openai/image.js";
+
+const DEFAULT_SEEDREAM_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3";
 
 export interface SeedreamImageProviderOptions {
   apiKey: string;
-  baseUrl: string;
-  region: string;
+  baseUrl?: string | null;
+  region?: string;
   models: ReadonlyMap<string, ImageModelDef>;
+  fetch?: typeof fetch;
+  logger?: Logger;
 }
 
 /**
- * Seedream — Volcengine image provider. Shares VolcengineConfig (apiKey +
- * region) with Seedance video. M2 implements the Ark request signing.
+ * Seedream — Volcengine Ark image API. The Ark image surface is documented as
+ * OpenAI-compatible (POST /images/generations with `Authorization: Bearer`).
+ * We compose the OpenAI provider with a different baseUrl and keep the Bearer
+ * auth strategy unchanged.
+ *
+ * TODO(verify endpoint shape) — confirm against
+ *   https://www.volcengine.com/docs/82379 image generation page when network
+ *   access permits. Defaults follow the documented OpenAI-compatible shape.
  */
 export class SeedreamImageProvider implements ImageProvider {
+  private readonly inner: OpenAIImageProvider;
   readonly id = "seedream";
   readonly displayName = "Seedream (Volcengine)";
-  readonly capabilities: ImageCapabilities;
   readonly models: ReadonlyMap<string, ImageModelDef>;
+  readonly capabilities: ImageCapabilities;
 
-  constructor(private readonly options: SeedreamImageProviderOptions) {
+  constructor(options: SeedreamImageProviderOptions) {
+    const baseUrl = (options.baseUrl ?? DEFAULT_SEEDREAM_BASE_URL).replace(/\/+$/, "");
     this.models = options.models;
-    this.capabilities = aggregateCapabilities(options.models);
+    this.inner = new OpenAIImageProvider({
+      apiKey: options.apiKey,
+      models: options.models,
+      providerId: "seedream",
+      displayName: "Seedream (Volcengine)",
+      urlBuilder: () => `${baseUrl}/images/generations`,
+      // Bearer is the documented Ark scheme; same as OpenAI default.
+      ...(options.fetch !== undefined ? { fetch: options.fetch } : {}),
+      ...(options.logger !== undefined ? { logger: options.logger } : {}),
+    });
+    this.capabilities = this.inner.capabilities;
   }
 
-  async generate(_req: ImageRequest, _signal?: AbortSignal): Promise<ImageGenerationResult> {
-    throw new Error("not implemented (M2)");
+  generate(req: ImageRequest, signal?: AbortSignal): Promise<ImageGenerationResult> {
+    return this.inner.generate(req, signal);
   }
 }

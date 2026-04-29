@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 
+import { registerConfigCommand } from "./commands/config.js";
 import { runDoctor } from "./commands/doctor.js";
+import { registerGenerateCommand } from "./commands/generate.js";
 import { registerStubCommands } from "./commands/stubs.js";
 import { CLI_VERSION } from "./version.js";
 
@@ -12,9 +14,6 @@ async function main(): Promise<void> {
     .description("imagine-studio CLI — local image and video generation")
     .version(CLI_VERSION);
 
-  // M1: only doctor is fully implemented. The rest are registered so
-  // `imagine --help` exposes the full v1 surface and each one prints
-  // "not implemented (Mn)" until it's wired up.
   program
     .command("doctor")
     .description("Health check: DB path, FTS status, configured providers")
@@ -27,6 +26,11 @@ async function main(): Promise<void> {
       }
     });
 
+  // M2 commands.
+  registerGenerateCommand(program);
+  registerConfigCommand(program);
+
+  // M3+ stubs (everything not implemented in M2).
   registerStubCommands(program);
 
   await program.parseAsync(process.argv);

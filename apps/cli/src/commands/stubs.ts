@@ -1,37 +1,21 @@
 import { Command } from "commander";
 
 /**
- * Registers the rest of the CLI surface (architecture.md §9) as stubs that
- * print "not implemented (Mn)" with the milestone where each one lands.
- * The help text is fully populated so `imagine --help` reflects the v1
- * surface even at M1.
+ * Registers M3+ command surface as stubs that print "not implemented (Mn)".
+ * `generate` and `config` are wired by their own modules at M2; everything
+ * else lands in later milestones but is shown in `--help` for surface
+ * visibility.
  */
 export function registerStubCommands(program: Command): void {
-  // generate ----------------------------------------------------------
-  program
-    .command("generate <prompt>")
-    .description("Generate one or more images from a prompt (M2)")
-    .option("--provider <id>", "Provider id (openai|azure-openai|google|flux-bfl|seedream)")
-    .option("--model <id>", "Model id within the chosen provider")
-    .option("--ref <paths>", "Comma-separated reference image paths")
-    .option("--character <id>", "Attach a character asset")
-    .option("--object <id>", "Attach an object asset")
-    .option("--background <id>", "Attach a background asset")
-    .option("--style <id>", "Attach a style asset")
-    .option("--count <n>", "Number of outputs", "1")
-    .option("--out <dir>", "Output directory override")
-    .option("--board <id>", "Add result to a board")
-    .action(notImplemented("M2"));
-
   // video -------------------------------------------------------------
   program
     .command("video <prompt>")
-    .description("Submit a video generation job (M2)")
+    .description("Submit a video generation job (M3)")
     .option("--provider <id>", "Provider id (default: seedance)", "seedance")
     .option("--duration <sec>", "Clip duration in seconds")
     .option("--ref <paths>", "Comma-separated reference image paths")
     .option("--wait", "Block until job completes, printing progress")
-    .action(notImplemented("M2"));
+    .action(notImplemented("M3"));
 
   // job ---------------------------------------------------------------
   const job = program.command("job").description("Inspect or control in-flight jobs (M3)");
@@ -79,15 +63,6 @@ export function registerStubCommands(program: Command): void {
     .command("favorite <itemId>")
     .description("Toggle favorite on a gallery item")
     .action(notImplemented("M3"));
-
-  // config ------------------------------------------------------------
-  const config = program.command("config").description("Inspect and edit ~/.imagine-studio/config.json (M3)");
-  config.command("get [key]").description("Print full config or one key").action(notImplemented("M3"));
-  config
-    .command("set <key> <value>")
-    .description("Set a dotted-path key (e.g. openai.apiKey)")
-    .action(notImplemented("M3"));
-  config.command("path").description("Print the absolute config.json path").action(notImplemented("M3"));
 }
 
 function notImplemented(milestone: string): () => void {

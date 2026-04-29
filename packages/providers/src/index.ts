@@ -1,4 +1,5 @@
 export * from "./registry.js";
+export * from "./http/index.js";
 
 // Per-vendor catalogs and skeletons re-exported for direct testing / overrides.
 export * from "./openai/catalog.js";

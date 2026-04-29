@@ -1,5 +1,6 @@
 export * from "./asset.js";
 export * from "./board.js";
+export * from "./errors.js";
 export * from "./gallery.js";
 export * from "./job.js";
 export * from "./media.js";

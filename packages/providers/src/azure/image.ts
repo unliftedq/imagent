@@ -1,11 +1,12 @@
 import type {
-  ImageCapabilities,
   ImageGenerationResult,
   ImageModelDef,
   ImageProvider,
   ImageRequest,
+  ImageCapabilities,
+  Logger,
 } from "@imagine-studio/core";
-import { aggregateCapabilities } from "../openai/image.js";
+import { OpenAIImageProvider } from "../openai/image.js";
 
 export interface AzureOpenAIImageProviderOptions {
   endpoint: string;
@@ -13,26 +14,43 @@ export interface AzureOpenAIImageProviderOptions {
   apiVersion: string;
   /** Deployment name → resolved model definition. */
   models: ReadonlyMap<string, ImageModelDef>;
+  fetch?: typeof fetch;
+  logger?: Logger;
 }
 
 /**
- * Azure shares the OpenAI image schema but uses an `api-key` header and
- * deployment-scoped URLs. M2 composes `OpenAIImageProvider` with an Azure
- * URL builder; the skeleton here just records the right id and aggregated
- * capability surface.
+ * Azure shares the OpenAI image schema entirely; only the URL and auth header
+ * differ. We compose `OpenAIImageProvider` with custom `urlBuilder` (deployment +
+ * api-version) and `authHeader` (`api-key` instead of `Bearer`). Body shape,
+ * caps validation, b64 decode — all reused.
  */
 export class AzureOpenAIImageProvider implements ImageProvider {
+  private readonly inner: OpenAIImageProvider;
   readonly id = "azure-openai";
   readonly displayName = "Azure OpenAI";
-  readonly capabilities: ImageCapabilities;
   readonly models: ReadonlyMap<string, ImageModelDef>;
+  readonly capabilities: ImageCapabilities;
 
-  constructor(private readonly options: AzureOpenAIImageProviderOptions) {
+  constructor(options: AzureOpenAIImageProviderOptions) {
+    const endpoint = options.endpoint.replace(/\/+$/, "");
+    const apiVersion = options.apiVersion;
     this.models = options.models;
-    this.capabilities = aggregateCapabilities(options.models);
+    this.inner = new OpenAIImageProvider({
+      apiKey: options.apiKey,
+      models: options.models,
+      providerId: "azure-openai",
+      displayName: "Azure OpenAI",
+      // Azure path: {endpoint}/openai/deployments/{deployment}/images/generations?api-version=...
+      urlBuilder: (deployment) =>
+        `${endpoint}/openai/deployments/${encodeURIComponent(deployment)}/images/generations?api-version=${encodeURIComponent(apiVersion)}`,
+      authHeader: (k) => ({ "api-key": k }),
+      ...(options.fetch !== undefined ? { fetch: options.fetch } : {}),
+      ...(options.logger !== undefined ? { logger: options.logger } : {}),
+    });
+    this.capabilities = this.inner.capabilities;
   }
 
-  async generate(_req: ImageRequest, _signal?: AbortSignal): Promise<ImageGenerationResult> {
-    throw new Error("not implemented (M2)");
+  generate(req: ImageRequest, signal?: AbortSignal): Promise<ImageGenerationResult> {
+    return this.inner.generate(req, signal);
   }
 }
