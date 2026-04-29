@@ -1,13 +1,19 @@
 import { create } from "zustand";
 import type { ThemePref } from "@imagine/ui";
 
+/**
+ * Five top-level routes (DESIGN.md §10.1 / §11). The pre-Quiet-Density
+ * `video` route was merged into Studio's `studioMode` tab; old persisted
+ * values are migrated transparently in the store initializer below.
+ */
 export type Route =
   | "providers"
   | "settings"
   | "studio"
   | "gallery"
-  | "assets"
-  | "video";
+  | "assets";
+
+export type StudioMode = "image" | "video";
 
 export interface ToastEntry {
   id: string;
@@ -17,11 +23,14 @@ export interface ToastEntry {
 }
 
 /**
- * Studio draft — kept in `useUIStore` so re-mounts (route switches) preserve
- * the half-typed prompt. Persists to localStorage with a debounced flush
- * (architecture.md §7 — workspace state would normally live in `kv`, but the
- * draft churns at typing speed so localStorage gives instant rehydrate without
- * an IPC round-trip).
+ * Studio drafts — kept in `useUIStore` so re-mounts (route switches, tab
+ * switches) preserve the half-typed prompt. Persists to localStorage with
+ * a debounced flush (architecture.md §7).
+ *
+ * Quiet-Density rewrite: instead of two top-level drafts (studioDraft,
+ * videoDraft), we nest both under `studioDraft` keyed by mode so the
+ * unified Studio page can read/write either path through a single
+ * setter.
  */
 export interface StudioDraftAssetIds {
   character: string[];
@@ -30,7 +39,7 @@ export interface StudioDraftAssetIds {
   style: string[];
 }
 
-export interface StudioDraft {
+export interface ImageDraft {
   prompt: string;
   providerId: string;
   modelId: string;
@@ -42,20 +51,6 @@ export interface StudioDraft {
   assetIds: StudioDraftAssetIds;
 }
 
-export const STUDIO_DRAFT_LS_KEY = "imagine.studioDraft.v1";
-export const VIDEO_DRAFT_LS_KEY = "imagine.videoDraft.v1";
-
-export interface VideoDraftAssetIds {
-  character: string[];
-  object: string[];
-  background: string[];
-  style: string[];
-}
-
-/**
- * Video Studio draft. Mirrors `StudioDraft` but with video-specific
- * parameters (duration, fps, resolution) and an optional first-frame ref.
- */
 export interface VideoDraft {
   prompt: string;
   providerId: string;
@@ -68,10 +63,20 @@ export interface VideoDraft {
   /** Optional first-frame image path (drag-drop or picked from gallery). */
   firstFrame?: string;
   parentId?: string;
-  assetIds: VideoDraftAssetIds;
+  assetIds: StudioDraftAssetIds;
 }
 
-const DEFAULT_DRAFT: StudioDraft = {
+export interface StudioDraft {
+  image: ImageDraft;
+  video: VideoDraft;
+}
+
+export const STUDIO_MODE_LS_KEY = "imagine.studioMode.v1";
+export const STUDIO_DRAFT_LS_KEY = "imagine.studioDraft.v1";
+export const VIDEO_DRAFT_LS_KEY = "imagine.videoDraft.v1";
+export const ROUTE_LS_KEY = "imagine.route.v1";
+
+const DEFAULT_IMAGE_DRAFT: ImageDraft = {
   prompt: "",
   providerId: "",
   modelId: "",
@@ -109,12 +114,12 @@ function normalizeAssetIds(input: unknown): StudioDraftAssetIds {
   };
 }
 
-function loadDraftFromStorage(): StudioDraft {
-  if (typeof window === "undefined") return DEFAULT_DRAFT;
+function loadImageDraftFromStorage(): ImageDraft {
+  if (typeof window === "undefined") return DEFAULT_IMAGE_DRAFT;
   try {
     const raw = window.localStorage.getItem(STUDIO_DRAFT_LS_KEY);
-    if (!raw) return DEFAULT_DRAFT;
-    const parsed = JSON.parse(raw) as Partial<StudioDraft>;
+    if (!raw) return DEFAULT_IMAGE_DRAFT;
+    const parsed = JSON.parse(raw) as Partial<ImageDraft>;
     return {
       prompt: typeof parsed.prompt === "string" ? parsed.prompt : "",
       providerId:
@@ -134,21 +139,8 @@ function loadDraftFromStorage(): StudioDraft {
       assetIds: normalizeAssetIds(parsed.assetIds),
     };
   } catch {
-    return DEFAULT_DRAFT;
+    return DEFAULT_IMAGE_DRAFT;
   }
-}
-
-let draftFlushTimer: ReturnType<typeof setTimeout> | null = null;
-function scheduleDraftFlush(draft: StudioDraft): void {
-  if (typeof window === "undefined") return;
-  if (draftFlushTimer) clearTimeout(draftFlushTimer);
-  draftFlushTimer = setTimeout(() => {
-    try {
-      window.localStorage.setItem(STUDIO_DRAFT_LS_KEY, JSON.stringify(draft));
-    } catch {
-      // localStorage may be full or unavailable (private mode); silently drop.
-    }
-  }, 400);
 }
 
 function loadVideoDraftFromStorage(): VideoDraft {
@@ -187,6 +179,19 @@ function loadVideoDraftFromStorage(): VideoDraft {
   }
 }
 
+let imageDraftFlushTimer: ReturnType<typeof setTimeout> | null = null;
+function scheduleImageDraftFlush(draft: ImageDraft): void {
+  if (typeof window === "undefined") return;
+  if (imageDraftFlushTimer) clearTimeout(imageDraftFlushTimer);
+  imageDraftFlushTimer = setTimeout(() => {
+    try {
+      window.localStorage.setItem(STUDIO_DRAFT_LS_KEY, JSON.stringify(draft));
+    } catch {
+      // localStorage may be full or unavailable (private mode); silently drop.
+    }
+  }, 400);
+}
+
 let videoDraftFlushTimer: ReturnType<typeof setTimeout> | null = null;
 function scheduleVideoDraftFlush(draft: VideoDraft): void {
   if (typeof window === "undefined") return;
@@ -200,33 +205,142 @@ function scheduleVideoDraftFlush(draft: VideoDraft): void {
   }, 400);
 }
 
+function persistMode(mode: StudioMode): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(STUDIO_MODE_LS_KEY, mode);
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * One-time migration: a stored `activeRoute='video'` (or our older
+ * `imagine.route.v1='video'`) maps to `{ route: 'studio', studioMode: 'video' }`.
+ * Read both possible keys; if either points at the dropped 'video' route,
+ * normalise on first boot.
+ */
+function loadInitialModeAndRoute(): { route: Route; studioMode: StudioMode } {
+  if (typeof window === "undefined") {
+    return { route: "providers", studioMode: "image" };
+  }
+  let storedMode: StudioMode = "image";
+  try {
+    const m = window.localStorage.getItem(STUDIO_MODE_LS_KEY);
+    if (m === "image" || m === "video") storedMode = m;
+  } catch {
+    // ignore
+  }
+  let storedRoute: Route = "providers";
+  try {
+    const r = window.localStorage.getItem(ROUTE_LS_KEY);
+    if (r === "studio" || r === "gallery" || r === "assets" || r === "providers" || r === "settings") {
+      storedRoute = r;
+    } else if (r === "video") {
+      // Migrate old 'video' route → studio + studioMode='video'.
+      storedRoute = "studio";
+      storedMode = "video";
+      try {
+        window.localStorage.setItem(ROUTE_LS_KEY, "studio");
+        window.localStorage.setItem(STUDIO_MODE_LS_KEY, "video");
+      } catch {
+        // ignore
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return { route: storedRoute, studioMode: storedMode };
+}
+
+function persistRoute(route: Route): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(ROUTE_LS_KEY, route);
+  } catch {
+    // ignore
+  }
+}
+
+export interface RemixPayloadImage {
+  kind: "image";
+  request: {
+    prompt: string;
+    providerId: string;
+    model: string;
+    count: number;
+    size?: string;
+    aspectRatio?: string;
+    references: { path: string }[];
+  };
+  parentId: string;
+}
+
+export interface RemixPayloadVideo {
+  kind: "video";
+  request: {
+    prompt: string;
+    providerId: string;
+    model: string;
+    durationSec?: number;
+    fps?: number;
+    resolution?: string;
+    aspectRatio?: string;
+    firstFrame?: string;
+    references: { path: string }[];
+  };
+  parentId: string;
+}
+
+export type RemixPayload = RemixPayloadImage | RemixPayloadVideo;
+
 interface UIState {
   route: Route;
+  studioMode: StudioMode;
   theme: ThemePref;
   toasts: ToastEntry[];
   studioDraft: StudioDraft;
-  videoDraft: VideoDraft;
   /** When true, the renderer should land on /studio at boot (or /providers). */
   preferredInitialRoute: Route | null;
   navigate: (route: Route) => void;
+  setStudioMode: (mode: StudioMode) => void;
   setTheme: (theme: ThemePref) => void;
   pushToast: (toast: Omit<ToastEntry, "id">) => string;
   dismissToast: (id: string) => void;
-  setStudioDraft: (patch: Partial<StudioDraft>) => void;
-  resetStudioDraft: () => void;
+  setImageDraft: (patch: Partial<ImageDraft>) => void;
   setVideoDraft: (patch: Partial<VideoDraft>) => void;
+  /** Convenience used from M5/M6 callsites — proxies to setImageDraft. */
+  setStudioDraft: (patch: Partial<ImageDraft>) => void;
+  resetDraft: (mode: StudioMode) => void;
+  resetStudioDraft: () => void;
   resetVideoDraft: () => void;
+  /** Apply a remix payload (from the gallery → "Remix" action) to the right
+   * draft and switch to the matching mode. Both kinds land on /studio. */
+  applyRemix: (payload: RemixPayload) => void;
   setPreferredInitialRoute: (r: Route | null) => void;
 }
 
+const { route: INITIAL_ROUTE, studioMode: INITIAL_MODE } =
+  loadInitialModeAndRoute();
+
 export const useUIStore = create<UIState>((set, get) => ({
-  route: "providers",
+  route: INITIAL_ROUTE,
+  studioMode: INITIAL_MODE,
   theme: "system",
   toasts: [],
-  studioDraft: loadDraftFromStorage(),
-  videoDraft: loadVideoDraftFromStorage(),
+  studioDraft: {
+    image: loadImageDraftFromStorage(),
+    video: loadVideoDraftFromStorage(),
+  },
   preferredInitialRoute: null,
-  navigate: (route) => set({ route }),
+  navigate: (route) => {
+    set({ route });
+    persistRoute(route);
+  },
+  setStudioMode: (mode) => {
+    set({ studioMode: mode });
+    persistMode(mode);
+  },
   setTheme: (theme) => set({ theme }),
   pushToast: (toast) => {
     const id = `t_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -235,23 +349,94 @@ export const useUIStore = create<UIState>((set, get) => ({
   },
   dismissToast: (id) =>
     set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
-  setStudioDraft: (patch) => {
-    const next = { ...get().studioDraft, ...patch };
-    set({ studioDraft: next });
-    scheduleDraftFlush(next);
-  },
-  resetStudioDraft: () => {
-    set({ studioDraft: { ...DEFAULT_DRAFT } });
-    scheduleDraftFlush({ ...DEFAULT_DRAFT });
+  setImageDraft: (patch) => {
+    const next: ImageDraft = { ...get().studioDraft.image, ...patch };
+    set((s) => ({ studioDraft: { ...s.studioDraft, image: next } }));
+    scheduleImageDraftFlush(next);
   },
   setVideoDraft: (patch) => {
-    const next = { ...get().videoDraft, ...patch };
-    set({ videoDraft: next });
+    const next: VideoDraft = { ...get().studioDraft.video, ...patch };
+    set((s) => ({ studioDraft: { ...s.studioDraft, video: next } }));
     scheduleVideoDraftFlush(next);
   },
+  setStudioDraft: (patch) => {
+    // Back-compat alias used by M5/M6 callsites that still expect the
+    // single-draft API. Always targets the image draft.
+    const next: ImageDraft = { ...get().studioDraft.image, ...patch };
+    set((s) => ({ studioDraft: { ...s.studioDraft, image: next } }));
+    scheduleImageDraftFlush(next);
+  },
+  resetDraft: (mode) => {
+    if (mode === "image") {
+      set((s) => ({
+        studioDraft: { ...s.studioDraft, image: { ...DEFAULT_IMAGE_DRAFT } },
+      }));
+      scheduleImageDraftFlush({ ...DEFAULT_IMAGE_DRAFT });
+    } else {
+      set((s) => ({
+        studioDraft: { ...s.studioDraft, video: { ...DEFAULT_VIDEO_DRAFT } },
+      }));
+      scheduleVideoDraftFlush({ ...DEFAULT_VIDEO_DRAFT });
+    }
+  },
+  resetStudioDraft: () => {
+    set((s) => ({
+      studioDraft: { ...s.studioDraft, image: { ...DEFAULT_IMAGE_DRAFT } },
+    }));
+    scheduleImageDraftFlush({ ...DEFAULT_IMAGE_DRAFT });
+  },
   resetVideoDraft: () => {
-    set({ videoDraft: { ...DEFAULT_VIDEO_DRAFT } });
+    set((s) => ({
+      studioDraft: { ...s.studioDraft, video: { ...DEFAULT_VIDEO_DRAFT } },
+    }));
     scheduleVideoDraftFlush({ ...DEFAULT_VIDEO_DRAFT });
+  },
+  applyRemix: (payload) => {
+    if (payload.kind === "video") {
+      const r = payload.request;
+      const next: VideoDraft = {
+        ...get().studioDraft.video,
+        prompt: r.prompt,
+        providerId: r.providerId,
+        modelId: r.model,
+        ...(typeof r.durationSec === "number" ? { durationSec: r.durationSec } : {}),
+        ...(typeof r.fps === "number" ? { fps: r.fps } : {}),
+        ...(typeof r.resolution === "string" ? { resolution: r.resolution } : {}),
+        ...(typeof r.aspectRatio === "string" ? { aspectRatio: r.aspectRatio } : {}),
+        ...(typeof r.firstFrame === "string" ? { firstFrame: r.firstFrame } : {}),
+        references: r.references.map((ref) => ref.path),
+        parentId: payload.parentId,
+      };
+      set((s) => ({
+        studioDraft: { ...s.studioDraft, video: next },
+        studioMode: "video",
+        route: "studio",
+      }));
+      scheduleVideoDraftFlush(next);
+      persistMode("video");
+      persistRoute("studio");
+    } else {
+      const r = payload.request;
+      const next: ImageDraft = {
+        ...get().studioDraft.image,
+        prompt: r.prompt,
+        providerId: r.providerId,
+        modelId: r.model,
+        count: r.count,
+        ...(typeof r.size === "string" ? { size: r.size } : {}),
+        ...(typeof r.aspectRatio === "string" ? { aspectRatio: r.aspectRatio } : {}),
+        references: r.references.map((ref) => ref.path),
+        parentId: payload.parentId,
+      };
+      set((s) => ({
+        studioDraft: { ...s.studioDraft, image: next },
+        studioMode: "image",
+        route: "studio",
+      }));
+      scheduleImageDraftFlush(next);
+      persistMode("image");
+      persistRoute("studio");
+    }
   },
   setPreferredInitialRoute: (r) => set({ preferredInitialRoute: r }),
 }));

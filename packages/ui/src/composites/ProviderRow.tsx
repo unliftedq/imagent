@@ -50,7 +50,7 @@ export function ProviderRow({
   return (
     <div
       className={cn(
-        "rounded-(--radius-lg) border border-(--color-hairline) bg-(--color-canvas) overflow-hidden",
+        "rounded-(--radius-lg) border border-(--border) bg-(--bg) overflow-hidden",
       )}
     >
       <div className="flex items-center gap-4 px-5 py-4">
@@ -63,25 +63,25 @@ export function ProviderRow({
           <CaretRight
             weight="bold"
             className={cn(
-              "size-4 text-(--color-muted) transition-transform duration-(--duration-fast)",
+              "size-4 text-(--text-muted) transition-transform duration-(--duration-fast)",
               open && "rotate-90",
             )}
           />
           <StatusDot status={status} />
           <div className="flex flex-1 flex-col gap-0.5">
             <div className="flex items-center gap-2">
-              <span className="text-(length:--text-title-sm) font-semibold text-(--color-ink)">
+              <span className="text-(length:--text-title-sm) font-semibold text-(--text)">
                 {name}
               </span>
               {badge}
               {!configured ? (
-                <span className="rounded-(--radius-pill) bg-(--color-surface-soft) px-2 py-0.5 text-(length:--text-caption-uppercase) tracking-[1.5px] text-(--color-muted)">
+                <span className="rounded-(--radius-pill) bg-(--surface) px-2 py-0.5 text-(length:--text-caption-uppercase) tracking-[1.5px] text-(--text-muted)">
                   NOT CONFIGURED
                 </span>
               ) : null}
             </div>
             {description ? (
-              <span className="text-(length:--text-body-sm) text-(--color-muted)">
+              <span className="text-(length:--text-body-sm) text-(--text-muted)">
                 {description}
               </span>
             ) : null}
@@ -119,7 +119,7 @@ export function ProviderRow({
         </div>
       </div>
       {open ? (
-        <div className="border-t border-(--color-hairline-soft) bg-(--color-surface-soft) p-5">
+        <div className="border-t border-(--border-faint) bg-(--surface) p-5">
           {children}
         </div>
       ) : null}
@@ -137,7 +137,7 @@ function StatusDot({ status }: { status: ProviderTestStatus }) {
             : "Connected"
         }
       >
-        <span className="inline-flex size-5 items-center justify-center rounded-(--radius-full) bg-(--color-brand-mint)/30 text-(--color-brand-teal)">
+        <span className="inline-flex size-5 items-center justify-center rounded-(--radius-full) bg-(--accent-soft)/30 text-(--accent-soft)">
           <Check weight="bold" className="size-3.5" />
         </span>
       </Tooltip>
@@ -148,7 +148,7 @@ function StatusDot({ status }: { status: ProviderTestStatus }) {
       <Tooltip
         content={status.status ? `${status.reason} (HTTP ${status.status})` : status.reason}
       >
-        <span className="inline-flex size-5 items-center justify-center rounded-(--radius-full) bg-(--color-error)/15 text-(--color-error)">
+        <span className="inline-flex size-5 items-center justify-center rounded-(--radius-full) bg-(--danger)/15 text-(--danger)">
           <XCircle weight="fill" className="size-4" />
         </span>
       </Tooltip>
@@ -156,14 +156,14 @@ function StatusDot({ status }: { status: ProviderTestStatus }) {
   }
   if (status.kind === "testing") {
     return (
-      <span className="inline-flex size-5 items-center justify-center rounded-(--radius-full) bg-(--color-surface-card) text-(--color-muted)">
+      <span className="inline-flex size-5 items-center justify-center rounded-(--radius-full) bg-(--surface-raised) text-(--text-muted)">
         <CircleNotch weight="bold" className="size-3.5 animate-spin" />
       </span>
     );
   }
   return (
     <Tooltip content="Untested — click Test to verify the connection.">
-      <span className="inline-flex size-5 items-center justify-center rounded-(--radius-full) bg-(--color-surface-card) text-(--color-muted)">
+      <span className="inline-flex size-5 items-center justify-center rounded-(--radius-full) bg-(--surface-raised) text-(--text-muted)">
         <WarningCircle weight="bold" className="size-3.5" />
       </span>
     </Tooltip>

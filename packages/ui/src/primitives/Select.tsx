@@ -16,11 +16,11 @@ export const SelectTrigger = forwardRef<
       ref={ref}
       className={cn(
         "flex h-11 w-full items-center justify-between gap-2 rounded-(--radius-md) " +
-          "border border-(--color-hairline) bg-(--color-canvas) px-4 py-3 " +
-          "text-(length:--text-body-md) text-(--color-ink) " +
+          "border border-(--border) bg-(--bg) px-4 py-3 " +
+          "text-(length:--text-body-md) text-(--text) " +
           "transition-colors duration-(--duration-fast) " +
-          "focus-visible:outline-none focus:border-(--color-ink) " +
-          "data-[placeholder]:text-(--color-muted-soft) " +
+          "focus-visible:outline-none focus:border-(--text) " +
+          "data-[placeholder]:text-(--text-faint) " +
           "disabled:cursor-not-allowed disabled:opacity-60",
         className,
       )}
@@ -28,7 +28,7 @@ export const SelectTrigger = forwardRef<
     >
       {children}
       <SelectPrimitive.Icon asChild>
-        <CaretDown weight="bold" className="size-4 text-(--color-muted)" />
+        <CaretDown weight="bold" className="size-4 text-(--text-muted)" />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   );
@@ -45,7 +45,7 @@ export const SelectContent = forwardRef<
         position={position}
         className={cn(
           "z-50 min-w-[var(--radix-select-trigger-width)] overflow-hidden " +
-            "rounded-(--radius-md) border border-(--color-hairline) bg-(--color-canvas) " +
+            "rounded-(--radius-md) border border-(--border) bg-(--bg) " +
             "shadow-[0_4px_24px_-8px_rgba(0,0,0,0.08)]",
           className,
         )}
@@ -72,8 +72,8 @@ export const SelectItem = forwardRef<
       ref={ref}
       className={cn(
         "relative flex cursor-pointer select-none items-center gap-2 rounded-(--radius-sm) " +
-          "py-2 pl-3 pr-8 text-(length:--text-body-sm) text-(--color-ink) outline-none " +
-          "data-[highlighted]:bg-(--color-surface-soft) " +
+          "py-2 pl-3 pr-8 text-(length:--text-body-sm) text-(--text) outline-none " +
+          "data-[highlighted]:bg-(--surface) " +
           "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         className,
       )}

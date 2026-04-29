@@ -53,10 +53,10 @@ export function BoardSidebarItem({
           "text-left text-(length:--text-body-sm) " +
           "transition-colors duration-(--duration-fast)",
         active
-          ? "bg-(--color-surface-card) text-(--color-ink) font-semibold"
-          : "text-(--color-body) hover:bg-(--color-surface-soft) hover:text-(--color-ink)",
+          ? "bg-(--surface-raised) text-(--text) font-semibold"
+          : "text-(--text) hover:bg-(--surface) hover:text-(--text)",
         isOver
-          ? "outline outline-2 outline-(--color-accent) outline-offset-1 bg-(--color-surface-soft)"
+          ? "outline outline-2 outline-(--accent) outline-offset-1 bg-(--surface)"
           : "",
         className,
       )}
@@ -69,8 +69,8 @@ export function BoardSidebarItem({
             "shrink-0 rounded-(--radius-pill) px-2 py-0.5 text-(length:--text-caption) " +
               "[font-variant-numeric:tabular-nums]",
             active
-              ? "bg-(--color-canvas) text-(--color-ink)"
-              : "bg-(--color-surface-card) text-(--color-muted)",
+              ? "bg-(--bg) text-(--text)"
+              : "bg-(--surface-raised) text-(--text-muted)",
           )}
         >
           {count}

@@ -173,10 +173,10 @@ export function AssetsPage() {
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-8 py-8">
       <header className="flex items-start justify-between gap-4">
         <div className="flex flex-col">
-          <h1 className="text-(length:--text-display-sm) font-(family-name:--font-display) text-(--color-ink)">
+          <h1 className="text-(length:--text-display-sm) font-(family-name:--font-display) text-(--text)">
             Assets
           </h1>
-          <p className="text-(length:--text-body-sm) text-(--color-muted)">
+          <p className="text-(length:--text-body-sm) text-(--text-muted)">
             Reusable characters, objects, backgrounds, and styles for your generations.
           </p>
         </div>
@@ -198,7 +198,7 @@ export function AssetsPage() {
           {KINDS.map((k) => (
             <Tabs.Trigger key={k} value={k}>
               {KIND_LABEL[k]}
-              <span className="ml-2 rounded-(--radius-pill) bg-(--color-surface-soft) px-1.5 text-[10px] font-semibold text-(--color-muted) [font-variant-numeric:tabular-nums]">
+              <span className="ml-2 rounded-(--radius-pill) bg-(--surface) px-1.5 text-[10px] font-semibold text-(--text-muted) [font-variant-numeric:tabular-nums]">
                 {byKind[k]?.length ?? 0}
               </span>
             </Tabs.Trigger>
@@ -206,7 +206,7 @@ export function AssetsPage() {
           <Tabs.Trigger value={TRASH_TAB}>
             <Icons.Trash weight="duotone" className="mr-1 size-4" />
             Trash
-            <span className="ml-2 rounded-(--radius-pill) bg-(--color-surface-soft) px-1.5 text-[10px] font-semibold text-(--color-muted) [font-variant-numeric:tabular-nums]">
+            <span className="ml-2 rounded-(--radius-pill) bg-(--surface) px-1.5 text-[10px] font-semibold text-(--text-muted) [font-variant-numeric:tabular-nums]">
               {archived.length}
             </span>
           </Tabs.Trigger>
@@ -467,17 +467,17 @@ function CreateAssetDialog({
   return (
     <Dialog.Root open={open} onOpenChange={(v) => (v ? null : onClose())}>
       <Dialog.Content className="max-w-2xl">
-        <Dialog.Title className="text-(length:--text-title-lg) font-semibold text-(--color-ink)">
+        <Dialog.Title className="text-(length:--text-title-lg) font-semibold text-(--text)">
           New asset
         </Dialog.Title>
-        <Dialog.Description className="mt-1 text-(length:--text-body-sm) text-(--color-muted)">
+        <Dialog.Description className="mt-1 text-(length:--text-body-sm) text-(--text-muted)">
           Create a reusable {kind === "style" ? "style" : kind} that can be picked from any
           generation.
         </Dialog.Description>
 
         <div className="mt-4 flex flex-col gap-4">
           <Field label="Kind">
-            <div className="flex gap-1 rounded-(--radius-pill) bg-(--color-surface-soft) p-1">
+            <div className="flex gap-1 rounded-(--radius-pill) bg-(--surface) p-1">
               {KINDS.map((k) => (
                 <button
                   key={k}
@@ -487,8 +487,8 @@ function CreateAssetDialog({
                     "flex-1 rounded-(--radius-pill) px-3 py-1.5 text-(length:--text-caption) " +
                     "capitalize transition-colors duration-(--duration-fast) " +
                     (kind === k
-                      ? "bg-(--color-canvas) text-(--color-ink) shadow-[0_0_0_1px_var(--color-hairline)]"
-                      : "text-(--color-muted) hover:text-(--color-ink)")
+                      ? "bg-(--bg) text-(--text) shadow-[0_0_0_1px_var(--border)]"
+                      : "text-(--text-muted) hover:text-(--text)")
                   }
                 >
                   {k}
@@ -523,7 +523,7 @@ function CreateAssetDialog({
                 placeholder="e.g. soft pastel watercolor, hand-drawn lines"
                 rows={2}
               />
-              <span className="text-(length:--text-caption) text-(--color-muted-soft)">
+              <span className="text-(length:--text-caption) text-(--text-faint)">
                 Used when the model lacks reference support. Reference image takes precedence.
               </span>
             </Field>
@@ -540,13 +540,13 @@ function CreateAssetDialog({
               "rounded-(--radius-md) border border-dashed px-4 py-6 text-center " +
               "transition-colors duration-(--duration-fast) " +
               (dragOver
-                ? "border-(--color-ink) bg-(--color-surface-card)"
-                : "border-(--color-hairline) bg-(--color-surface-soft)")
+                ? "border-(--text) bg-(--surface-raised)"
+                : "border-(--border) bg-(--surface)")
             }
           >
-            <p className="text-(length:--text-caption) text-(--color-muted)">
+            <p className="text-(length:--text-caption) text-(--text-muted)">
               Drag reference images here, or
-              <label className="ml-1 cursor-pointer text-(--color-ink) underline underline-offset-2">
+              <label className="ml-1 cursor-pointer text-(--text) underline underline-offset-2">
                 browse
                 <input
                   type="file"
@@ -562,7 +562,7 @@ function CreateAssetDialog({
                 />
               </label>
             </p>
-            <p className="mt-1 text-(length:--text-caption) text-(--color-muted-soft)">
+            <p className="mt-1 text-(length:--text-caption) text-(--text-faint)">
               Up to {MAX_UPLOADS} per asset. {files.length} attached.
             </p>
           </div>
@@ -572,7 +572,7 @@ function CreateAssetDialog({
               {files.map((f) => (
                 <div
                   key={f.id}
-                  className="relative size-16 overflow-hidden rounded-(--radius-sm) border border-(--color-hairline)"
+                  className="relative size-16 overflow-hidden rounded-(--radius-sm) border border-(--border)"
                 >
                   {/* biome-ignore lint/a11y/useAltText: filename caption below */}
                   <img
@@ -585,9 +585,9 @@ function CreateAssetDialog({
                     onClick={() => removeFile(f.id)}
                     className={
                       "absolute right-0.5 top-0.5 inline-flex size-5 items-center justify-center " +
-                      "rounded-full bg-(--color-canvas) text-(--color-ink) " +
+                      "rounded-full bg-(--bg) text-(--text) " +
                       "transition-colors duration-(--duration-fast) " +
-                      "hover:bg-(--color-error) hover:text-(--color-on-primary)"
+                      "hover:bg-(--danger) hover:text-(--accent-fg)"
                     }
                     aria-label={`Remove ${f.name}`}
                   >
@@ -599,7 +599,7 @@ function CreateAssetDialog({
           ) : null}
 
           {error ? (
-            <div className="rounded-(--radius-md) border border-(--color-error)/40 bg-(--color-error)/10 px-3 py-2 text-(length:--text-caption) text-(--color-error)">
+            <div className="rounded-(--radius-md) border border-(--danger)/40 bg-(--danger)/10 px-3 py-2 text-(length:--text-caption) text-(--danger)">
               {error}
             </div>
           ) : null}
@@ -703,13 +703,13 @@ function AssetDrawer({
       <Dialog.Sheet>
         {asset ? (
           <div className="flex h-full flex-col gap-4">
-            <Dialog.Title className="text-(length:--text-title-lg) font-semibold text-(--color-ink)">
+            <Dialog.Title className="text-(length:--text-title-lg) font-semibold text-(--text)">
               {asset.name}
             </Dialog.Title>
             <span
               className={
-                "inline-flex w-fit items-center rounded-(--radius-pill) bg-(--color-surface-card) " +
-                "px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[1.5px] text-(--color-ink)"
+                "inline-flex w-fit items-center rounded-(--radius-pill) bg-(--surface-raised) " +
+                "px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[1.5px] text-(--text)"
               }
             >
               {asset.kind}
@@ -723,7 +723,7 @@ function AssetDrawer({
                     href={resolveDataUrl(f.relPath)}
                     target="_blank"
                     rel="noreferrer"
-                    className="block aspect-square overflow-hidden rounded-(--radius-sm) border border-(--color-hairline)"
+                    className="block aspect-square overflow-hidden rounded-(--radius-sm) border border-(--border)"
                   >
                     {/* biome-ignore lint/a11y/useAltText: covered by hover title below */}
                     <img
@@ -735,7 +735,7 @@ function AssetDrawer({
                 ))}
               </div>
             ) : asset.kind === "style" ? (
-              <p className="text-(length:--text-caption) text-(--color-muted)">
+              <p className="text-(length:--text-caption) text-(--text-muted)">
                 No reference images — this style relies on the prompt snippet below.
               </p>
             ) : null}
@@ -757,14 +757,14 @@ function AssetDrawer({
                   onChange={(e) => setPromptSnippet(e.target.value)}
                   rows={2}
                 />
-                <span className="text-(length:--text-caption) text-(--color-muted-soft)">
+                <span className="text-(length:--text-caption) text-(--text-faint)">
                   Reference is preferred when the model supports refs; otherwise this snippet is
                   appended to the prompt.
                 </span>
               </Field>
             ) : null}
 
-            <div className="mt-auto flex flex-col gap-2 border-t border-(--color-hairline-soft) pt-4">
+            <div className="mt-auto flex flex-col gap-2 border-t border-(--border-faint) pt-4">
               <div className="flex items-center justify-between gap-2">
                 <Button variant="ghost" size="sm" onClick={() => void openFolder()}>
                   Open folder
@@ -869,7 +869,7 @@ function AssetDrawer({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-(length:--text-caption) font-semibold text-(--color-muted)">
+      <span className="text-(length:--text-caption) font-semibold text-(--text-muted)">
         {label}
       </span>
       {children}
@@ -895,7 +895,7 @@ function SearchInput({
     <div className="relative w-full max-w-sm">
       <Icons.MagnifyingGlass
         weight="bold"
-        className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-(--color-muted)"
+        className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-(--text-muted)"
       />
       <Input
         placeholder={placeholder}
@@ -910,8 +910,8 @@ function SearchInput({
           aria-label="Clear search"
           className={
             "absolute right-2 top-1/2 inline-flex size-6 -translate-y-1/2 items-center " +
-            "justify-center rounded-(--radius-pill) text-(--color-muted) " +
-            "transition-colors duration-(--duration-fast) hover:bg-(--color-surface-soft) hover:text-(--color-ink)"
+            "justify-center rounded-(--radius-pill) text-(--text-muted) " +
+            "transition-colors duration-(--duration-fast) hover:bg-(--surface) hover:text-(--text)"
           }
         >
           <Icons.X weight="bold" className="size-3.5" />
@@ -936,21 +936,21 @@ function TrashRow({
   return (
     <li
       className={
-        "flex items-center gap-3 rounded-(--radius-md) border border-(--color-hairline) " +
-        "bg-(--color-canvas) px-3 py-2"
+        "flex items-center gap-3 rounded-(--radius-md) border border-(--border) " +
+        "bg-(--bg) px-3 py-2"
       }
     >
       <button
         type="button"
         onClick={onOpen}
-        className="size-10 shrink-0 overflow-hidden rounded-(--radius-sm) bg-(--color-surface-soft)"
+        className="size-10 shrink-0 overflow-hidden rounded-(--radius-sm) bg-(--surface)"
         aria-label={`Open ${asset.name}`}
       >
         {thumb ? (
           // biome-ignore lint/a11y/useAltText: alt provided via aria-label on button
           <img src={thumb} alt={asset.name} className="block h-full w-full object-cover" />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-(--color-muted)">
+          <div className="flex h-full w-full items-center justify-center text-(--text-muted)">
             <Icons.Folder weight="duotone" className="size-5" />
           </div>
         )}
@@ -960,10 +960,10 @@ function TrashRow({
         onClick={onOpen}
         className="flex min-w-0 flex-1 flex-col items-start text-left"
       >
-        <span className="truncate text-(length:--text-body-sm) font-semibold text-(--color-ink)">
+        <span className="truncate text-(length:--text-body-sm) font-semibold text-(--text)">
           {asset.name}
         </span>
-        <span className="text-(length:--text-caption) text-(--color-muted)">
+        <span className="text-(length:--text-caption) text-(--text-muted)">
           {asset.archivedAt
             ? `Archived ${new Date(asset.archivedAt).toLocaleDateString()}`
             : "Archived"}
@@ -971,8 +971,8 @@ function TrashRow({
       </button>
       <span
         className={
-          "shrink-0 inline-flex items-center rounded-(--radius-pill) bg-(--color-surface-card) " +
-          "px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[1.5px] text-(--color-ink)"
+          "shrink-0 inline-flex items-center rounded-(--radius-pill) bg-(--surface-raised) " +
+          "px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[1.5px] text-(--text)"
         }
       >
         {asset.kind}

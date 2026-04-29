@@ -23,7 +23,7 @@ export const DialogOverlay = forwardRef<
     <DialogPrimitive.Overlay
       ref={ref}
       className={cn(
-        "fixed inset-0 z-40 bg-(--color-ink)/40 backdrop-blur-[1px] " +
+        "fixed inset-0 z-40 bg-(--text)/40 backdrop-blur-[1px] " +
           "data-[state=open]:animate-in data-[state=closed]:animate-out " +
           "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         className,
@@ -44,8 +44,8 @@ export const DialogContent = forwardRef<
         ref={ref}
         className={cn(
           "fixed left-1/2 top-1/2 z-50 w-full max-w-xl -translate-x-1/2 -translate-y-1/2 " +
-            "rounded-(--radius-lg) border border-(--color-hairline) " +
-            "bg-(--color-canvas) p-6 outline-none " +
+            "rounded-(--radius-lg) border border-(--border) " +
+            "bg-(--bg) p-6 outline-none " +
             "data-[state=open]:animate-in data-[state=closed]:animate-out " +
             "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
           className,
@@ -57,9 +57,9 @@ export const DialogContent = forwardRef<
           <DialogPrimitive.Close
             className={
               "absolute right-4 top-4 inline-flex size-8 items-center justify-center " +
-              "rounded-(--radius-sm) text-(--color-muted) " +
+              "rounded-(--radius-sm) text-(--text-muted) " +
               "transition-colors duration-(--duration-fast) " +
-              "hover:bg-(--color-surface-soft) hover:text-(--color-ink)"
+              "hover:bg-(--surface) hover:text-(--text)"
             }
             aria-label="Close"
           >
@@ -86,7 +86,7 @@ export const DialogSheet = forwardRef<
         ref={ref}
         className={cn(
           "fixed right-0 top-0 z-50 h-full w-full max-w-lg " +
-            "border-l border-(--color-hairline) bg-(--color-canvas) p-6 outline-none " +
+            "border-l border-(--border) bg-(--bg) p-6 outline-none " +
             "overflow-y-auto " +
             "data-[state=open]:animate-in data-[state=closed]:animate-out " +
             "data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right",
@@ -99,9 +99,9 @@ export const DialogSheet = forwardRef<
           <DialogPrimitive.Close
             className={
               "absolute right-4 top-4 inline-flex size-8 items-center justify-center " +
-              "rounded-(--radius-sm) text-(--color-muted) " +
+              "rounded-(--radius-sm) text-(--text-muted) " +
               "transition-colors duration-(--duration-fast) " +
-              "hover:bg-(--color-surface-soft) hover:text-(--color-ink)"
+              "hover:bg-(--surface) hover:text-(--text)"
             }
             aria-label="Close"
           >

@@ -47,7 +47,7 @@ export function SettingsPage() {
   if (!appPrefs) {
     return (
       <div className="mx-auto max-w-3xl px-8 py-10">
-        <p className="text-(--color-muted)">Loading…</p>
+        <p className="text-(--text-muted)">Loading…</p>
       </div>
     );
   }
@@ -55,10 +55,10 @@ export function SettingsPage() {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 px-8 py-10">
       <header className="mb-2">
-        <h1 className="text-(length:--text-display-sm) font-display font-medium tracking-(--text-display-sm--letter-spacing) text-(--color-ink)">
+        <h1 className="text-(length:--text-display-sm) font-display font-medium tracking-(--text-display-sm--letter-spacing) text-(--text)">
           Settings
         </h1>
-        <p className="mt-2 text-(length:--text-body-md) text-(--color-body)">
+        <p className="mt-2 text-(length:--text-body-md) text-(--text)">
           Workspace defaults and storage. Changes save automatically.
         </p>
       </header>
@@ -114,9 +114,9 @@ export function SettingsPage() {
                   onChange={(e) =>
                     patch({ generationConcurrency: Number(e.target.value) })
                   }
-                  className="flex-1 accent-(--color-primary)"
+                  className="flex-1 accent-(--accent)"
                 />
-                <span className="w-8 text-center text-(--color-ink) font-mono text-sm">
+                <span className="w-8 text-center text-(--text) font-mono text-sm">
                   {appPrefs.generationConcurrency}
                 </span>
               </div>
@@ -196,9 +196,9 @@ export function SettingsPage() {
               <PathRow label="Logs" value={paths.logsDir} target={paths.logsDir} />
             </div>
           ) : (
-            <p className="text-(--color-muted)">Loading…</p>
+            <p className="text-(--text-muted)">Loading…</p>
           )}
-          <div className="mt-6 border-t border-(--color-hairline-soft) pt-4">
+          <div className="mt-6 border-t border-(--border-faint) pt-4">
             <Button
               variant="danger"
               size="sm"
@@ -224,19 +224,19 @@ export function SettingsPage() {
         <PanelBody>
           {version ? (
             <dl className="grid grid-cols-[140px_1fr] gap-y-2 text-(length:--text-body-sm)">
-              <dt className="text-(--color-muted)">App</dt>
-              <dd className="font-mono text-(--color-ink)">{version.app}</dd>
-              <dt className="text-(--color-muted)">Electron</dt>
-              <dd className="font-mono text-(--color-ink)">{version.electron}</dd>
-              <dt className="text-(--color-muted)">Node</dt>
-              <dd className="font-mono text-(--color-ink)">{version.node}</dd>
-              <dt className="text-(--color-muted)">Platform</dt>
-              <dd className="font-mono text-(--color-ink)">
+              <dt className="text-(--text-muted)">App</dt>
+              <dd className="font-mono text-(--text)">{version.app}</dd>
+              <dt className="text-(--text-muted)">Electron</dt>
+              <dd className="font-mono text-(--text)">{version.electron}</dd>
+              <dt className="text-(--text-muted)">Node</dt>
+              <dd className="font-mono text-(--text)">{version.node}</dd>
+              <dt className="text-(--text-muted)">Platform</dt>
+              <dd className="font-mono text-(--text)">
                 {version.platform} {version.arch}
               </dd>
             </dl>
           ) : (
-            <p className="text-(--color-muted)">Loading…</p>
+            <p className="text-(--text-muted)">Loading…</p>
           )}
         </PanelBody>
       </Panel>
@@ -261,7 +261,7 @@ function SegmentedTheme({
     },
   ];
   return (
-    <div className="inline-flex items-center gap-1 rounded-(--radius-pill) bg-(--color-surface-soft) p-1">
+    <div className="inline-flex items-center gap-1 rounded-(--radius-pill) bg-(--surface) p-1">
       {opts.map((o) => {
         const active = value === o.id;
         return (
@@ -272,8 +272,8 @@ function SegmentedTheme({
             className={
               "inline-flex items-center gap-2 rounded-(--radius-pill) px-3 py-1.5 text-(length:--text-nav-link) transition-colors duration-(--duration-fast) " +
               (active
-                ? "bg-(--color-canvas) text-(--color-ink) shadow-[0_0_0_1px_var(--color-hairline)]"
-                : "text-(--color-muted) hover:text-(--color-ink)")
+                ? "bg-(--bg) text-(--text) shadow-[0_0_0_1px_var(--border)]"
+                : "text-(--text-muted) hover:text-(--text)")
             }
           >
             {o.icon}
@@ -295,12 +295,12 @@ function PathRow({
   target: string;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-(--radius-md) border border-(--color-hairline-soft) bg-(--color-surface-soft) px-3 py-2">
+    <div className="flex items-center justify-between gap-3 rounded-(--radius-md) border border-(--border-faint) bg-(--surface) px-3 py-2">
       <div className="min-w-0 flex-1">
-        <div className="text-(length:--text-caption-uppercase) tracking-[1.5px] text-(--color-muted)">
+        <div className="text-(length:--text-caption-uppercase) tracking-[1.5px] text-(--text-muted)">
           {label}
         </div>
-        <div className="truncate font-mono text-(length:--text-body-sm) text-(--color-ink)">
+        <div className="truncate font-mono text-(length:--text-body-sm) text-(--text)">
           {value}
         </div>
       </div>
@@ -329,9 +329,9 @@ function ToggleRow({
   return (
     <label className="flex items-center justify-between gap-4">
       <div className="flex flex-col gap-0.5">
-        <span className="text-(length:--text-body-md) text-(--color-ink)">{label}</span>
+        <span className="text-(length:--text-body-md) text-(--text)">{label}</span>
         {description ? (
-          <span className="text-(length:--text-body-sm) text-(--color-muted)">
+          <span className="text-(length:--text-body-sm) text-(--text-muted)">
             {description}
           </span>
         ) : null}
@@ -344,8 +344,8 @@ function ToggleRow({
 function SectionTitle({ icon, title }: { icon: React.ReactNode; title: string }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-(--color-muted)">{icon}</span>
-      <span className="text-(length:--text-title-md) font-semibold text-(--color-ink)">
+      <span className="text-(--text-muted)">{icon}</span>
+      <span className="text-(length:--text-title-md) font-semibold text-(--text)">
         {title}
       </span>
     </div>
@@ -363,12 +363,12 @@ function Field({
 }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-(length:--text-caption-uppercase) tracking-[1.5px] text-(--color-muted)">
+      <span className="text-(length:--text-caption-uppercase) tracking-[1.5px] text-(--text-muted)">
         {label}
       </span>
       {children}
       {helperText ? (
-        <span className="text-(length:--text-caption) text-(--color-muted)">{helperText}</span>
+        <span className="text-(length:--text-caption) text-(--text-muted)">{helperText}</span>
       ) : null}
     </label>
   );

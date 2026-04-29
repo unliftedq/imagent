@@ -13,7 +13,7 @@ export const Card = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(f
     <div
       ref={ref}
       className={cn(
-        "rounded-(--radius-lg) border border-(--color-hairline) bg-(--color-canvas) p-6",
+        "rounded-(--radius-lg) border border-(--border) bg-(--bg) p-6",
         className,
       )}
       {...rest}
@@ -32,7 +32,7 @@ export const Panel = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
     <div
       ref={ref}
       className={cn(
-        "rounded-(--radius-lg) border border-(--color-hairline) bg-(--color-canvas)",
+        "rounded-(--radius-lg) border border-(--border) bg-(--bg)",
         className,
       )}
       {...rest}
@@ -48,7 +48,7 @@ export const PanelHeader = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElem
       <div
         ref={ref}
         className={cn(
-          "flex items-center justify-between gap-3 border-b border-(--color-hairline-soft) px-6 py-4",
+          "flex items-center justify-between gap-3 border-b border-(--border-faint) px-6 py-4",
           className,
         )}
         {...rest}

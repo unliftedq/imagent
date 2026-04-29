@@ -28,6 +28,8 @@ export {
   TabsList,
   TabsTrigger,
   TabsContent,
+  TabsListUnderline,
+  TabsTriggerUnderline,
 } from "./primitives/Tabs.js";
 export {
   Popover,
@@ -96,7 +98,16 @@ export type {
   GalleryItemCardProps,
   GalleryItemCardKind,
   GalleryItemCardBoardOption,
+  GalleryItemCardSize,
 } from "./composites/GalleryItemCard.js";
+export { NavRail, NAV_RAIL_ROWS } from "./composites/NavRail.js";
+export type { NavRailProps, NavRoute } from "./composites/NavRail.js";
+export { GalleryRail } from "./composites/GalleryRail.js";
+export type {
+  GalleryRailProps,
+  GalleryRailFilter,
+  GalleryRailItem,
+} from "./composites/GalleryRail.js";
 export { BoardSidebarItem } from "./composites/BoardSidebarItem.js";
 export type { BoardSidebarItemProps } from "./composites/BoardSidebarItem.js";
 export { JobProgress } from "./composites/JobProgress.js";

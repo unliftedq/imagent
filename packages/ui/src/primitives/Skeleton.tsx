@@ -5,7 +5,7 @@ export function Skeleton({ className, ...rest }: HTMLAttributes<HTMLDivElement>)
   return (
     <div
       className={cn(
-        "animate-pulse rounded-(--radius-sm) bg-(--color-surface-soft)",
+        "animate-pulse rounded-(--radius-sm) bg-(--surface)",
         className,
       )}
       {...rest}

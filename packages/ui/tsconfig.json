@@ -13,6 +13,6 @@
     "noEmit": false
   },
   "include": ["src/**/*"],
-  "exclude": ["src/**/*.css"],
+  "exclude": ["src/**/*.css", "src/**/*.test.ts", "src/**/*.test.tsx"],
   "references": [{ "path": "../core" }, { "path": "../ipc" }]
 }

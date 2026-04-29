@@ -28,6 +28,10 @@ export interface PromptComposerProps {
   onPromptChange: (next: string) => void;
   /** Cmd/Ctrl+Enter shortcut handler (parent owns the actual generate call). */
   onSubmit?: () => void;
+  /** Optional negative-prompt text + setter. When omitted, the negative
+   * textarea is hidden. */
+  negativePrompt?: string;
+  onNegativePromptChange?: (next: string) => void;
   /** Asset chips appearing on a row above the textarea (legacy; populated in M6 via the AssetPicker). */
   assetSlots?: ReadonlyArray<PromptComposerAssetSlot>;
   /** Per-kind asset selection state — wired via `AssetPicker`. */
@@ -43,6 +47,7 @@ export interface PromptComposerProps {
   /** When the user clicks "Create new" inside an AssetPicker. */
   onRequestCreateAsset?: (kind: AssetKind) => void;
   placeholder?: string;
+  negativePlaceholder?: string;
   /** When false, renders the legacy disabled "+ asset" stub. Defaults to true in M6. */
   enableAssetPicker?: boolean;
   /** When the parent wants to re-render with a fresh focus, bump this. */
@@ -55,15 +60,19 @@ export interface PromptComposerProps {
 }
 
 /**
- * PromptComposer per design.md §10. Large textarea (6 visible lines, autosizes
- * up to 14), style/character chip row above, no shadow, 1px hairline border.
- * Cmd/Ctrl+Enter → onSubmit. The actual *Generate* button is the parent
- * page's responsibility — this component is presentational + keyboard-aware.
+ * PromptComposer — DESIGN.md §10.2 (rail-fitted).
+ *
+ * Lives inside the 280px params rail; vertically stacked, no internal
+ * max-width. Sections are separated by hairline dividers and labelled with
+ * sentence-case `body --text-muted`. Two textareas (Prompt, Negative
+ * Prompt) auto-grow between 5 and 10 visible lines, mono.
  */
 export function PromptComposer({
   prompt,
   onPromptChange,
   onSubmit,
+  negativePrompt,
+  onNegativePromptChange,
   assetSlots = [],
   selectedAssetIds,
   onAssetIdsChange,
@@ -71,34 +80,28 @@ export function PromptComposer({
   maxReferencesHint,
   thumbnailUrl,
   onRequestCreateAsset,
-  placeholder = "Describe the image you want…",
+  placeholder = "Describe what you want to see…",
+  negativePlaceholder = "What to avoid…",
   enableAssetPicker = false,
   autoFocusKey,
   className,
   showCharCount = false,
   pickerTrailing,
 }: PromptComposerProps) {
-  const ref = useRef<HTMLTextAreaElement>(null);
+  const promptRef = useRef<HTMLTextAreaElement>(null);
+  const negRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-grow up to ~14 lines. We measure with scrollHeight — set height to
-  // auto first so shrinking works on backspace.
+  // Auto-grow up to ~10 lines (DESIGN.md §10.2: default 5, max 10).
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.height = "auto";
-    const lineHeight = 22; // matches text-body-md leading; conservative
-    const maxRows = 14;
-    const minRows = 6;
-    const desired = Math.max(
-      lineHeight * minRows,
-      Math.min(el.scrollHeight, lineHeight * maxRows),
-    );
-    el.style.height = `${desired}px`;
+    autosize(promptRef.current, 5, 10);
   }, [prompt]);
+  useEffect(() => {
+    autosize(negRef.current, 2, 4);
+  }, [negativePrompt]);
 
   useEffect(() => {
     if (autoFocusKey === undefined) return;
-    ref.current?.focus();
+    promptRef.current?.focus();
   }, [autoFocusKey]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>): void => {
@@ -112,104 +115,151 @@ export function PromptComposer({
   const charCount = prompt.length;
 
   return (
-    <div className={cn("flex flex-col gap-2", className)}>
-      <div className="relative">
-        <textarea
-          ref={ref}
-          value={prompt}
-          onChange={(e) => onPromptChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          rows={6}
-          className={cn(
-            "block w-full bg-(--color-canvas) text-(--color-ink) " +
-              "border border-(--color-hairline) rounded-(--radius-md) " +
-              "px-4 py-3 text-(length:--text-body-md) resize-none " +
-              "placeholder:text-(--color-muted-soft) " +
-              "transition-colors duration-(--duration-fast) " +
-              "focus-visible:outline-none focus:border-(--color-ink)",
-          )}
-        />
-        {showCharCount ? (
-          <span
-            className={
-              "pointer-events-none absolute bottom-2 right-3 select-none " +
-              "font-[Inter] text-(length:--text-caption) text-(--color-muted-soft) " +
-              "[font-variant-numeric:tabular-nums]"
-            }
-          >
-            {charCount.toLocaleString()}
-          </span>
-        ) : null}
-      </div>
-
-      {/* Asset slot row — M6: four AssetPickers wired via parent state. */}
-      <div className="flex flex-wrap items-center gap-2">
-        {/* Legacy chip slots (still supported but no longer the default). */}
-        {assetSlots.map((slot, idx) => (
-          <span
-            key={`${slot.label}-${idx}`}
-            className={
-              "inline-flex items-center gap-1 rounded-(--radius-pill) " +
-              "bg-(--color-surface-card) text-(--color-ink) " +
-              "px-3 py-1 text-(length:--text-caption)"
-            }
-          >
-            <span className="font-semibold">{slot.label}</span>
-            <span className="truncate max-w-[180px]">{slot.value}</span>
-            {slot.onRemove ? (
-              <button
-                type="button"
-                onClick={slot.onRemove}
-                className="text-(--color-muted) hover:text-(--color-ink)"
-                aria-label="Remove asset"
-              >
-                ×
-              </button>
-            ) : null}
-          </span>
-        ))}
-        {enableAssetPicker && selectedAssetIds && onAssetIdsChange && assets ? (
-          <>
-            {(["character", "object", "background", "style"] as AssetKind[]).map(
-              (k) => (
-                <AssetPicker
-                  key={k}
-                  kind={k}
-                  assets={assets.byKind[k] ?? []}
-                  selected={selectedAssetIds[k] ?? []}
-                  onChange={(next) =>
-                    onAssetIdsChange({ ...selectedAssetIds, [k]: next })
-                  }
-                  {...(thumbnailUrl ? { thumbnailUrl } : {})}
-                  {...(maxReferencesHint !== undefined
-                    ? { maxReferencesHint }
-                    : {})}
-                  {...(onRequestCreateAsset
-                    ? { onRequestCreate: () => onRequestCreateAsset(k) }
-                    : {})}
-                />
-              ),
+    <div className={cn("flex w-full flex-col gap-3", className)}>
+      {/* Prompt section */}
+      <div className="flex flex-col gap-1.5">
+        <label className="text-[12px] text-(--text-muted)" htmlFor="composer-prompt">
+          Prompt
+        </label>
+        <div className="relative">
+          <textarea
+            id="composer-prompt"
+            ref={promptRef}
+            value={prompt}
+            onChange={(e) => onPromptChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            rows={5}
+            className={cn(
+              "block w-full resize-none rounded-(--radius-sm) border border-(--border) " +
+                "bg-(--surface-raised) px-3 py-2 text-[12px] leading-[18px] " +
+                "font-(family-name:--font-mono) text-(--text) " +
+                "placeholder:text-(--text-faint) " +
+                "transition-colors duration-(--motion-fast) ease-(--ease-out) " +
+                "focus-visible:outline-none focus:border-(--accent)",
             )}
-            {pickerTrailing}
-          </>
-        ) : (
-          <Tooltip content="Asset slots arrive in M6.">
+          />
+          {showCharCount ? (
             <span
-              aria-disabled="true"
               className={
-                "inline-flex items-center gap-1.5 rounded-(--radius-pill) " +
-                "border border-dashed border-(--color-hairline) " +
-                "px-3 py-1 text-(length:--text-caption) text-(--color-muted-soft) " +
-                "select-none cursor-not-allowed"
+                "pointer-events-none absolute bottom-1.5 right-2 select-none " +
+                "text-[11px] text-(--text-faint) [font-variant-numeric:tabular-nums]"
               }
             >
-              <Plus weight="bold" className="size-3.5" />
-              asset
+              {charCount.toLocaleString()}
             </span>
-          </Tooltip>
-        )}
+          ) : null}
+        </div>
       </div>
+
+      {/* Asset chip row — sits between Prompt and Negative Prompt per DESIGN §10.2 */}
+      {(enableAssetPicker && selectedAssetIds && onAssetIdsChange && assets) ||
+      assetSlots.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {assetSlots.map((slot, idx) => (
+            <span
+              key={`${slot.label}-${idx}`}
+              className={
+                "inline-flex items-center gap-1 rounded-(--radius-xs) " +
+                "border border-(--border) bg-(--surface-raised) text-(--text) " +
+                "px-2 py-0.5 text-[11px]"
+              }
+            >
+              <span className="font-semibold">{slot.label}</span>
+              <span className="truncate max-w-[140px]">{slot.value}</span>
+              {slot.onRemove ? (
+                <button
+                  type="button"
+                  onClick={slot.onRemove}
+                  className="text-(--text-muted) hover:text-(--text)"
+                  aria-label="Remove asset"
+                >
+                  ×
+                </button>
+              ) : null}
+            </span>
+          ))}
+          {enableAssetPicker && selectedAssetIds && onAssetIdsChange && assets ? (
+            <>
+              {(["character", "object", "background", "style"] as AssetKind[]).map(
+                (k) => (
+                  <AssetPicker
+                    key={k}
+                    kind={k}
+                    assets={assets.byKind[k] ?? []}
+                    selected={selectedAssetIds[k] ?? []}
+                    onChange={(next) =>
+                      onAssetIdsChange({ ...selectedAssetIds, [k]: next })
+                    }
+                    {...(thumbnailUrl ? { thumbnailUrl } : {})}
+                    {...(maxReferencesHint !== undefined
+                      ? { maxReferencesHint }
+                      : {})}
+                    {...(onRequestCreateAsset
+                      ? { onRequestCreate: () => onRequestCreateAsset(k) }
+                      : {})}
+                  />
+                ),
+              )}
+              {pickerTrailing}
+            </>
+          ) : null}
+        </div>
+      ) : (
+        <Tooltip content="Asset slots arrive in M6.">
+          <span
+            aria-disabled="true"
+            className={
+              "inline-flex items-center gap-1.5 rounded-(--radius-xs) " +
+              "border border-dashed border-(--border) " +
+              "px-2 py-0.5 text-[11px] text-(--text-faint) " +
+              "select-none cursor-not-allowed"
+            }
+          >
+            <Plus weight="bold" className="size-3" />
+            asset
+          </span>
+        </Tooltip>
+      )}
+
+      {/* Negative prompt — only when the parent provides a setter. */}
+      {onNegativePromptChange ? (
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[12px] text-(--text-muted)" htmlFor="composer-neg">
+            Negative
+          </label>
+          <textarea
+            id="composer-neg"
+            ref={negRef}
+            value={negativePrompt ?? ""}
+            onChange={(e) => onNegativePromptChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={negativePlaceholder}
+            rows={2}
+            className={cn(
+              "block w-full resize-none rounded-(--radius-sm) border border-(--border) " +
+                "bg-(--surface-raised) px-3 py-2 text-[12px] leading-[18px] " +
+                "font-(family-name:--font-mono) text-(--text) " +
+                "placeholder:text-(--text-faint) " +
+                "transition-colors duration-(--motion-fast) ease-(--ease-out) " +
+                "focus-visible:outline-none focus:border-(--accent)",
+            )}
+          />
+        </div>
+      ) : null}
     </div>
   );
+}
+
+function autosize(el: HTMLTextAreaElement | null, min: number, max: number): void {
+  if (!el) return;
+  el.style.height = "auto";
+  // 18px line height matches the body-sm leading we set on the textarea.
+  const lineHeight = 18;
+  const padY = 8 * 2; // py-2 on top + bottom
+  const desired = Math.max(
+    min * lineHeight + padY,
+    Math.min(el.scrollHeight, max * lineHeight + padY),
+  );
+  el.style.height = `${desired}px`;
 }

@@ -28,8 +28,8 @@ export const ToastRoot = forwardRef<
     <ToastPrimitive.Root
       ref={ref}
       className={cn(
-        "flex items-center gap-3 rounded-(--radius-lg) border border-(--color-hairline) " +
-          "bg-(--color-canvas) p-4 text-(length:--text-body-sm) text-(--color-ink) shadow-lg " +
+        "flex items-center gap-3 rounded-(--radius-lg) border border-(--border) " +
+          "bg-(--bg) p-4 text-(length:--text-body-sm) text-(--text) shadow-lg " +
           "data-[state=open]:animate-in data-[state=closed]:animate-out " +
           "data-[swipe=move]:translate-x-(--radix-toast-swipe-move-x) " +
           "data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-(--radix-toast-swipe-end-x)",
@@ -60,7 +60,7 @@ export const ToastDescription = forwardRef<
   return (
     <ToastPrimitive.Description
       ref={ref}
-      className={cn("text-(--color-body)", className)}
+      className={cn("text-(--text)", className)}
       {...rest}
     />
   );

@@ -44,9 +44,7 @@ export function GalleryPage() {
   const removeBoard = useBoardsStore((s) => s.remove);
   const addItem = useBoardsStore((s) => s.addItem);
 
-  const navigate = useUIStore((s) => s.navigate);
-  const setDraft = useUIStore((s) => s.setStudioDraft);
-  const setVideoDraft = useUIStore((s) => s.setVideoDraft);
+  const applyRemix = useUIStore((s) => s.applyRemix);
   const pushToast = useUIStore((s) => s.pushToast);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -121,33 +119,45 @@ export function GalleryPage() {
     try {
       const result = await api["gallery.remix"]({ itemId: id });
       if (result.kind === "video") {
-        const req = result.request;
-        setVideoDraft({
-          prompt: req.prompt,
-          providerId: req.providerId,
-          modelId: req.model,
-          ...(typeof req.durationSec === "number" ? { durationSec: req.durationSec } : {}),
-          ...(typeof req.fps === "number" ? { fps: req.fps } : {}),
-          ...(typeof req.resolution === "string" ? { resolution: req.resolution } : {}),
-          ...(typeof req.aspectRatio === "string" ? { aspectRatio: req.aspectRatio } : {}),
-          references: req.references.map((r) => r.path),
+        applyRemix({
+          kind: "video",
           parentId: id,
+          request: {
+            prompt: result.request.prompt,
+            providerId: result.request.providerId,
+            model: result.request.model,
+            ...(typeof result.request.durationSec === "number"
+              ? { durationSec: result.request.durationSec }
+              : {}),
+            ...(typeof result.request.fps === "number"
+              ? { fps: result.request.fps }
+              : {}),
+            ...(typeof result.request.resolution === "string"
+              ? { resolution: result.request.resolution }
+              : {}),
+            ...(typeof result.request.aspectRatio === "string"
+              ? { aspectRatio: result.request.aspectRatio }
+              : {}),
+            references: result.request.references.map((r) => ({ path: r.path })),
+          },
         });
-        navigate("video");
         return;
       }
-      const req = result.request;
-      setDraft({
-        prompt: req.prompt,
-        providerId: req.providerId,
-        modelId: req.model,
-        count: req.count,
-        ...(req.size !== undefined ? { size: req.size } : {}),
-        ...(req.aspectRatio !== undefined ? { aspectRatio: req.aspectRatio } : {}),
-        references: req.references.map((r) => r.path),
-        ...(req.parentId !== undefined ? { parentId: req.parentId } : {}),
+      applyRemix({
+        kind: "image",
+        parentId: id,
+        request: {
+          prompt: result.request.prompt,
+          providerId: result.request.providerId,
+          model: result.request.model,
+          count: result.request.count,
+          ...(result.request.size !== undefined ? { size: result.request.size } : {}),
+          ...(result.request.aspectRatio !== undefined
+            ? { aspectRatio: result.request.aspectRatio }
+            : {}),
+          references: result.request.references.map((r) => ({ path: r.path })),
+        },
       });
-      navigate("studio");
     } catch (err) {
       pushToast({
         title: "Remix failed",
@@ -176,8 +186,8 @@ export function GalleryPage() {
   return (
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
       <div className="grid h-full grid-cols-[220px_minmax(0,1fr)] gap-0">
-        <aside className="flex flex-col gap-1 border-r border-(--color-hairline) bg-(--color-canvas) p-3">
-          <div className="px-2 pb-2 pt-1 text-(length:--text-caption-uppercase) font-semibold uppercase tracking-[1.5px] text-(--color-muted)">
+        <aside className="flex flex-col gap-1 border-r border-(--border) bg-(--bg) p-3">
+          <div className="px-2 pb-2 pt-1 text-(length:--text-caption-uppercase) font-semibold uppercase tracking-[1.5px] text-(--text-muted)">
             Library
           </div>
           <BoardSidebarItem
@@ -195,8 +205,8 @@ export function GalleryPage() {
             acceptsDrop={false}
             onClick={() => setActiveFilter(BOARD_FAVORITES)}
           />
-          <div className="my-2 h-px bg-(--color-hairline-soft)" />
-          <div className="px-2 pb-1 text-(length:--text-caption-uppercase) font-semibold uppercase tracking-[1.5px] text-(--color-muted)">
+          <div className="my-2 h-px bg-(--border-faint)" />
+          <div className="px-2 pb-1 text-(length:--text-caption-uppercase) font-semibold uppercase tracking-[1.5px] text-(--text-muted)">
             Boards
           </div>
           {boards.map((b) => (
@@ -215,9 +225,9 @@ export function GalleryPage() {
               <input
                 autoFocus
                 className={
-                  "flex-1 rounded-(--radius-sm) border border-(--color-hairline) " +
-                  "bg-(--color-canvas) px-2 py-1 text-(length:--text-body-sm) text-(--color-ink) " +
-                  "focus:outline-none focus:border-(--color-ink)"
+                  "flex-1 rounded-(--radius-sm) border border-(--border) " +
+                  "bg-(--bg) px-2 py-1 text-(length:--text-body-sm) text-(--text) " +
+                  "focus:outline-none focus:border-(--text)"
                 }
                 value={newBoardName}
                 placeholder="Board name"
@@ -241,8 +251,8 @@ export function GalleryPage() {
               onClick={() => setCreatingBoard(true)}
               className={
                 "flex w-full items-center gap-2 rounded-(--radius-sm) px-3 py-2 " +
-                "text-left text-(length:--text-body-sm) text-(--color-muted) " +
-                "transition-colors duration-(--duration-fast) hover:bg-(--color-surface-soft) hover:text-(--color-ink)"
+                "text-left text-(length:--text-body-sm) text-(--text-muted) " +
+                "transition-colors duration-(--duration-fast) hover:bg-(--surface) hover:text-(--text)"
               }
             >
               <Icons.Plus weight="bold" className="size-4" />
@@ -257,7 +267,7 @@ export function GalleryPage() {
             <div className="relative w-full max-w-md">
               <Icons.MagnifyingGlass
                 weight="bold"
-                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-(--color-muted)"
+                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-(--text-muted)"
               />
               <Input
                 placeholder="Search prompts…"
@@ -272,8 +282,8 @@ export function GalleryPage() {
                   aria-label="Clear search"
                   className={
                     "absolute right-2 top-1/2 inline-flex size-6 -translate-y-1/2 items-center " +
-                    "justify-center rounded-(--radius-pill) text-(--color-muted) " +
-                    "transition-colors duration-(--duration-fast) hover:bg-(--color-surface-soft) hover:text-(--color-ink)"
+                    "justify-center rounded-(--radius-pill) text-(--text-muted) " +
+                    "transition-colors duration-(--duration-fast) hover:bg-(--surface) hover:text-(--text)"
                   }
                 >
                   <Icons.X weight="bold" className="size-3.5" />
@@ -286,15 +296,15 @@ export function GalleryPage() {
                 aria-label="Search syntax help"
                 className={
                   "inline-flex size-7 items-center justify-center rounded-(--radius-pill) " +
-                  "text-(--color-muted) transition-colors duration-(--duration-fast) " +
-                  "hover:bg-(--color-surface-soft) hover:text-(--color-ink)"
+                  "text-(--text-muted) transition-colors duration-(--duration-fast) " +
+                  "hover:bg-(--surface) hover:text-(--text)"
                 }
               >
                 <Icons.Info weight="duotone" className="size-4" />
               </button>
             </Tooltip>
             {query.search ? (
-              <span className="text-(length:--text-caption) text-(--color-muted)">
+              <span className="text-(length:--text-caption) text-(--text-muted)">
                 {total} match{total === 1 ? "" : "es"}
               </span>
             ) : null}
@@ -303,9 +313,9 @@ export function GalleryPage() {
             <div className="mx-auto mt-12 max-w-md text-center">
               <Icons.Folder
                 weight="duotone"
-                className="mx-auto size-10 text-(--color-muted)"
+                className="mx-auto size-10 text-(--text-muted)"
               />
-              <p className="mt-3 text-(length:--text-body-sm) text-(--color-muted)">
+              <p className="mt-3 text-(length:--text-body-sm) text-(--text-muted)">
                 Nothing here yet — head to Studio and generate something.
               </p>
             </div>
@@ -404,9 +414,9 @@ function BoardRow({
         <input
           autoFocus
           className={
-            "flex-1 rounded-(--radius-sm) border border-(--color-hairline) " +
-            "bg-(--color-canvas) px-2 py-1 text-(length:--text-body-sm) text-(--color-ink) " +
-            "focus:outline-none focus:border-(--color-ink)"
+            "flex-1 rounded-(--radius-sm) border border-(--border) " +
+            "bg-(--bg) px-2 py-1 text-(length:--text-body-sm) text-(--text) " +
+            "focus:outline-none focus:border-(--text)"
           }
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -441,9 +451,9 @@ function BoardRow({
             <button
               type="button"
               className={
-                "rounded-(--radius-sm) p-0.5 text-(--color-muted) " +
+                "rounded-(--radius-sm) p-0.5 text-(--text-muted) " +
                 "opacity-0 transition-opacity duration-(--duration-fast) " +
-                "hover:bg-(--color-surface-card) group-hover:opacity-100"
+                "hover:bg-(--surface-raised) group-hover:opacity-100"
               }
               onClick={(e) => {
                 e.stopPropagation();
@@ -462,7 +472,7 @@ function BoardRow({
           sideOffset={4}
           className={
             "z-50 min-w-[160px] overflow-hidden rounded-(--radius-md) " +
-            "border border-(--color-hairline) bg-(--color-canvas) p-1 " +
+            "border border-(--border) bg-(--bg) p-1 " +
             "shadow-[0_4px_24px_-8px_rgba(0,0,0,0.08)]"
           }
         >
@@ -474,14 +484,14 @@ function BoardRow({
             className={
               "flex cursor-pointer select-none items-center rounded-(--radius-sm) " +
               "px-3 py-2 text-(length:--text-body-sm) outline-none " +
-              "data-[highlighted]:bg-(--color-surface-soft)"
+              "data-[highlighted]:bg-(--surface)"
             }
           >
             Rename
           </DropdownMenu.Item>
           <DropdownMenu.Item
             disabled
-            className="px-3 py-2 text-(length:--text-body-sm) text-(--color-muted-soft)"
+            className="px-3 py-2 text-(length:--text-body-sm) text-(--text-faint)"
           >
             Set cover (coming soon)
           </DropdownMenu.Item>
@@ -489,8 +499,8 @@ function BoardRow({
             onSelect={() => onDelete()}
             className={
               "flex cursor-pointer select-none items-center rounded-(--radius-sm) " +
-              "px-3 py-2 text-(length:--text-body-sm) text-(--color-error) outline-none " +
-              "data-[highlighted]:bg-(--color-error)/10"
+              "px-3 py-2 text-(length:--text-body-sm) text-(--danger) outline-none " +
+              "data-[highlighted]:bg-(--danger)/10"
             }
           >
             Delete
@@ -555,11 +565,11 @@ function DetailDrawer({
         <Dialog.Content
           className={
             "fixed inset-y-0 right-0 z-50 flex w-[420px] flex-col " +
-            "border-l border-(--color-hairline) bg-(--color-canvas) shadow-2xl"
+            "border-l border-(--border) bg-(--bg) shadow-2xl"
           }
         >
-          <header className="flex items-center justify-between border-b border-(--color-hairline) p-4">
-            <Dialog.Title className="text-(length:--text-title-md) font-semibold text-(--color-ink)">
+          <header className="flex items-center justify-between border-b border-(--border) p-4">
+            <Dialog.Title className="text-(length:--text-title-md) font-semibold text-(--text)">
               Item details
             </Dialog.Title>
             <IconButton
@@ -577,26 +587,26 @@ function DetailDrawer({
                   src={resolveGalleryUrl(data.item.relPath)}
                   controls
                   preload="metadata"
-                  className="block w-full rounded-(--radius-md) border border-(--color-hairline) bg-black"
+                  className="block w-full rounded-(--radius-md) border border-(--border) bg-black"
                 />
               ) : (
                 <img
                   src={resolveGalleryUrl(data.item.relPath)}
                   alt={data.item.prompt}
-                  className="block w-full rounded-(--radius-md) border border-(--color-hairline)"
+                  className="block w-full rounded-(--radius-md) border border-(--border)"
                 />
               )}
               <dl className="mt-4 grid grid-cols-[80px_minmax(0,1fr)] gap-x-3 gap-y-1 text-(length:--text-body-sm)">
-                <dt className="text-(--color-muted)">prompt</dt>
-                <dd className="text-(--color-ink) whitespace-pre-wrap">{data.item.prompt}</dd>
-                <dt className="text-(--color-muted)">provider</dt>
-                <dd className="text-(--color-ink)">{data.item.providerId}</dd>
-                <dt className="text-(--color-muted)">model</dt>
-                <dd className="text-(--color-ink)">{data.item.model}</dd>
-                <dt className="text-(--color-muted)">file</dt>
-                <dd className="text-(--color-ink) break-all">{data.item.relPath}</dd>
-                <dt className="text-(--color-muted)">params</dt>
-                <dd className="font-(family-name:--font-mono) text-(length:--text-caption) text-(--color-muted) break-all">
+                <dt className="text-(--text-muted)">prompt</dt>
+                <dd className="text-(--text) whitespace-pre-wrap">{data.item.prompt}</dd>
+                <dt className="text-(--text-muted)">provider</dt>
+                <dd className="text-(--text)">{data.item.providerId}</dd>
+                <dt className="text-(--text-muted)">model</dt>
+                <dd className="text-(--text)">{data.item.model}</dd>
+                <dt className="text-(--text-muted)">file</dt>
+                <dd className="text-(--text) break-all">{data.item.relPath}</dd>
+                <dt className="text-(--text-muted)">params</dt>
+                <dd className="font-(family-name:--font-mono) text-(length:--text-caption) text-(--text-muted) break-all">
                   {data.item.paramsJson}
                 </dd>
               </dl>
@@ -637,7 +647,7 @@ function DetailDrawer({
               {/* Used assets (M6) */}
               {data.assets.length > 0 ? (
                 <div className="mt-6">
-                  <h3 className="text-(length:--text-caption-uppercase) font-semibold uppercase tracking-[1.5px] text-(--color-muted)">
+                  <h3 className="text-(length:--text-caption-uppercase) font-semibold uppercase tracking-[1.5px] text-(--text-muted)">
                     Used assets
                   </h3>
                   <ul className="mt-2 flex flex-wrap gap-1.5">
@@ -646,11 +656,11 @@ function DetailDrawer({
                         key={a.assetId}
                         className={
                           "inline-flex items-center gap-1 rounded-(--radius-pill) " +
-                          "bg-(--color-surface-card) px-2 py-1 text-(length:--text-caption) text-(--color-ink)"
+                          "bg-(--surface-raised) px-2 py-1 text-(length:--text-caption) text-(--text)"
                         }
                       >
                         <span className="font-semibold">{a.name ?? a.assetId.slice(0, 8)}</span>
-                        <span className="text-(--color-muted)">({a.role})</span>
+                        <span className="text-(--text-muted)">({a.role})</span>
                       </li>
                     ))}
                   </ul>
@@ -660,18 +670,18 @@ function DetailDrawer({
               {/* Lineage */}
               {(data.parent || data.children.length > 0 || data.siblings.length > 0) ? (
                 <div className="mt-6">
-                  <h3 className="text-(length:--text-caption-uppercase) font-semibold uppercase tracking-[1.5px] text-(--color-muted)">
+                  <h3 className="text-(length:--text-caption-uppercase) font-semibold uppercase tracking-[1.5px] text-(--text-muted)">
                     Lineage
                   </h3>
                   {data.parent ? (
                     <div className="mt-2">
-                      <div className="text-(length:--text-caption) text-(--color-muted)">parent</div>
+                      <div className="text-(length:--text-caption) text-(--text-muted)">parent</div>
                       <LineageTile item={data.parent} />
                     </div>
                   ) : null}
                   {data.siblings.length > 0 ? (
                     <div className="mt-2">
-                      <div className="text-(length:--text-caption) text-(--color-muted)">
+                      <div className="text-(length:--text-caption) text-(--text-muted)">
                         siblings (up to 3)
                       </div>
                       <div className="grid grid-cols-3 gap-2">
@@ -683,7 +693,7 @@ function DetailDrawer({
                   ) : null}
                   {data.children.length > 0 ? (
                     <div className="mt-2">
-                      <div className="text-(length:--text-caption) text-(--color-muted)">
+                      <div className="text-(length:--text-caption) text-(--text-muted)">
                         children (up to 3)
                       </div>
                       <div className="grid grid-cols-3 gap-2">
@@ -697,7 +707,7 @@ function DetailDrawer({
               ) : null}
             </div>
           ) : (
-            <div className="flex flex-1 items-center justify-center text-(length:--text-body-sm) text-(--color-muted)">
+            <div className="flex flex-1 items-center justify-center text-(length:--text-body-sm) text-(--text-muted)">
               Loading…
             </div>
           )}
@@ -717,7 +727,7 @@ function LineageTile({ item }: { item: GalleryItem }) {
   return (
     <div
       title={item.prompt}
-      className="relative aspect-square overflow-hidden rounded-(--radius-sm) border border-(--color-hairline)"
+      className="relative aspect-square overflow-hidden rounded-(--radius-sm) border border-(--border)"
     >
       {src ? (
         <img
@@ -726,7 +736,7 @@ function LineageTile({ item }: { item: GalleryItem }) {
           className="block h-full w-full object-cover"
         />
       ) : (
-        <div className="flex h-full w-full items-center justify-center bg-(--color-surface-soft) text-(--color-muted)">
+        <div className="flex h-full w-full items-center justify-center bg-(--surface) text-(--text-muted)">
           <Icons.FilmReel weight="duotone" className="size-5" />
         </div>
       )}

@@ -4,7 +4,7 @@ import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { cn } from "../lib/cn.js";
 
 /**
- * Clay primary button is near-black (`--color-primary`) with white text,
+ * Clay primary button is near-black (`--accent`) with white text,
  * 12px radius, 44px height, no shadow. Variants follow design.md component
  * specs (button-primary / button-secondary / button-text-link).
  */
@@ -12,22 +12,22 @@ const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 select-none whitespace-nowrap font-semibold " +
     "transition-colors duration-(--duration-fast) ease-(--ease-standard) " +
     "disabled:cursor-not-allowed disabled:opacity-60 " +
-    "focus-visible:outline-2 focus-visible:outline-(--color-accent) focus-visible:outline-offset-2",
+    "focus-visible:outline-2 focus-visible:outline-(--accent) focus-visible:outline-offset-2",
   {
     variants: {
       variant: {
         primary:
-          "bg-(--color-primary) text-(--color-on-primary) " +
-          "hover:bg-(--color-primary-active) " +
-          "disabled:bg-(--color-primary-disabled) disabled:text-(--color-muted)",
+          "bg-(--accent) text-(--accent-fg) " +
+          "hover:bg-(--accent-active) " +
+          "disabled:bg-(--surface-sunken) disabled:text-(--text-muted)",
         secondary:
-          "bg-(--color-canvas) text-(--color-ink) border border-(--color-hairline) " +
-          "hover:border-(--color-ink) hover:bg-(--color-surface-soft)",
+          "bg-(--bg) text-(--text) border border-(--border) " +
+          "hover:border-(--text) hover:bg-(--surface)",
         ghost:
-          "bg-transparent text-(--color-ink) " +
-          "hover:bg-(--color-surface-soft)",
+          "bg-transparent text-(--text) " +
+          "hover:bg-(--surface)",
         danger:
-          "bg-(--color-error) text-white hover:opacity-90",
+          "bg-(--danger) text-white hover:opacity-90",
       },
       size: {
         sm: "h-8 rounded-(--radius-sm) px-3 text-sm",

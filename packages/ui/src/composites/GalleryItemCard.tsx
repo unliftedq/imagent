@@ -5,6 +5,15 @@ import { type ReactNode, useState } from "react";
 import { cn } from "../lib/cn.js";
 
 export type GalleryItemCardKind = "image" | "video";
+/**
+ * `masonry` — full Gallery page card (preserves aspect ratio, hover caption +
+ *   actions, right-click menu).
+ * `rail` / `sm` — compact square thumbnail used by the Studio right rail.
+ *   No caption underneath, no kebab; clicking the card invokes onSelect (the
+ *   Studio canvas listens for it). Drag, context menu and boards menu are
+ *   suppressed in this variant.
+ */
+export type GalleryItemCardSize = "masonry" | "rail" | "sm";
 
 export interface GalleryItemCardBoardOption {
   id: string;
@@ -37,6 +46,8 @@ export interface GalleryItemCardProps {
   onDelete?: () => void;
   /** When true, makes the card a drag source for the Boards sidebar. */
   draggable?: boolean;
+  /** Visual variant — see GalleryItemCardSize. Defaults to `masonry`. */
+  size?: GalleryItemCardSize;
   className?: string;
 }
 
@@ -51,10 +62,85 @@ export interface GalleryItemCardProps {
  * DnD source id + Radix DropdownMenu actions.
  */
 export function GalleryItemCard(props: GalleryItemCardProps) {
+  const size: GalleryItemCardSize = props.size ?? "masonry";
+  if (size === "rail" || size === "sm") {
+    return <RailVariant {...props} />;
+  }
   if (props.kind === "video") {
     return <VideoVariant {...props} />;
   }
   return <ImageVariant {...props} />;
+}
+
+/**
+ * Compact rail variant — square thumb, no kebab, no boards menu, no
+ * right-click. Click loads the item into the parent's canvas; double-click
+ * still routes through `onOpen`.
+ */
+function RailVariant({
+  id,
+  kind,
+  src,
+  caption,
+  favorited,
+  selected,
+  onSelect,
+  onOpen,
+  className,
+}: GalleryItemCardProps) {
+  const hasSrc = typeof src === "string" && src.length > 0;
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      onDoubleClick={onOpen}
+      title={caption ?? ""}
+      aria-label={caption ?? `Gallery item ${id}`}
+      className={cn(
+        "group relative block aspect-square w-full overflow-hidden rounded-(--radius-sm) " +
+          "border bg-(--surface-sunken) transition-colors duration-(--motion-fast) " +
+          "ease-(--ease-out) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring)",
+        selected
+          ? "border-(--border-strong) outline outline-2 outline-(--accent) outline-offset-0"
+          : "border-(--border) hover:border-(--border-strong)",
+        className,
+      )}
+    >
+      {hasSrc ? (
+        <img
+          src={src}
+          alt=""
+          loading="lazy"
+          draggable={false}
+          className="block h-full w-full object-cover"
+        />
+      ) : (
+        <span aria-hidden="true" className="block h-full w-full" />
+      )}
+      {kind === "video" ? (
+        <span
+          aria-hidden="true"
+          className={
+            "pointer-events-none absolute bottom-1 left-1 inline-flex size-4 " +
+            "items-center justify-center rounded-(--radius-pill) bg-black/55 text-white"
+          }
+        >
+          <Play weight="fill" className="size-2.5" />
+        </span>
+      ) : null}
+      {favorited ? (
+        <span
+          aria-hidden="true"
+          className={
+            "pointer-events-none absolute right-1 top-1 inline-flex size-4 " +
+            "items-center justify-center rounded-(--radius-pill) bg-black/45 text-white"
+          }
+        >
+          <Heart weight="fill" className="size-2.5" />
+        </span>
+      ) : null}
+    </button>
+  );
 }
 
 function ImageVariant({
@@ -104,17 +190,17 @@ function ImageVariant({
           }}
           className={cn(
             "group relative break-inside-avoid mb-3 w-full cursor-pointer overflow-hidden " +
-              "rounded-(--radius-md) border border-(--color-hairline) bg-(--color-canvas) " +
+              "rounded-(--radius-md) border border-(--border) bg-(--bg) " +
               "transition-colors duration-(--duration-fast)",
             selected
-              ? "border-(--color-ink) outline outline-2 outline-(--color-accent) outline-offset-1"
-              : "hover:border-(--color-ink)",
+              ? "border-(--text) outline outline-2 outline-(--accent) outline-offset-1"
+              : "hover:border-(--text)",
             isDragging ? "opacity-50" : "",
             className,
           )}
           aria-label={`Gallery item ${id}`}
         >
-          <div style={{ aspectRatio: ratio }} className="bg-(--color-surface-soft)">
+          <div style={{ aspectRatio: ratio }} className="bg-(--surface)">
             <img
               src={src}
               alt={caption ?? "Gallery item"}
@@ -177,7 +263,7 @@ function ImageVariant({
           sideOffset={4}
           className={cn(
             "z-50 min-w-[200px] overflow-hidden rounded-(--radius-md) " +
-              "border border-(--color-hairline) bg-(--color-canvas) p-1 " +
+              "border border-(--border) bg-(--bg) p-1 " +
               "shadow-[0_4px_24px_-8px_rgba(0,0,0,0.08)]",
           )}
         >
@@ -192,17 +278,17 @@ function ImageVariant({
                 className={
                   "relative flex cursor-pointer select-none items-center justify-between " +
                   "rounded-(--radius-sm) px-3 py-2 text-(length:--text-body-sm) " +
-                  "data-[highlighted]:bg-(--color-surface-soft) outline-none"
+                  "data-[highlighted]:bg-(--surface) outline-none"
                 }
               >
                 Add to board
-                <span className="ml-2 text-(--color-muted)">›</span>
+                <span className="ml-2 text-(--text-muted)">›</span>
               </DropdownMenu.SubTrigger>
               <DropdownMenu.Portal>
                 <DropdownMenu.SubContent
                   className={cn(
                     "z-50 min-w-[180px] overflow-hidden rounded-(--radius-md) " +
-                      "border border-(--color-hairline) bg-(--color-canvas) p-1 " +
+                      "border border-(--border) bg-(--bg) p-1 " +
                       "shadow-[0_4px_24px_-8px_rgba(0,0,0,0.08)]",
                   )}
                 >
@@ -218,7 +304,7 @@ function ImageVariant({
               </DropdownMenu.Portal>
             </DropdownMenu.Sub>
           ) : null}
-          <DropdownMenu.Separator className="my-1 h-px bg-(--color-hairline-soft)" />
+          <DropdownMenu.Separator className="my-1 h-px bg-(--border-faint)" />
           <Item onSelect={onOpenFileLocation}>Open file location</Item>
           <Item onSelect={onDelete} variant="danger">
             Delete
@@ -277,11 +363,11 @@ function VideoVariant({
           }}
           className={cn(
             "group relative break-inside-avoid mb-3 w-full cursor-pointer overflow-hidden " +
-              "rounded-(--radius-md) border border-(--color-hairline) bg-(--color-canvas) " +
+              "rounded-(--radius-md) border border-(--border) bg-(--bg) " +
               "transition-colors duration-(--duration-fast)",
             selected
-              ? "border-(--color-ink) outline outline-2 outline-(--color-accent) outline-offset-1"
-              : "hover:border-(--color-ink)",
+              ? "border-(--text) outline outline-2 outline-(--accent) outline-offset-1"
+              : "hover:border-(--text)",
             isDragging ? "opacity-50" : "",
             className,
           )}
@@ -289,7 +375,7 @@ function VideoVariant({
         >
           <div
             style={{ aspectRatio: ratio }}
-            className="relative bg-(--color-surface-soft)"
+            className="relative bg-(--surface)"
           >
             {hasThumb ? (
               <img
@@ -300,7 +386,7 @@ function VideoVariant({
                 className="block h-full w-full object-cover"
               />
             ) : (
-              <div className="flex h-full w-full items-center justify-center text-(--color-muted)">
+              <div className="flex h-full w-full items-center justify-center text-(--text-muted)">
                 <FilmStrip weight="duotone" className="size-10" />
               </div>
             )}
@@ -367,7 +453,7 @@ function VideoVariant({
           sideOffset={4}
           className={cn(
             "z-50 min-w-[200px] overflow-hidden rounded-(--radius-md) " +
-              "border border-(--color-hairline) bg-(--color-canvas) p-1 " +
+              "border border-(--border) bg-(--bg) p-1 " +
               "shadow-[0_4px_24px_-8px_rgba(0,0,0,0.08)]",
           )}
         >
@@ -382,17 +468,17 @@ function VideoVariant({
                 className={
                   "relative flex cursor-pointer select-none items-center justify-between " +
                   "rounded-(--radius-sm) px-3 py-2 text-(length:--text-body-sm) " +
-                  "data-[highlighted]:bg-(--color-surface-soft) outline-none"
+                  "data-[highlighted]:bg-(--surface) outline-none"
                 }
               >
                 Add to board
-                <span className="ml-2 text-(--color-muted)">›</span>
+                <span className="ml-2 text-(--text-muted)">›</span>
               </DropdownMenu.SubTrigger>
               <DropdownMenu.Portal>
                 <DropdownMenu.SubContent
                   className={cn(
                     "z-50 min-w-[180px] overflow-hidden rounded-(--radius-md) " +
-                      "border border-(--color-hairline) bg-(--color-canvas) p-1 " +
+                      "border border-(--border) bg-(--bg) p-1 " +
                       "shadow-[0_4px_24px_-8px_rgba(0,0,0,0.08)]",
                   )}
                 >
@@ -408,7 +494,7 @@ function VideoVariant({
               </DropdownMenu.Portal>
             </DropdownMenu.Sub>
           ) : null}
-          <DropdownMenu.Separator className="my-1 h-px bg-(--color-hairline-soft)" />
+          <DropdownMenu.Separator className="my-1 h-px bg-(--border-faint)" />
           <Item onSelect={onOpenFileLocation}>Open file location</Item>
           <Item onSelect={onDelete} variant="danger">
             Delete
@@ -442,9 +528,9 @@ function Item({
       className={cn(
         "relative flex cursor-pointer select-none items-center " +
           "rounded-(--radius-sm) px-3 py-2 text-(length:--text-body-sm) outline-none " +
-          "data-[highlighted]:bg-(--color-surface-soft) " +
+          "data-[highlighted]:bg-(--surface) " +
           "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-        variant === "danger" ? "text-(--color-error)" : "text-(--color-ink)",
+        variant === "danger" ? "text-(--danger)" : "text-(--text)",
       )}
     >
       {children}
@@ -470,9 +556,9 @@ function CornerButton({
       aria-label={ariaLabel}
       className={cn(
         "inline-flex size-7 items-center justify-center rounded-(--radius-sm) " +
-          "border border-(--color-hairline) bg-(--color-canvas) text-(--color-ink) " +
-          "transition-colors duration-(--duration-fast) hover:bg-(--color-surface-soft)",
-        active ? "text-(--color-error)" : "",
+          "border border-(--border) bg-(--bg) text-(--text) " +
+          "transition-colors duration-(--duration-fast) hover:bg-(--surface)",
+        active ? "text-(--danger)" : "",
       )}
     >
       {children}

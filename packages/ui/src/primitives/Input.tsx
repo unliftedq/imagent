@@ -16,13 +16,13 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       ref={ref}
       type={type}
       className={cn(
-        "block w-full bg-(--color-canvas) text-(--color-ink) " +
-          "border border-(--color-hairline) rounded-(--radius-md) " +
+        "block w-full bg-(--bg) text-(--text) " +
+          "border border-(--border) rounded-(--radius-md) " +
           "h-11 px-4 py-3 text-(length:--text-body-md) " +
-          "placeholder:text-(--color-muted-soft) " +
+          "placeholder:text-(--text-faint) " +
           "transition-colors duration-(--duration-fast) " +
-          "focus-visible:outline-none focus:border-(--color-ink) " +
-          "disabled:bg-(--color-surface-soft) disabled:text-(--color-muted) disabled:cursor-not-allowed",
+          "focus-visible:outline-none focus:border-(--text) " +
+          "disabled:bg-(--surface) disabled:text-(--text-muted) disabled:cursor-not-allowed",
         className,
       )}
       {...rest}

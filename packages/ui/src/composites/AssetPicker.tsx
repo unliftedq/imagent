@@ -90,12 +90,12 @@ export function AssetPicker({
           type="button"
           className={cn(
             "inline-flex items-center gap-2 rounded-(--radius-pill) " +
-              "border border-(--color-hairline) bg-(--color-canvas) " +
-              "px-3 py-1.5 text-(length:--text-caption) text-(--color-ink) " +
+              "border border-(--border) bg-(--bg) " +
+              "px-3 py-1.5 text-(length:--text-caption) text-(--text) " +
               "transition-colors duration-(--duration-fast) " +
-              "hover:border-(--color-ink) " +
-              "data-[state=open]:border-(--color-ink)",
-            selected.length > 0 ? "border-(--color-ink)" : "",
+              "hover:border-(--text) " +
+              "data-[state=open]:border-(--text)",
+            selected.length > 0 ? "border-(--text)" : "",
             className,
           )}
         >
@@ -108,8 +108,8 @@ export function AssetPicker({
                     key={a.id}
                     className={
                       "inline-flex size-5 items-center justify-center overflow-hidden " +
-                      "rounded-full border border-(--color-canvas) bg-(--color-surface-soft) " +
-                      "text-[10px] font-semibold text-(--color-ink)"
+                      "rounded-full border border-(--bg) bg-(--surface) " +
+                      "text-[10px] font-semibold text-(--text)"
                     }
                     aria-hidden
                   >
@@ -137,13 +137,13 @@ export function AssetPicker({
       <Popover.Content className="w-[360px]">
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-(length:--text-caption-uppercase) font-semibold uppercase tracking-[1.5px] text-(--color-muted)">
+            <span className="text-(length:--text-caption-uppercase) font-semibold uppercase tracking-[1.5px] text-(--text-muted)">
               Pick {KIND_LABEL[kind]}
             </span>
             {onRequestCreate ? (
               <button
                 type="button"
-                className="text-(length:--text-caption) text-(--color-ink) underline underline-offset-2"
+                className="text-(length:--text-caption) text-(--text) underline underline-offset-2"
                 onClick={() => {
                   setOpen(false);
                   onRequestCreate();
@@ -162,8 +162,8 @@ export function AssetPicker({
           />
 
           {filtered.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 rounded-(--radius-md) border border-dashed border-(--color-hairline) bg-(--color-surface-soft) px-4 py-6 text-center">
-              <span className="text-(length:--text-caption) text-(--color-muted)">
+            <div className="flex flex-col items-center gap-2 rounded-(--radius-md) border border-dashed border-(--border) bg-(--surface) px-4 py-6 text-center">
+              <span className="text-(length:--text-caption) text-(--text-muted)">
                 {assets.length === 0
                   ? `No ${KIND_LABEL[kind].toLowerCase()} assets yet.`
                   : "No matches."}
@@ -171,7 +171,7 @@ export function AssetPicker({
               {onRequestCreate && assets.length === 0 ? (
                 <button
                   type="button"
-                  className="text-(length:--text-caption) text-(--color-ink) underline underline-offset-2"
+                  className="text-(length:--text-caption) text-(--text) underline underline-offset-2"
                   onClick={() => {
                     setOpen(false);
                     onRequestCreate();
@@ -197,13 +197,13 @@ export function AssetPicker({
           )}
 
           {overHint ? (
-            <p className="text-(length:--text-caption) text-(--color-warning)">
+            <p className="text-(length:--text-caption) text-(--warning)">
               Model accepts up to {maxReferencesHint} reference
               {maxReferencesHint === 1 ? "" : "s"} — extras will be ignored.
             </p>
           ) : null}
 
-          <div className="flex items-center justify-between gap-2 border-t border-(--color-hairline-soft) pt-2">
+          <div className="flex items-center justify-between gap-2 border-t border-(--border-faint) pt-2">
             <Button variant="ghost" size="sm" onClick={clear} disabled={selected.length === 0}>
               Clear
             </Button>

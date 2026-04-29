@@ -59,11 +59,11 @@ export function ModelSelect({
         aria-label={ariaLabel}
         className={cn(
           "flex h-11 w-full items-center justify-between gap-3 rounded-(--radius-md) " +
-            "border border-(--color-hairline) bg-(--color-canvas) px-4 " +
-            "text-(length:--text-body-sm) text-(--color-ink) " +
+            "border border-(--border) bg-(--bg) px-4 " +
+            "text-(length:--text-body-sm) text-(--text) " +
             "transition-colors duration-(--duration-fast) " +
-            "focus-visible:outline-none focus:border-(--color-ink) " +
-            "data-[placeholder]:text-(--color-muted-soft) " +
+            "focus-visible:outline-none focus:border-(--text) " +
+            "data-[placeholder]:text-(--text-faint) " +
             "disabled:cursor-not-allowed disabled:opacity-60",
           className,
         )}
@@ -73,13 +73,13 @@ export function ModelSelect({
             {current?.displayName ?? current?.id ?? "—"}
           </span>
           {current ? (
-            <span className="truncate text-(length:--text-caption) text-(--color-muted)">
+            <span className="truncate text-(length:--text-caption) text-(--text-muted)">
               {capabilityDigest(current)}
             </span>
           ) : null}
         </span>
         <SelectPrimitive.Icon asChild>
-          <CaretDown weight="bold" className="size-4 text-(--color-muted)" />
+          <CaretDown weight="bold" className="size-4 text-(--text-muted)" />
         </SelectPrimitive.Icon>
       </SelectPrimitive.Trigger>
       <SelectPrimitive.Portal>
@@ -88,7 +88,7 @@ export function ModelSelect({
           sideOffset={4}
           className={cn(
             "z-50 min-w-[var(--radix-select-trigger-width)] max-w-[480px] overflow-hidden " +
-              "rounded-(--radius-md) border border-(--color-hairline) bg-(--color-canvas) " +
+              "rounded-(--radius-md) border border-(--border) bg-(--bg) " +
               "shadow-[0_4px_24px_-8px_rgba(0,0,0,0.08)]",
           )}
         >
@@ -102,8 +102,8 @@ export function ModelSelect({
                 value={m.id}
                 className={cn(
                   "relative flex flex-col gap-1 cursor-pointer select-none rounded-(--radius-sm) " +
-                    "px-3 py-2 pr-8 text-(--color-ink) outline-none " +
-                    "data-[highlighted]:bg-(--color-surface-soft) " +
+                    "px-3 py-2 pr-8 text-(--text) outline-none " +
+                    "data-[highlighted]:bg-(--surface) " +
                     "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
                 )}
               >
@@ -152,7 +152,7 @@ function CapabilityTable({ model }: { model: ResolvedModelOption }) {
   const caps = model.capabilities;
   if (!caps) {
     return (
-      <span className="font-(family-name:--font-mono) text-(length:--text-caption) text-(--color-muted)">
+      <span className="font-(family-name:--font-mono) text-(length:--text-caption) text-(--text-muted)">
         capabilities: unknown
       </span>
     );
@@ -182,7 +182,7 @@ function CapabilityTable({ model }: { model: ResolvedModelOption }) {
     }   neg: ${caps.supportsNegativePrompt ? "yes" : "no"}`,
   );
   return (
-    <pre className="m-0 whitespace-pre font-(family-name:--font-mono) text-[11px] leading-tight text-(--color-muted)">
+    <pre className="m-0 whitespace-pre font-(family-name:--font-mono) text-[11px] leading-tight text-(--text-muted)">
       {lines.join("\n")}
     </pre>
   );

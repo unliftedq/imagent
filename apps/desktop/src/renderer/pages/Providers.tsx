@@ -258,10 +258,10 @@ export function ProvidersPage() {
   return (
     <div className="mx-auto max-w-4xl px-8 py-10">
       <header className="mb-8">
-        <h1 className="text-(length:--text-display-sm) font-display font-medium tracking-(--text-display-sm--letter-spacing) text-(--color-ink)">
+        <h1 className="text-(length:--text-display-sm) font-display font-medium tracking-(--text-display-sm--letter-spacing) text-(--text)">
           Providers
         </h1>
-        <p className="mt-2 text-(length:--text-body-md) text-(--color-body)">
+        <p className="mt-2 text-(length:--text-body-md) text-(--text)">
           Configure API access for image and video generation.
         </p>
       </header>
@@ -402,8 +402,8 @@ export function ProvidersPage() {
                 {/* Volcengine has two parallel model editors — one per port. */}
                 {id === "volcengine" ? (
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div className="flex flex-col gap-3 rounded-(--radius-md) border border-(--color-border) p-3">
-                      <span className="text-(length:--text-caption-uppercase) tracking-[1.5px] text-(--color-muted)">
+                    <div className="flex flex-col gap-3 rounded-(--radius-md) border border-(--border) p-3">
+                      <span className="text-(length:--text-caption-uppercase) tracking-[1.5px] text-(--text-muted)">
                         Image models (Seedream)
                       </span>
                       <Field label="Models" helperText="Comma-separated.">
@@ -420,8 +420,8 @@ export function ProvidersPage() {
                         />
                       </Field>
                     </div>
-                    <div className="flex flex-col gap-3 rounded-(--radius-md) border border-(--color-border) p-3">
-                      <span className="text-(length:--text-caption-uppercase) tracking-[1.5px] text-(--color-muted)">
+                    <div className="flex flex-col gap-3 rounded-(--radius-md) border border-(--border) p-3">
+                      <span className="text-(length:--text-caption-uppercase) tracking-[1.5px] text-(--text-muted)">
                         Video models (Seedance)
                       </span>
                       <Field label="Models" helperText="Comma-separated.">
@@ -485,7 +485,7 @@ function secretMaskFor(id: ProviderId, masked: ReturnType<typeof useConfigStore.
 
 function KindsBadge({ text }: { text: string }) {
   return (
-    <span className="rounded-(--radius-pill) bg-(--color-brand-lavender)/30 px-2 py-0.5 text-(length:--text-caption) text-(--color-ink)">
+    <span className="rounded-(--radius-pill) bg-(--accent-soft)/30 px-2 py-0.5 text-(length:--text-caption) text-(--text)">
       {text}
     </span>
   );
@@ -502,12 +502,12 @@ function Field({
 }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-(length:--text-caption-uppercase) tracking-[1.5px] text-(--color-muted)">
+      <span className="text-(length:--text-caption-uppercase) tracking-[1.5px] text-(--text-muted)">
         {label}
       </span>
       {children}
       {helperText ? (
-        <span className="text-(length:--text-caption) text-(--color-muted)">{helperText}</span>
+        <span className="text-(length:--text-caption) text-(--text-muted)">{helperText}</span>
       ) : null}
     </label>
   );

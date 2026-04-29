@@ -22,8 +22,8 @@ export const PopoverContent = forwardRef<
         align={align}
         sideOffset={sideOffset}
         className={cn(
-          "z-50 rounded-(--radius-md) border border-(--color-hairline) " +
-            "bg-(--color-canvas) text-(--color-ink) " +
+          "z-50 rounded-(--radius-md) border border-(--border) " +
+            "bg-(--bg) text-(--text) " +
             // Clay system: no shadow on content surfaces beyond the documented
             // hairline border.
             "p-3 outline-none " +

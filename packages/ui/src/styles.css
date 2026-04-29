@@ -1,172 +1,262 @@
 @import "tailwindcss";
 
+/* Tailwind v4 auto-detects content from the consuming app's root, but workspace
+ * packages aren't scanned by default. Explicitly include this package's source
+ * so utility classes used in `@imagine/ui` composites (e.g. `h-10` in NavRail,
+ * `h-11` in Button/Input/Select) make it into the generated stylesheet. */
+@source "./**/*.{ts,tsx}";
+
 /* -------------------------------------------------------------------------
- * Imagine Studio "Clay" tokens (design.md). Light is the canonical theme;
- * dark adapts the same palette by darkening surfaces and lifting ink. The
- * brand-color cards keep their saturation in both modes.
+ * Imagine Studio "Quiet-Density" tokens — DESIGN.md §3.
+ *
+ * Cool-tinted neutral grays + a single blue-violet accent (~265°). Light is
+ * the canonical theme; dark adapts the same palette by stepping the
+ * surface scale up in lightness while keeping the cool tilt. Tokens are
+ * authored as OKLCH (so the cool tint is exact) and exposed to Tailwind v4
+ * via the @theme inline block at the bottom.
+ *
+ * The legacy `--color-*` alias surface was removed in favor of the canonical
+ * token names (--bg, --surface, --text, --accent, --border, etc.) used
+ * directly in className arbitrary-value syntax (e.g. `bg-(--surface-raised)`).
  * ----------------------------------------------------------------------- */
 
 @theme {
-  /* Color tokens — light is the default declared here; dark overrides come
-     via [data-theme="dark"] below. */
-  --color-canvas: #fffaf0;
-  --color-surface-soft: #faf5e8;
-  --color-surface-card: #f5f0e0;
-  --color-surface-strong: #ebe6d6;
-  --color-surface-dark: #0a1a1a;
-  --color-surface-dark-elevated: #1a2a2a;
-
-  --color-ink: #0a0a0a;
-  --color-body: #3a3a3a;
-  --color-body-strong: #1a1a1a;
-  --color-muted: #6a6a6a;
-  --color-muted-soft: #9a9a9a;
-
-  --color-hairline: #e5e5e5;
-  --color-hairline-soft: #f0f0f0;
-
-  --color-primary: #0a0a0a;
-  --color-primary-active: #1f1f1f;
-  --color-primary-disabled: #e5e5e5;
-
-  --color-on-primary: #ffffff;
-  --color-on-dark: #ffffff;
-  --color-on-dark-soft: #a0a0a0;
-
-  --color-brand-pink: #ff4d8b;
-  --color-brand-teal: #1a3a3a;
-  --color-brand-lavender: #b8a4ed;
-  --color-brand-peach: #ffb084;
-  --color-brand-ochre: #e8b94a;
-  --color-brand-mint: #a4d4c5;
-  --color-brand-coral: #ff6b5a;
-
-  --color-success: #22c55e;
-  --color-warning: #f59e0b;
-  --color-error: #ef4444;
-
-  /* Accent picked for indicators (status dots, ring focus). The Clay system
-     uses ink for primary; for non-CTA accents we use ochre. */
-  --color-accent: #e8b94a;
-
-  /* Spacing (matches design.md). */
-  --spacing-xxs: 4px;
-  --spacing-xs: 8px;
-  --spacing-sm: 12px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
-  --spacing-xxl: 48px;
-  --spacing-section: 96px;
-
-  /* Border radius. */
-  --radius-xs: 6px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+  /* radius — DESIGN.md §6.1, tops out at 12px */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  /* legacy aliases — clamped so the system can't accidentally render a 16/24px corner */
+  --radius-xl: 12px;
   --radius-pill: 9999px;
   --radius-full: 9999px;
 
-  /* Typography scale (sizes). Tailwind v4 reads these as `text-*`. */
-  --text-display-xl: 72px;
-  --text-display-xl--line-height: 1;
-  --text-display-xl--letter-spacing: -2.5px;
-  --text-display-xl--font-weight: 500;
+  /* font families — Inter for UI, JetBrains Mono for prompts/IDs/seeds */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  /* legacy alias — `font-display` is no longer a separate face; map to Inter */
+  --font-display: var(--font-sans);
 
-  --text-display-lg: 56px;
-  --text-display-lg--line-height: 1.05;
-  --text-display-lg--letter-spacing: -2px;
-  --text-display-lg--font-weight: 500;
+  /* z layers */
+  --z-base: 0;
+  --z-rail: 10;
+  --z-popover: 50;
+  --z-overlay: 80;
+  --z-dialog: 100;
+  --z-toast: 120;
 
-  --text-display-md: 40px;
-  --text-display-md--line-height: 1.1;
-  --text-display-md--letter-spacing: -1px;
-  --text-display-md--font-weight: 500;
+  /* shadows — overlays only (DESIGN.md §6.3) */
+  --shadow-popover:
+    0 1px 2px oklch(0 0 0 / 0.04),
+    0 4px 12px oklch(0 0 0 / 0.06);
+  --shadow-overlay:
+    0 2px 6px oklch(0 0 0 / 0.06),
+    0 12px 32px oklch(0 0 0 / 0.10);
 
-  --text-display-sm: 32px;
-  --text-display-sm--line-height: 1.15;
-  --text-display-sm--letter-spacing: -0.5px;
-  --text-display-sm--font-weight: 500;
+  /* spacing — DESIGN.md §5.1 (4px base scale) */
+  --spacing-xxs: 2px;
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 20px;
+  --spacing-xxl: 24px;
+  --spacing-section: 64px;
 
-  --text-title-lg: 24px;
-  --text-title-lg--line-height: 1.3;
-  --text-title-lg--letter-spacing: -0.3px;
-  --text-title-lg--font-weight: 600;
+  /* layout widths — DESIGN.md §5.2 (load-bearing) */
+  --rail-nav: 220px;
+  --rail-params: 280px;
+  --rail-gallery: 240px;
+  --rail-boards: 240px;
+  --drawer-width: 400px;
 
-  --text-title-md: 18px;
-  --text-title-md--line-height: 1.4;
-  --text-title-md--font-weight: 600;
-
-  --text-title-sm: 16px;
-  --text-title-sm--line-height: 1.4;
-  --text-title-sm--font-weight: 600;
-
-  --text-body-md: 16px;
-  --text-body-md--line-height: 1.55;
-  --text-body-md--font-weight: 400;
-
-  --text-body-sm: 14px;
-  --text-body-sm--line-height: 1.55;
-  --text-body-sm--font-weight: 400;
-
-  --text-caption: 13px;
-  --text-caption--line-height: 1.4;
+  /* typography scale — DESIGN.md §4.2 (six steps, 13px body, no display-XL) */
+  --text-caption: 11px;
+  --text-caption--line-height: 16px;
   --text-caption--font-weight: 500;
 
-  --text-caption-uppercase: 12px;
-  --text-caption-uppercase--line-height: 1.4;
-  --text-caption-uppercase--letter-spacing: 1.5px;
-  --text-caption-uppercase--font-weight: 600;
+  --text-body-sm: 12px;
+  --text-body-sm--line-height: 18px;
+  --text-body-sm--font-weight: 400;
 
-  --text-button: 14px;
-  --text-button--line-height: 1;
+  --text-body: 13px;
+  --text-body--line-height: 20px;
+  --text-body--font-weight: 400;
+
+  --text-body-md: 13px;
+  --text-body-md--line-height: 20px;
+  --text-body-md--font-weight: 400;
+
+  --text-body-strong: 13px;
+  --text-body-strong--line-height: 20px;
+  --text-body-strong--font-weight: 600;
+
+  --text-title: 15px;
+  --text-title--line-height: 22px;
+  --text-title--letter-spacing: -0.01em;
+  --text-title--font-weight: 600;
+
+  --text-title-sm: 15px;
+  --text-title-sm--line-height: 22px;
+  --text-title-sm--font-weight: 600;
+
+  --text-title-md: 15px;
+  --text-title-md--line-height: 22px;
+  --text-title-md--font-weight: 600;
+
+  --text-title-lg: 15px;
+  --text-title-lg--line-height: 22px;
+  --text-title-lg--font-weight: 600;
+
+  --text-display: 20px;
+  --text-display--line-height: 26px;
+  --text-display--letter-spacing: -0.01em;
+  --text-display--font-weight: 600;
+
+  /* legacy display-* aliases collapse to the same 20px display step.
+     We intentionally do NOT carry forward the 32–72px "marketing" sizes. */
+  --text-display-sm: 20px;
+  --text-display-sm--line-height: 26px;
+  --text-display-sm--letter-spacing: -0.01em;
+  --text-display-sm--font-weight: 600;
+
+  --text-display-md: 20px;
+  --text-display-md--line-height: 26px;
+  --text-display-md--letter-spacing: -0.01em;
+  --text-display-md--font-weight: 600;
+
+  --text-display-lg: 20px;
+  --text-display-lg--line-height: 26px;
+  --text-display-lg--letter-spacing: -0.01em;
+  --text-display-lg--font-weight: 600;
+
+  --text-display-xl: 20px;
+  --text-display-xl--line-height: 26px;
+  --text-display-xl--letter-spacing: -0.01em;
+  --text-display-xl--font-weight: 600;
+
+  --text-button: 13px;
+  --text-button--line-height: 20px;
   --text-button--font-weight: 600;
 
-  --text-nav-link: 14px;
-  --text-nav-link--line-height: 1.4;
-  --text-nav-link--font-weight: 500;
+  --text-nav-link: 13px;
+  --text-nav-link--line-height: 20px;
+  --text-nav-link--font-weight: 400;
 
-  --font-sans:
-    Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-display: "Plain Black", Inter, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", Roboto, sans-serif;
-  --font-mono:
-    "JetBrains Mono", "SF Mono", Consolas, "Liberation Mono", monospace;
+  /* legacy uppercase caption — sentence-case body-sm muted is the new pattern,
+     but pages may still reference the variable until they're refreshed. */
+  --text-caption-uppercase: 11px;
+  --text-caption-uppercase--line-height: 16px;
+  --text-caption-uppercase--letter-spacing: 0.04em;
+  --text-caption-uppercase--font-weight: 600;
 
-  /* Motion — used by transition utilities. */
+  /* motion — DESIGN.md §7.1 */
   --duration-fast: 120ms;
-  --duration-base: 200ms;
-  --duration-slow: 320ms;
+  --duration-base: 180ms;
+  --duration-slow: 240ms;
+  --motion-fast: 120ms;
+  --motion-base: 180ms;
+  --motion-slow: 240ms;
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
-  --ease-emphasized: cubic-bezier(0.3, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Dark theme — keep saturated brand colors intact, darken the canvas, and
-   keep type contrast high. We don't apply a blanket darkening filter (per
-   M4 spec) — thumbnails (M5+) render full-strength. */
+/* -------------------------------------------------------------------------
+ * Light theme tokens — DESIGN.md §3.1 / §3.3 / §3.4 / §3.5
+ * ----------------------------------------------------------------------- */
+[data-theme="light"],
+:root:not([data-theme="dark"]) {
+  /* surfaces */
+  --bg: oklch(0.985 0.002 260);
+  --surface: oklch(0.97 0.003 260);
+  --surface-raised: oklch(1 0 0);
+  --surface-sunken: oklch(0.955 0.003 260);
+  --border: oklch(0.92 0.004 260);
+  --border-strong: oklch(0.85 0.005 260);
+  --border-faint: oklch(0.95 0.003 260);
+
+  /* text */
+  --text: oklch(0.20 0.006 260);
+  --text-muted: oklch(0.50 0.007 260);
+  --text-faint: oklch(0.65 0.006 260);
+  --text-on-accent: oklch(1 0 0);
+
+  /* accent — blue-violet (~265°), the one chromatic moment */
+  --accent: oklch(0.55 0.18 265);
+  --accent-hover: oklch(0.50 0.19 265);
+  --accent-active: oklch(0.45 0.19 265);
+  --accent-fg: oklch(1 0 0);
+  --accent-soft: oklch(0.95 0.025 265);
+  --focus-ring: oklch(0.55 0.18 265 / 0.5);
+
+  /* semantic — calm, not neon (DESIGN.md §3.5) */
+  --success: oklch(0.62 0.14 150);
+  --success-soft: oklch(0.94 0.04 150);
+  --warning: oklch(0.74 0.14 75);
+  --warning-soft: oklch(0.95 0.05 75);
+  --danger: oklch(0.58 0.20 25);
+  --danger-soft: oklch(0.95 0.03 25);
+}
+
+/* -------------------------------------------------------------------------
+ * Dark theme tokens — DESIGN.md §3.2 (cool dark grays, brighter accent)
+ * ----------------------------------------------------------------------- */
 [data-theme="dark"] {
-  --color-canvas: #18120a;
-  --color-surface-soft: #221a10;
-  --color-surface-card: #2a2114;
-  --color-surface-strong: #322818;
-  --color-surface-dark: #0a1a1a;
-  --color-surface-dark-elevated: #1a2a2a;
+  --bg: oklch(0.16 0.005 260);
+  --surface: oklch(0.19 0.006 260);
+  --surface-raised: oklch(0.22 0.007 260);
+  --surface-sunken: oklch(0.14 0.005 260);
+  --border: oklch(0.28 0.008 260);
+  --border-strong: oklch(0.38 0.009 260);
+  --border-faint: oklch(0.24 0.007 260);
 
-  --color-ink: #fbf6e8;
-  --color-body: #ddd2bd;
-  --color-body-strong: #ffffff;
-  --color-muted: #a39782;
-  --color-muted-soft: #7d735f;
+  --text: oklch(0.96 0.003 260);
+  --text-muted: oklch(0.70 0.006 260);
+  --text-faint: oklch(0.55 0.006 260);
+  --text-on-accent: oklch(0.18 0.005 260);
 
-  --color-hairline: #3a3024;
-  --color-hairline-soft: #2c241a;
+  --accent: oklch(0.65 0.20 265);
+  --accent-hover: oklch(0.70 0.20 265);
+  --accent-active: oklch(0.60 0.20 265);
+  --accent-fg: oklch(0.18 0.005 265);
+  --accent-soft: oklch(0.28 0.05 265);
+  --focus-ring: oklch(0.65 0.20 265 / 0.55);
 
-  --color-primary: #fbf6e8;
-  --color-primary-active: #ddd2bd;
-  --color-primary-disabled: #3a3024;
+  --success: oklch(0.70 0.15 150);
+  --success-soft: oklch(0.30 0.07 150);
+  --warning: oklch(0.78 0.14 75);
+  --warning-soft: oklch(0.32 0.06 75);
+  --danger: oklch(0.66 0.21 25);
+  --danger-soft: oklch(0.30 0.07 25);
+}
 
-  --color-on-primary: #0a0a0a;
+/* expose the canonical tokens to Tailwind v4 utility classes
+   (so `bg-surface`, `text-text-muted`, `border-border-strong` resolve). */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-border-faint: var(--border-faint);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-faint: var(--text-faint);
+  --color-text-on-accent: var(--text-on-accent);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
 }
 
 /* -------------------------------------------------------------------------
@@ -181,22 +271,66 @@
   html {
     color-scheme: light dark;
   }
+  /* Body @ 13px (DESIGN.md §4.4). Tabular figures globally. */
   body {
-    background-color: var(--color-canvas);
-    color: var(--color-ink);
+    background-color: var(--bg);
+    color: var(--text);
     font-family: var(--font-sans);
-    font-size: var(--text-body-md);
-    line-height: var(--text-body-md--line-height);
+    font-size: 13px;
+    line-height: 20px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+  body,
+  code,
+  td.numeric,
+  .num,
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  code,
+  .mono {
+    font-family: var(--font-mono);
+  }
+  /* Global focus ring — DESIGN.md §14.1 */
   *:focus-visible {
-    outline: 2px solid var(--color-accent);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
     border-radius: var(--radius-sm);
   }
+
+  /* Pointer cursor on every clickable element. Tailwind v4 preflight defaults
+   * <button> to `cursor: default` (a deliberate change from v3); we restore the
+   * classic hand cursor app-wide so all interactive surfaces feel clickable. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="link"]:not([aria-disabled="true"]),
+  [role="switch"]:not([aria-disabled="true"]),
+  [role="tab"]:not([aria-disabled="true"]),
+  [role="menuitem"]:not([aria-disabled="true"]),
+  [role="menuitemcheckbox"]:not([aria-disabled="true"]),
+  [role="menuitemradio"]:not([aria-disabled="true"]),
+  [role="option"]:not([aria-disabled="true"]),
+  [role="checkbox"]:not([aria-disabled="true"]),
+  [role="radio"]:not([aria-disabled="true"]),
+  a[href]:not([aria-disabled="true"]),
+  summary,
+  label[for] {
+    cursor: pointer;
+  }
   ::selection {
-    background-color: var(--color-brand-ochre);
-    color: var(--color-ink);
+    background-color: var(--accent-soft);
+    color: var(--text);
+  }
+  /* Reduced motion — DESIGN.md §7.2 */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }

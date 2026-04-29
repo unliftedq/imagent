@@ -66,22 +66,22 @@ export function JobProgress({
   return (
     <div
       className={cn(
-        "flex items-center gap-3 rounded-(--radius-md) border border-(--color-hairline) " +
-          "bg-(--color-canvas) px-3 py-2",
+        "flex items-center gap-3 rounded-(--radius-md) border border-(--border) " +
+          "bg-(--bg) px-3 py-2",
         className,
       )}
     >
       <div className="flex flex-1 flex-col gap-1">
-        <div className="flex items-center gap-2 text-(length:--text-caption) text-(--color-muted)">
+        <div className="flex items-center gap-2 text-(length:--text-caption) text-(--text-muted)">
           <span className="font-semibold uppercase tracking-[1.5px] text-(length:--text-caption-uppercase)">
             {humanState(state)}
           </span>
-          {label ? <span className="truncate text-(--color-muted)">{label}</span> : null}
+          {label ? <span className="truncate text-(--text-muted)">{label}</span> : null}
         </div>
         <div
           className={cn(
             "relative h-6 w-full overflow-hidden rounded-(--radius-sm)",
-            "bg-(--color-surface-strong)",
+            "bg-(--surface-sunken)",
           )}
           role="progressbar"
           aria-valuemin={0}
@@ -89,16 +89,16 @@ export function JobProgress({
           aria-valuenow={progress ?? undefined}
         >
           {isError ? (
-            <div className="absolute inset-0 bg-(--color-error)/40" />
+            <div className="absolute inset-0 bg-(--danger)/40" />
           ) : isTerminal ? (
             <div
-              className="absolute inset-y-0 left-0 bg-(--color-accent)"
+              className="absolute inset-y-0 left-0 bg-(--accent)"
               style={{ width: state === "succeeded" ? "100%" : "0%" }}
             />
           ) : (
             // Striped indeterminate bar.
             <div
-              className="absolute inset-0 bg-(--color-accent) opacity-80"
+              className="absolute inset-0 bg-(--accent) opacity-80"
               style={{
                 backgroundImage:
                   "repeating-linear-gradient(45deg, rgba(255,255,255,0.35) 0 8px, transparent 8px 16px)",
@@ -115,7 +115,7 @@ export function JobProgress({
           )}
         </div>
         {isError && errorMessage ? (
-          <span className="text-(length:--text-caption) text-(--color-error)">
+          <span className="text-(length:--text-caption) text-(--danger)">
             {errorMessage}
           </span>
         ) : null}
@@ -174,22 +174,22 @@ function VideoVariant({
   return (
     <div
       className={cn(
-        "flex flex-col gap-2 rounded-(--radius-md) border border-(--color-hairline) " +
-          "bg-(--color-canvas) px-4 py-3",
+        "flex flex-col gap-2 rounded-(--radius-md) border border-(--border) " +
+          "bg-(--bg) px-4 py-3",
         className,
       )}
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <div className="flex items-center gap-2 text-(length:--text-caption) text-(--color-muted)">
+          <div className="flex items-center gap-2 text-(length:--text-caption) text-(--text-muted)">
             <span className="font-semibold uppercase tracking-[1.5px] text-(length:--text-caption-uppercase)">
               {humanState(state)}
             </span>
             {label ? (
-              <span className="truncate text-(--color-ink)">{label}</span>
+              <span className="truncate text-(--text)">{label}</span>
             ) : null}
           </div>
-          <div className="flex items-center gap-3 text-(length:--text-caption) text-(--color-muted-soft) [font-variant-numeric:tabular-nums]">
+          <div className="flex items-center gap-3 text-(length:--text-caption) text-(--text-faint) [font-variant-numeric:tabular-nums]">
             <span>{formatDuration(elapsedSec)} elapsed</span>
             {etaSec !== null ? <span>~{formatDuration(etaSec)} remaining</span> : null}
             {typeof progress === "number" && !isTerminal ? (
@@ -207,27 +207,27 @@ function VideoVariant({
         ) : null}
       </div>
       <div
-        className="relative h-1 w-full overflow-hidden rounded-(--radius-pill) bg-(--color-surface-strong)"
+        className="relative h-1 w-full overflow-hidden rounded-(--radius-pill) bg-(--surface-sunken)"
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={1}
         aria-valuenow={progress ?? undefined}
       >
         {isError ? (
-          <div className="absolute inset-0 bg-(--color-error)/60" />
+          <div className="absolute inset-0 bg-(--danger)/60" />
         ) : isTerminal ? (
           <div
-            className="absolute inset-y-0 left-0 bg-(--color-accent)"
+            className="absolute inset-y-0 left-0 bg-(--accent)"
             style={{ width: state === "succeeded" ? "100%" : "0%" }}
           />
         ) : typeof progress === "number" ? (
           <div
-            className="absolute inset-y-0 left-0 bg-(--color-accent) transition-[width] duration-(--duration-base)"
+            className="absolute inset-y-0 left-0 bg-(--accent) transition-[width] duration-(--duration-base)"
             style={{ width: `${Math.max(0, Math.min(1, progress)) * 100}%` }}
           />
         ) : (
           <div
-            className="absolute inset-0 bg-(--color-accent)/80"
+            className="absolute inset-0 bg-(--accent)/80"
             style={{
               backgroundImage:
                 "repeating-linear-gradient(45deg, rgba(255,255,255,0.35) 0 8px, transparent 8px 16px)",
@@ -237,7 +237,7 @@ function VideoVariant({
         )}
       </div>
       {isError && errorMessage ? (
-        <span className="text-(length:--text-caption) text-(--color-error)">
+        <span className="text-(length:--text-caption) text-(--danger)">
           {errorMessage}
         </span>
       ) : null}
