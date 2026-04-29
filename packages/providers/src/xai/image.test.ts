@@ -1,17 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 import { ProviderHttpError, type ImageRequest } from "@imagine-studio/core";
-import { VolcengineImageProvider } from "./image.js";
-import { VOLCENGINE_IMAGE_MODELS } from "./catalog.js";
+import { XaiImageProvider } from "./image.js";
+import { XAI_IMAGE_MODELS } from "./catalog.js";
 
 const PNG_B64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkAAIAAAoAAv/lxKUAAAAASUVORK5CYII=";
 
 function makeProvider(fetcher: typeof fetch) {
-  return new VolcengineImageProvider({
-    apiKey: "volc-key",
-    baseUrl: "https://ark.example/api/v3",
-    region: "cn-beijing",
-    models: new Map(Object.entries(VOLCENGINE_IMAGE_MODELS)),
+  return new XaiImageProvider({
+    apiKey: "xai-key",
+    baseUrl: "https://api.x.ai/v1",
+    models: new Map(Object.entries(XAI_IMAGE_MODELS)),
     fetch: fetcher,
   });
 }
@@ -24,26 +23,26 @@ function jsonResponse(status: number, body: unknown, headers: Record<string, str
 }
 
 const baseRequest: ImageRequest = {
-  prompt: "neon koi pond",
-  providerId: "volcengine",
-  model: "seedream-3.0",
+  prompt: "a cat in a top hat, photo",
+  providerId: "xai",
+  model: "grok-2-image-1212",
   count: 1,
   size: "1024x1024",
   references: [],
   assetIds: [],
 };
 
-describe("VolcengineImageProvider", () => {
-  it("composes Ark images URL with bearer auth (OpenAI-compatible)", async () => {
+describe("XaiImageProvider", () => {
+  it("composes xAI images URL with bearer auth (OpenAI-compatible)", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse(200, { data: [{ b64_json: PNG_B64 }] }),
     );
     const p = makeProvider(fetchMock as unknown as typeof fetch);
     await p.generate(baseRequest);
     const [url, init] = fetchMock.mock.calls[0]!;
-    expect(url).toBe("https://ark.example/api/v3/images/generations");
+    expect(url).toBe("https://api.x.ai/v1/images/generations");
     expect((init as RequestInit).headers as Record<string, string>).toMatchObject({
-      Authorization: "Bearer volc-key",
+      Authorization: "Bearer xai-key",
     });
   });
 
@@ -53,19 +52,9 @@ describe("VolcengineImageProvider", () => {
     await expect(p.generate(baseRequest)).rejects.toBeInstanceOf(ProviderHttpError);
   });
 
-  it("retries on 429 then succeeds", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(jsonResponse(429, {}, { "retry-after": "0" }))
-      .mockResolvedValueOnce(jsonResponse(200, { data: [{ b64_json: PNG_B64 }] }));
+  it("network failure surfaces (timeout / offline)", async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new Error("ETIMEDOUT"));
     const p = makeProvider(fetchMock as unknown as typeof fetch);
-    const r = await p.generate(baseRequest);
-    expect(r.outputs).toHaveLength(1);
-  });
-
-  it("provider id is 'volcengine' (consolidated with Seedance)", () => {
-    const p = makeProvider(vi.fn() as unknown as typeof fetch);
-    expect(p.id).toBe("volcengine");
-    expect(p.displayName).toBe("Volcengine");
-  });
+    await expect(p.generate(baseRequest)).rejects.toBeTruthy();
+  }, 30_000);
 });

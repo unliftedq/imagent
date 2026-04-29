@@ -50,8 +50,7 @@ function deepMerge<T>(base: T, patch: DeepPartial<T>): T {
 
 /**
  * File-backed config.json store. Reads on every loadConfig (cheap; not hot-
- * pathed). Applies DEFAULT_CONFIG when the file is missing. The watcher is a
- * polling fallback at M1; fs.watch wiring lands in M4 alongside the renderer.
+ * pathed). Applies DEFAULT_CONFIG when the file is missing.
  */
 export function createFileConfigStore(filePath: string): ConfigStore {
   return {
@@ -67,7 +66,13 @@ export function createFileConfigStore(filePath: string): ConfigStore {
         }
         throw err;
       }
-      const parsed = JSON.parse(raw);
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw);
+      } catch (err) {
+        throw new Error(`config.json at ${filePath} is not valid JSON: ${(err as Error).message}`);
+      }
+
       const merged = deepMerge(DEFAULT_CONFIG, parsed as DeepPartial<ConfigFile>);
       return ConfigFileSchema.parse(merged);
     },
@@ -75,7 +80,7 @@ export function createFileConfigStore(filePath: string): ConfigStore {
       const current = await this.loadConfig();
       const next = ConfigFileSchema.parse(deepMerge(current, patch));
       await ensureDir(path.dirname(filePath));
-      await fs.writeFile(filePath, JSON.stringify(next, null, 2), "utf8");
+      await atomicWriteText(filePath, JSON.stringify(next, null, 2));
       return next;
     },
     watchConfig(_cb): () => void {
@@ -87,4 +92,10 @@ export function createFileConfigStore(filePath: string): ConfigStore {
 
 async function ensureDir(dir: string): Promise<void> {
   await fs.mkdir(dir, { recursive: true });
+}
+
+async function atomicWriteText(filePath: string, text: string): Promise<void> {
+  const tmp = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+  await fs.writeFile(tmp, text, "utf8");
+  await fs.rename(tmp, filePath);
 }

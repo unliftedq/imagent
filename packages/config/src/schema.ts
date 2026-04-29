@@ -2,8 +2,10 @@ import { ImageModelEntrySchema, VideoModelEntrySchema } from "@imagine-studio/co
 import { z } from "zod";
 
 /**
- * Secrets are keyed by **vendor**: volcengine secrets are shared between
- * seedream (image) and seedance (video). See architecture.md §7.
+ * Secrets are keyed by **vendor**. Volcengine secrets unlock both image
+ * (Seedream) and video (Seedance) ports under the single `volcengine`
+ * provider id. xAI is OpenAI-API-compatible image-only at v1.
+ * See architecture.md §7.1.
  */
 export const ProviderSecretsSchema = z.object({
   openai: z.object({ apiKey: z.string() }).optional(),
@@ -22,13 +24,14 @@ export const ProviderSecretsSchema = z.object({
       region: z.string().default("cn-beijing"),
     })
     .optional(),
+  xai: z.object({ apiKey: z.string() }).optional(),
 });
 export type ProviderSecrets = z.infer<typeof ProviderSecretsSchema>;
 
 /**
- * Preferences are keyed by **provider id** — seedream and seedance are
- * separate, even though they share volcengine secrets. The asymmetry is
- * deliberate (architecture.md §7).
+ * Preferences are keyed by **provider id** (= vendor). Volcengine carries
+ * both image and video model lists under one block because Seedream and
+ * Seedance share Ark credentials.
  */
 export const ProviderPreferencesSchema = z.object({
   openai: z.object({
@@ -52,16 +55,18 @@ export const ProviderPreferencesSchema = z.object({
     models: z.array(ImageModelEntrySchema),
     defaultModel: z.string(),
   }),
-  seedream: z.object({
-    baseUrl: z.string(),
+  volcengine: z.object({
+    baseUrl: z.string().default("https://ark.cn-beijing.volces.com/api/v3"),
+    imageModels: z.array(ImageModelEntrySchema),
+    videoModels: z.array(VideoModelEntrySchema),
+    defaultImageModel: z.string(),
+    defaultVideoModel: z.string(),
+    videoDefaults: z.record(z.unknown()).optional(),
+  }),
+  xai: z.object({
+    baseUrl: z.string().default("https://api.x.ai/v1"),
     models: z.array(ImageModelEntrySchema),
     defaultModel: z.string(),
-  }),
-  seedance: z.object({
-    baseUrl: z.string(),
-    models: z.array(VideoModelEntrySchema),
-    defaultModel: z.string(),
-    defaults: z.record(z.unknown()).optional(),
   }),
 });
 export type ProviderPreferences = z.infer<typeof ProviderPreferencesSchema>;
@@ -113,15 +118,17 @@ export const DEFAULT_CONFIG: ConfigFile = {
       models: [],
       defaultModel: "flux-pro-1.1",
     },
-    seedream: {
-      baseUrl: "https://ark.cn-beijing.volces.com",
-      models: [],
-      defaultModel: "seedream-3.0",
+    volcengine: {
+      baseUrl: "https://ark.cn-beijing.volces.com/api/v3",
+      imageModels: [],
+      videoModels: [],
+      defaultImageModel: "seedream-3.0",
+      defaultVideoModel: "seedance-1.0-pro",
     },
-    seedance: {
-      baseUrl: "https://ark.cn-beijing.volces.com",
+    xai: {
+      baseUrl: "https://api.x.ai/v1",
       models: [],
-      defaultModel: "seedance-1.0-pro",
+      defaultModel: "grok-2-image-1212",
     },
   },
 };

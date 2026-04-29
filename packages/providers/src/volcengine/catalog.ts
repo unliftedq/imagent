@@ -6,10 +6,14 @@ import type {
 } from "@imagine-studio/core";
 
 /**
- * Seedream is the image side of Volcengine; capability shape mirrors the
- * documented Ark image API (sizes, single-output by default).
+ * Volcengine (Ark) hosts two model families under one provider:
+ *   - Seedream: image
+ *   - Seedance: video
+ * Both reach the same Ark base URL with the same Bearer key. The runtime
+ * discriminator is the port type — `VolcengineImageProvider` vs
+ * `VolcengineVideoProvider`. See architecture.md §4 (vendor=provider).
  */
-export const SEEDREAM_IMAGE_MODELS: Record<string, ImageModelDef> = {
+export const VOLCENGINE_IMAGE_MODELS: Record<string, ImageModelDef> = {
   "seedream-3.0": {
     id: "seedream-3.0",
     displayName: "Seedream 3.0",
@@ -25,15 +29,7 @@ export const SEEDREAM_IMAGE_MODELS: Record<string, ImageModelDef> = {
   },
 };
 
-export const SEEDREAM_CATALOG: ImageCatalog = {
-  seedream: SEEDREAM_IMAGE_MODELS,
-};
-
-/**
- * Seedance is the video side of Volcengine. 1–5 minute completion, async,
- * polling-based. Resolutions documented per the Ark video API.
- */
-export const SEEDANCE_VIDEO_MODELS: Record<string, VideoModelDef> = {
+export const VOLCENGINE_VIDEO_MODELS: Record<string, VideoModelDef> = {
   "seedance-1.0-pro": {
     id: "seedance-1.0-pro",
     displayName: "Seedance 1.0 Pro",
@@ -50,6 +46,12 @@ export const SEEDANCE_VIDEO_MODELS: Record<string, VideoModelDef> = {
   },
 };
 
-export const SEEDANCE_CATALOG: VideoCatalog = {
-  seedance: SEEDANCE_VIDEO_MODELS,
+/** Image catalog keyed by provider id (`volcengine`). */
+export const VOLCENGINE_IMAGE_CATALOG: ImageCatalog = {
+  volcengine: VOLCENGINE_IMAGE_MODELS,
+};
+
+/** Video catalog keyed by provider id (`volcengine`). */
+export const VOLCENGINE_VIDEO_CATALOG: VideoCatalog = {
+  volcengine: VOLCENGINE_VIDEO_MODELS,
 };

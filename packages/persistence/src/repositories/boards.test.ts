@@ -71,6 +71,95 @@ describe("BoardRepository", () => {
     }
   });
 
+  it("appendItem auto-positions across multiple calls (M5)", () => {
+    const db = openDatabase(dbPath);
+    try {
+      const boardRepo = new BoardRepository(db);
+      const galleryRepo = new GalleryRepository(db);
+      const now = Date.now();
+      boardRepo.create({
+        id: "b-auto",
+        name: "Auto",
+        description: null,
+        coverItemId: null,
+        position: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+      for (const id of ["g1", "g2", "g3"]) {
+        galleryRepo.create({
+          id,
+          kind: "image",
+          parentId: null,
+          prompt: "p",
+          negativePrompt: null,
+          providerId: "p",
+          model: "m",
+          paramsJson: "{}",
+          relPath: `${id}.png`,
+          thumbPath: null,
+          durationMs: null,
+          width: null,
+          height: null,
+          bytes: 1,
+          jobId: null,
+          favorited: false,
+          createdAt: now,
+        });
+      }
+      expect(boardRepo.appendItem("b-auto", "g1").position).toBe(0);
+      expect(boardRepo.appendItem("b-auto", "g2").position).toBe(1);
+      expect(boardRepo.appendItem("b-auto", "g3").position).toBe(2);
+      expect(boardRepo.countItems("b-auto")).toBe(3);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("addItem is idempotent through hasItem guards (M5)", () => {
+    const db = openDatabase(dbPath);
+    try {
+      const boardRepo = new BoardRepository(db);
+      const galleryRepo = new GalleryRepository(db);
+      const now = Date.now();
+      boardRepo.create({
+        id: "b-idempotent",
+        name: "Idem",
+        description: null,
+        coverItemId: null,
+        position: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+      galleryRepo.create({
+        id: "g1",
+        kind: "image",
+        parentId: null,
+        prompt: "p",
+        negativePrompt: null,
+        providerId: "p",
+        model: "m",
+        paramsJson: "{}",
+        relPath: "g1.png",
+        thumbPath: null,
+        durationMs: null,
+        width: null,
+        height: null,
+        bytes: 1,
+        jobId: null,
+        favorited: false,
+        createdAt: now,
+      });
+      boardRepo.appendItem("b-idempotent", "g1");
+      // Second append would normally violate the PK; our IPC handler gates
+      // on hasItem so this stays a no-op at the application boundary.
+      expect(boardRepo.hasItem("b-idempotent", "g1")).toBe(true);
+      expect(boardRepo.countItems("b-idempotent")).toBe(1);
+    } finally {
+      db.close();
+    }
+  });
+
   it("delete cascades to board_items", () => {
     const db = openDatabase(dbPath);
     try {

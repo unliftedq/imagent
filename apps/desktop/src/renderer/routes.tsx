@@ -1,6 +1,8 @@
 import type { ComponentType } from "react";
+import { GalleryPage } from "./pages/Gallery.js";
 import { ProvidersPage } from "./pages/Providers.js";
 import { SettingsPage } from "./pages/Settings.js";
+import { StudioPage } from "./pages/Studio.js";
 import { NotYetImplemented } from "./pages/NotYetImplemented.js";
 import type { Route } from "./state/useUIStore.js";
 
@@ -15,10 +17,8 @@ export const ROUTES: RouteDef[] = [
   {
     id: "studio",
     label: "Studio",
-    Component: () => (
-      <NotYetImplemented title="Studio" milestone="M5" description="Image generation lands in M5 — Boards + Remix come with it." />
-    ),
-    available: false,
+    Component: StudioPage,
+    available: true,
   },
   {
     id: "video",
@@ -29,8 +29,8 @@ export const ROUTES: RouteDef[] = [
   {
     id: "gallery",
     label: "Gallery",
-    Component: () => <NotYetImplemented title="Gallery" milestone="M5" />,
-    available: false,
+    Component: GalleryPage,
+    available: true,
   },
   {
     id: "assets",

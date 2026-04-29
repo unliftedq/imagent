@@ -8,7 +8,7 @@ A localized image **and** video generation studio shipping as Electron desktop *
 
 **In scope (v1).**
 - Electron desktop + headless CLI from one monorepo.
-- Six providers day-one: OpenAI, Azure OpenAI, Google (Imagen/Gemini), Flux (BFL official `api.bfl.ai`), Seedream (Volcengine image), Seedance (Volcengine video).
+- Six providers day-one: OpenAI, Azure OpenAI, Google (Imagen/Gemini), Flux (BFL official `api.bfl.ai`), Volcengine (Seedream image + Seedance video, shared key), xAI (Grok image).
 - Asset taxonomy: `character | object | background | style`. Characters/objects/backgrounds are reference-image based; styles can carry a reference image AND/OR a prompt snippet.
 - Boards/Collections with drag-and-drop, masonry gallery, Remix flow.
 - Video pipeline with async job lifecycle that survives app restarts.
@@ -54,7 +54,7 @@ Two ports in `packages/core/src/ports/`. **No fake unification** — image is sy
 ```ts
 // packages/core/src/ports/image-provider.ts
 export interface ImageProvider {
-  readonly id: string;                      // "openai" | "azure-openai" | "google" | "flux-bfl" | "seedream"
+  readonly id: string;                      // "openai" | "azure-openai" | "google" | "flux-bfl" | "volcengine" | "xai"
   readonly displayName: string;
   readonly capabilities: ImageCapabilities; // sizes, max refs, supports style ref
   generate(req: ImageRequest, signal?: AbortSignal): Promise<ImageGenerationResult>;
@@ -62,7 +62,7 @@ export interface ImageProvider {
 
 // packages/core/src/ports/video-provider.ts
 export interface VideoProvider {
-  readonly id: string;                      // "seedance" | (future) "sora" | "veo"
+  readonly id: string;                      // "volcengine" | (future) "sora" | "veo"
   readonly displayName: string;
   readonly capabilities: VideoCapabilities; // durations, fps, resolutions, ref-image support
   submit(req: VideoRequest): Promise<VideoJobHandle>;          // returns provider job id quickly
@@ -88,14 +88,14 @@ JobRunner.start(intent: GenerationIntent): Promise<JobId>
 
 Because every state transition is in SQLite (`jobs` table), the runner can resume on app launch by selecting `state IN ('queued','running')` and rescheduling polls — Seedance jobs survive the 12h server-side TTL.
 
-**Vendor sharing.** Providers are organised in `packages/providers/src/` by **vendor**, not port. `volcengine/` exposes both `SeedreamImageProvider` and `SeedanceVideoProvider` reading the same `VolcengineConfig`. `azure/image.ts` composes `OpenAIImageProvider` with an Azure URL builder + `api-key` header strategy — no copy-paste of the OpenAI body schema.
+**Vendor = Provider.** A provider is the unit a user configures, not a model. Volcengine (Ark) hosts two model families — Seedream for image, Seedance for video — under one set of credentials, so the user sees **one** "Volcengine" provider with **one** key field; the model picker in Studio / Video Studio decides whether the request goes to Seedream or Seedance. Concretely: `packages/providers/src/volcengine/` exposes `VolcengineImageProvider` (default model: Seedream) and `VolcengineVideoProvider` (default model: Seedance), **both with `id: "volcengine"`**. The runtime discriminator is the port type — the same id appears in both `createImageRegistry` and `createVideoRegistry` outputs. `azure/image.ts` composes `OpenAIImageProvider` with an Azure URL builder + `api-key` header strategy — no copy-paste of the OpenAI body schema. `xai/image.ts` and Volcengine's image side both compose `OpenAIImageProvider` against their own base URL (xAI and Volcengine Ark are OpenAI-API-compatible).
 
 **Flux v1 = BFL official.** `POST /v1/flux-{model}` returns `{id, polling_url}`; we then `GET polling_url` until `status === "Ready"`, then download `result.sample`. Same shape as Seedance, so the polling logic generalises.
 
 `packages/providers/src/registry.ts` exports two factories:
 ```
-createImageRegistry(secrets, settings) -> { openai, "azure-openai", google, "flux-bfl", seedream }
-createVideoRegistry(secrets, settings) -> { seedance }                                    // v1
+createImageRegistry(secrets, settings) -> { openai, "azure-openai", google, "flux-bfl", volcengine, xai }
+createVideoRegistry(secrets, settings) -> { volcengine }                                  // v1 (same vendor id, video port)
 ```
 
 ### Models & Capabilities
@@ -222,7 +222,7 @@ CREATE TABLE gallery_items (
   parent_id        TEXT REFERENCES gallery_items(id) ON DELETE SET NULL,  -- remix lineage
   prompt           TEXT NOT NULL,
   negative_prompt  TEXT,
-  provider_id      TEXT NOT NULL,            -- "seedream", "azure-openai", ...
+  provider_id      TEXT NOT NULL,            -- "openai" | "azure-openai" | "google" | "flux-bfl" | "volcengine" | "xai"
   model            TEXT NOT NULL,
   params_json      TEXT NOT NULL,            -- aspect, size, fps, duration, count, seed, raw provider params
   rel_path         TEXT NOT NULL,            -- output file under ~/.imagine-studio/gallery/
@@ -327,7 +327,8 @@ export const ProviderSecretsSchema = z.object({
   google:         z.object({ apiKey: z.string() }).optional(),
   "flux-bfl":     z.object({ apiKey: z.string() }).optional(),
   volcengine:     z.object({ apiKey: z.string(),
-                             region: z.string().default("cn-beijing") }).optional(),  // shared by seedream + seedance
+                             region: z.string().default("cn-beijing") }).optional(),  // one key drives Seedream (image) + Seedance (video)
+  xai:            z.object({ apiKey: z.string() }).optional(),
 });
 
 export const ProviderPreferencesSchema = z.object({
@@ -339,11 +340,14 @@ export const ProviderPreferencesSchema = z.object({
   google:         z.object({ models: z.array(ImageModelEntrySchema), defaultModel: z.string() }),
   "flux-bfl":     z.object({ baseUrl: z.string().default("https://api.bfl.ai"),
                              models: z.array(ImageModelEntrySchema), defaultModel: z.string() }),
-  seedream:       z.object({ baseUrl: z.string(),
+  volcengine:     z.object({ baseUrl: z.string().default("https://ark.cn-beijing.volces.com/api/v3"),
+                             imageModels:        z.array(ImageModelEntrySchema),
+                             videoModels:        z.array(VideoModelEntrySchema),
+                             defaultImageModel:  z.string(),                       // e.g. "seedream-3.0"
+                             defaultVideoModel:  z.string(),                       // e.g. "seedance-1.0-pro"
+                             videoDefaults:      z.record(z.unknown()).optional() }),
+  xai:            z.object({ baseUrl: z.string().default("https://api.x.ai/v1"),
                              models: z.array(ImageModelEntrySchema), defaultModel: z.string() }),
-  seedance:       z.object({ baseUrl: z.string(),
-                             models: z.array(VideoModelEntrySchema), defaultModel: z.string(),
-                             defaults: z.record(z.unknown()).optional() }),
 });
 
 export const AppPreferencesSchema = z.object({
@@ -362,7 +366,7 @@ export const ConfigFileSchema = z.object({
 });
 ```
 
-Note: secrets are keyed by **vendor** (`volcengine` → one key pair shared by seedream + seedance), preferences are keyed by **provider id**. The asymmetry is deliberate — it prevents a "guess which secret matches this provider" magic that would obscure auth flows.
+Note: both secrets and preferences are keyed by **provider id** (= vendor). The Volcengine entry has both `imageModels` and `videoModels` arrays under one provider because Seedream and Seedance share Ark credentials and base URL; the model picker in Studio / Video Studio chooses the port. This keeps "one provider = one key field" — the user sees six rows on the Providers page (OpenAI, Azure, Google, Flux, Volcengine, xAI) regardless of how many model families a provider hosts internally.
 
 ### 7.2 Access (dependency injection)
 
@@ -441,10 +445,10 @@ export const events = {
 The CLI imports the same packages as the main process (no IPC). It opens the same `studio.db` and writes to the same `gallery/` tree, so anything generated from the shell shows up next time the desktop opens. Commander 12; ships as one bun-compiled binary `imagine.exe`.
 
 ```
-imagine generate "<prompt>"  [--provider seedream] [--model ...] [--ref path,path]
+imagine generate "<prompt>"  [--provider volcengine] [--model seedream-3.0] [--ref path,path]
                              [--character id] [--object id] [--background id] [--style id]
                              [--count 4] [--out dir] [--board boardId]
-imagine video <prompt>       [--provider seedance] [--duration 5] [--ref ...] [--wait]
+imagine video <prompt>       [--provider volcengine] [--model seedance-1.0-pro] [--duration 5] [--ref ...] [--wait]
 imagine job {status|cancel|watch} <jobId>
 imagine asset {add|list|rm|show} ...
 imagine board {create|add|ls|rm} ...

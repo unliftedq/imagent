@@ -33,6 +33,12 @@ export interface GalleryRepositoryPort {
   create(item: GalleryItem): GalleryItem;
 }
 
+export interface BoardRepositoryPort {
+  /** Idempotent. Appends `itemId` to `boardId` at position max+1. */
+  appendItem(boardId: string, itemId: string): unknown;
+  hasItem(boardId: string, itemId: string): boolean;
+}
+
 export interface FilesServicePort {
   galleryItemFile(itemId: string, ext: string, date?: Date): string;
   /** The directory the above file resides in — runner mkdirs it before write. */
@@ -47,6 +53,8 @@ export type VideoRegistry = ReadonlyMap<string, VideoProvider>;
 export interface JobRunnerDeps {
   jobs: JobRepositoryPort;
   gallery: GalleryRepositoryPort;
+  /** Optional; only used when an intent supplies `boardId`. */
+  boards?: BoardRepositoryPort;
   files: FilesServicePort;
   imageRegistry: ImageRegistry;
   videoRegistry: VideoRegistry;
@@ -84,10 +92,19 @@ interface RunningEntry {
   pollIndex: number;
 }
 
+interface IntentOverrides {
+  parentId?: string;
+  boardId?: string;
+}
+
 export class JobRunner extends EventEmitter {
   private readonly deps: Required<
-    Omit<JobRunnerDeps, "logger" | "idFactory" | "now" | "setTimer" | "clearTimer" | "writeFile" | "ensureDir">
+    Omit<
+      JobRunnerDeps,
+      "logger" | "idFactory" | "now" | "setTimer" | "clearTimer" | "writeFile" | "ensureDir" | "boards"
+    >
   > & {
+    boards: BoardRepositoryPort | null;
     logger: Logger;
     idFactory: () => string;
     now: () => number;
@@ -97,12 +114,15 @@ export class JobRunner extends EventEmitter {
     ensureDir: (dir: string) => Promise<void>;
   };
   private readonly running = new Map<JobId, RunningEntry>();
+  /** parentId/boardId overrides stashed at start() time, applied at item create. */
+  private readonly intentOverrides = new Map<JobId, IntentOverrides>();
 
   constructor(deps: JobRunnerDeps) {
     super();
     this.deps = {
       jobs: deps.jobs,
       gallery: deps.gallery,
+      boards: deps.boards ?? null,
       files: deps.files,
       imageRegistry: deps.imageRegistry,
       videoRegistry: deps.videoRegistry,
@@ -117,10 +137,13 @@ export class JobRunner extends EventEmitter {
   }
 
   async start(intent: GenerationIntent): Promise<JobId> {
+    const overrides: IntentOverrides = {};
+    if (intent.parentId) overrides.parentId = intent.parentId;
+    if (intent.boardId) overrides.boardId = intent.boardId;
     if (intent.kind === "image") {
-      return this.startImage(intent.request);
+      return this.startImage(intent.request, overrides);
     }
-    return this.startVideo(intent.request);
+    return this.startVideo(intent.request, overrides);
   }
 
   async cancel(id: JobId): Promise<void> {
@@ -134,6 +157,7 @@ export class JobRunner extends EventEmitter {
       this.deps.clearTimer(entry.timer);
     }
     this.running.delete(id);
+    this.intentOverrides.delete(id);
 
     // Best-effort: if a provider supports cancel, hit it for video jobs.
     const job = this.deps.jobs.get(id);
@@ -208,7 +232,7 @@ export class JobRunner extends EventEmitter {
 
   // ----- image path -----------------------------------------------------
 
-  private async startImage(req: ImageRequest): Promise<JobId> {
+  private async startImage(req: ImageRequest, overrides: IntentOverrides = {}): Promise<JobId> {
     const provider = this.deps.imageRegistry.get(req.providerId);
     if (!provider) {
       throw new ProviderError(`image provider '${req.providerId}' is not configured`, {
@@ -235,6 +259,9 @@ export class JobRunner extends EventEmitter {
 
     const abort = new AbortController();
     this.running.set(id, { abort, pollIndex: 0 });
+    if (overrides.parentId || overrides.boardId) {
+      this.intentOverrides.set(id, overrides);
+    }
 
     // Run async; surface failures via events, not the start() promise.
     this.imageGenerationLoop(job, req, provider, abort.signal).catch((err) => {
@@ -270,10 +297,11 @@ export class JobRunner extends EventEmitter {
 
       const relPath = relativeToData(absPath, this.deps.files.dataDir);
 
+      const overrides = this.intentOverrides.get(job.id) ?? {};
       const item = this.deps.gallery.create({
         id: itemId,
         kind: "image",
-        parentId: null,
+        parentId: overrides.parentId ?? null,
         prompt: req.prompt,
         negativePrompt: req.negativePrompt ?? null,
         providerId: req.providerId,
@@ -296,6 +324,22 @@ export class JobRunner extends EventEmitter {
         createdAt: now,
       });
 
+      // Best-effort board attach; persists `board_items` row idempotently.
+      if (overrides.boardId && this.deps.boards) {
+        try {
+          if (!this.deps.boards.hasItem(overrides.boardId, item.id)) {
+            this.deps.boards.appendItem(overrides.boardId, item.id);
+          }
+        } catch (err) {
+          this.deps.logger.warn("appendItem failed", {
+            id: job.id,
+            boardId: overrides.boardId,
+            err: String(err),
+          });
+        }
+      }
+      this.intentOverrides.delete(job.id);
+
       const updated = this.deps.jobs.updateState(job.id, {
         state: "succeeded",
         progress: 1,
@@ -306,6 +350,7 @@ export class JobRunner extends EventEmitter {
       this.emit("job.completed", updated);
     } catch (err) {
       this.running.delete(job.id);
+      this.intentOverrides.delete(job.id);
       const aborted = isAbortError(err) || err instanceof ProviderAbortError;
       const updated = this.deps.jobs.updateState(job.id, {
         state: aborted ? "cancelled" : "failed",
@@ -318,7 +363,7 @@ export class JobRunner extends EventEmitter {
 
   // ----- video path -----------------------------------------------------
 
-  private async startVideo(req: VideoRequest): Promise<JobId> {
+  private async startVideo(req: VideoRequest, overrides: IntentOverrides = {}): Promise<JobId> {
     const provider = this.deps.videoRegistry.get(req.providerId);
     if (!provider) {
       throw new ProviderError(`video provider '${req.providerId}' is not configured`, {
@@ -346,6 +391,9 @@ export class JobRunner extends EventEmitter {
     const abort = new AbortController();
     const entry: RunningEntry = { abort, pollIndex: 0 };
     this.running.set(id, entry);
+    if (overrides.parentId || overrides.boardId) {
+      this.intentOverrides.set(id, overrides);
+    }
 
     // Submit asynchronously; record providerJobId as soon as we have it.
     void (async () => {
@@ -450,10 +498,11 @@ export class JobRunner extends EventEmitter {
         await this.deps.writeFile(absPath, out.bytes);
         const relPath = relativeToData(absPath, this.deps.files.dataDir);
 
+        const overrides = this.intentOverrides.get(id) ?? {};
         const item = this.deps.gallery.create({
           id: itemId,
           kind: "video",
-          parentId: null,
+          parentId: overrides.parentId ?? null,
           prompt: req.prompt,
           negativePrompt: req.negativePrompt ?? null,
           providerId: req.providerId,
@@ -476,6 +525,21 @@ export class JobRunner extends EventEmitter {
           createdAt: now,
         });
 
+        if (overrides.boardId && this.deps.boards) {
+          try {
+            if (!this.deps.boards.hasItem(overrides.boardId, item.id)) {
+              this.deps.boards.appendItem(overrides.boardId, item.id);
+            }
+          } catch (err) {
+            this.deps.logger.warn("appendItem failed", {
+              id,
+              boardId: overrides.boardId,
+              err: String(err),
+            });
+          }
+        }
+        this.intentOverrides.delete(id);
+
         const updated = this.deps.jobs.updateState(id, {
           state: "succeeded",
           progress: 1,
@@ -485,6 +549,7 @@ export class JobRunner extends EventEmitter {
         this.running.delete(id);
         this.emit("job.completed", updated);
       } catch (err) {
+        this.intentOverrides.delete(id);
         const updated = this.deps.jobs.updateState(id, {
           state: "failed",
           errorMessage: (err as Error)?.message ?? String(err),
@@ -497,6 +562,7 @@ export class JobRunner extends EventEmitter {
     }
 
     // failed / cancelled
+    this.intentOverrides.delete(id);
     const updated = this.deps.jobs.updateState(id, {
       state: status.state,
       errorMessage: status.errorMessage ?? null,

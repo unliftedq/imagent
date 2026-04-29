@@ -1,19 +1,47 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { TooltipProvider, useTheme } from "@imagine-studio/ui";
 import { ROUTES } from "./routes.js";
 import { useUIStore } from "./state/useUIStore.js";
 import { useConfigStore } from "./state/useConfigStore.js";
+import { api } from "./lib/api.js";
 
 export function App() {
   const route = useUIStore((s) => s.route);
   const navigate = useUIStore((s) => s.navigate);
   const appPrefs = useConfigStore((s) => s.appPrefs);
+  const summaries = useConfigStore((s) => s.summaries);
   const refresh = useConfigStore((s) => s.refresh);
   const { theme, setTheme } = useTheme();
+  // First-run initial route: if any provider is configured, default to /studio,
+  // otherwise stay on /providers (where the user lands automatically thanks to
+  // the store default). We only run this once after the first config load.
+  const initialRouteAppliedRef = useRef(false);
 
   useEffect(() => {
     void refresh();
+    // Stash the data dir on a window global so renderer-side helpers can
+    // build `file://` URLs for gallery items without an extra IPC per image.
+    void (async () => {
+      try {
+        const paths = await api["app.storagePaths"]();
+        const w = window as unknown as { __imagineDataDir__?: string };
+        w.__imagineDataDir__ = paths.dataDir;
+      } catch {
+        // Best-effort; the Studio recent strip degrades gracefully.
+      }
+    })();
   }, [refresh]);
+
+  useEffect(() => {
+    if (initialRouteAppliedRef.current) return;
+    if (!appPrefs) return; // wait for first refresh()
+    initialRouteAppliedRef.current = true;
+    const anyConfigured = summaries.some((s) => s.configured);
+    if (anyConfigured) {
+      navigate("studio");
+    }
+    // else: stay on /providers (the default).
+  }, [appPrefs, summaries, navigate]);
 
   // Keep useTheme in sync with the persisted preference once loaded.
   useEffect(() => {

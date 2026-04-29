@@ -3,9 +3,6 @@ import {
   Button,
   Icons,
   Input,
-  Panel,
-  PanelBody,
-  PanelHeader,
   ProviderRow,
   type ProviderTestStatus,
 } from "@imagine-studio/ui";
@@ -21,8 +18,13 @@ interface RowState {
   region: string;
   // Per-provider config blocks (string-edit form):
   baseUrl: string;
-  models: string; // comma-separated
+  models: string; // comma-separated (single-list providers)
   defaultModel: string;
+  // Volcengine has two model lists, one per port.
+  imageModels: string;
+  videoModels: string;
+  defaultImageModel: string;
+  defaultVideoModel: string;
   azureImageDeployment: string;
   azureVideoDeployment: string;
 }
@@ -36,6 +38,10 @@ function emptyRowState(): RowState {
     baseUrl: "",
     models: "",
     defaultModel: "",
+    imageModels: "",
+    videoModels: "",
+    defaultImageModel: "",
+    defaultVideoModel: "",
     azureImageDeployment: "",
     azureVideoDeployment: "",
   };
@@ -72,15 +78,17 @@ function rowStateFromConfig(
       r.models = prefs["flux-bfl"].models.join(", ");
       r.defaultModel = prefs["flux-bfl"].defaultModel;
       break;
-    case "seedream":
-      r.baseUrl = prefs.seedream.baseUrl;
-      r.models = prefs.seedream.models.join(", ");
-      r.defaultModel = prefs.seedream.defaultModel;
+    case "volcengine":
+      r.baseUrl = prefs.volcengine.baseUrl;
+      r.imageModels = prefs.volcengine.imageModels.join(", ");
+      r.videoModels = prefs.volcengine.videoModels.join(", ");
+      r.defaultImageModel = prefs.volcengine.defaultImageModel;
+      r.defaultVideoModel = prefs.volcengine.defaultVideoModel;
       break;
-    case "seedance":
-      r.baseUrl = prefs.seedance.baseUrl;
-      r.models = prefs.seedance.models.join(", ");
-      r.defaultModel = prefs.seedance.defaultModel;
+    case "xai":
+      r.baseUrl = prefs.xai.baseUrl;
+      r.models = prefs.xai.models.join(", ");
+      r.defaultModel = prefs.xai.defaultModel;
       break;
   }
   return r;
@@ -104,8 +112,8 @@ export function ProvidersPage() {
     "azure-openai": emptyRowState(),
     google: emptyRowState(),
     "flux-bfl": emptyRowState(),
-    seedream: emptyRowState(),
-    seedance: emptyRowState(),
+    volcengine: emptyRowState(),
+    xai: emptyRowState(),
   }));
 
   useEffect(() => {
@@ -120,13 +128,13 @@ export function ProvidersPage() {
       "azure-openai": rowStateFromConfig("azure-openai", providerPrefs),
       google: rowStateFromConfig("google", providerPrefs),
       "flux-bfl": rowStateFromConfig("flux-bfl", providerPrefs),
-      seedream: rowStateFromConfig("seedream", providerPrefs),
-      seedance: rowStateFromConfig("seedance", providerPrefs),
+      volcengine: rowStateFromConfig("volcengine", providerPrefs),
+      xai: rowStateFromConfig("xai", providerPrefs),
     });
   }, [providerPrefs]);
 
   const order: ProviderId[] = useMemo(
-    () => ["openai", "azure-openai", "google", "flux-bfl", "seedream", "seedance"],
+    () => ["openai", "azure-openai", "google", "flux-bfl", "volcengine", "xai"],
     [],
   );
 
@@ -155,10 +163,9 @@ export function ProvidersPage() {
     const nextPrefs: ProviderPreferencesPayload = JSON.parse(
       JSON.stringify(providerPrefs),
     ) as ProviderPreferencesPayload;
-    const modelList = r.models
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
+    const splitList = (s: string): string[] =>
+      s.split(",").map((x) => x.trim()).filter(Boolean);
+    const modelList = splitList(r.models);
     switch (id) {
       case "openai":
         nextPrefs.openai = {
@@ -189,18 +196,29 @@ export function ProvidersPage() {
           defaultModel: r.defaultModel || modelList[0] || nextPrefs["flux-bfl"].defaultModel,
         };
         break;
-      case "seedream":
-        nextPrefs.seedream = {
-          baseUrl: r.baseUrl || nextPrefs.seedream.baseUrl,
-          models: modelList,
-          defaultModel: r.defaultModel || modelList[0] || nextPrefs.seedream.defaultModel,
+      case "volcengine": {
+        const imageModels = splitList(r.imageModels);
+        const videoModels = splitList(r.videoModels);
+        nextPrefs.volcengine = {
+          baseUrl: r.baseUrl || nextPrefs.volcengine.baseUrl,
+          imageModels,
+          videoModels,
+          defaultImageModel:
+            r.defaultImageModel ||
+            imageModels[0] ||
+            nextPrefs.volcengine.defaultImageModel,
+          defaultVideoModel:
+            r.defaultVideoModel ||
+            videoModels[0] ||
+            nextPrefs.volcengine.defaultVideoModel,
         };
         break;
-      case "seedance":
-        nextPrefs.seedance = {
-          baseUrl: r.baseUrl || nextPrefs.seedance.baseUrl,
+      }
+      case "xai":
+        nextPrefs.xai = {
+          baseUrl: r.baseUrl || nextPrefs.xai.baseUrl,
           models: modelList,
-          defaultModel: r.defaultModel || modelList[0] || nextPrefs.seedance.defaultModel,
+          defaultModel: r.defaultModel || modelList[0] || nextPrefs.xai.defaultModel,
         };
         break;
     }
@@ -217,12 +235,13 @@ export function ProvidersPage() {
     }
     if (id === "google" && r.apiKey) secretsPatch.google = { apiKey: r.apiKey };
     if (id === "flux-bfl" && r.apiKey) secretsPatch["flux-bfl"] = { apiKey: r.apiKey };
-    if (id === "seedream" || id === "seedance") {
+    if (id === "volcengine") {
       const block: NonNullable<SecretsWrite["volcengine"]> = {};
       if (r.apiKey) block.apiKey = r.apiKey;
       if (r.region) block.region = r.region;
       if (Object.keys(block).length > 0) secretsPatch.volcengine = block;
     }
+    if (id === "xai" && r.apiKey) secretsPatch.xai = { apiKey: r.apiKey };
 
     await saveProviderPrefs(nextPrefs);
     if (Object.keys(secretsPatch).length > 0) {
@@ -252,13 +271,9 @@ export function ProvidersPage() {
           const summary = summaries.find((s) => s.id === id);
           const r = rows[id];
           const status = statusFor(id);
-          const sharedNote =
-            id === "seedream"
-              ? "This key is shared with Seedance."
-              : id === "seedance"
-              ? "This key is shared with Seedream."
-              : undefined;
           const maskedKey = secretMaskFor(id, secrets);
+          const kindsBadge =
+            id === "volcengine" ? <KindsBadge text="Image + Video" /> : null;
           return (
             <ProviderRow
               key={id}
@@ -267,17 +282,13 @@ export function ProvidersPage() {
               status={status}
               onTest={() => void testProvider(id)}
               onSave={() => void saveRow(id)}
-              badge={sharedNote ? <SharedBadge text={sharedNote} /> : null}
+              badge={kindsBadge}
               defaultOpen={!summary?.configured}
             >
               <div className="flex flex-col gap-4">
                 {id !== "azure-openai" ? (
                   <SecretField
-                    label={
-                      id === "seedream" || id === "seedance"
-                        ? "Volcengine API key"
-                        : "API key"
-                    }
+                    label="API key"
                     placeholder={maskedKey ?? "paste your key here"}
                     value={r.apiKey}
                     onChange={(v) => update(id, "apiKey", v)}
@@ -335,7 +346,7 @@ export function ProvidersPage() {
                   </>
                 ) : null}
 
-                {(id === "openai" || id === "flux-bfl" || id === "seedream" || id === "seedance") ? (
+                {(id === "openai" || id === "flux-bfl" || id === "volcengine" || id === "xai") ? (
                   <Field
                     label="Base URL"
                     helperText={
@@ -352,13 +363,15 @@ export function ProvidersPage() {
                           ? "https://api.bfl.ai"
                           : id === "openai"
                           ? "https://api.openai.com/v1"
+                          : id === "xai"
+                          ? "https://api.x.ai/v1"
                           : "https://ark.cn-beijing.volces.com/api/v3"
                       }
                     />
                   </Field>
                 ) : null}
 
-                {(id === "seedream" || id === "seedance") ? (
+                {id === "volcengine" ? (
                   <Field label="Region">
                     <Input
                       value={r.region}
@@ -367,7 +380,8 @@ export function ProvidersPage() {
                   </Field>
                 ) : null}
 
-                {id !== "azure-openai" ? (
+                {/* Single-list providers (openai/google/flux-bfl/xai). */}
+                {(id === "openai" || id === "google" || id === "flux-bfl" || id === "xai") ? (
                   <>
                     <Field label="Models" helperText="Comma-separated list. The first one is used as the default if none is set below.">
                       <Input
@@ -383,6 +397,48 @@ export function ProvidersPage() {
                       />
                     </Field>
                   </>
+                ) : null}
+
+                {/* Volcengine has two parallel model editors — one per port. */}
+                {id === "volcengine" ? (
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="flex flex-col gap-3 rounded-(--radius-md) border border-(--color-border) p-3">
+                      <span className="text-(length:--text-caption-uppercase) tracking-[1.5px] text-(--color-muted)">
+                        Image models (Seedream)
+                      </span>
+                      <Field label="Models" helperText="Comma-separated.">
+                        <Input
+                          value={r.imageModels}
+                          onChange={(e) => update(id, "imageModels", e.target.value)}
+                          placeholder="seedream-3.0"
+                        />
+                      </Field>
+                      <Field label="Default image model">
+                        <Input
+                          value={r.defaultImageModel}
+                          onChange={(e) => update(id, "defaultImageModel", e.target.value)}
+                        />
+                      </Field>
+                    </div>
+                    <div className="flex flex-col gap-3 rounded-(--radius-md) border border-(--color-border) p-3">
+                      <span className="text-(length:--text-caption-uppercase) tracking-[1.5px] text-(--color-muted)">
+                        Video models (Seedance)
+                      </span>
+                      <Field label="Models" helperText="Comma-separated.">
+                        <Input
+                          value={r.videoModels}
+                          onChange={(e) => update(id, "videoModels", e.target.value)}
+                          placeholder="seedance-1.0-pro"
+                        />
+                      </Field>
+                      <Field label="Default video model">
+                        <Input
+                          value={r.defaultVideoModel}
+                          onChange={(e) => update(id, "defaultVideoModel", e.target.value)}
+                        />
+                      </Field>
+                    </div>
+                  </div>
                 ) : null}
               </div>
             </ProviderRow>
@@ -401,10 +457,8 @@ function modelPlaceholder(id: ProviderId): string {
       return "imagen-3";
     case "flux-bfl":
       return "flux-pro-1.1, flux-dev";
-    case "seedream":
-      return "seedream-3.0";
-    case "seedance":
-      return "seedance-1.0-pro";
+    case "xai":
+      return "grok-2-image-1212";
     default:
       return "";
   }
@@ -420,15 +474,16 @@ function secretMaskFor(id: ProviderId, masked: ReturnType<typeof useConfigStore.
       return masked.google?.apiKey ?? null;
     case "flux-bfl":
       return masked["flux-bfl"]?.apiKey ?? null;
-    case "seedream":
-    case "seedance":
+    case "volcengine":
       return masked.volcengine?.apiKey ?? null;
+    case "xai":
+      return masked.xai?.apiKey ?? null;
     default:
       return null;
   }
 }
 
-function SharedBadge({ text }: { text: string }) {
+function KindsBadge({ text }: { text: string }) {
   return (
     <span className="rounded-(--radius-pill) bg-(--color-brand-lavender)/30 px-2 py-0.5 text-(length:--text-caption) text-(--color-ink)">
       {text}

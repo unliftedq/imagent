@@ -9,43 +9,41 @@ import type {
 } from "@imagine-studio/core";
 import { OpenAIImageProvider } from "../openai/image.js";
 
-const DEFAULT_VOLCENGINE_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3";
+const DEFAULT_XAI_BASE_URL = "https://api.x.ai/v1";
 
-export interface VolcengineImageProviderOptions {
+export interface XaiImageProviderOptions {
   apiKey: string;
   baseUrl?: string | null;
-  region?: string;
   models: ReadonlyMap<string, ImageModelDef>;
   fetch?: typeof fetch;
   logger?: Logger;
 }
 
 /**
- * Volcengine image provider — backed by Ark's OpenAI-compatible image API
- * (`POST /images/generations` with `Authorization: Bearer`). The default
- * model family is Seedream (see catalog.ts). Shares an Ark API key with
- * `VolcengineVideoProvider`; both report `id = "volcengine"`.
+ * xAI image provider — OpenAI-compatible image API against
+ * `https://api.x.ai/v1/images/generations` with `Authorization: Bearer`.
+ * Default catalog model is `grok-2-image-1212`. Composes the OpenAI
+ * provider with a different base URL (same wire shape).
  */
-export class VolcengineImageProvider implements ImageProvider {
+export class XaiImageProvider implements ImageProvider {
   private readonly inner: OpenAIImageProvider;
-  readonly id = "volcengine";
-  readonly displayName = "Volcengine";
+  readonly id = "xai";
+  readonly displayName = "xAI";
   readonly models: ReadonlyMap<string, ImageModelDef>;
   readonly capabilities: ImageCapabilities;
 
-  constructor(options: VolcengineImageProviderOptions) {
-    const baseUrl = (options.baseUrl ?? DEFAULT_VOLCENGINE_BASE_URL).replace(/\/+$/, "");
+  constructor(options: XaiImageProviderOptions) {
+    const baseUrl = (options.baseUrl ?? DEFAULT_XAI_BASE_URL).replace(/\/+$/, "");
     this.models = options.models;
     this.inner = new OpenAIImageProvider({
       apiKey: options.apiKey,
       // Pass baseUrl through so the inner's GET /models test() probe hits
-      // Ark rather than OpenAI's default endpoint.
+      // xAI rather than OpenAI's default endpoint.
       baseUrl,
       models: options.models,
-      providerId: "volcengine",
-      displayName: "Volcengine",
+      providerId: "xai",
+      displayName: "xAI",
       urlBuilder: () => `${baseUrl}/images/generations`,
-      // Bearer is the documented Ark scheme; same as OpenAI default.
       ...(options.fetch !== undefined ? { fetch: options.fetch } : {}),
       ...(options.logger !== undefined ? { logger: options.logger } : {}),
     });
@@ -56,10 +54,7 @@ export class VolcengineImageProvider implements ImageProvider {
     return this.inner.generate(req, signal);
   }
 
-  /**
-   * Volcengine test piggybacks on the OpenAI-compatible inner provider's
-   * `GET /models` probe.
-   */
+  /** xAI exposes an OpenAI-compatible `GET /models` listing. */
   test(signal?: AbortSignal): Promise<ProviderTestResult> {
     if (!this.inner.test) {
       return Promise.resolve({ ok: false, reason: "test() unavailable" });

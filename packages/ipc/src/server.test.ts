@@ -56,6 +56,7 @@ describe("registerIpcHandlers", () => {
           id: "openai",
           displayName: "OpenAI",
           configured: true,
+          kinds: ["image"],
           defaultModel: "gpt-image-1",
           modelIds: ["gpt-image-1"],
         },
@@ -185,6 +186,193 @@ describe("registerIpcHandlers", () => {
     const result = await client["app.preferences.set"]({ theme: "dark" });
     expect(result.theme).toBe("dark");
     expect(saved).toEqual({ theme: "dark" });
+  });
+
+  describe("M5 routes — smoke tests for input/output round-trips", () => {
+    it("gallery.query: paginates with kind filter", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      registerIpcHandlers(ipcMain, {
+        "gallery.query": async (q) => {
+          expect(q.kind).toBe("image");
+          expect(q.limit).toBe(20);
+          return { items: [], total: 0 };
+        },
+      });
+      const reply = (await invoke("gallery.query", {
+        kind: "image",
+        limit: 20,
+        offset: 0,
+      })) as { ok: true; value: { items: unknown[]; total: number } };
+      expect(reply.ok).toBe(true);
+      expect(reply.value.total).toBe(0);
+    });
+
+    it("gallery.toggleFavorite: omits `favorited` and toggles", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      let seen: { id: string; favorited?: boolean } | null = null;
+      registerIpcHandlers(ipcMain, {
+        "gallery.toggleFavorite": async (input) => {
+          seen = input;
+        },
+      });
+      const reply = (await invoke("gallery.toggleFavorite", { id: "g1" })) as {
+        ok: true;
+      };
+      expect(reply.ok).toBe(true);
+      expect(seen).toEqual({ id: "g1" });
+    });
+
+    it("gallery.show: returns parent + children + siblings", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      const stubItem = (id: string) => ({
+        id,
+        kind: "image" as const,
+        prompt: "p",
+        providerId: "openai",
+        model: "x",
+        paramsJson: "{}",
+        relPath: "x.png",
+        bytes: 1,
+        favorited: false,
+        createdAt: 0,
+      });
+      registerIpcHandlers(ipcMain, {
+        "gallery.show": async ({ id }) => ({
+          item: stubItem(id),
+          parent: stubItem("p1"),
+          children: [stubItem("c1"), stubItem("c2")],
+          siblings: [stubItem("s1")],
+        }),
+      });
+      const reply = (await invoke("gallery.show", { id: "g1" })) as {
+        ok: true;
+        value: {
+          item: { id: string };
+          children: unknown[];
+          siblings: unknown[];
+        };
+      };
+      expect(reply.ok).toBe(true);
+      expect(reply.value.item.id).toBe("g1");
+      expect(reply.value.children).toHaveLength(2);
+      expect(reply.value.siblings).toHaveLength(1);
+    });
+
+    it("gallery.remix: returns an ImageRequest with parentId", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      registerIpcHandlers(ipcMain, {
+        "gallery.remix": async ({ itemId }) => ({
+          prompt: "remixed",
+          providerId: "openai",
+          model: "gpt-image-1",
+          count: 1,
+          references: [],
+          assetIds: [],
+          parentId: itemId,
+        }),
+      });
+      const reply = (await invoke("gallery.remix", { itemId: "g1" })) as {
+        ok: true;
+        value: { parentId?: string };
+      };
+      expect(reply.ok).toBe(true);
+      expect(reply.value.parentId).toBe("g1");
+    });
+
+    it("boards.list: returns ordered boards", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      registerIpcHandlers(ipcMain, {
+        "boards.list": async () => [
+          {
+            id: "b1",
+            name: "First",
+            description: null,
+            coverItemId: null,
+            position: 0,
+            createdAt: 0,
+            updatedAt: 0,
+          },
+        ],
+      });
+      const reply = (await invoke("boards.list", undefined)) as {
+        ok: true;
+        value: Array<{ id: string }>;
+      };
+      expect(reply.ok).toBe(true);
+      expect(reply.value).toHaveLength(1);
+    });
+
+    it("boards.addItem: position is optional", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      let seen: { boardId: string; itemId: string; position?: number } | null = null;
+      registerIpcHandlers(ipcMain, {
+        "boards.addItem": async (input) => {
+          seen = input;
+        },
+      });
+      const reply = (await invoke("boards.addItem", {
+        boardId: "b1",
+        itemId: "g1",
+      })) as { ok: true };
+      expect(reply.ok).toBe(true);
+      expect(seen).toEqual({ boardId: "b1", itemId: "g1" });
+    });
+
+    it("boards.create: round-trip", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      registerIpcHandlers(ipcMain, {
+        "boards.create": async (input) => ({
+          id: "b-new",
+          name: input.name,
+          description: input.description ?? null,
+          coverItemId: null,
+          position: 0,
+          createdAt: 0,
+          updatedAt: 0,
+        }),
+      });
+      const reply = (await invoke("boards.create", {
+        id: "ignored",
+        name: "Inspirations",
+        description: "saved looks",
+        coverItemId: null,
+        position: 0,
+        createdAt: 0,
+        updatedAt: 0,
+      })) as { ok: true; value: { id: string; name: string } };
+      expect(reply.ok).toBe(true);
+      expect(reply.value.id).toBe("b-new");
+      expect(reply.value.name).toBe("Inspirations");
+    });
+
+    it("jobs.list: round-trips JobsQuery", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      registerIpcHandlers(ipcMain, {
+        "jobs.list": async (q) => {
+          expect(q.kind).toBe("image");
+          return [];
+        },
+      });
+      const reply = (await invoke("jobs.list", {
+        kind: "image",
+        limit: 50,
+        offset: 0,
+      })) as { ok: true; value: unknown[] };
+      expect(reply.ok).toBe(true);
+    });
+
+    it("jobs.cancel: round-trips id", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      let seen: string | null = null;
+      registerIpcHandlers(ipcMain, {
+        "jobs.cancel": async ({ id }) => {
+          seen = id;
+        },
+      });
+      const reply = (await invoke("jobs.cancel", { id: "j1" })) as { ok: true };
+      expect(reply.ok).toBe(true);
+      expect(seen).toBe("j1");
+    });
   });
 
   it("subscribes to events through the client", async () => {

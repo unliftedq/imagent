@@ -41,7 +41,7 @@ export function registerGenerateCommand(program: Command): void {
   program
     .command("generate <prompt>")
     .description("Generate one or more images from a prompt")
-    .option("--provider <id>", "Provider id (openai|azure-openai|google|flux-bfl|seedream)")
+    .option("--provider <id>", "Provider id (openai|azure-openai|google|flux-bfl|volcengine|xai)")
     .option("--model <id>", "Model id within the chosen provider")
     .option("--count <n>", "Number of outputs", "1")
     .option("--size <WxH>", "Output size (provider-dependent)")
@@ -161,9 +161,15 @@ function pickModel(
   providerModels: ReadonlyMap<string, unknown>,
 ): string {
   if (modelOverride) return modelOverride;
-  const block = config.providers[providerId] as { defaultModel?: string } | undefined;
-  if (block?.defaultModel && providerModels.has(block.defaultModel)) {
-    return block.defaultModel;
+  const block = config.providers[providerId] as
+    | { defaultModel?: string; defaultImageModel?: string }
+    | undefined;
+  // Volcengine carries `defaultImageModel` (because it also has video). Other
+  // providers carry `defaultModel`.
+  const candidate =
+    providerId === "volcengine" ? block?.defaultImageModel : block?.defaultModel;
+  if (candidate && providerModels.has(candidate)) {
+    return candidate;
   }
   // Fallback to the first known model.
   const first = providerModels.keys().next().value;

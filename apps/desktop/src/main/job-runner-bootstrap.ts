@@ -6,6 +6,7 @@ import {
   type SecretsStore,
 } from "@imagine-studio/config";
 import {
+  BoardRepository,
   GalleryRepository,
   JobRepository,
   type DatabaseType,
@@ -51,6 +52,7 @@ export async function bootstrapRuntime(deps: BootstrapDeps): Promise<RuntimeServ
 
   const galleryRepo = new GalleryRepository(db);
   const jobsRepo = new JobRepository(db);
+  const boardsRepo = new BoardRepository(db);
 
   // Files port — JobRunner only needs galleryDir/galleryItemFile/dataDir.
   const filesPort = {
@@ -60,16 +62,33 @@ export async function bootstrapRuntime(deps: BootstrapDeps): Promise<RuntimeServ
     dataDir: paths.dataDir,
   };
 
-  let snapshot = await loadSnapshot(configStore, secretsStore);
-  let imageRegistry = createImageRegistry(snapshot.secrets, snapshot.preferences);
-  let videoRegistry = createVideoRegistry(snapshot.secrets, snapshot.preferences);
+  // Live registries — mutable Maps shared with the JobRunner so a config
+  // refresh can replace entries without re-instantiating the runner.
+  const imageRegistry = new Map() as Map<string, never>;
+  const videoRegistry = new Map() as Map<string, never>;
+
+  const repopulate = async (): Promise<void> => {
+    const snap = await loadSnapshot(configStore, secretsStore);
+    const nextImage = createImageRegistry(snap.secrets, snap.preferences);
+    const nextVideo = createVideoRegistry(snap.secrets, snap.preferences);
+    imageRegistry.clear();
+    for (const [k, v] of nextImage) {
+      (imageRegistry as Map<string, unknown>).set(k, v);
+    }
+    videoRegistry.clear();
+    for (const [k, v] of nextVideo) {
+      (videoRegistry as Map<string, unknown>).set(k, v);
+    }
+  };
+  await repopulate();
 
   const runner = new JobRunner({
     jobs: jobsRepo,
     gallery: galleryRepo,
+    boards: boardsRepo,
     files: filesPort,
-    imageRegistry,
-    videoRegistry,
+    imageRegistry: imageRegistry as unknown as ImageRegistry,
+    videoRegistry: videoRegistry as unknown as VideoRegistry,
     logger,
   });
 
@@ -82,23 +101,11 @@ export async function bootstrapRuntime(deps: BootstrapDeps): Promise<RuntimeServ
   }
 
   return {
-    get imageRegistry() {
-      return imageRegistry;
-    },
-    get videoRegistry() {
-      return videoRegistry;
-    },
+    imageRegistry: imageRegistry as unknown as ImageRegistry,
+    videoRegistry: videoRegistry as unknown as VideoRegistry,
     jobRunner: runner,
     async refresh() {
-      snapshot = await loadSnapshot(configStore, secretsStore);
-      imageRegistry = createImageRegistry(snapshot.secrets, snapshot.preferences);
-      videoRegistry = createVideoRegistry(snapshot.secrets, snapshot.preferences);
-      // The JobRunner reads its registries by reference, so swapping the
-      // backing maps doesn't help — we cheat by replacing the values it
-      // captured at construction. JobRunner's deps property is private; we
-      // accept that newly-submitted jobs go through the freshly captured
-      // registry by passing the registries via runtime closure in the IPC
-      // handlers (image.generate is M5).
+      await repopulate();
       logger.info("[runtime] registries refreshed", {
         image: [...imageRegistry.keys()],
         video: [...videoRegistry.keys()],

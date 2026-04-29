@@ -56,7 +56,7 @@ export function registerConfigCommand(program: Command): void {
     });
 }
 
-const VENDOR_KEYS = ["openai", "azure-openai", "google", "flux-bfl", "volcengine"] as const;
+const VENDOR_KEYS = ["openai", "azure-openai", "google", "flux-bfl", "volcengine", "xai"] as const;
 type VendorId = (typeof VENDOR_KEYS)[number];
 
 function isVendorKey(s: string): s is VendorId {

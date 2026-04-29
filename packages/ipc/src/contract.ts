@@ -3,6 +3,7 @@ import {
   BoardSchema,
   GalleryItemSchema,
   GalleryQuerySchema,
+  ImageModelDefSchema,
   ImageRequestSchema,
   JobSchema,
   JobsQuerySchema,
@@ -53,15 +54,25 @@ export const ProviderIdSchema = z.enum([
   "azure-openai",
   "google",
   "flux-bfl",
-  "seedream",
-  "seedance",
+  "volcengine",
+  "xai",
 ]);
 export type ProviderId = z.infer<typeof ProviderIdSchema>;
+
+/**
+ * Which generation kinds a provider participates in. Volcengine spans both
+ * `image` and `video` because Seedream + Seedance share Ark credentials
+ * under one provider id (architecture.md §4 vendor=provider).
+ */
+export const ProviderKindSchema = z.enum(["image", "video"]);
+export type ProviderKind = z.infer<typeof ProviderKindSchema>;
 
 export const ProviderSummarySchema = z.object({
   id: ProviderIdSchema,
   displayName: z.string(),
   configured: z.boolean(),
+  /** Generation kinds this provider supports. */
+  kinds: z.array(ProviderKindSchema),
   /** When `configured`, the resolved default model for this provider. */
   defaultModel: z.string().nullable(),
   modelIds: z.array(z.string()),
@@ -108,12 +119,14 @@ export const ProviderPreferencesPayloadSchema = z.object({
     models: z.array(z.string()),
     defaultModel: z.string(),
   }),
-  seedream: z.object({
+  volcengine: z.object({
     baseUrl: z.string(),
-    models: z.array(z.string()),
-    defaultModel: z.string(),
+    imageModels: z.array(z.string()),
+    videoModels: z.array(z.string()),
+    defaultImageModel: z.string(),
+    defaultVideoModel: z.string(),
   }),
-  seedance: z.object({
+  xai: z.object({
     baseUrl: z.string(),
     models: z.array(z.string()),
     defaultModel: z.string(),
@@ -143,6 +156,7 @@ export const MaskedSecretsSchema = z.object({
       region: z.string().nullable(),
     })
     .optional(),
+  xai: z.object({ apiKey: z.string().nullable() }).optional(),
 });
 export type MaskedSecrets = z.infer<typeof MaskedSecretsSchema>;
 
@@ -164,6 +178,7 @@ export const SecretsWriteSchema = z.object({
       region: z.string().min(1).optional(),
     })
     .optional(),
+  xai: z.object({ apiKey: z.string().min(1) }).partial().optional(),
 });
 export type SecretsWrite = z.infer<typeof SecretsWriteSchema>;
 
@@ -252,6 +267,17 @@ export const contract = {
   "image.generate": { input: ImageRequestSchema, output: GalleryItemSchema },
   "video.submit": { input: VideoRequestSchema, output: JobSchema },
 
+  // Model resolution — returns the deep-merged catalog ← user-override view
+  // for an image provider, the same shape JobRunner & validators consume.
+  "image.models": {
+    input: z.object({ providerId: ProviderIdSchema }),
+    output: z.object({
+      providerId: ProviderIdSchema,
+      defaultModel: z.string().nullable(),
+      models: z.array(ImageModelDefSchema),
+    }),
+  },
+
   // Jobs
   "jobs.list": { input: JobsQuerySchema, output: z.array(JobSchema) },
   "jobs.cancel": { input: z.object({ id: z.string() }), output: z.void() },
@@ -291,7 +317,13 @@ export const contract = {
   },
   "boards.delete": { input: z.object({ id: z.string() }), output: z.void() },
   "boards.addItem": {
-    input: z.object({ boardId: z.string(), itemId: z.string(), position: z.number().int() }),
+    // Position is optional — when omitted, the handler appends at max+1.
+    // Idempotent: a no-op if (boardId, itemId) is already linked.
+    input: z.object({
+      boardId: z.string(),
+      itemId: z.string(),
+      position: z.number().int().optional(),
+    }),
     output: z.void(),
   },
   "boards.removeItem": {
@@ -308,12 +340,22 @@ export const contract = {
     input: GalleryQuerySchema,
     output: z.object({ items: z.array(GalleryItemSchema), total: z.number().int() }),
   },
+  "gallery.show": {
+    input: z.object({ id: z.string() }),
+    output: z.object({
+      item: GalleryItemSchema,
+      parent: GalleryItemSchema.nullable(),
+      children: z.array(GalleryItemSchema),
+      siblings: z.array(GalleryItemSchema),
+    }),
+  },
   "gallery.remix": {
     input: z.object({ itemId: z.string() }),
     output: ImageRequestSchema,
   },
   "gallery.toggleFavorite": {
-    input: z.object({ id: z.string(), favorited: z.boolean() }),
+    // `favorited` optional — when omitted, the handler toggles the current value.
+    input: z.object({ id: z.string(), favorited: z.boolean().optional() }),
     output: z.void(),
   },
   "gallery.delete": { input: z.object({ id: z.string() }), output: z.void() },

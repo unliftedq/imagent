@@ -21,6 +21,8 @@ export const ImageRequestSchema = z.object({
   assetIds: z.array(z.string()).default([]),
   /** Optional board to add the resulting item to immediately. */
   boardId: z.string().optional(),
+  /** Optional remix lineage — records gallery_items.parent_id on the result. */
+  parentId: z.string().optional(),
   /** Provider-specific raw params passthrough (will land in params_json). */
   raw: z.record(z.unknown()).optional(),
 });
@@ -45,7 +47,19 @@ export const VideoRequestSchema = z.object({
 export type VideoRequest = z.infer<typeof VideoRequestSchema>;
 
 export const GenerationIntentSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("image"), request: ImageRequestSchema }),
-  z.object({ kind: z.literal("video"), request: VideoRequestSchema }),
+  z.object({
+    kind: z.literal("image"),
+    request: ImageRequestSchema,
+    /** Records `gallery_items.parent_id` on the resulting row (remix lineage). */
+    parentId: z.string().optional(),
+    /** When set, inserts a `board_items` row for the new gallery item. */
+    boardId: z.string().optional(),
+  }),
+  z.object({
+    kind: z.literal("video"),
+    request: VideoRequestSchema,
+    parentId: z.string().optional(),
+    boardId: z.string().optional(),
+  }),
 ]);
 export type GenerationIntent = z.infer<typeof GenerationIntentSchema>;

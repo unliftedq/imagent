@@ -13,3 +13,5 @@ export * from "./flux/image.js";
 export * from "./volcengine/catalog.js";
 export * from "./volcengine/image.js";
 export * from "./volcengine/video.js";
+export * from "./xai/catalog.js";
+export * from "./xai/image.js";

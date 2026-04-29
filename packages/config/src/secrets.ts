@@ -14,6 +14,7 @@ const ENV_KEYS = {
   google: { apiKey: "GOOGLE_API_KEY" },
   "flux-bfl": { apiKey: "FLUX_BFL_API_KEY" },
   volcengine: { apiKey: "VOLCENGINE_API_KEY", region: "VOLCENGINE_REGION" },
+  xai: { apiKey: "XAI_API_KEY" },
 } as const;
 
 /**
@@ -89,6 +90,9 @@ export function createEnvSecretsStore(env: NodeJS.ProcessEnv): SecretsStore {
           region: env[ENV_KEYS.volcengine.region] ?? "cn-beijing",
         };
       }
+
+      const xaiKey = env[ENV_KEYS.xai.apiKey];
+      if (xaiKey) out.xai = { apiKey: xaiKey };
       return ProviderSecretsSchema.parse(out);
     },
     async saveSecrets(): Promise<void> {

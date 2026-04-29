@@ -56,6 +56,30 @@ export type { IconButtonProps } from "./primitives/IconButton.js";
 // Composites
 export { ProviderRow } from "./composites/ProviderRow.js";
 export type { ProviderRowProps, ProviderTestStatus } from "./composites/ProviderRow.js";
+export { ModelSelect } from "./composites/ModelSelect.js";
+export type {
+  ModelSelectProps,
+  ResolvedModelOption,
+} from "./composites/ModelSelect.js";
+export { PromptComposer } from "./composites/PromptComposer.js";
+export type {
+  PromptComposerProps,
+  PromptComposerAssetSlot,
+} from "./composites/PromptComposer.js";
+export { GalleryItemCard } from "./composites/GalleryItemCard.js";
+export type {
+  GalleryItemCardProps,
+  GalleryItemCardKind,
+  GalleryItemCardBoardOption,
+} from "./composites/GalleryItemCard.js";
+export { BoardSidebarItem } from "./composites/BoardSidebarItem.js";
+export type { BoardSidebarItemProps } from "./composites/BoardSidebarItem.js";
+export { JobProgress } from "./composites/JobProgress.js";
+export type {
+  JobProgressProps,
+  JobProgressKind,
+  JobProgressState,
+} from "./composites/JobProgress.js";
 
 // Icons
 export * as Icons from "./icons.js";

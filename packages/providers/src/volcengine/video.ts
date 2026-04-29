@@ -20,9 +20,9 @@ import { z } from "zod";
 import { createHttpClient, type HttpClient } from "../http/index.js";
 import { testFailureFromError } from "../openai/image.js";
 
-const DEFAULT_SEEDANCE_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3";
+const DEFAULT_VOLCENGINE_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3";
 
-export interface SeedanceVideoProviderOptions {
+export interface VolcengineVideoProviderOptions {
   apiKey: string;
   baseUrl?: string;
   region?: string;
@@ -31,14 +31,13 @@ export interface SeedanceVideoProviderOptions {
   logger?: Logger;
 }
 
-// TODO(verify endpoint shape) — confirmed convention from Volcengine Ark
-// `contents/generations/tasks` flow: submit, poll, fetch on success. Status
-// values mapped to our VideoJobState below.
-const SeedanceSubmitResponseSchema = z.object({
+// Ark `contents/generations/tasks` flow: submit, poll, fetch on success.
+// Status values mapped to our VideoJobState below.
+const VolcengineSubmitResponseSchema = z.object({
   id: z.string(),
 });
 
-const SeedanceTaskResponseSchema = z.object({
+const VolcengineTaskResponseSchema = z.object({
   id: z.string().optional(),
   status: z.string(),
   // Different revisions return progress in different shapes; accept both.
@@ -59,18 +58,24 @@ const SeedanceTaskResponseSchema = z.object({
     .optional(),
 });
 
-export class SeedanceVideoProvider implements VideoProvider {
-  readonly id = "seedance";
-  readonly displayName = "Seedance (Volcengine)";
+/**
+ * Volcengine video provider — backed by Ark's video generation tasks API
+ * (Seedance model family). Shares the Ark base URL + API key with
+ * `VolcengineImageProvider`; both report `id = "volcengine"`. The runtime
+ * discriminator is the port type.
+ */
+export class VolcengineVideoProvider implements VideoProvider {
+  readonly id = "volcengine";
+  readonly displayName = "Volcengine";
   readonly models: ReadonlyMap<string, VideoModelDef>;
   readonly capabilities: VideoCapabilities;
   private readonly http: HttpClient;
   private readonly baseUrl: string;
 
-  constructor(options: SeedanceVideoProviderOptions) {
+  constructor(options: VolcengineVideoProviderOptions) {
     this.models = options.models;
     this.capabilities = aggregateVideoCapabilities(options.models);
-    this.baseUrl = (options.baseUrl ?? DEFAULT_SEEDANCE_BASE_URL).replace(/\/+$/, "");
+    this.baseUrl = (options.baseUrl ?? DEFAULT_VOLCENGINE_BASE_URL).replace(/\/+$/, "");
     this.http = createHttpClient({
       vendorId: this.id,
       headers: { Authorization: `Bearer ${options.apiKey}` },
@@ -82,7 +87,7 @@ export class SeedanceVideoProvider implements VideoProvider {
   async submit(req: VideoRequest): Promise<VideoJobHandle> {
     const model = this.models.get(req.model);
     if (!model) {
-      throw new ProviderRequestError(`unknown video model '${req.model}' for seedance`, {
+      throw new ProviderRequestError(`unknown video model '${req.model}' for volcengine`, {
         vendorId: this.id,
       });
     }
@@ -110,8 +115,8 @@ export class SeedanceVideoProvider implements VideoProvider {
     };
 
     const url = `${this.baseUrl}/contents/generations/tasks`;
-    const response = await this.http.post<z.infer<typeof SeedanceSubmitResponseSchema>>(url, body, {
-      schema: SeedanceSubmitResponseSchema,
+    const response = await this.http.post<z.infer<typeof VolcengineSubmitResponseSchema>>(url, body, {
+      schema: VolcengineSubmitResponseSchema,
     });
 
     return { providerId: this.id, providerJobId: response.id };
@@ -119,8 +124,8 @@ export class SeedanceVideoProvider implements VideoProvider {
 
   async poll(handle: VideoJobHandle): Promise<VideoJobStatus> {
     const url = `${this.baseUrl}/contents/generations/tasks/${encodeURIComponent(handle.providerJobId)}`;
-    const response = await this.http.get<z.infer<typeof SeedanceTaskResponseSchema>>(url, {
-      schema: SeedanceTaskResponseSchema,
+    const response = await this.http.get<z.infer<typeof VolcengineTaskResponseSchema>>(url, {
+      schema: VolcengineTaskResponseSchema,
     });
     const state = mapStatus(response.status);
     const out: VideoJobStatus = { state };
@@ -135,8 +140,8 @@ export class SeedanceVideoProvider implements VideoProvider {
 
   async fetch(handle: VideoJobHandle): Promise<VideoGenerationResult> {
     const url = `${this.baseUrl}/contents/generations/tasks/${encodeURIComponent(handle.providerJobId)}`;
-    const response = await this.http.get<z.infer<typeof SeedanceTaskResponseSchema>>(url, {
-      schema: SeedanceTaskResponseSchema,
+    const response = await this.http.get<z.infer<typeof VolcengineTaskResponseSchema>>(url, {
+      schema: VolcengineTaskResponseSchema,
     });
     if (mapStatus(response.status) !== "succeeded") {
       throw new ProviderError(`fetch() called on non-succeeded task (status=${response.status})`, {
@@ -159,8 +164,8 @@ export class SeedanceVideoProvider implements VideoProvider {
   }
 
   /**
-   * Seedance shares Ark base URL + API key with Seedream; the OpenAI-compatible
-   * `GET /models` listing endpoint serves as the auth probe.
+   * Same Ark `GET /models` listing as the image provider — Ark exposes one
+   * directory keyed by both Seedream and Seedance models.
    */
   async test(signal?: AbortSignal): Promise<ProviderTestResult> {
     const started = Date.now();
@@ -189,10 +194,8 @@ export class SeedanceVideoProvider implements VideoProvider {
     try {
       await this.http.del(url);
     } catch (err) {
-      // If the API doesn't support cancel (e.g. 404 / 405), surface a clear
-      // message; the JobRunner is allowed to drop the polling loop regardless.
       if (err instanceof ProviderHttpError && (err.status === 404 || err.status === 405)) {
-        throw new ProviderError("not supported by Seedance", { vendorId: this.id, status: err.status });
+        throw new ProviderError("not supported by Volcengine", { vendorId: this.id, status: err.status });
       }
       throw err;
     }

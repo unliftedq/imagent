@@ -18,13 +18,15 @@ import { GoogleImageProvider } from "./google/image.js";
 import { FLUX_CATALOG } from "./flux/catalog.js";
 import { FluxImageProvider } from "./flux/image.js";
 import {
-  SEEDANCE_CATALOG,
-  SEEDREAM_CATALOG,
-  SEEDREAM_IMAGE_MODELS,
-  SEEDANCE_VIDEO_MODELS,
+  VOLCENGINE_IMAGE_CATALOG,
+  VOLCENGINE_IMAGE_MODELS,
+  VOLCENGINE_VIDEO_CATALOG,
+  VOLCENGINE_VIDEO_MODELS,
 } from "./volcengine/catalog.js";
-import { SeedreamImageProvider } from "./volcengine/image.js";
-import { SeedanceVideoProvider } from "./volcengine/video.js";
+import { VolcengineImageProvider } from "./volcengine/image.js";
+import { VolcengineVideoProvider } from "./volcengine/video.js";
+import { XAI_CATALOG, XAI_IMAGE_MODELS } from "./xai/catalog.js";
+import { XaiImageProvider } from "./xai/image.js";
 
 /** Aggregate built-in image catalog merged across vendors. */
 export const BUILTIN_IMAGE_CATALOG: ImageCatalog = {
@@ -32,12 +34,13 @@ export const BUILTIN_IMAGE_CATALOG: ImageCatalog = {
   ...AZURE_OPENAI_CATALOG,
   ...GOOGLE_CATALOG,
   ...FLUX_CATALOG,
-  ...SEEDREAM_CATALOG,
+  ...VOLCENGINE_IMAGE_CATALOG,
+  ...XAI_CATALOG,
 };
 
 /** Aggregate built-in video catalog. */
 export const BUILTIN_VIDEO_CATALOG: VideoCatalog = {
-  ...SEEDANCE_CATALOG,
+  ...VOLCENGINE_VIDEO_CATALOG,
 };
 
 export type ImageRegistry = ReadonlyMap<string, ImageProvider>;
@@ -46,6 +49,8 @@ export type VideoRegistry = ReadonlyMap<string, VideoProvider>;
 /**
  * Build the image-provider registry. Providers without configured secrets
  * are skipped silently — `imagine doctor` reports the gap to the user.
+ *
+ * Keys: `"openai" | "azure-openai" | "google" | "flux-bfl" | "volcengine" | "xai"`.
  */
 export function createImageRegistry(
   secrets: ProviderSecrets,
@@ -56,7 +61,7 @@ export function createImageRegistry(
 
   if (secrets.openai) {
     const entries = ensureDefaultModel(prefs.openai.models, prefs.openai.defaultModel);
-    const models = resolveModelMap("openai", entries, catalog, "image");
+    const models = resolveModelMap("openai", entries, catalog);
     out.set(
       "openai",
       new OpenAIImageProvider({
@@ -70,7 +75,7 @@ export function createImageRegistry(
   if (secrets["azure-openai"]) {
     // Azure resolves deployments rather than catalog ids; we look up
     // `image-default` capabilities as a baseline shared across deployments.
-    const models = resolveAzureDeployments(prefs["azure-openai"].deployments, catalog);
+    const models = resolveAzureDeployments(prefs["azure-openai"].deployments);
     out.set(
       "azure-openai",
       new AzureOpenAIImageProvider({
@@ -84,13 +89,13 @@ export function createImageRegistry(
 
   if (secrets.google) {
     const entries = ensureDefaultModel(prefs.google.models, prefs.google.defaultModel);
-    const models = resolveModelMap("google", entries, catalog, "image");
+    const models = resolveModelMap("google", entries, catalog);
     out.set("google", new GoogleImageProvider({ apiKey: secrets.google.apiKey, models }));
   }
 
   if (secrets["flux-bfl"]) {
     const entries = ensureDefaultModel(prefs["flux-bfl"].models, prefs["flux-bfl"].defaultModel);
-    const models = resolveModelMap("flux-bfl", entries, catalog, "image");
+    const models = resolveModelMap("flux-bfl", entries, catalog);
     out.set(
       "flux-bfl",
       new FluxImageProvider({
@@ -101,18 +106,36 @@ export function createImageRegistry(
     );
   }
 
-  // Seedream image shares the volcengine secret with Seedance video.
+  // Volcengine consolidates Seedream (image) under one provider id.
   if (secrets.volcengine) {
-    const entries = ensureDefaultModel(prefs.seedream.models, prefs.seedream.defaultModel);
-    const models = resolveModelMap("seedream", entries, catalog, "image", {
-      seedream: SEEDREAM_IMAGE_MODELS,
+    const entries = ensureDefaultModel(
+      prefs.volcengine.imageModels,
+      prefs.volcengine.defaultImageModel,
+    );
+    const models = resolveModelMap("volcengine", entries, catalog, {
+      volcengine: VOLCENGINE_IMAGE_MODELS,
     });
     out.set(
-      "seedream",
-      new SeedreamImageProvider({
+      "volcengine",
+      new VolcengineImageProvider({
         apiKey: secrets.volcengine.apiKey,
-        baseUrl: prefs.seedream.baseUrl,
+        baseUrl: prefs.volcengine.baseUrl,
         region: secrets.volcengine.region,
+        models,
+      }),
+    );
+  }
+
+  if (secrets.xai) {
+    const entries = ensureDefaultModel(prefs.xai.models, prefs.xai.defaultModel);
+    const models = resolveModelMap("xai", entries, catalog, {
+      xai: XAI_IMAGE_MODELS,
+    });
+    out.set(
+      "xai",
+      new XaiImageProvider({
+        apiKey: secrets.xai.apiKey,
+        baseUrl: prefs.xai.baseUrl,
         models,
       }),
     );
@@ -121,6 +144,7 @@ export function createImageRegistry(
   return out;
 }
 
+/** Video registry. v1 only Volcengine (Seedance). */
 export function createVideoRegistry(
   secrets: ProviderSecrets,
   prefs: ProviderPreferences,
@@ -129,15 +153,18 @@ export function createVideoRegistry(
   const out = new Map<string, VideoProvider>();
 
   if (secrets.volcengine) {
-    const entries = ensureDefaultModel(prefs.seedance.models, prefs.seedance.defaultModel);
-    const models = resolveVideoModelMap("seedance", entries, catalog, {
-      seedance: SEEDANCE_VIDEO_MODELS,
+    const entries = ensureDefaultModel(
+      prefs.volcengine.videoModels,
+      prefs.volcengine.defaultVideoModel,
+    );
+    const models = resolveVideoModelMap("volcengine", entries, catalog, {
+      volcengine: VOLCENGINE_VIDEO_MODELS,
     });
     out.set(
-      "seedance",
-      new SeedanceVideoProvider({
+      "volcengine",
+      new VolcengineVideoProvider({
         apiKey: secrets.volcengine.apiKey,
-        baseUrl: prefs.seedance.baseUrl,
+        baseUrl: prefs.volcengine.baseUrl,
         region: secrets.volcengine.region,
         models,
       }),
@@ -148,9 +175,9 @@ export function createVideoRegistry(
 }
 
 /**
- * Returns the list of provider ids that have secrets configured, regardless
- * of whether the registry actually instantiated them. Used by `imagine doctor`
- * to render "Providers: X / 6 configured".
+ * Distinct vendor-secret count. Configuring `volcengine.apiKey` increments
+ * by 1 even though it unlocks both image + video; `xai.apiKey` increments
+ * by 1 too. Used by `imagine doctor` to render "Providers: X / 6 configured".
  */
 export function configuredProviderCount(secrets: ProviderSecrets): number {
   let n = 0;
@@ -158,14 +185,12 @@ export function configuredProviderCount(secrets: ProviderSecrets): number {
   if (secrets["azure-openai"]) n += 1;
   if (secrets.google) n += 1;
   if (secrets["flux-bfl"]) n += 1;
-  if (secrets.volcengine) {
-    // Volcengine secrets unlock TWO providers (seedream + seedance).
-    n += 2;
-  }
+  if (secrets.volcengine) n += 1;
+  if (secrets.xai) n += 1;
   return n;
 }
 
-/** Total provider id count across image + video registries (used in doctor). */
+/** Total distinct vendor count across all registries. Six providers. */
 export const TOTAL_PROVIDER_COUNT = 6;
 
 // --- internal helpers ---------------------------------------------------
@@ -191,7 +216,6 @@ function resolveModelMap(
   providerId: string,
   entries: readonly (string | ImageModelDef)[],
   catalog: ImageCatalog,
-  _kind: "image",
   extraCatalog: ImageCatalog = {},
 ): ReadonlyMap<string, ImageModelDef> {
   const out = new Map<string, ImageModelDef>();
@@ -220,7 +244,6 @@ function resolveVideoModelMap(
 
 function resolveAzureDeployments(
   deployments: { image: string; video: string | null },
-  _catalog: ImageCatalog,
 ): ReadonlyMap<string, ImageModelDef> {
   const out = new Map<string, ImageModelDef>();
   if (deployments.image) {

@@ -1,14 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 import { ProviderHttpError, type VideoRequest } from "@imagine-studio/core";
-import { SeedanceVideoProvider } from "./video.js";
-import { SEEDANCE_VIDEO_MODELS } from "./catalog.js";
+import { VolcengineVideoProvider } from "./video.js";
+import { VOLCENGINE_VIDEO_MODELS } from "./catalog.js";
 
 function makeProvider(fetcher: typeof fetch) {
-  return new SeedanceVideoProvider({
+  return new VolcengineVideoProvider({
     apiKey: "volc-key",
     baseUrl: "https://ark.example/api/v3",
     region: "cn-beijing",
-    models: new Map(Object.entries(SEEDANCE_VIDEO_MODELS)),
+    models: new Map(Object.entries(VOLCENGINE_VIDEO_MODELS)),
     fetch: fetcher,
   });
 }
@@ -26,7 +26,7 @@ function bytesResponse(payload: Uint8Array, mime = "video/mp4"): Response {
 
 const baseRequest: VideoRequest = {
   prompt: "rotating crystal in a misty forest",
-  providerId: "seedance",
+  providerId: "volcengine",
   model: "seedance-1.0-pro",
   durationSec: 5,
   fps: 24,
@@ -35,12 +35,12 @@ const baseRequest: VideoRequest = {
   assetIds: [],
 };
 
-describe("SeedanceVideoProvider", () => {
+describe("VolcengineVideoProvider", () => {
   it("submit POSTs to /contents/generations/tasks and returns job id", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { id: "task-1" }));
     const p = makeProvider(fetchMock as unknown as typeof fetch);
     const handle = await p.submit(baseRequest);
-    expect(handle).toEqual({ providerId: "seedance", providerJobId: "task-1" });
+    expect(handle).toEqual({ providerId: "volcengine", providerJobId: "task-1" });
     const [url] = fetchMock.mock.calls[0]!;
     expect(url).toBe("https://ark.example/api/v3/contents/generations/tasks");
   });
@@ -52,7 +52,7 @@ describe("SeedanceVideoProvider", () => {
       .mockResolvedValueOnce(jsonResponse(200, { status: "running", progress: 0.7 }))
       .mockResolvedValueOnce(jsonResponse(200, { status: "succeeded" }));
     const p = makeProvider(fetchMock as unknown as typeof fetch);
-    const h = { providerId: "seedance", providerJobId: "task-1" };
+    const h = { providerId: "volcengine", providerJobId: "task-1" };
     expect((await p.poll(h)).state).toBe("running");
     expect((await p.poll(h)).state).toBe("running");
     expect((await p.poll(h)).state).toBe("succeeded");
@@ -63,7 +63,7 @@ describe("SeedanceVideoProvider", () => {
       jsonResponse(200, { status: "failed", error: { code: "INTERNAL", message: "kaput" } }),
     );
     const p = makeProvider(fetchMock as unknown as typeof fetch);
-    const status = await p.poll({ providerId: "seedance", providerJobId: "task-1" });
+    const status = await p.poll({ providerId: "volcengine", providerJobId: "task-1" });
     expect(status.state).toBe("failed");
     expect(status.errorMessage).toBe("kaput");
   });
@@ -85,7 +85,7 @@ describe("SeedanceVideoProvider", () => {
       )
       .mockResolvedValueOnce(bytesResponse(mp4));
     const p = makeProvider(fetchMock as unknown as typeof fetch);
-    const r = await p.fetch({ providerId: "seedance", providerJobId: "task-1" });
+    const r = await p.fetch({ providerId: "volcengine", providerJobId: "task-1" });
     expect(r.output.mimeType).toBe("video/mp4");
     expect(Array.from(r.output.bytes)).toEqual(Array.from(mp4));
     expect(r.output.durationMs).toBe(5000);
