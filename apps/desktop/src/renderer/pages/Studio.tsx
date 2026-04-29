@@ -8,14 +8,16 @@ import {
   Select,
   type ResolvedModelOption,
 } from "@imagine-studio/ui";
-import type { GalleryItem, ImageModelDef, ImageRequest } from "@imagine-studio/core";
+import type { Asset, AssetKind, GalleryItem, ImageModelDef, ImageRequest } from "@imagine-studio/core";
 import type { ProviderId } from "@imagine-studio/ipc";
 import { IpcClientError } from "@imagine-studio/ipc";
 import { api } from "../lib/api.js";
+import { useAssetsStore } from "../state/useAssetsStore.js";
 import { useConfigStore } from "../state/useConfigStore.js";
 import { useGalleryStore } from "../state/useGalleryStore.js";
 import { useJobsStore } from "../state/useJobsStore.js";
 import { useUIStore } from "../state/useUIStore.js";
+import { resolveAssetThumbnailUrl } from "./Assets.js";
 
 /**
  * Studio page (M5) — image generation flow per design.md §11.
@@ -42,6 +44,9 @@ export function StudioPage() {
   const refreshGallery = useGalleryStore((s) => s.refresh);
   const upsertOne = useGalleryStore((s) => s.upsertOne);
 
+  const assetsByKind = useAssetsStore((s) => s.byKind);
+  const refreshAssets = useAssetsStore((s) => s.refresh);
+
   const activeJobId = useJobsStore((s) => s.activeJobId);
   const setActiveJobId = useJobsStore((s) => s.setActiveJobId);
   const jobs = useJobsStore((s) => s.jobs);
@@ -56,11 +61,12 @@ export function StudioPage() {
     [summaries],
   );
 
-  // Bootstrap: load config + gallery on mount.
+  // Bootstrap: load config + gallery + assets on mount.
   useEffect(() => {
     void refreshConfig();
     void refreshGallery();
-  }, [refreshConfig, refreshGallery]);
+    void refreshAssets();
+  }, [refreshConfig, refreshGallery, refreshAssets]);
 
   // Default provider/model selection on first load — falls back to the user's
   // app-pref `defaultProvider`, then the first configured provider.
@@ -160,7 +166,21 @@ export function StudioPage() {
       return;
     }
 
-    const req: ImageRequest = {
+    const slotsHaveAny =
+      (draft.assetIds.character.length ?? 0) +
+        (draft.assetIds.object.length ?? 0) +
+        (draft.assetIds.background.length ?? 0) +
+        (draft.assetIds.style.length ?? 0) >
+      0;
+
+    const req: ImageRequest & {
+      assetSlots?: {
+        character?: string[];
+        object?: string[];
+        background?: string[];
+        style?: string[];
+      };
+    } = {
       prompt: draft.prompt.trim(),
       providerId: draft.providerId,
       model: draft.modelId,
@@ -170,6 +190,7 @@ export function StudioPage() {
       references: draft.references.map((path) => ({ path, role: "freeform" as const })),
       assetIds: [],
       ...(draft.parentId ? { parentId: draft.parentId } : {}),
+      ...(slotsHaveAny ? { assetSlots: draft.assetIds } : {}),
     };
 
     setSubmitting(true);
@@ -264,6 +285,15 @@ export function StudioPage() {
         onPromptChange={(p) => setDraft({ prompt: p })}
         onSubmit={() => void generate()}
         showCharCount
+        enableAssetPicker
+        assets={{ byKind: assetsByKind }}
+        selectedAssetIds={draft.assetIds}
+        onAssetIdsChange={(next) => setDraft({ assetIds: next })}
+        thumbnailUrl={(a: Asset) => resolveAssetThumbnailUrl(a)}
+        {...(caps?.maxReferences !== undefined
+          ? { maxReferencesHint: caps.maxReferences }
+          : {})}
+        onRequestCreateAsset={(_kind: AssetKind) => navigate("assets")}
       />
 
       {/* Reference drop zone */}

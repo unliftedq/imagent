@@ -427,6 +427,12 @@ function DetailDrawer({
     parent: GalleryItem | null;
     children: GalleryItem[];
     siblings: GalleryItem[];
+    assets: Array<{
+      assetId: string;
+      role: string;
+      name: string | null;
+      kind: "character" | "object" | "background" | "style" | null;
+    }>;
   } | null>(null);
   const removeItem = useGalleryStore((s) => s.remove);
   const toggleFav = useGalleryStore((s) => s.toggleFavorite);
@@ -442,6 +448,7 @@ function DetailDrawer({
             parent: r.parent ?? null,
             children: r.children,
             siblings: r.siblings,
+            assets: r.assets ?? [],
           });
         }
       } catch {
@@ -528,6 +535,29 @@ function DetailDrawer({
                   Delete
                 </Button>
               </div>
+
+              {/* Used assets (M6) */}
+              {data.assets.length > 0 ? (
+                <div className="mt-6">
+                  <h3 className="text-(length:--text-caption-uppercase) font-semibold uppercase tracking-[1.5px] text-(--color-muted)">
+                    Used assets
+                  </h3>
+                  <ul className="mt-2 flex flex-wrap gap-1.5">
+                    {data.assets.map((a) => (
+                      <li
+                        key={a.assetId}
+                        className={
+                          "inline-flex items-center gap-1 rounded-(--radius-pill) " +
+                          "bg-(--color-surface-card) px-2 py-1 text-(length:--text-caption) text-(--color-ink)"
+                        }
+                      >
+                        <span className="font-semibold">{a.name ?? a.assetId.slice(0, 8)}</span>
+                        <span className="text-(--color-muted)">({a.role})</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
 
               {/* Lineage */}
               {(data.parent || data.children.length > 0 || data.siblings.length > 0) ? (

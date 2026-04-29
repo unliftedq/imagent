@@ -264,7 +264,25 @@ export const contract = {
   "system.resetConfig": { input: z.void(), output: z.void() },
 
   // Image / Video
-  "image.generate": { input: ImageRequestSchema, output: GalleryItemSchema },
+  "image.generate": {
+    /**
+     * Renderer-facing image.generate input. Extends `ImageRequest` with an
+     * optional `assetSlots` map so the renderer can attach assets per kind.
+     * The handler resolves slots into reference paths + style snippets +
+     * `gallery_item_assets` rows before invoking JobRunner.
+     */
+    input: ImageRequestSchema.extend({
+      assetSlots: z
+        .object({
+          character: z.array(z.string()).optional(),
+          object: z.array(z.string()).optional(),
+          background: z.array(z.string()).optional(),
+          style: z.array(z.string()).optional(),
+        })
+        .optional(),
+    }),
+    output: GalleryItemSchema,
+  },
   "video.submit": { input: VideoRequestSchema, output: JobSchema },
 
   // Model resolution — returns the deep-merged catalog ← user-override view
@@ -288,24 +306,63 @@ export const contract = {
       .object({
         kind: z.enum(["character", "object", "background", "style"]).optional(),
         includeArchived: z.boolean().optional(),
+        search: z.string().optional(),
+        limit: z.number().int().positive().optional(),
+        offset: z.number().int().nonnegative().optional(),
       })
       .optional(),
-    output: z.array(AssetSchema),
+    output: z.object({
+      items: z.array(AssetSchema),
+      total: z.number().int().nonnegative(),
+    }),
   },
-  "assets.create": { input: AssetSchema, output: AssetSchema },
+  "assets.show": {
+    input: z.object({ id: z.string() }),
+    output: AssetSchema,
+  },
+  "assets.create": {
+    input: z.object({
+      kind: z.enum(["character", "object", "background", "style"]),
+      name: z.string().min(1),
+      description: z.string().nullable().optional(),
+      promptSnippet: z.string().nullable().optional(),
+      fileUploads: z
+        .array(
+          z.object({
+            bytes: z.instanceof(Uint8Array),
+            originalName: z.string(),
+            mimeType: z.string(),
+          }),
+        )
+        .default([]),
+    }),
+    output: AssetSchema,
+  },
   "assets.update": {
-    input: z.object({ id: z.string(), patch: AssetSchema.partial() }),
+    input: z.object({
+      id: z.string(),
+      patch: z.object({
+        name: z.string().min(1).optional(),
+        description: z.string().nullable().optional(),
+        promptSnippet: z.string().nullable().optional(),
+      }),
+    }),
     output: AssetSchema,
   },
   "assets.delete": { input: z.object({ id: z.string() }), output: z.void() },
   "assets.uploadFile": {
     input: z.object({
       assetId: z.string(),
-      role: z.enum(["reference", "thumbnail"]),
-      mimeType: z.string(),
+      role: z.enum(["reference", "thumbnail"]).default("reference"),
       bytes: z.instanceof(Uint8Array),
+      originalName: z.string(),
+      mimeType: z.string(),
     }),
     output: z.object({ fileId: z.string(), relPath: z.string() }),
+  },
+  "assets.removeFile": {
+    input: z.object({ fileId: z.string() }),
+    output: z.void(),
   },
 
   // Boards (M3 / M5)
@@ -347,6 +404,20 @@ export const contract = {
       parent: GalleryItemSchema.nullable(),
       children: z.array(GalleryItemSchema),
       siblings: z.array(GalleryItemSchema),
+      /**
+       * `gallery_item_assets` rows joined with the asset name + kind for the
+       * lineage drawer's "Used assets" block (M6).
+       */
+      assets: z
+        .array(
+          z.object({
+            assetId: z.string(),
+            role: z.string(),
+            name: z.string().nullable(),
+            kind: z.enum(["character", "object", "background", "style"]).nullable(),
+          }),
+        )
+        .default([]),
     }),
   },
   "gallery.remix": {

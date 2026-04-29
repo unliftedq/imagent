@@ -30,6 +30,25 @@ export {
   TabsContent,
 } from "./primitives/Tabs.js";
 export {
+  Popover,
+  PopoverRoot,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverAnchor,
+  PopoverClose,
+} from "./primitives/Popover.js";
+export {
+  Dialog,
+  DialogRoot,
+  DialogTrigger,
+  DialogContent,
+  DialogSheet,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+  DialogOverlay,
+} from "./primitives/Dialog.js";
+export {
   Tooltip,
   TooltipProvider,
   TooltipRoot,
@@ -65,7 +84,13 @@ export { PromptComposer } from "./composites/PromptComposer.js";
 export type {
   PromptComposerProps,
   PromptComposerAssetSlot,
+  PromptComposerAssetsBundle,
+  PromptComposerSelectedAssetIds,
 } from "./composites/PromptComposer.js";
+export { AssetCard } from "./composites/AssetCard.js";
+export type { AssetCardProps } from "./composites/AssetCard.js";
+export { AssetPicker } from "./composites/AssetPicker.js";
+export type { AssetPickerProps } from "./composites/AssetPicker.js";
 export { GalleryItemCard } from "./composites/GalleryItemCard.js";
 export type {
   GalleryItemCardProps,

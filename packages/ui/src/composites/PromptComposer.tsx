@@ -1,7 +1,9 @@
-import { useEffect, useRef, type KeyboardEvent } from "react";
+import { useEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
+import type { Asset, AssetKind } from "@imagine-studio/core";
 import { Plus } from "@phosphor-icons/react";
 import { cn } from "../lib/cn.js";
 import { Tooltip } from "../primitives/Tooltip.js";
+import { AssetPicker } from "./AssetPicker.js";
 
 export interface PromptComposerAssetSlot {
   /** "Style:" / "Character:" — populated in M6. */
@@ -10,22 +12,46 @@ export interface PromptComposerAssetSlot {
   onRemove?: () => void;
 }
 
+export interface PromptComposerSelectedAssetIds {
+  character: string[];
+  object: string[];
+  background: string[];
+  style: string[];
+}
+
+export interface PromptComposerAssetsBundle {
+  byKind: Record<AssetKind, Asset[]>;
+}
+
 export interface PromptComposerProps {
   prompt: string;
   onPromptChange: (next: string) => void;
   /** Cmd/Ctrl+Enter shortcut handler (parent owns the actual generate call). */
   onSubmit?: () => void;
-  /** Asset chips appearing on a row above the textarea. M5 receives an empty
-   *  array; M6 will populate it via the AssetPicker composite. */
+  /** Asset chips appearing on a row above the textarea (legacy; populated in M6 via the AssetPicker). */
   assetSlots?: ReadonlyArray<PromptComposerAssetSlot>;
+  /** Per-kind asset selection state — wired via `AssetPicker`. */
+  selectedAssetIds?: PromptComposerSelectedAssetIds;
+  /** Called when the user toggles an asset selection across any kind. */
+  onAssetIdsChange?: (next: PromptComposerSelectedAssetIds) => void;
+  /** Available assets per kind; consumed by AssetPicker. */
+  assets?: PromptComposerAssetsBundle;
+  /** Pulled from the resolved model — drives the AssetPicker's hint text. */
+  maxReferencesHint?: number;
+  /** Resolves a thumbnail URL for an asset. */
+  thumbnailUrl?: (asset: Asset) => string | null | undefined;
+  /** When the user clicks "Create new" inside an AssetPicker. */
+  onRequestCreateAsset?: (kind: AssetKind) => void;
   placeholder?: string;
-  /** When false, M5 renders the disabled "+ asset" stub with a Coming Soon tooltip. */
+  /** When false, renders the legacy disabled "+ asset" stub. Defaults to true in M6. */
   enableAssetPicker?: boolean;
   /** When the parent wants to re-render with a fresh focus, bump this. */
   autoFocusKey?: number;
   className?: string;
   /** Tabular-figures character counter. Off by default — Studio doesn't need it. */
   showCharCount?: boolean;
+  /** Optional trailing content rendered alongside the asset pickers. */
+  pickerTrailing?: ReactNode;
 }
 
 /**
@@ -39,11 +65,18 @@ export function PromptComposer({
   onPromptChange,
   onSubmit,
   assetSlots = [],
+  selectedAssetIds,
+  onAssetIdsChange,
+  assets,
+  maxReferencesHint,
+  thumbnailUrl,
+  onRequestCreateAsset,
   placeholder = "Describe the image you want…",
   enableAssetPicker = false,
   autoFocusKey,
   className,
   showCharCount = false,
+  pickerTrailing,
 }: PromptComposerProps) {
   const ref = useRef<HTMLTextAreaElement>(null);
 
@@ -110,8 +143,9 @@ export function PromptComposer({
         ) : null}
       </div>
 
-      {/* Asset slot row — populated in M6. M5 shows the disabled stub. */}
+      {/* Asset slot row — M6: four AssetPickers wired via parent state. */}
       <div className="flex flex-wrap items-center gap-2">
+        {/* Legacy chip slots (still supported but no longer the default). */}
         {assetSlots.map((slot, idx) => (
           <span
             key={`${slot.label}-${idx}`}
@@ -135,7 +169,31 @@ export function PromptComposer({
             ) : null}
           </span>
         ))}
-        {enableAssetPicker ? null : (
+        {enableAssetPicker && selectedAssetIds && onAssetIdsChange && assets ? (
+          <>
+            {(["character", "object", "background", "style"] as AssetKind[]).map(
+              (k) => (
+                <AssetPicker
+                  key={k}
+                  kind={k}
+                  assets={assets.byKind[k] ?? []}
+                  selected={selectedAssetIds[k] ?? []}
+                  onChange={(next) =>
+                    onAssetIdsChange({ ...selectedAssetIds, [k]: next })
+                  }
+                  {...(thumbnailUrl ? { thumbnailUrl } : {})}
+                  {...(maxReferencesHint !== undefined
+                    ? { maxReferencesHint }
+                    : {})}
+                  {...(onRequestCreateAsset
+                    ? { onRequestCreate: () => onRequestCreateAsset(k) }
+                    : {})}
+                />
+              ),
+            )}
+            {pickerTrailing}
+          </>
+        ) : (
           <Tooltip content="Asset slots arrive in M6.">
             <span
               aria-disabled="true"

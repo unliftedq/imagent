@@ -14,5 +14,5 @@
   },
   "include": ["src/**/*"],
   "exclude": ["src/**/*.css"],
-  "references": [{ "path": "../ipc" }]
+  "references": [{ "path": "../core" }, { "path": "../ipc" }]
 }

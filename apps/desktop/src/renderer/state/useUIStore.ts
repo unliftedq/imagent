@@ -23,6 +23,13 @@ export interface ToastEntry {
  * draft churns at typing speed so localStorage gives instant rehydrate without
  * an IPC round-trip).
  */
+export interface StudioDraftAssetIds {
+  character: string[];
+  object: string[];
+  background: string[];
+  style: string[];
+}
+
 export interface StudioDraft {
   prompt: string;
   providerId: string;
@@ -32,6 +39,7 @@ export interface StudioDraft {
   aspectRatio?: string;
   references: string[];
   parentId?: string;
+  assetIds: StudioDraftAssetIds;
 }
 
 export const STUDIO_DRAFT_LS_KEY = "imagine-studio.studioDraft.v1";
@@ -42,7 +50,29 @@ const DEFAULT_DRAFT: StudioDraft = {
   modelId: "",
   count: 1,
   references: [],
+  assetIds: { character: [], object: [], background: [], style: [] },
 };
+
+function normalizeAssetIds(input: unknown): StudioDraftAssetIds {
+  const empty: StudioDraftAssetIds = {
+    character: [],
+    object: [],
+    background: [],
+    style: [],
+  };
+  if (!input || typeof input !== "object") return empty;
+  const r = input as Record<string, unknown>;
+  const pick = (k: keyof StudioDraftAssetIds): string[] => {
+    const v = r[k];
+    return Array.isArray(v) ? (v.filter((x) => typeof x === "string") as string[]) : [];
+  };
+  return {
+    character: pick("character"),
+    object: pick("object"),
+    background: pick("background"),
+    style: pick("style"),
+  };
+}
 
 function loadDraftFromStorage(): StudioDraft {
   if (typeof window === "undefined") return DEFAULT_DRAFT;
@@ -66,6 +96,7 @@ function loadDraftFromStorage(): StudioDraft {
       ...(typeof parsed.parentId === "string"
         ? { parentId: parsed.parentId }
         : {}),
+      assetIds: normalizeAssetIds(parsed.assetIds),
     };
   } catch {
     return DEFAULT_DRAFT;

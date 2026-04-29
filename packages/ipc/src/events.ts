@@ -18,6 +18,10 @@ export const events = {
     op: z.enum(["created", "updated", "deleted"]),
     item: GalleryItemSchema.optional(),
   }),
+  "assets.changed": z.object({
+    id: z.string(),
+    op: z.enum(["created", "updated", "deleted"]),
+  }),
   "config.changed": z.object({
     /** Stringified ConfigFile so the renderer can re-parse without sharing zod. */
     configJson: z.string(),

@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { App } from "./App.js";
+import { useAssetsStore } from "./state/useAssetsStore.js";
 import { useJobsStore } from "./state/useJobsStore.js";
 import { useGalleryStore } from "./state/useGalleryStore.js";
 import "./styles.css";
@@ -14,6 +15,7 @@ if (!rootEl) {
 // fire — the renderer lives for the lifetime of the window.
 useJobsStore.getState().bindEvents();
 useGalleryStore.getState().bindEvents();
+useAssetsStore.getState().bindEvents();
 
 ReactDOM.createRoot(rootEl).render(
   <React.StrictMode>

@@ -164,6 +164,112 @@ describe("AssetRepository", () => {
     }
   });
 
+  it("listWithFiles paginates and joins file rows", () => {
+    const db = openDatabase(dbPath);
+    try {
+      const repo = new AssetRepository(db);
+      const now = Date.now();
+      // Two assets, two files each (one ref + one thumb).
+      for (const id of ["a1", "a2"]) {
+        repo.create({
+          id,
+          kind: "character",
+          name: `Char ${id}`,
+          description: null,
+          promptSnippet: null,
+          files: [],
+          createdAt: now,
+          updatedAt: now,
+          archivedAt: null,
+        });
+        repo.addFile({
+          id: `${id}-ref`,
+          assetId: id,
+          role: "reference",
+          relPath: `assets/${id}/ref-001.png`,
+          mimeType: "image/png",
+          width: 1024,
+          height: 768,
+          bytes: 100,
+          sha256: `sha-${id}`,
+          position: 0,
+          createdAt: now,
+        });
+        repo.addFile({
+          id: `${id}-thumb`,
+          assetId: id,
+          role: "thumbnail",
+          relPath: `assets/${id}/thumb.webp`,
+          mimeType: "image/webp",
+          width: 256,
+          height: 192,
+          bytes: 50,
+          sha256: `thumb-${id}`,
+          position: 0,
+          createdAt: now,
+        });
+      }
+
+      const page = repo.listWithFiles({ kind: "character" });
+      expect(page.total).toBe(2);
+      expect(page.items).toHaveLength(2);
+      for (const a of page.items) {
+        expect(a.files).toHaveLength(2);
+        expect(a.files.find((f) => f.role === "reference")).toBeTruthy();
+        expect(a.files.find((f) => f.role === "thumbnail")).toBeTruthy();
+      }
+
+      const limited = repo.listWithFiles({ kind: "character", limit: 1 });
+      expect(limited.total).toBe(2);
+      expect(limited.items).toHaveLength(1);
+
+      const offset = repo.listWithFiles({ kind: "character", limit: 1, offset: 1 });
+      expect(offset.items).toHaveLength(1);
+      expect(offset.items[0]?.id).not.toBe(limited.items[0]?.id);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("usageCount counts gallery_item_assets links", () => {
+    const db = openDatabase(dbPath);
+    try {
+      const repo = new AssetRepository(db);
+      const now = Date.now();
+      repo.create({
+        id: "u1",
+        kind: "character",
+        name: "U",
+        description: null,
+        promptSnippet: null,
+        files: [],
+        createdAt: now,
+        updatedAt: now,
+        archivedAt: null,
+      });
+      // No links → 0.
+      expect(repo.usageCount("u1")).toBe(0);
+      // Insert two gallery_items + link them.
+      db.prepare(
+        `INSERT INTO gallery_items (id, kind, prompt, provider_id, model, params_json, rel_path, bytes, favorited, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run("g1", "image", "p", "openai", "x", "{}", "g1.png", 1, 0, now);
+      db.prepare(
+        `INSERT INTO gallery_items (id, kind, prompt, provider_id, model, params_json, rel_path, bytes, favorited, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run("g2", "image", "p", "openai", "x", "{}", "g2.png", 1, 0, now);
+      db.prepare(
+        "INSERT INTO gallery_item_assets (item_id, asset_id, role) VALUES (?, ?, ?)",
+      ).run("g1", "u1", "character");
+      db.prepare(
+        "INSERT INTO gallery_item_assets (item_id, asset_id, role) VALUES (?, ?, ?)",
+      ).run("g2", "u1", "character");
+      expect(repo.usageCount("u1")).toBe(2);
+    } finally {
+      db.close();
+    }
+  });
+
   it("findFilesBySha256 returns matching rows for dedup hint", () => {
     const db = openDatabase(dbPath);
     try {

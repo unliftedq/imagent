@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import { AssetsPage } from "./pages/Assets.js";
 import { GalleryPage } from "./pages/Gallery.js";
 import { ProvidersPage } from "./pages/Providers.js";
 import { SettingsPage } from "./pages/Settings.js";
@@ -35,8 +36,8 @@ export const ROUTES: RouteDef[] = [
   {
     id: "assets",
     label: "Assets",
-    Component: () => <NotYetImplemented title="Assets" milestone="M6" />,
-    available: false,
+    Component: AssetsPage,
+    available: true,
   },
   {
     id: "providers",

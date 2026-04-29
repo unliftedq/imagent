@@ -242,6 +242,7 @@ describe("registerIpcHandlers", () => {
           parent: stubItem("p1"),
           children: [stubItem("c1"), stubItem("c2")],
           siblings: [stubItem("s1")],
+          assets: [],
         }),
       });
       const reply = (await invoke("gallery.show", { id: "g1" })) as {
@@ -372,6 +373,143 @@ describe("registerIpcHandlers", () => {
       const reply = (await invoke("jobs.cancel", { id: "j1" })) as { ok: true };
       expect(reply.ok).toBe(true);
       expect(seen).toBe("j1");
+    });
+  });
+
+  describe("M6 routes — Assets", () => {
+    const stubAsset = (id: string, kind: "character" | "style") => ({
+      id,
+      kind,
+      name: `Asset ${id}`,
+      description: null,
+      promptSnippet: kind === "style" ? "moody" : null,
+      files: [],
+      createdAt: 0,
+      updatedAt: 0,
+      archivedAt: null,
+    });
+
+    it("assets.list: returns paginated items + total", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      registerIpcHandlers(ipcMain, {
+        "assets.list": async (q) => {
+          expect(q?.kind).toBe("character");
+          return {
+            items: [stubAsset("a1", "character"), stubAsset("a2", "character")],
+            total: 2,
+          };
+        },
+      });
+      const reply = (await invoke("assets.list", { kind: "character" })) as {
+        ok: true;
+        value: { items: unknown[]; total: number };
+      };
+      expect(reply.ok).toBe(true);
+      expect(reply.value.total).toBe(2);
+      expect(reply.value.items).toHaveLength(2);
+    });
+
+    it("assets.show: returns a single asset", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      registerIpcHandlers(ipcMain, {
+        "assets.show": async ({ id }) => stubAsset(id, "character"),
+      });
+      const reply = (await invoke("assets.show", { id: "a1" })) as {
+        ok: true;
+        value: { id: string };
+      };
+      expect(reply.ok).toBe(true);
+      expect(reply.value.id).toBe("a1");
+    });
+
+    it("assets.create: round-trips a single upload", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      let seen: { kind?: string; uploads?: number } = {};
+      registerIpcHandlers(ipcMain, {
+        "assets.create": async (input) => {
+          seen = { kind: input.kind, uploads: input.fileUploads.length };
+          return stubAsset("new", "character");
+        },
+      });
+      const reply = (await invoke("assets.create", {
+        kind: "character",
+        name: "Alice",
+        fileUploads: [
+          {
+            bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47]),
+            originalName: "alice.png",
+            mimeType: "image/png",
+          },
+        ],
+      })) as { ok: true; value: { id: string } };
+      expect(reply.ok).toBe(true);
+      expect(reply.value.id).toBe("new");
+      expect(seen.kind).toBe("character");
+      expect(seen.uploads).toBe(1);
+    });
+
+    it("assets.update: round-trips a name patch", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      let seenPatch: { name?: string } = {};
+      registerIpcHandlers(ipcMain, {
+        "assets.update": async ({ id, patch }) => {
+          seenPatch = patch;
+          return { ...stubAsset(id, "character"), name: patch.name ?? "" };
+        },
+      });
+      const reply = (await invoke("assets.update", {
+        id: "a1",
+        patch: { name: "Alice II" },
+      })) as { ok: true; value: { name: string } };
+      expect(reply.ok).toBe(true);
+      expect(reply.value.name).toBe("Alice II");
+      expect(seenPatch.name).toBe("Alice II");
+    });
+
+    it("assets.delete: round-trips id", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      let seen: string | null = null;
+      registerIpcHandlers(ipcMain, {
+        "assets.delete": async ({ id }) => {
+          seen = id;
+        },
+      });
+      const reply = (await invoke("assets.delete", { id: "a1" })) as { ok: true };
+      expect(reply.ok).toBe(true);
+      expect(seen).toBe("a1");
+    });
+
+    it("image.generate: accepts optional assetSlots", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      let seenSlots: unknown = null;
+      registerIpcHandlers(ipcMain, {
+        "image.generate": async (req) => {
+          seenSlots = (req as { assetSlots?: unknown }).assetSlots;
+          return {
+            id: "g1",
+            kind: "image",
+            prompt: req.prompt,
+            providerId: req.providerId,
+            model: req.model,
+            paramsJson: "{}",
+            relPath: "x.png",
+            bytes: 1,
+            favorited: false,
+            createdAt: 0,
+          };
+        },
+      });
+      const reply = (await invoke("image.generate", {
+        prompt: "x",
+        providerId: "openai",
+        model: "gpt-image-1",
+        count: 1,
+        references: [],
+        assetIds: [],
+        assetSlots: { character: ["a1"], style: ["s1"] },
+      })) as { ok: true };
+      expect(reply.ok).toBe(true);
+      expect(seenSlots).toEqual({ character: ["a1"], style: ["s1"] });
     });
   });
 

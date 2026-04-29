@@ -1,4 +1,5 @@
 import { app, dialog, shell, type BrowserWindow, type IpcMain } from "electron";
+import { createHash, randomUUID } from "node:crypto";
 import path from "node:path";
 import { promises as fs } from "node:fs";
 import {
@@ -14,10 +15,12 @@ import {
   type VideoRegistry,
 } from "@imagine-studio/providers";
 import {
+  AssetRepository,
   BoardRepository,
   GalleryRepository,
   JobRepository,
   KvRepository,
+  generateImageThumbnailFromBuffer,
   type DatabaseType,
   type PathResolver,
 } from "@imagine-studio/persistence";
@@ -29,12 +32,21 @@ import {
   type IpcServer,
 } from "@imagine-studio/ipc";
 import type {
+  Asset,
+  AssetFile,
+  AssetKind,
   Board,
   GalleryItem,
   ImageRequest,
   Job,
   Logger,
 } from "@imagine-studio/core";
+import {
+  appendStylePromptSnippets,
+  capReferencePaths,
+  resolveAssetSlots,
+} from "@imagine-studio/core";
+import sharp from "sharp";
 import type { RuntimeServices } from "./job-runner-bootstrap.js";
 
 void _unused;
@@ -63,6 +75,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
   const galleryRepo = new GalleryRepository(deps.db);
   const boardRepo = new BoardRepository(deps.db);
   const jobsRepo = new JobRepository(deps.db);
+  const assetRepo = new AssetRepository(deps.db);
 
   /** Resolve a relative gallery path against `dataDir`. */
   const absGalleryPath = (rel: string): string => {
@@ -239,15 +252,90 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       kv.delete(key);
     },
 
-    // M5 — Studio + Gallery
+    // M5 / M6 — Studio + Gallery
     "image.generate": async (request) => {
-      const r = request as ImageRequest;
+      const r = request as ImageRequest & {
+        assetSlots?: {
+          character?: string[];
+          object?: string[];
+          background?: string[];
+          style?: string[];
+        };
+      };
+
+      // Resolve asset slots → reference paths + style snippet appendix +
+      // attachments to write after the gallery item lands.
+      const slots = r.assetSlots ?? {};
+      const slotInputs = {
+        ...(slots.character ? { character: slots.character } : {}),
+        ...(slots.object ? { object: slots.object } : {}),
+        ...(slots.background ? { background: slots.background } : {}),
+        ...(slots.style ? { style: slots.style } : {}),
+      };
+
+      // Look up the model's caps to know maxReferences + supportsRef.
+      const provider = runtime.imageRegistry.get(r.providerId);
+      const resolvedModel = provider?.models?.get?.(r.model);
+      const maxRefs = resolvedModel?.capabilities?.maxReferences;
+      const supportsRefs = (maxRefs ?? Infinity) > 0;
+
+      let resolution;
+      try {
+        resolution = resolveAssetSlots(
+          slotInputs,
+          (id) => assetRepo.get(id),
+          (rel) =>
+            path.isAbsolute(rel) ? rel : path.join(paths.dataDir, rel),
+          { supportsReferences: supportsRefs },
+        );
+      } catch (err) {
+        throw new IpcHandlerError(
+          "validation_failed",
+          (err as Error)?.message ?? String(err),
+        );
+      }
+
+      // Combine freeform refs with slot-derived refs (slot order: char→obj→bg→style).
+      const allRefPaths = [
+        ...(r.references ?? []).map((ref) => ref.path),
+        ...resolution.referencePaths,
+      ];
+      const { references: cappedRefs, capped } = capReferencePaths(
+        allRefPaths,
+        maxRefs,
+      );
+      if (capped !== undefined) {
+        logger.warn("image.generate: cap-at-max references", {
+          providerId: r.providerId,
+          model: r.model,
+          capped,
+          original: allRefPaths.length,
+        });
+      }
+
+      // Build the augmented prompt + final ImageRequest the JobRunner sees.
+      const augmentedPrompt = appendStylePromptSnippets(
+        r.prompt,
+        resolution.stylePromptSnippets,
+      );
+      const finalReq: ImageRequest = {
+        ...r,
+        prompt: augmentedPrompt,
+        references: cappedRefs.map((p) => ({ path: p, role: "freeform" as const })),
+        assetIds: [
+          ...(r.assetIds ?? []),
+          ...resolution.assetIds.filter((id) => !(r.assetIds ?? []).includes(id)),
+        ],
+      };
+      // Strip the IPC-only assetSlots field before passing to the runner.
+      // (ImageRequestSchema doesn't carry it.)
       const intent = {
         kind: "image" as const,
-        request: r,
-        ...(r.parentId ? { parentId: r.parentId } : {}),
-        ...(r.boardId ? { boardId: r.boardId } : {}),
+        request: finalReq,
+        ...(finalReq.parentId ? { parentId: finalReq.parentId } : {}),
+        ...(finalReq.boardId ? { boardId: finalReq.boardId } : {}),
       };
+
       // Subscribe to a single job's terminal events, then start. Listeners are
       // wired with a sentinel jobId we capture from start()'s return value.
       let resolveJob!: (job: Job) => void;
@@ -293,6 +381,24 @@ export function setupIpc(deps: IpcDeps): IpcServer {
           `image.generate: gallery item ${job.resultItemId} missing`,
         );
       }
+
+      // M6: write gallery_item_assets rows for every contributing slot asset.
+      for (const att of resolution.attachments) {
+        try {
+          galleryRepo.addAssetLink({
+            itemId: item.id,
+            assetId: att.assetId,
+            role: att.role,
+          });
+        } catch (err) {
+          logger.warn("addAssetLink failed", {
+            itemId: item.id,
+            assetId: att.assetId,
+            err: String(err),
+          });
+        }
+      }
+
       // Notify any other windows via gallery.changed.
       try {
         server.emit("gallery.changed", { id: item.id, op: "created", item });
@@ -319,7 +425,22 @@ export function setupIpc(deps: IpcDeps): IpcServer {
             .filter((s) => s.id !== id)
             .slice(0, 3)
         : [];
-      return { item, parent, children, siblings };
+      const links = galleryRepo.listAssetLinks(id);
+      const assets = links.map((l) => {
+        const a = assetRepo.get(l.assetId);
+        return {
+          assetId: l.assetId,
+          role: l.role,
+          name: a?.name ?? null,
+          kind: (a?.kind ?? null) as
+            | "character"
+            | "object"
+            | "background"
+            | "style"
+            | null,
+        };
+      });
+      return { item, parent, children, siblings, assets };
     },
 
     "gallery.remix": async ({ itemId }) => {
@@ -468,11 +589,278 @@ export function setupIpc(deps: IpcDeps): IpcServer {
     },
 
     // M6 — Assets
-    "assets.list": notImplemented("M6", "assets.list"),
-    "assets.create": notImplemented("M6", "assets.create"),
-    "assets.update": notImplemented("M6", "assets.update"),
-    "assets.delete": notImplemented("M6", "assets.delete"),
-    "assets.uploadFile": notImplemented("M6", "assets.uploadFile"),
+    "assets.list": async (input) => {
+      const opts = input ?? {};
+      const page = assetRepo.listWithFiles({
+        ...(opts.kind !== undefined ? { kind: opts.kind } : {}),
+        ...(opts.includeArchived !== undefined
+          ? { includeArchived: opts.includeArchived }
+          : {}),
+        ...(opts.search !== undefined ? { search: opts.search } : {}),
+        ...(opts.limit !== undefined ? { limit: opts.limit } : {}),
+        ...(opts.offset !== undefined ? { offset: opts.offset } : {}),
+      });
+      return page;
+    },
+
+    "assets.show": async ({ id }) => {
+      const asset = assetRepo.get(id);
+      if (!asset) {
+        throw new IpcHandlerError("not_found", `asset '${id}' not found`);
+      }
+      return asset;
+    },
+
+    "assets.create": async ({ kind, name, description, promptSnippet, fileUploads }) => {
+      // Server-side validation: non-style requires >=1 upload; style requires
+      // >=1 upload OR a prompt snippet.
+      const uploads = fileUploads ?? [];
+      if (kind === "style") {
+        if (uploads.length === 0 && !(promptSnippet && promptSnippet.trim().length > 0)) {
+          throw new IpcHandlerError(
+            "validation_failed",
+            "style assets require at least one reference upload OR a prompt snippet",
+          );
+        }
+      } else {
+        if (uploads.length === 0) {
+          throw new IpcHandlerError(
+            "validation_failed",
+            `${kind} assets require at least one reference upload`,
+          );
+        }
+      }
+
+      const assetId = randomUUID();
+      const assetDir = paths.assetsDir(assetId);
+      await fs.mkdir(assetDir, { recursive: true });
+
+      const now = Date.now();
+      const fileRows: AssetFile[] = [];
+
+      for (let i = 0; i < uploads.length; i += 1) {
+        const u = uploads[i]!;
+        const buf = Buffer.from(u.bytes);
+        const ext = pickExt(u.originalName, u.mimeType);
+        const padded = String(i + 1).padStart(3, "0");
+        const destRel = path
+          .join("assets", assetId, `ref-${padded}${ext}`)
+          .replace(/\\/g, "/");
+        const destAbs = path.join(paths.dataDir, destRel);
+        await fs.writeFile(destAbs, buf);
+
+        let width: number | null = null;
+        let height: number | null = null;
+        let mimeType = u.mimeType || guessMimeFromExt(ext);
+        try {
+          const meta = await sharp(buf).metadata();
+          width = meta.width ?? null;
+          height = meta.height ?? null;
+          if (meta.format) mimeType = `image/${meta.format}`;
+        } catch {
+          // Non-image upload — leave dimensions null and trust the supplied mime.
+        }
+
+        const sha256 = createHash("sha256").update(buf).digest("hex");
+        fileRows.push({
+          id: randomUUID(),
+          assetId,
+          role: "reference",
+          relPath: destRel,
+          mimeType,
+          width,
+          height,
+          bytes: buf.byteLength,
+          sha256,
+          position: i,
+          createdAt: now,
+        });
+      }
+
+      // Generate a thumbnail from the first upload (best-effort).
+      if (uploads.length > 0) {
+        const first = uploads[0]!;
+        const thumbRel = path
+          .join("assets", assetId, "thumb.webp")
+          .replace(/\\/g, "/");
+        const thumbAbs = path.join(paths.dataDir, thumbRel);
+        try {
+          const t = await generateImageThumbnailFromBuffer(
+            Buffer.from(first.bytes),
+            thumbAbs,
+            { maxSide: 256 },
+          );
+          const thumbBuf = await fs.readFile(thumbAbs);
+          fileRows.push({
+            id: randomUUID(),
+            assetId,
+            role: "thumbnail",
+            relPath: thumbRel,
+            mimeType: "image/webp",
+            width: t.width,
+            height: t.height,
+            bytes: t.bytes,
+            sha256: createHash("sha256").update(thumbBuf).digest("hex"),
+            position: 0,
+            createdAt: now,
+          });
+        } catch (err) {
+          logger.warn("thumbnail generation failed", {
+            assetId,
+            err: String(err),
+          });
+        }
+      }
+
+      const asset: Asset = {
+        id: assetId,
+        kind,
+        name,
+        description: description ?? null,
+        promptSnippet: promptSnippet ?? null,
+        files: fileRows,
+        createdAt: now,
+        updatedAt: now,
+        archivedAt: null,
+      };
+      assetRepo.create(asset);
+      for (const f of fileRows) {
+        assetRepo.addFile(f);
+      }
+
+      try {
+        server.emit("assets.changed", { id: assetId, op: "created" });
+      } catch (err) {
+        logger.warn("assets.changed emit failed", { err: String(err) });
+      }
+      return assetRepo.get(assetId) ?? asset;
+    },
+
+    "assets.update": async ({ id, patch }) => {
+      const existing = assetRepo.get(id);
+      if (!existing) {
+        throw new IpcHandlerError("not_found", `asset '${id}' not found`);
+      }
+      const merged: Partial<Asset> = {};
+      if (patch.name !== undefined) merged.name = patch.name;
+      if (patch.description !== undefined) merged.description = patch.description ?? null;
+      if (patch.promptSnippet !== undefined)
+        merged.promptSnippet = patch.promptSnippet ?? null;
+      const next = assetRepo.update(id, merged);
+      try {
+        server.emit("assets.changed", { id, op: "updated" });
+      } catch (err) {
+        logger.warn("assets.changed emit failed", { err: String(err) });
+      }
+      return next;
+    },
+
+    "assets.delete": async ({ id }) => {
+      const existing = assetRepo.get(id);
+      if (!existing) return; // idempotent
+      assetRepo.delete(id);
+      const dir = paths.assetsDir(id);
+      try {
+        const stat = await fs.lstat(dir);
+        if (stat.isSymbolicLink()) {
+          await fs.unlink(dir);
+        } else {
+          await fs.rm(dir, { recursive: true, force: true });
+        }
+      } catch (err) {
+        const code = (err as NodeJS.ErrnoException).code;
+        if (code !== "ENOENT") {
+          logger.warn("assets.delete: rm dir failed", {
+            id,
+            dir,
+            err: String(err),
+          });
+        }
+      }
+      try {
+        server.emit("assets.changed", { id, op: "deleted" });
+      } catch (err) {
+        logger.warn("assets.changed emit failed", { err: String(err) });
+      }
+    },
+
+    "assets.uploadFile": async ({ assetId, role, bytes, originalName, mimeType }) => {
+      const asset = assetRepo.get(assetId);
+      if (!asset) {
+        throw new IpcHandlerError("not_found", `asset '${assetId}' not found`);
+      }
+      const buf = Buffer.from(bytes);
+      const ext = pickExt(originalName, mimeType);
+      const existingRefs = asset.files.filter((f) => f.role === "reference").length;
+      const padded = String(existingRefs + 1).padStart(3, "0");
+      const destRel =
+        role === "thumbnail"
+          ? path.join("assets", assetId, "thumb.webp").replace(/\\/g, "/")
+          : path
+              .join("assets", assetId, `ref-${padded}${ext}`)
+              .replace(/\\/g, "/");
+      const destAbs = path.join(paths.dataDir, destRel);
+      await fs.mkdir(path.dirname(destAbs), { recursive: true });
+      await fs.writeFile(destAbs, buf);
+      let width: number | null = null;
+      let height: number | null = null;
+      let mt = mimeType || guessMimeFromExt(ext);
+      try {
+        const meta = await sharp(buf).metadata();
+        width = meta.width ?? null;
+        height = meta.height ?? null;
+        if (meta.format) mt = `image/${meta.format}`;
+      } catch {
+        // non-image
+      }
+      const sha256 = createHash("sha256").update(buf).digest("hex");
+      const fileId = randomUUID();
+      const file: AssetFile = {
+        id: fileId,
+        assetId,
+        role,
+        relPath: destRel,
+        mimeType: mt,
+        width,
+        height,
+        bytes: buf.byteLength,
+        sha256,
+        position: existingRefs,
+        createdAt: Date.now(),
+      };
+      assetRepo.addFile(file);
+      try {
+        server.emit("assets.changed", { id: assetId, op: "updated" });
+      } catch (err) {
+        logger.warn("assets.changed emit failed", { err: String(err) });
+      }
+      return { fileId, relPath: destRel };
+    },
+
+    "assets.removeFile": async ({ fileId }) => {
+      // Look up the asset by walking files (we don't have findFileById; the
+      // repo exposes listFiles per asset). The cheaper path: iterate the
+      // current asset list once and find the matching row.
+      const all = assetRepo.list({ includeArchived: true });
+      let owner: { assetId: string; relPath: string } | null = null;
+      for (const a of all) {
+        const hit = a.files.find((f) => f.id === fileId);
+        if (hit) {
+          owner = { assetId: a.id, relPath: hit.relPath };
+          break;
+        }
+      }
+      assetRepo.removeFile(fileId);
+      if (owner) {
+        const abs = path.join(paths.dataDir, owner.relPath);
+        await safeUnlink(abs);
+        try {
+          server.emit("assets.changed", { id: owner.assetId, op: "updated" });
+        } catch (err) {
+          logger.warn("assets.changed emit failed", { err: String(err) });
+        }
+      }
+    },
 
     // M7 — Video Studio
     "video.submit": notImplemented("M7", "video.submit"),
@@ -486,6 +874,42 @@ export function setupIpc(deps: IpcDeps): IpcServer {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+function pickExt(originalName: string, mimeType: string): string {
+  const ext = path.extname(originalName).toLowerCase();
+  if (ext) return ext;
+  // Fall back to mime-derived extension.
+  switch (mimeType) {
+    case "image/png":
+      return ".png";
+    case "image/jpeg":
+    case "image/jpg":
+      return ".jpg";
+    case "image/webp":
+      return ".webp";
+    case "image/gif":
+      return ".gif";
+    default:
+      return ".bin";
+  }
+}
+
+function guessMimeFromExt(ext: string): string {
+  const e = ext.toLowerCase().replace(/^\./, "");
+  switch (e) {
+    case "png":
+      return "image/png";
+    case "jpg":
+    case "jpeg":
+      return "image/jpeg";
+    case "webp":
+      return "image/webp";
+    case "gif":
+      return "image/gif";
+    default:
+      return "application/octet-stream";
+  }
+}
 
 function parseJsonObject(s: string): Record<string, unknown> {
   try {

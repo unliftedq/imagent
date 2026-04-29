@@ -1,0 +1,701 @@
+import { useEffect, useMemo, useState } from "react";
+import {
+  AssetCard,
+  Button,
+  Dialog,
+  EmptyState,
+  Icons,
+  Input,
+  Tabs,
+  Textarea,
+} from "@imagine-studio/ui";
+import type { Asset, AssetKind } from "@imagine-studio/core";
+import { IpcClientError } from "@imagine-studio/ipc";
+import { api } from "../lib/api.js";
+import { useAssetsStore } from "../state/useAssetsStore.js";
+import { useUIStore } from "../state/useUIStore.js";
+
+const KINDS: AssetKind[] = ["character", "object", "background", "style"];
+const KIND_LABEL: Record<AssetKind, string> = {
+  character: "Characters",
+  object: "Objects",
+  background: "Backgrounds",
+  style: "Styles",
+};
+const ACTIVE_TAB_LS_KEY = "imagine-studio.activeAssetTab.v1";
+const MAX_UPLOADS = 10;
+
+/**
+ * Assets page (M6) — four-tab CRUD per design.md §11.
+ */
+export function AssetsPage() {
+  const byKind = useAssetsStore((s) => s.byKind);
+  const refresh = useAssetsStore((s) => s.refresh);
+  const setSearch = useAssetsStore((s) => s.setSearch);
+  const removeAsset = useAssetsStore((s) => s.remove);
+  const updateAsset = useAssetsStore((s) => s.update);
+  const pushToast = useUIStore((s) => s.pushToast);
+
+  const [activeTab, setActiveTab] = useState<AssetKind>(() => {
+    if (typeof window === "undefined") return "character";
+    const stored = window.localStorage.getItem(ACTIVE_TAB_LS_KEY);
+    if (stored && KINDS.includes(stored as AssetKind)) {
+      return stored as AssetKind;
+    }
+    return "character";
+  });
+  const [search, setSearchInput] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createKind, setCreateKind] = useState<AssetKind>("character");
+  const [drawerId, setDrawerId] = useState<string | null>(null);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(ACTIVE_TAB_LS_KEY, activeTab);
+  }, [activeTab]);
+
+  // Debounce the search → store query.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearch(search.trim() || undefined);
+    }, 200);
+    return () => clearTimeout(t);
+  }, [search, setSearch]);
+
+  const visibleAssets = byKind[activeTab] ?? [];
+  const drawerAsset = useMemo(() => {
+    if (!drawerId) return null;
+    for (const k of KINDS) {
+      const hit = byKind[k].find((a) => a.id === drawerId);
+      if (hit) return hit;
+    }
+    return null;
+  }, [byKind, drawerId]);
+
+  const onCreated = (created: Asset): void => {
+    setCreateOpen(false);
+    setActiveTab(created.kind);
+    setDrawerId(created.id);
+  };
+
+  const onDelete = async (id: string): Promise<void> => {
+    try {
+      await removeAsset(id);
+      setDrawerId(null);
+    } catch (err) {
+      pushToast({
+        title: "Delete failed",
+        description: err instanceof IpcClientError ? err.message : (err as Error)?.message,
+        variant: "error",
+      });
+    }
+  };
+
+  return (
+    <div className="mx-auto flex max-w-6xl flex-col gap-6 px-8 py-8">
+      <header className="flex items-start justify-between gap-4">
+        <div className="flex flex-col">
+          <h1 className="text-(length:--text-display-sm) font-(family-name:--font-display) text-(--color-ink)">
+            Assets
+          </h1>
+          <p className="text-(length:--text-body-sm) text-(--color-muted)">
+            Reusable characters, objects, backgrounds, and styles for your generations.
+          </p>
+        </div>
+        <Button
+          leadingIcon={<Icons.Plus weight="bold" className="size-4" />}
+          onClick={() => {
+            setCreateKind(activeTab);
+            setCreateOpen(true);
+          }}
+        >
+          New
+        </Button>
+      </header>
+
+      <Tabs.Root value={activeTab} onValueChange={(v) => setActiveTab(v as AssetKind)}>
+        <Tabs.List>
+          {KINDS.map((k) => (
+            <Tabs.Trigger key={k} value={k}>
+              {KIND_LABEL[k]}
+              <span className="ml-2 rounded-(--radius-pill) bg-(--color-surface-soft) px-1.5 text-[10px] font-semibold text-(--color-muted) [font-variant-numeric:tabular-nums]">
+                {byKind[k]?.length ?? 0}
+              </span>
+            </Tabs.Trigger>
+          ))}
+        </Tabs.List>
+
+        {KINDS.map((k) => (
+          <Tabs.Content key={k} value={k} className="mt-4 flex flex-col gap-4">
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder={`Search ${KIND_LABEL[k].toLowerCase()}…`}
+                value={search}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="max-w-sm"
+              />
+              {search ? (
+                <Button variant="ghost" size="sm" onClick={() => setSearchInput("")}>
+                  Clear
+                </Button>
+              ) : null}
+            </div>
+
+            {visibleAssets.length === 0 ? (
+              <EmptyState
+                icon={<Icons.Folder weight="duotone" className="size-10" />}
+                title={`No ${KIND_LABEL[k].toLowerCase()} yet`}
+                description={
+                  k === "style"
+                    ? "Styles can be a reference image, a prompt snippet, or both."
+                    : `Add a ${k} with one or more reference images.`
+                }
+                action={
+                  <Button
+                    leadingIcon={<Icons.Plus weight="bold" className="size-4" />}
+                    onClick={() => {
+                      setCreateKind(k);
+                      setCreateOpen(true);
+                    }}
+                  >
+                    New {k}
+                  </Button>
+                }
+              />
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                {visibleAssets.map((a) => (
+                  <AssetCard
+                    key={a.id}
+                    asset={a}
+                    thumbnailUrl={resolveAssetThumbnailUrl(a)}
+                    onClick={() => setDrawerId(a.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </Tabs.Content>
+        ))}
+      </Tabs.Root>
+
+      <CreateAssetDialog
+        open={createOpen}
+        kind={createKind}
+        onKindChange={setCreateKind}
+        onClose={() => setCreateOpen(false)}
+        onCreated={onCreated}
+      />
+
+      <AssetDrawer
+        asset={drawerAsset}
+        onClose={() => setDrawerId(null)}
+        onDelete={onDelete}
+        onSave={async (patch) => {
+          if (!drawerAsset) return;
+          await updateAsset({ id: drawerAsset.id, ...patch });
+        }}
+      />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// CreateAssetDialog
+// ---------------------------------------------------------------------------
+
+interface CreateDialogProps {
+  open: boolean;
+  kind: AssetKind;
+  onKindChange: (k: AssetKind) => void;
+  onClose: () => void;
+  onCreated: (asset: Asset) => void;
+}
+
+interface PendingFile {
+  id: string;
+  name: string;
+  mimeType: string;
+  size: number;
+  bytes: ArrayBuffer;
+  previewUrl: string;
+}
+
+function CreateAssetDialog({
+  open,
+  kind,
+  onKindChange,
+  onClose,
+  onCreated,
+}: CreateDialogProps) {
+  const create = useAssetsStore((s) => s.create);
+  const pushToast = useUIStore((s) => s.pushToast);
+
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [promptSnippet, setPromptSnippet] = useState("");
+  const [files, setFiles] = useState<PendingFile[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+
+  // Reset on close.
+  useEffect(() => {
+    if (!open) {
+      setName("");
+      setDescription("");
+      setPromptSnippet("");
+      setFiles((prev) => {
+        for (const f of prev) URL.revokeObjectURL(f.previewUrl);
+        return [];
+      });
+      setError(null);
+      setDragOver(false);
+      setSubmitting(false);
+    }
+  }, [open]);
+
+  const addFiles = async (incoming: FileList | File[]): Promise<void> => {
+    const arr = Array.from(incoming);
+    const next: PendingFile[] = [];
+    for (const f of arr) {
+      if (files.length + next.length >= MAX_UPLOADS) {
+        pushToast({
+          title: "Upload cap",
+          description: `Up to ${MAX_UPLOADS} reference images per asset. Extras dropped.`,
+          variant: "warning",
+        });
+        break;
+      }
+      const buf = await f.arrayBuffer();
+      next.push({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name: f.name,
+        mimeType: f.type || "application/octet-stream",
+        size: f.size,
+        bytes: buf,
+        previewUrl: URL.createObjectURL(f),
+      });
+    }
+    setFiles((prev) => [...prev, ...next]);
+  };
+
+  const removeFile = (id: string): void => {
+    setFiles((prev) => {
+      const target = prev.find((f) => f.id === id);
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((f) => f.id !== id);
+    });
+  };
+
+  const submit = async (): Promise<void> => {
+    setError(null);
+    if (!name.trim()) {
+      setError("Name is required.");
+      return;
+    }
+    if (kind !== "style" && files.length === 0) {
+      setError(`${kind} assets require at least one reference image.`);
+      return;
+    }
+    if (kind === "style" && files.length === 0 && !promptSnippet.trim()) {
+      setError("Style assets require at least one reference OR a prompt snippet.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const created = await create({
+        kind,
+        name: name.trim(),
+        description: description.trim() || null,
+        promptSnippet: promptSnippet.trim() || null,
+        fileUploads: files.map((f) => ({
+          bytes: new Uint8Array(f.bytes),
+          originalName: f.name,
+          mimeType: f.mimeType,
+        })),
+      });
+      onCreated(created);
+    } catch (err) {
+      setError(
+        err instanceof IpcClientError
+          ? err.message
+          : (err as Error)?.message ?? String(err),
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const onDrop = async (e: React.DragEvent<HTMLDivElement>): Promise<void> => {
+    e.preventDefault();
+    setDragOver(false);
+    if (e.dataTransfer.files.length > 0) {
+      await addFiles(e.dataTransfer.files);
+    }
+  };
+
+  return (
+    <Dialog.Root open={open} onOpenChange={(v) => (v ? null : onClose())}>
+      <Dialog.Content className="max-w-2xl">
+        <Dialog.Title className="text-(length:--text-title-lg) font-semibold text-(--color-ink)">
+          New asset
+        </Dialog.Title>
+        <Dialog.Description className="mt-1 text-(length:--text-body-sm) text-(--color-muted)">
+          Create a reusable {kind === "style" ? "style" : kind} that can be picked from any
+          generation.
+        </Dialog.Description>
+
+        <div className="mt-4 flex flex-col gap-4">
+          <Field label="Kind">
+            <div className="flex gap-1 rounded-(--radius-pill) bg-(--color-surface-soft) p-1">
+              {KINDS.map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => onKindChange(k)}
+                  className={
+                    "flex-1 rounded-(--radius-pill) px-3 py-1.5 text-(length:--text-caption) " +
+                    "capitalize transition-colors duration-(--duration-fast) " +
+                    (kind === k
+                      ? "bg-(--color-canvas) text-(--color-ink) shadow-[0_0_0_1px_var(--color-hairline)]"
+                      : "text-(--color-muted) hover:text-(--color-ink)")
+                  }
+                >
+                  {k}
+                </button>
+              ))}
+            </div>
+          </Field>
+
+          <Field label="Name">
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={kind === "character" ? "Alice" : kind === "style" ? "Studio Ghibli" : ""}
+              autoFocus
+            />
+          </Field>
+
+          <Field label="Description (optional)">
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Notes about this asset…"
+              rows={2}
+            />
+          </Field>
+
+          {kind === "style" ? (
+            <Field label="Prompt snippet (style only)">
+              <Textarea
+                value={promptSnippet}
+                onChange={(e) => setPromptSnippet(e.target.value)}
+                placeholder="e.g. soft pastel watercolor, hand-drawn lines"
+                rows={2}
+              />
+              <span className="text-(length:--text-caption) text-(--color-muted-soft)">
+                Used when the model lacks reference support. Reference image takes precedence.
+              </span>
+            </Field>
+          ) : null}
+
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => void onDrop(e)}
+            className={
+              "rounded-(--radius-md) border border-dashed px-4 py-6 text-center " +
+              "transition-colors duration-(--duration-fast) " +
+              (dragOver
+                ? "border-(--color-ink) bg-(--color-surface-card)"
+                : "border-(--color-hairline) bg-(--color-surface-soft)")
+            }
+          >
+            <p className="text-(length:--text-caption) text-(--color-muted)">
+              Drag reference images here, or
+              <label className="ml-1 cursor-pointer text-(--color-ink) underline underline-offset-2">
+                browse
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files) {
+                      void addFiles(e.target.files);
+                      e.target.value = "";
+                    }
+                  }}
+                />
+              </label>
+            </p>
+            <p className="mt-1 text-(length:--text-caption) text-(--color-muted-soft)">
+              Up to {MAX_UPLOADS} per asset. {files.length} attached.
+            </p>
+          </div>
+
+          {files.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {files.map((f) => (
+                <div
+                  key={f.id}
+                  className="relative size-16 overflow-hidden rounded-(--radius-sm) border border-(--color-hairline)"
+                >
+                  {/* biome-ignore lint/a11y/useAltText: filename caption below */}
+                  <img
+                    src={f.previewUrl}
+                    alt={f.name}
+                    className="h-full w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeFile(f.id)}
+                    className={
+                      "absolute right-0.5 top-0.5 inline-flex size-5 items-center justify-center " +
+                      "rounded-full bg-(--color-canvas) text-(--color-ink) " +
+                      "transition-colors duration-(--duration-fast) " +
+                      "hover:bg-(--color-error) hover:text-(--color-on-primary)"
+                    }
+                    aria-label={`Remove ${f.name}`}
+                  >
+                    <Icons.X weight="bold" className="size-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          {error ? (
+            <div className="rounded-(--radius-md) border border-(--color-error)/40 bg-(--color-error)/10 px-3 py-2 text-(length:--text-caption) text-(--color-error)">
+              {error}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-6 flex items-center justify-end gap-2">
+          <Button variant="ghost" onClick={onClose} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button onClick={() => void submit()} disabled={submitting}>
+            {submitting ? "Saving…" : "Create asset"}
+          </Button>
+        </div>
+      </Dialog.Content>
+    </Dialog.Root>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Drawer
+// ---------------------------------------------------------------------------
+
+interface DrawerProps {
+  asset: Asset | null;
+  onClose: () => void;
+  onDelete: (id: string) => Promise<void>;
+  onSave: (patch: {
+    name?: string;
+    description?: string | null;
+    promptSnippet?: string | null;
+  }) => Promise<void>;
+}
+
+function AssetDrawer({ asset, onClose, onDelete, onSave }: DrawerProps) {
+  const pushToast = useUIStore((s) => s.pushToast);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [promptSnippet, setPromptSnippet] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  useEffect(() => {
+    if (!asset) return;
+    setName(asset.name);
+    setDescription(asset.description ?? "");
+    setPromptSnippet(asset.promptSnippet ?? "");
+    setConfirmDelete(false);
+  }, [asset]);
+
+  const dirty =
+    asset !== null &&
+    (asset.name !== name ||
+      (asset.description ?? "") !== description ||
+      (asset.promptSnippet ?? "") !== promptSnippet);
+
+  const save = async (): Promise<void> => {
+    if (!asset || !dirty) return;
+    try {
+      await onSave({
+        name: name.trim() || asset.name,
+        description: description.trim() || null,
+        ...(asset.kind === "style"
+          ? { promptSnippet: promptSnippet.trim() || null }
+          : {}),
+      });
+      pushToast({ title: "Saved", variant: "success" });
+    } catch (err) {
+      pushToast({
+        title: "Save failed",
+        description: err instanceof IpcClientError ? err.message : (err as Error)?.message,
+        variant: "error",
+      });
+    }
+  };
+
+  const openFolder = async (): Promise<void> => {
+    if (!asset) return;
+    try {
+      await api["system.openPath"]({ path: `assets/${asset.id}` });
+    } catch (err) {
+      pushToast({
+        title: "Could not open folder",
+        description: (err as Error)?.message,
+        variant: "error",
+      });
+    }
+  };
+
+  const refs = asset?.files.filter((f) => f.role === "reference") ?? [];
+
+  return (
+    <Dialog.Root open={asset !== null} onOpenChange={(v) => (v ? null : onClose())}>
+      <Dialog.Sheet>
+        {asset ? (
+          <div className="flex h-full flex-col gap-4">
+            <Dialog.Title className="text-(length:--text-title-lg) font-semibold text-(--color-ink)">
+              {asset.name}
+            </Dialog.Title>
+            <span
+              className={
+                "inline-flex w-fit items-center rounded-(--radius-pill) bg-(--color-surface-card) " +
+                "px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[1.5px] text-(--color-ink)"
+              }
+            >
+              {asset.kind}
+            </span>
+
+            {refs.length > 0 ? (
+              <div className="grid grid-cols-3 gap-2">
+                {refs.map((f) => (
+                  <a
+                    key={f.id}
+                    href={resolveDataUrl(f.relPath)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block aspect-square overflow-hidden rounded-(--radius-sm) border border-(--color-hairline)"
+                  >
+                    {/* biome-ignore lint/a11y/useAltText: covered by hover title below */}
+                    <img
+                      src={resolveDataUrl(f.relPath)}
+                      alt={f.relPath}
+                      className="h-full w-full object-cover"
+                    />
+                  </a>
+                ))}
+              </div>
+            ) : asset.kind === "style" ? (
+              <p className="text-(length:--text-caption) text-(--color-muted)">
+                No reference images — this style relies on the prompt snippet below.
+              </p>
+            ) : null}
+
+            <Field label="Name">
+              <Input value={name} onChange={(e) => setName(e.target.value)} />
+            </Field>
+            <Field label="Description">
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={2}
+              />
+            </Field>
+            {asset.kind === "style" ? (
+              <Field label="Prompt snippet">
+                <Textarea
+                  value={promptSnippet}
+                  onChange={(e) => setPromptSnippet(e.target.value)}
+                  rows={2}
+                />
+                <span className="text-(length:--text-caption) text-(--color-muted-soft)">
+                  Reference is preferred when the model supports refs; otherwise this snippet is
+                  appended to the prompt.
+                </span>
+              </Field>
+            ) : null}
+
+            <div className="mt-auto flex items-center justify-between gap-2 border-t border-(--color-hairline-soft) pt-4">
+              <Button variant="ghost" size="sm" onClick={() => void openFolder()}>
+                Open folder
+              </Button>
+              <div className="flex items-center gap-2">
+                {confirmDelete ? (
+                  <>
+                    <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={() => void onDelete(asset.id)}
+                    >
+                      Confirm delete
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setConfirmDelete(true)}
+                  >
+                    Delete
+                  </Button>
+                )}
+                <Button size="sm" onClick={() => void save()} disabled={!dirty}>
+                  Save
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </Dialog.Sheet>
+    </Dialog.Root>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-(length:--text-caption) font-semibold text-(--color-muted)">
+        {label}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+function resolveDataUrl(relPath: string): string {
+  const w = window as unknown as { __imagineDataDir__?: string };
+  const dataDir = w.__imagineDataDir__ ?? "";
+  if (!dataDir) return relPath;
+  const norm = relPath.replace(/\\/g, "/");
+  const root = dataDir.replace(/\\/g, "/");
+  return `file:///${root}/${norm}`.replace(/\/+/g, "/").replace("file:/", "file:///");
+}
+
+export function resolveAssetThumbnailUrl(asset: Asset): string | null {
+  const thumb = asset.files.find((f) => f.role === "thumbnail");
+  const ref = asset.files.find((f) => f.role === "reference");
+  const target = thumb ?? ref;
+  return target ? resolveDataUrl(target.relPath) : null;
+}

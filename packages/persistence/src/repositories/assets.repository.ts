@@ -62,6 +62,13 @@ export interface AssetListOptions {
   /** FTS5 MATCH expression. When provided, joins assets_fts. */
   search?: string;
   limit?: number;
+  /** Pagination offset; combine with `limit`. */
+  offset?: number;
+}
+
+export interface AssetListPage {
+  items: Asset[];
+  total: number;
 }
 
 /**
@@ -98,9 +105,75 @@ export class AssetRepository {
     if (opts.limit !== undefined) {
       sql += " LIMIT ?";
       params.push(opts.limit);
+      if (opts.offset !== undefined) {
+        sql += " OFFSET ?";
+        params.push(opts.offset);
+      }
     }
     const rows = this.db.prepare(sql).all(...params) as AssetRow[];
     return rows.map((r) => rowToAsset(r, this.listFiles(r.id)));
+  }
+
+  /**
+   * Same shape as `list` but returns paginated rows joined with their files
+   * AND the total count for the same WHERE clause. Used by the IPC
+   * `assets.list` handler so the renderer can show "page 1 of N".
+   */
+  listWithFiles(opts: AssetListOptions = {}): AssetListPage {
+    const where: string[] = [];
+    const params: unknown[] = [];
+    if (opts.kind) {
+      where.push("a.kind = ?");
+      params.push(opts.kind);
+    }
+    if (!opts.includeArchived) {
+      where.push("a.archived_at IS NULL");
+    }
+
+    let baseSql: string;
+    let countSql: string;
+    if (opts.search && opts.search.trim().length > 0) {
+      baseSql =
+        "SELECT a.* FROM assets a JOIN assets_fts f ON a.rowid = f.rowid " +
+        `WHERE f.assets_fts MATCH ?${where.length ? ` AND ${where.join(" AND ")}` : ""} ` +
+        "ORDER BY a.updated_at DESC";
+      countSql =
+        "SELECT COUNT(*) AS n FROM assets a JOIN assets_fts f ON a.rowid = f.rowid " +
+        `WHERE f.assets_fts MATCH ?${where.length ? ` AND ${where.join(" AND ")}` : ""}`;
+      params.unshift(opts.search);
+    } else {
+      const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+      baseSql = `SELECT a.* FROM assets a ${whereSql} ORDER BY a.updated_at DESC`;
+      countSql = `SELECT COUNT(*) AS n FROM assets a ${whereSql}`;
+    }
+
+    const totalRow = this.db.prepare(countSql).get(...params) as { n: number };
+    let sql = baseSql;
+    const allParams = [...params];
+    if (opts.limit !== undefined) {
+      sql += " LIMIT ?";
+      allParams.push(opts.limit);
+      if (opts.offset !== undefined) {
+        sql += " OFFSET ?";
+        allParams.push(opts.offset);
+      }
+    }
+    const rows = this.db.prepare(sql).all(...allParams) as AssetRow[];
+    const items = rows.map((r) => rowToAsset(r, this.listFiles(r.id)));
+    return { items, total: totalRow.n };
+  }
+
+  /**
+   * Count of `gallery_item_assets` rows referencing this asset. Surfaced as
+   * "X used in N items" on the Assets page card. Cheap subquery.
+   */
+  usageCount(assetId: string): number {
+    const row = this.db
+      .prepare(
+        "SELECT COUNT(*) AS n FROM gallery_item_assets WHERE asset_id = ?",
+      )
+      .get(assetId) as { n: number };
+    return row.n;
   }
 
   get(id: string): Asset | null {
