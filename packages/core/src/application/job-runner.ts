@@ -47,6 +47,19 @@ export interface FilesServicePort {
   readonly dataDir: string;
 }
 
+/**
+ * Best-effort thumbnail generation service. JobRunner calls this after a
+ * video MP4 is written to disk; failures log a warning and don't fail the
+ * job (the MP4 is the deliverable). Implementations live in `persistence`.
+ */
+export interface ThumbnailServicePort {
+  /**
+   * Produce a thumbnail next to `srcPath`. Returns the absolute path to the
+   * generated file, or `null` when generation was skipped (e.g. unsupported).
+   */
+  generateForVideo(srcPath: string, destPath: string): Promise<{ ok: true } | { ok: false; reason: string }>;
+}
+
 export type ImageRegistry = ReadonlyMap<string, ImageProvider>;
 export type VideoRegistry = ReadonlyMap<string, VideoProvider>;
 
@@ -70,6 +83,13 @@ export interface JobRunnerDeps {
   /** scheduling abstraction; tests inject a fake. */
   setTimer?: (cb: () => void, ms: number) => unknown;
   clearTimer?: (handle: unknown) => void;
+  /**
+   * Optional thumbnail generator. When set, the video success path calls
+   * `generateForVideo()` after the MP4 is written; the result path is
+   * persisted to `gallery_items.thumb_path`. Failures are best-effort
+   * (logged, not surfaced as job failures).
+   */
+  thumbnailService?: ThumbnailServicePort;
 }
 
 export type JobEventName = "job.progress" | "job.completed" | "job.failed";
@@ -101,7 +121,15 @@ export class JobRunner extends EventEmitter {
   private readonly deps: Required<
     Omit<
       JobRunnerDeps,
-      "logger" | "idFactory" | "now" | "setTimer" | "clearTimer" | "writeFile" | "ensureDir" | "boards"
+      | "logger"
+      | "idFactory"
+      | "now"
+      | "setTimer"
+      | "clearTimer"
+      | "writeFile"
+      | "ensureDir"
+      | "boards"
+      | "thumbnailService"
     >
   > & {
     boards: BoardRepositoryPort | null;
@@ -112,6 +140,7 @@ export class JobRunner extends EventEmitter {
     clearTimer: (handle: unknown) => void;
     writeFile: (filePath: string, bytes: Uint8Array) => Promise<void>;
     ensureDir: (dir: string) => Promise<void>;
+    thumbnailService: ThumbnailServicePort | null;
   };
   private readonly running = new Map<JobId, RunningEntry>();
   /** parentId/boardId overrides stashed at start() time, applied at item create. */
@@ -133,6 +162,7 @@ export class JobRunner extends EventEmitter {
       clearTimer: deps.clearTimer ?? ((h) => clearTimeout(h as ReturnType<typeof setTimeout>)),
       writeFile: deps.writeFile ?? defaultWriteFile,
       ensureDir: deps.ensureDir ?? defaultEnsureDir,
+      thumbnailService: deps.thumbnailService ?? null,
     };
   }
 
@@ -498,6 +528,38 @@ export class JobRunner extends EventEmitter {
         await this.deps.writeFile(absPath, out.bytes);
         const relPath = relativeToData(absPath, this.deps.files.dataDir);
 
+        // Best-effort thumbnail generation. Persist `thumb_path` only when
+        // the service confirms a file was written; failures log + drop.
+        let thumbRel: string | null = null;
+        if (this.deps.thumbnailService) {
+          // `<itemId>.thumb.webp` next to `<itemId>.<ext>` — sibling layout
+          // matches architecture.md §6.
+          const absThumb = this.deps.files.galleryItemFile(
+            `${itemId}.thumb`,
+            "webp",
+            date,
+          );
+          try {
+            const r = await this.deps.thumbnailService.generateForVideo(
+              absPath,
+              absThumb,
+            );
+            if (r.ok) {
+              thumbRel = relativeToData(absThumb, this.deps.files.dataDir);
+            } else {
+              this.deps.logger.warn("thumbnail generateForVideo skipped", {
+                id,
+                reason: r.reason,
+              });
+            }
+          } catch (err) {
+            this.deps.logger.warn("thumbnail generateForVideo threw", {
+              id,
+              err: String(err),
+            });
+          }
+        }
+
         const overrides = this.intentOverrides.get(id) ?? {};
         const item = this.deps.gallery.create({
           id: itemId,
@@ -515,7 +577,7 @@ export class JobRunner extends EventEmitter {
             raw: { ...(req.raw ?? {}), ...(out.raw ?? {}) },
           }),
           relPath,
-          thumbPath: null,
+          thumbPath: thumbRel,
           durationMs: out.durationMs ?? null,
           width: out.width ?? null,
           height: out.height ?? null,

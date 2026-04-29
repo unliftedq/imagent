@@ -18,7 +18,8 @@ interface GalleryState {
 }
 
 const defaultQuery: GalleryQuery = {
-  kind: "image",
+  // M7: gallery query no longer filters by kind — image + video items mix
+  // in the masonry. Pages opt back into a kind filter by calling setQuery.
   limit: 60,
   offset: 0,
 };

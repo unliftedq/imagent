@@ -58,7 +58,18 @@ function rowToFile(r: AssetFileRow): AssetFile {
 
 export interface AssetListOptions {
   kind?: AssetKind;
+  /**
+   * Default: false. When false (default), `archived_at IS NULL` is enforced —
+   * archived assets are hidden from list queries. When true, archived assets
+   * are included alongside live ones. Mutually exclusive with `archivedOnly`.
+   */
   includeArchived?: boolean;
+  /**
+   * When true, return ONLY archived rows (`archived_at IS NOT NULL`). Used by
+   * the Trash tab in the Assets page (M8). Takes precedence over
+   * `includeArchived`.
+   */
+  archivedOnly?: boolean;
   /** FTS5 MATCH expression. When provided, joins assets_fts. */
   search?: string;
   limit?: number;
@@ -85,7 +96,9 @@ export class AssetRepository {
       where.push("a.kind = ?");
       params.push(opts.kind);
     }
-    if (!opts.includeArchived) {
+    if (opts.archivedOnly) {
+      where.push("a.archived_at IS NOT NULL");
+    } else if (!opts.includeArchived) {
       where.push("a.archived_at IS NULL");
     }
 
@@ -126,7 +139,9 @@ export class AssetRepository {
       where.push("a.kind = ?");
       params.push(opts.kind);
     }
-    if (!opts.includeArchived) {
+    if (opts.archivedOnly) {
+      where.push("a.archived_at IS NOT NULL");
+    } else if (!opts.includeArchived) {
       where.push("a.archived_at IS NULL");
     }
 
@@ -230,15 +245,42 @@ export class AssetRepository {
     return this.get(id) ?? next;
   }
 
+  /**
+   * Soft-delete: stamp `archived_at` so the asset disappears from default
+   * lists and from any AssetPicker. Reversible via `restore`. Files on disk
+   * remain intact (no fs cleanup) — `permanentlyDelete` removes them.
+   */
   archive(id: string): void {
+    const now = Date.now();
     this.db
       .prepare("UPDATE assets SET archived_at = ?, updated_at = ? WHERE id = ?")
-      .run(Date.now(), Date.now(), id);
+      .run(now, now, id);
   }
 
-  delete(id: string): void {
-    // FK cascade clears asset_files.
+  /**
+   * Reverse of `archive`: clear the `archived_at` stamp. Idempotent — calling
+   * on a live asset is a no-op.
+   */
+  restore(id: string): void {
+    this.db
+      .prepare("UPDATE assets SET archived_at = NULL, updated_at = ? WHERE id = ?")
+      .run(Date.now(), id);
+  }
+
+  /**
+   * Hard delete — `assets` row + cascade `asset_files`. Filesystem cleanup is
+   * the caller's responsibility (see `assets.delete` IPC handler).
+   *
+   * `permanentlyDelete` is the preferred name from M8 onward; `delete` stays
+   * as an alias so older callers keep working.
+   */
+  permanentlyDelete(id: string): void {
     this.db.prepare("DELETE FROM assets WHERE id = ?").run(id);
+  }
+
+  /** @deprecated Use `permanentlyDelete` for clarity. Same behavior. */
+  delete(id: string): void {
+    this.permanentlyDelete(id);
   }
 
   listFiles(assetId: string): AssetFile[] {

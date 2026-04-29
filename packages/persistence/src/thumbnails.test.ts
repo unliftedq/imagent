@@ -1,6 +1,8 @@
+import { EventEmitter } from "node:events";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { Readable } from "node:stream";
 import sharp from "sharp";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
@@ -84,7 +86,159 @@ describe("thumbnails", () => {
     expect(meta.format).toBe("png");
   });
 
-  it("generateVideoThumbnail throws (M7)", async () => {
-    await expect(generateVideoThumbnail("a", "b")).rejects.toThrow(/M7/);
+  it("generateVideoThumbnail invokes ffmpeg with -ss/-frames:v and pipes mjpeg through sharp", async () => {
+    const dst = path.join(tmpDir, "video-thumb.webp");
+    // Pre-bake a known JPEG that ffmpeg "would" emit, so we can verify the
+    // sharp pipeline actually transforms what came over stdout.
+    const fakeFrame = await sharp({
+      create: {
+        width: 1280,
+        height: 720,
+        channels: 3,
+        background: { r: 200, g: 100, b: 50 },
+      },
+    })
+      .jpeg({ quality: 90 })
+      .toBuffer();
+
+    const seenArgs: string[][] = [];
+    const fakeSpawn = ((_bin: string, args: readonly string[]) => {
+      seenArgs.push([...args]);
+      const child = new EventEmitter() as EventEmitter & {
+        stdout: Readable;
+        stderr: Readable;
+      };
+      child.stdout = Readable.from([fakeFrame]);
+      child.stderr = Readable.from([]);
+      // Wait for both streams to end, then emit close(0).
+      let done = 0;
+      const check = (): void => {
+        done += 1;
+        if (done >= 2) child.emit("close", 0);
+      };
+      child.stdout.once("end", check);
+      child.stderr.once("end", check);
+      return child as unknown as ReturnType<typeof import("node:child_process").spawn>;
+    }) as unknown as typeof import("node:child_process").spawn;
+
+    const result = await generateVideoThumbnail(
+      path.join(tmpDir, "fake.mp4"),
+      dst,
+      {
+        ffmpegPath: "fake-ffmpeg.exe",
+        spawnFn: fakeSpawn,
+        maxSide: 256,
+      },
+    );
+
+    expect(seenArgs).toHaveLength(1);
+    const args = seenArgs[0]!;
+    expect(args).toContain("-ss");
+    expect(args).toContain("-frames:v");
+    expect(args).toContain("image2pipe");
+    expect(args).toContain("mjpeg");
+    expect(result.width).toBeLessThanOrEqual(256);
+    expect(result.height).toBeLessThanOrEqual(256);
+    // 1280x720 fits inside a 256 box → width should be the longer side.
+    expect(result.width).toBeGreaterThan(result.height);
+    expect(result.bytes).toBeGreaterThan(0);
+
+    // Output is a real webp file.
+    const meta = await sharp(dst).metadata();
+    expect(meta.format).toBe("webp");
+  });
+
+  it("generateVideoThumbnail retries with seek=0 when initial seek fails", async () => {
+    const dst = path.join(tmpDir, "retry-thumb.webp");
+    const fakeFrame = await sharp({
+      create: { width: 320, height: 240, channels: 3, background: "#444" },
+    })
+      .jpeg()
+      .toBuffer();
+
+    let calls = 0;
+    const fakeSpawn = ((_bin: string, args: readonly string[]) => {
+      calls += 1;
+      const child = new EventEmitter() as EventEmitter & {
+        stdout: Readable;
+        stderr: Readable;
+      };
+      const ssIdx = args.indexOf("-ss");
+      const ssVal = ssIdx >= 0 ? args[ssIdx + 1] : "";
+      let stdoutBuf: Buffer[];
+      let stderrBuf: Buffer[];
+      let exitCode: number;
+      if (calls === 1 && ssVal !== "0") {
+        // First attempt at non-zero seek "fails" (e.g. video shorter than 1s).
+        stdoutBuf = [];
+        stderrBuf = [Buffer.from("Seek to t=1 failed")];
+        exitCode = 1;
+      } else {
+        stdoutBuf = [fakeFrame];
+        stderrBuf = [];
+        exitCode = 0;
+      }
+      child.stdout = Readable.from(stdoutBuf);
+      child.stderr = Readable.from(stderrBuf);
+      let done = 0;
+      const check = (): void => {
+        done += 1;
+        if (done >= 2) child.emit("close", exitCode);
+      };
+      child.stdout.once("end", check);
+      child.stderr.once("end", check);
+      return child as unknown as ReturnType<typeof import("node:child_process").spawn>;
+    }) as unknown as typeof import("node:child_process").spawn;
+
+    const result = await generateVideoThumbnail(
+      path.join(tmpDir, "short.mp4"),
+      dst,
+      { ffmpegPath: "fake.exe", spawnFn: fakeSpawn, maxSide: 128 },
+    );
+    expect(calls).toBe(2);
+    expect(result.width).toBeLessThanOrEqual(128);
+  });
+
+  it("generateVideoThumbnail writes a placeholder webp when ffmpeg fails entirely", async () => {
+    const dst = path.join(tmpDir, "placeholder.webp");
+    const fakeSpawn = ((_bin: string, _args: readonly string[]) => {
+      const child = new EventEmitter() as EventEmitter & {
+        stdout: Readable;
+        stderr: Readable;
+      };
+      child.stdout = Readable.from([] as Buffer[]);
+      child.stderr = Readable.from([Buffer.from("invalid input")]);
+      let done = 0;
+      const check = (): void => {
+        done += 1;
+        if (done >= 2) child.emit("close", 1);
+      };
+      child.stdout.once("end", check);
+      child.stderr.once("end", check);
+      return child as unknown as ReturnType<typeof import("node:child_process").spawn>;
+    }) as unknown as typeof import("node:child_process").spawn;
+
+    const result = await generateVideoThumbnail(
+      path.join(tmpDir, "broken.mp4"),
+      dst,
+      { ffmpegPath: "fake.exe", spawnFn: fakeSpawn },
+    );
+    // Placeholder is a 1×1 webp — caller still has a thumb path on disk.
+    expect(result.width).toBe(1);
+    expect(result.height).toBe(1);
+    const meta = await sharp(dst).metadata();
+    expect(meta.format).toBe("webp");
+  });
+
+  it("generateVideoThumbnail writes a placeholder when ffmpegPath is null", async () => {
+    const dst = path.join(tmpDir, "missing-bin.webp");
+    const result = await generateVideoThumbnail(
+      path.join(tmpDir, "x.mp4"),
+      dst,
+      { ffmpegPath: null },
+    );
+    expect(result.bytes).toBeGreaterThan(0);
+    const meta = await sharp(dst).metadata();
+    expect(meta.format).toBe("webp");
   });
 });

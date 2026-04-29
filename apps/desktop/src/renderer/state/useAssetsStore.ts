@@ -21,13 +21,32 @@ export interface AssetUpdateInput {
 
 interface AssetsState {
   byKind: Record<AssetKind, Asset[]>;
+  /** Archived asset cache for the Trash tab (M8). Cross-kind. */
+  archived: Asset[];
   query: { search?: string; kind?: AssetKind; limit?: number };
   bound: boolean;
   /** Refresh one kind, or all four if `kind` is omitted. */
   refresh: (kind?: AssetKind) => Promise<void>;
+  /** Refresh the archived cache used by the Trash tab. */
+  refreshArchived: () => Promise<void>;
   setSearch: (search: string | undefined) => void;
   create: (input: AssetCreateInput) => Promise<Asset>;
   update: (input: AssetUpdateInput) => Promise<Asset>;
+  /**
+   * Soft-delete (M8): moves the asset to the Trash tab. AssetPicker filters
+   * archived assets, so the asset disappears from kind tabs + ref-pickers but
+   * its files stay on disk.
+   */
+  archive: (id: string) => Promise<void>;
+  /** Reverse of `archive` (M8). Idempotent on a live asset. */
+  restore: (id: string) => Promise<void>;
+  /**
+   * Hard-delete: removes the row + cascade files + rm-rf the asset dir.
+   * Replaces the older `remove` callsite — kept under that name as an alias
+   * for callers that haven't migrated yet.
+   */
+  permanentlyDelete: (id: string) => Promise<void>;
+  /** @deprecated Use `permanentlyDelete` for clarity (M8). */
   remove: (id: string) => Promise<void>;
   /** Subscribes to `assets.changed` push events. Idempotent. */
   bindEvents: () => () => void;
@@ -42,6 +61,7 @@ const EMPTY_BY_KIND: Record<AssetKind, Asset[]> = {
 
 export const useAssetsStore = create<AssetsState>((set, get) => ({
   byKind: { ...EMPTY_BY_KIND },
+  archived: [],
   query: {},
   bound: false,
 
@@ -70,9 +90,19 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
     set({ byKind: next });
   },
 
+  refreshArchived: async () => {
+    const search = get().query.search;
+    const result = await api["assets.list"]({
+      archivedOnly: true,
+      ...(search ? { search } : {}),
+    });
+    set({ archived: result.items });
+  },
+
   setSearch: (search) => {
     set((s) => ({ query: { ...s.query, search: search || undefined } }));
     void get().refresh();
+    void get().refreshArchived();
   },
 
   create: async (input) => {
@@ -123,15 +153,50 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
     return next;
   },
 
-  remove: async (id) => {
+  archive: async (id) => {
+    await api["assets.archive"]({ id });
+    // Optimistically pull from the live tabs; reconciles on next refresh.
+    set((s) => {
+      const nextByKind = { ...s.byKind } as Record<AssetKind, Asset[]>;
+      let archivedAsset: Asset | null = null;
+      for (const k of KINDS) {
+        const hit = nextByKind[k].find((a) => a.id === id);
+        if (hit) archivedAsset = hit;
+        nextByKind[k] = nextByKind[k].filter((a) => a.id !== id);
+      }
+      const archived = archivedAsset
+        ? [
+            { ...archivedAsset, archivedAt: Date.now() },
+            ...s.archived.filter((a) => a.id !== id),
+          ]
+        : s.archived;
+      return { byKind: nextByKind, archived };
+    });
+  },
+
+  restore: async (id) => {
+    await api["assets.restore"]({ id });
+    // Pull from archived; let the next refresh re-seat into the right kind tab.
+    set((s) => ({ archived: s.archived.filter((a) => a.id !== id) }));
+    await get().refresh();
+  },
+
+  permanentlyDelete: async (id) => {
     await api["assets.delete"]({ id });
     set((s) => {
       const nextByKind = { ...s.byKind } as Record<AssetKind, Asset[]>;
       for (const k of KINDS) {
         nextByKind[k] = nextByKind[k].filter((a) => a.id !== id);
       }
-      return { byKind: nextByKind };
+      return {
+        byKind: nextByKind,
+        archived: s.archived.filter((a) => a.id !== id),
+      };
     });
+  },
+
+  remove: async (id) => {
+    await get().permanentlyDelete(id);
   },
 
   bindEvents: () => {
@@ -139,6 +204,7 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
     set({ bound: true });
     const off = api.on("assets.changed", () => {
       void get().refresh();
+      void get().refreshArchived();
     });
     return () => {
       off();

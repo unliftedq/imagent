@@ -270,6 +270,85 @@ describe("AssetRepository", () => {
     }
   });
 
+  it("archive then restore round-trips through list defaults (M8)", () => {
+    const db = openDatabase(dbPath);
+    try {
+      const repo = new AssetRepository(db);
+      const now = Date.now();
+      repo.create({
+        id: "a-arch",
+        kind: "character",
+        name: "Bob",
+        description: null,
+        promptSnippet: null,
+        files: [],
+        createdAt: now,
+        updatedAt: now,
+        archivedAt: null,
+      });
+      // Live by default.
+      expect(repo.list({ kind: "character" })).toHaveLength(1);
+
+      repo.archive("a-arch");
+
+      // Default list excludes the archived asset.
+      expect(repo.list({ kind: "character" })).toHaveLength(0);
+      // includeArchived: true brings it back into the same list.
+      expect(repo.list({ kind: "character", includeArchived: true })).toHaveLength(1);
+      // archivedOnly returns just the archived row regardless of kind.
+      const trash = repo.list({ archivedOnly: true });
+      expect(trash).toHaveLength(1);
+      expect(trash[0]?.id).toBe("a-arch");
+      expect(trash[0]?.archivedAt).not.toBeNull();
+
+      repo.restore("a-arch");
+      expect(repo.list({ kind: "character" })).toHaveLength(1);
+      expect(repo.list({ archivedOnly: true })).toHaveLength(0);
+      // restore() is idempotent on a live asset.
+      repo.restore("a-arch");
+      expect(repo.list({ kind: "character" })).toHaveLength(1);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("permanentlyDelete cascades like delete (M8)", () => {
+    const db = openDatabase(dbPath);
+    try {
+      const repo = new AssetRepository(db);
+      const now = Date.now();
+      repo.create({
+        id: "a-perm",
+        kind: "object",
+        name: "Mug",
+        description: null,
+        promptSnippet: null,
+        files: [],
+        createdAt: now,
+        updatedAt: now,
+        archivedAt: null,
+      });
+      repo.addFile({
+        id: "f-perm",
+        assetId: "a-perm",
+        role: "reference",
+        relPath: "assets/a-perm/ref-001.png",
+        mimeType: "image/png",
+        width: null,
+        height: null,
+        bytes: 1,
+        sha256: "x",
+        position: 0,
+        createdAt: now,
+      });
+      repo.permanentlyDelete("a-perm");
+      expect(repo.get("a-perm")).toBeNull();
+      expect(repo.listFiles("a-perm")).toHaveLength(0);
+    } finally {
+      db.close();
+    }
+  });
+
   it("findFilesBySha256 returns matching rows for dedup hint", () => {
     const db = openDatabase(dbPath);
     try {

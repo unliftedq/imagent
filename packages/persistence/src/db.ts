@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import Database, { type Database as DatabaseType } from "better-sqlite3";
@@ -69,7 +70,29 @@ export function countFtsTables(db: DatabaseType): number {
 }
 
 function loadBuiltinMigrations(): readonly Migration[] {
-  const here = path.dirname(fileURLToPath(import.meta.url));
+  // Node SEA path: when bundled into the `imagine` binary, migrations are
+  // embedded as SEA assets via apps/cli/sea-config.json. We probe with a
+  // lazy require so that *non-SEA* hosts (Bun, normal Node, Electron) don't
+  // trip the experimental warning.
+  const seaInit = readSeaAsset("001_init.sql");
+  const seaFts = readSeaAsset("002_fts.sql");
+  if (seaInit && seaFts) {
+    return [
+      { version: 1, name: "001_init", sql: seaInit },
+      { version: 2, name: "002_fts", sql: seaFts },
+    ];
+  }
+
+  // CJS-bundled fallback: when esbuild bundles this for the CLI binary,
+  // `import.meta.url` is replaced with `{}.url` (undefined). Skip the
+  // filesystem probe in that case rather than crashing on fileURLToPath.
+  const metaUrl =
+    typeof import.meta?.url === "string" && import.meta.url
+      ? import.meta.url
+      : null;
+  if (!metaUrl) return [];
+
+  const here = path.dirname(fileURLToPath(metaUrl));
   // When loaded from src (bun --bun) `here` is .../packages/persistence/src;
   // when loaded from dist it's .../packages/persistence/dist. The migrations
   // directory lives next to the source file in both layouts because tsc
@@ -92,6 +115,34 @@ function loadBuiltinMigrations(): readonly Migration[] {
     { version: 1, name: "001_init", sql: init },
     { version: 2, name: "002_fts", sql: fts },
   ];
+}
+
+/**
+ * Best-effort load of a Node SEA asset. Returns `null` outside of SEA mode
+ * (which is the common path: Bun, normal Node host, Electron all skip this).
+ *
+ * Uses `createRequire` because `node:sea` is only available in Node 20+ and
+ * doesn't exist under Bun — a static `import "node:sea"` would crash the
+ * persistence package on Bun-driven test runs.
+ */
+function readSeaAsset(name: string): string | null {
+  try {
+    // `import.meta.url` is undefined when this file is bundled into the CLI's
+    // CJS bundle (Node SEA), so anchor createRequire on a known-good location
+    // — `process.execPath` works everywhere SEA is supported (Node 20+).
+    const base = typeof import.meta?.url === "string" && import.meta.url
+      ? import.meta.url
+      : process.execPath;
+    const req = createRequire(base);
+    const sea = req("node:sea") as {
+      isSea?: () => boolean;
+      getAsset?: (name: string, encoding: string) => string;
+    };
+    if (!sea?.isSea?.()) return null;
+    return sea.getAsset?.(name, "utf8") ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export type { DatabaseType };

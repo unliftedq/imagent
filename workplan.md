@@ -153,15 +153,15 @@ FTS-backed search, asset archive/restore, signed installers, README + screenshot
 - Install NSIS installer on a clean Windows VM → first launch creates `~/.imagine-studio/`, app boots, `imagine.exe doctor` works from a fresh shell.
 - Total cold-start time on the user's host < 2s.
 
-## 2. Open Items to Confirm Mid-Implementation
+## 2. Open Items — Status (v1 shipped)
 
-These are stylistic/UX choices that don't block the workplan; surface them at the relevant milestone.
+All resolved as defaults. Recorded here so future contributors see the decisions.
 
-- **Aspect-ratio canonicalization** (M2 / M5): each provider speaks aspect differently. Default = snap unsupported ratios to the nearest supported size and toast the user. Alt = reject. Confirm at M5.
-- **Asset reference cap** (M6): provider max-ref counts vary (gpt-image-1=16, Seedream lower, Gemini many). Default = silently cap at the documented max with a UI hint. Confirm at M6.
-- **Remix lineage UI depth** (M5): render 3 levels with *show more*. Deeper lineage trees are rare but possible.
-- **Telemetry** (M8): default off. Revisit at M8 if the user wants Sentry-style error reporting.
-- **Sora / Veo integration**: deferred past v1; provider port supports it without schema changes when the time comes.
+- **Aspect-ratio canonicalization** — *resolved*: snap unsupported ratios to the nearest supported size + toast the user. Implemented in M5 / M6.
+- **Asset reference cap** — *resolved*: silent cap at each model's documented `capabilities.maxReferences`, with a UI hint above the asset slot when over budget. Logic lives in `core.capReferencePaths`, used by both `image.generate` and `video.submit`. Implemented in M6 / M7.
+- **Remix lineage UI depth** — *resolved*: Gallery drawer renders parent + 3 siblings + 3 children. No "show more" yet; revisit only if a user hits the cap. Implemented in M5.
+- **Telemetry** — *resolved*: off in v1. No Sentry, no anonymous error reports. Revisit only on explicit user request.
+- **Sora / Veo integration** — *deferred past v1*: provider port + `VideoModelDef` schema accept either without schema changes. Add as a vendor folder + secret slot when the time comes.
 
 ## 3. Dev Loop & Verification Cheatsheet
 

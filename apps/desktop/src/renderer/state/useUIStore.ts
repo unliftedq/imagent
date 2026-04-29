@@ -43,12 +43,47 @@ export interface StudioDraft {
 }
 
 export const STUDIO_DRAFT_LS_KEY = "imagine-studio.studioDraft.v1";
+export const VIDEO_DRAFT_LS_KEY = "imagine-studio.videoDraft.v1";
+
+export interface VideoDraftAssetIds {
+  character: string[];
+  object: string[];
+  background: string[];
+  style: string[];
+}
+
+/**
+ * Video Studio draft. Mirrors `StudioDraft` but with video-specific
+ * parameters (duration, fps, resolution) and an optional first-frame ref.
+ */
+export interface VideoDraft {
+  prompt: string;
+  providerId: string;
+  modelId: string;
+  durationSec?: number;
+  fps?: number;
+  resolution?: string;
+  aspectRatio?: string;
+  references: string[];
+  /** Optional first-frame image path (drag-drop or picked from gallery). */
+  firstFrame?: string;
+  parentId?: string;
+  assetIds: VideoDraftAssetIds;
+}
 
 const DEFAULT_DRAFT: StudioDraft = {
   prompt: "",
   providerId: "",
   modelId: "",
   count: 1,
+  references: [],
+  assetIds: { character: [], object: [], background: [], style: [] },
+};
+
+const DEFAULT_VIDEO_DRAFT: VideoDraft = {
+  prompt: "",
+  providerId: "",
+  modelId: "",
   references: [],
   assetIds: { character: [], object: [], background: [], style: [] },
 };
@@ -116,11 +151,61 @@ function scheduleDraftFlush(draft: StudioDraft): void {
   }, 400);
 }
 
+function loadVideoDraftFromStorage(): VideoDraft {
+  if (typeof window === "undefined") return DEFAULT_VIDEO_DRAFT;
+  try {
+    const raw = window.localStorage.getItem(VIDEO_DRAFT_LS_KEY);
+    if (!raw) return DEFAULT_VIDEO_DRAFT;
+    const parsed = JSON.parse(raw) as Partial<VideoDraft>;
+    return {
+      prompt: typeof parsed.prompt === "string" ? parsed.prompt : "",
+      providerId: typeof parsed.providerId === "string" ? parsed.providerId : "",
+      modelId: typeof parsed.modelId === "string" ? parsed.modelId : "",
+      ...(typeof parsed.durationSec === "number"
+        ? { durationSec: parsed.durationSec }
+        : {}),
+      ...(typeof parsed.fps === "number" ? { fps: parsed.fps } : {}),
+      ...(typeof parsed.resolution === "string"
+        ? { resolution: parsed.resolution }
+        : {}),
+      ...(typeof parsed.aspectRatio === "string"
+        ? { aspectRatio: parsed.aspectRatio }
+        : {}),
+      references: Array.isArray(parsed.references)
+        ? (parsed.references as string[])
+        : [],
+      ...(typeof parsed.firstFrame === "string"
+        ? { firstFrame: parsed.firstFrame }
+        : {}),
+      ...(typeof parsed.parentId === "string"
+        ? { parentId: parsed.parentId }
+        : {}),
+      assetIds: normalizeAssetIds(parsed.assetIds),
+    };
+  } catch {
+    return DEFAULT_VIDEO_DRAFT;
+  }
+}
+
+let videoDraftFlushTimer: ReturnType<typeof setTimeout> | null = null;
+function scheduleVideoDraftFlush(draft: VideoDraft): void {
+  if (typeof window === "undefined") return;
+  if (videoDraftFlushTimer) clearTimeout(videoDraftFlushTimer);
+  videoDraftFlushTimer = setTimeout(() => {
+    try {
+      window.localStorage.setItem(VIDEO_DRAFT_LS_KEY, JSON.stringify(draft));
+    } catch {
+      // ignore
+    }
+  }, 400);
+}
+
 interface UIState {
   route: Route;
   theme: ThemePref;
   toasts: ToastEntry[];
   studioDraft: StudioDraft;
+  videoDraft: VideoDraft;
   /** When true, the renderer should land on /studio at boot (or /providers). */
   preferredInitialRoute: Route | null;
   navigate: (route: Route) => void;
@@ -129,6 +214,8 @@ interface UIState {
   dismissToast: (id: string) => void;
   setStudioDraft: (patch: Partial<StudioDraft>) => void;
   resetStudioDraft: () => void;
+  setVideoDraft: (patch: Partial<VideoDraft>) => void;
+  resetVideoDraft: () => void;
   setPreferredInitialRoute: (r: Route | null) => void;
 }
 
@@ -137,6 +224,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   theme: "system",
   toasts: [],
   studioDraft: loadDraftFromStorage(),
+  videoDraft: loadVideoDraftFromStorage(),
   preferredInitialRoute: null,
   navigate: (route) => set({ route }),
   setTheme: (theme) => set({ theme }),
@@ -155,6 +243,15 @@ export const useUIStore = create<UIState>((set, get) => ({
   resetStudioDraft: () => {
     set({ studioDraft: { ...DEFAULT_DRAFT } });
     scheduleDraftFlush({ ...DEFAULT_DRAFT });
+  },
+  setVideoDraft: (patch) => {
+    const next = { ...get().videoDraft, ...patch };
+    set({ videoDraft: next });
+    scheduleVideoDraftFlush(next);
+  },
+  resetVideoDraft: () => {
+    set({ videoDraft: { ...DEFAULT_VIDEO_DRAFT } });
+    scheduleVideoDraftFlush({ ...DEFAULT_VIDEO_DRAFT });
   },
   setPreferredInitialRoute: (r) => set({ preferredInitialRoute: r }),
 }));

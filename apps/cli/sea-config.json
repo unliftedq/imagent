@@ -1,0 +1,11 @@
+{
+  "main": "dist/imagine.bundle.cjs",
+  "output": "dist/imagine.blob",
+  "disableExperimentalSEAWarning": true,
+  "useSnapshot": false,
+  "useCodeCache": true,
+  "assets": {
+    "001_init.sql": "../../packages/persistence/src/migrations/001_init.sql",
+    "002_fts.sql": "../../packages/persistence/src/migrations/002_fts.sql"
+  }
+}

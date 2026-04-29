@@ -24,4 +24,13 @@ export {
   Info,
   Plus,
   X,
+  Image,
+  FilmReel,
+  FilmStrip,
+  VideoCamera,
+  SquaresFour,
+  Cube,
+  Play,
+  MagnifyingGlass,
+  ArrowCounterClockwise,
 } from "@phosphor-icons/react";

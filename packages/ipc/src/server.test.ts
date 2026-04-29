@@ -259,25 +259,81 @@ describe("registerIpcHandlers", () => {
       expect(reply.value.siblings).toHaveLength(1);
     });
 
-    it("gallery.remix: returns an ImageRequest with parentId", async () => {
+    it("gallery.remix: returns an ImageRequest envelope with parentId", async () => {
       const { ipcMain, invoke } = makeFakeIpc();
       registerIpcHandlers(ipcMain, {
         "gallery.remix": async ({ itemId }) => ({
-          prompt: "remixed",
-          providerId: "openai",
-          model: "gpt-image-1",
-          count: 1,
-          references: [],
-          assetIds: [],
-          parentId: itemId,
+          kind: "image" as const,
+          request: {
+            prompt: "remixed",
+            providerId: "openai",
+            model: "gpt-image-1",
+            count: 1,
+            references: [],
+            assetIds: [],
+            parentId: itemId,
+          },
         }),
       });
       const reply = (await invoke("gallery.remix", { itemId: "g1" })) as {
         ok: true;
-        value: { parentId?: string };
+        value: { kind: string; request: { parentId?: string } };
       };
       expect(reply.ok).toBe(true);
-      expect(reply.value.parentId).toBe("g1");
+      expect(reply.value.kind).toBe("image");
+      expect(reply.value.request.parentId).toBe("g1");
+    });
+
+    it("gallery.remix: video parent returns a VideoRequest envelope", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      registerIpcHandlers(ipcMain, {
+        "gallery.remix": async () => ({
+          kind: "video" as const,
+          request: {
+            prompt: "rotating crystal",
+            providerId: "volcengine",
+            model: "seedance-1.0-pro",
+            durationSec: 5,
+            fps: 24,
+            resolution: "720p",
+            references: [],
+            assetIds: [],
+          },
+        }),
+      });
+      const reply = (await invoke("gallery.remix", { itemId: "v1" })) as {
+        ok: true;
+        value: { kind: string; request: { durationSec?: number } };
+      };
+      expect(reply.ok).toBe(true);
+      expect(reply.value.kind).toBe("video");
+      expect(reply.value.request.durationSec).toBe(5);
+    });
+
+    it("video.submit: returns { jobId } and accepts assetSlots + parentId", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      const captured: Array<Record<string, unknown>> = [];
+      registerIpcHandlers(ipcMain, {
+        "video.submit": async (req) => {
+          captured.push(req as Record<string, unknown>);
+          return { jobId: "vid-job-1" };
+        },
+      });
+      const reply = (await invoke("video.submit", {
+        prompt: "rotating crystal",
+        providerId: "volcengine",
+        model: "seedance-1.0-pro",
+        durationSec: 5,
+        references: [],
+        assetIds: [],
+        assetSlots: { style: ["s1"] },
+        parentId: "parent-vid",
+      })) as { ok: true; value: { jobId: string } };
+      expect(reply.ok).toBe(true);
+      expect(reply.value.jobId).toBe("vid-job-1");
+      const seen = captured[0]!;
+      expect(seen.assetSlots).toEqual({ style: ["s1"] });
+      expect(seen.parentId).toBe("parent-vid");
     });
 
     it("boards.list: returns ordered boards", async () => {
@@ -477,6 +533,63 @@ describe("registerIpcHandlers", () => {
       const reply = (await invoke("assets.delete", { id: "a1" })) as { ok: true };
       expect(reply.ok).toBe(true);
       expect(seen).toBe("a1");
+    });
+
+    it("assets.archive: round-trips id (M8)", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      let seen: string | null = null;
+      registerIpcHandlers(ipcMain, {
+        "assets.archive": async ({ id }) => {
+          seen = id;
+        },
+      });
+      const reply = (await invoke("assets.archive", { id: "a1" })) as {
+        ok: true;
+      };
+      expect(reply.ok).toBe(true);
+      expect(seen).toBe("a1");
+    });
+
+    it("assets.restore: round-trips id (M8)", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      let seen: string | null = null;
+      registerIpcHandlers(ipcMain, {
+        "assets.restore": async ({ id }) => {
+          seen = id;
+        },
+      });
+      const reply = (await invoke("assets.restore", { id: "a1" })) as {
+        ok: true;
+      };
+      expect(reply.ok).toBe(true);
+      expect(seen).toBe("a1");
+    });
+
+    it("assets.list: archivedOnly returns archived items (M8)", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      let seenArchivedOnly: boolean | undefined;
+      registerIpcHandlers(ipcMain, {
+        "assets.list": async (q) => {
+          seenArchivedOnly = q?.archivedOnly;
+          return {
+            items: [
+              {
+                ...stubAsset("trashed", "character"),
+                archivedAt: 1_700_000_000_000,
+              },
+            ],
+            total: 1,
+          };
+        },
+      });
+      const reply = (await invoke("assets.list", { archivedOnly: true })) as {
+        ok: true;
+        value: { items: Array<{ id: string }>; total: number };
+      };
+      expect(reply.ok).toBe(true);
+      expect(seenArchivedOnly).toBe(true);
+      expect(reply.value.total).toBe(1);
+      expect(reply.value.items[0]?.id).toBe("trashed");
     });
 
     it("image.generate: accepts optional assetSlots", async () => {

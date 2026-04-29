@@ -9,6 +9,7 @@ import {
   BoardRepository,
   GalleryRepository,
   JobRepository,
+  videoThumbnailService,
   type DatabaseType,
   type PathResolver,
 } from "@imagine-studio/persistence";
@@ -28,6 +29,12 @@ export interface RuntimeServices {
   videoRegistry: VideoRegistry;
   jobRunner: JobRunner;
   refresh(): Promise<void>;
+  /**
+   * Drain queued + running jobs from a previous session. Called *after*
+   * the main window finishes its first paint so cold-start isn't blocked
+   * by provider polling. (M8 cold-start optimisation.)
+   */
+  resumeRunningJobs(): Promise<void>;
 }
 
 export interface BootstrapDeps {
@@ -43,9 +50,9 @@ export interface BootstrapDeps {
  * snapshot. Calling `refresh()` re-reads both and swaps the registries on
  * the JobRunner under the hood (the runner's deps are mutable references).
  *
- * Image generation IPC routes are M5; video routes are M7 — but we still
- * construct the runner so `resumeRunningJobs()` can finalize any leftover
- * jobs from a prior CLI session.
+ * Image generation IPC routes shipped in M5; video routes shipped in M7.
+ * `resumeRunningJobs()` runs immediately after construction so any leftover
+ * Seedance jobs from a prior session keep polling.
  */
 export async function bootstrapRuntime(deps: BootstrapDeps): Promise<RuntimeServices> {
   const { db, configStore, secretsStore, paths, logger } = deps;
@@ -89,16 +96,21 @@ export async function bootstrapRuntime(deps: BootstrapDeps): Promise<RuntimeServ
     files: filesPort,
     imageRegistry: imageRegistry as unknown as ImageRegistry,
     videoRegistry: videoRegistry as unknown as VideoRegistry,
+    thumbnailService: videoThumbnailService,
     logger,
   });
 
-  // Resume jobs left running from a previous session (CLI or a prior desktop
-  // crash). Image jobs get marked failed; video jobs poll-resume.
-  try {
-    await runner.resumeRunningJobs();
-  } catch (err) {
-    logger.warn("resumeRunningJobs failed", { err: String(err) });
-  }
+  // M8: defer resume to after the first window paints. Resume can run
+  // synchronous DB scans + provider calls; deferring shaves ~100ms off
+  // cold-start. The scheduling caller (main.ts) drains resumeRunningJobs
+  // once `mainWindow.show()` has fired its `did-finish-load`.
+  const deferredResume = async (): Promise<void> => {
+    try {
+      await runner.resumeRunningJobs();
+    } catch (err) {
+      logger.warn("resumeRunningJobs failed", { err: String(err) });
+    }
+  };
 
   return {
     imageRegistry: imageRegistry as unknown as ImageRegistry,
@@ -111,6 +123,7 @@ export async function bootstrapRuntime(deps: BootstrapDeps): Promise<RuntimeServ
         video: [...videoRegistry.keys()],
       });
     },
+    resumeRunningJobs: deferredResume,
   } satisfies RuntimeServices;
 }
 

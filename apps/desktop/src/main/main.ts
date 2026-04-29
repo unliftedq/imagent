@@ -105,8 +105,20 @@ async function bootstrap(): Promise<RuntimeServices> {
 
 app.whenReady().then(async () => {
   try {
-    await bootstrap();
+    const t0 = Date.now();
+    const runtime = await bootstrap();
     await createWindow();
+    // M8 cold-start: defer cross-session job resume until the first paint
+    // lands. This shaves provider polling RTT off the path from app launch
+    // to first frame.
+    if (mainWindow) {
+      mainWindow.webContents.once("did-finish-load", () => {
+        logger.info("[main] first paint", { ms: Date.now() - t0 });
+        void runtime.resumeRunningJobs();
+      });
+    } else {
+      void runtime.resumeRunningJobs();
+    }
   } catch (err) {
     logger.error("[main] bootstrap failed", { err: String(err) });
     app.quit();

@@ -40,6 +40,7 @@ import type {
   ImageRequest,
   Job,
   Logger,
+  VideoRequest,
 } from "@imagine-studio/core";
 import {
   appendStylePromptSnippets,
@@ -64,10 +65,10 @@ export interface IpcDeps {
 }
 
 /**
- * Wires every IPC route described in the contract. M4 routes are real;
- * M5/M6/M7 routes return `not_implemented` envelopes. Push events are not
- * forwarded here — the main process attaches `webContents` targets via
- * `IpcServer.addEventTarget`.
+ * Wires every IPC route described in the contract. All routes through M7
+ * are real handlers; future-milestone routes use `notImplemented()` stubs.
+ * Push events are not forwarded here — the main process attaches
+ * `webContents` targets via `IpcServer.addEventTarget`.
  */
 export function setupIpc(deps: IpcDeps): IpcServer {
   const { ipcMain, configStore, secretsStore, paths, logger, runtime, getMainWindow } = deps;
@@ -449,6 +450,27 @@ export function setupIpc(deps: IpcDeps): IpcServer {
         throw new IpcHandlerError("not_found", `gallery item '${itemId}' not found`);
       }
       const params = parseJsonObject(parent.paramsJson);
+      if (parent.kind === "video") {
+        const req: VideoRequest = {
+          prompt: parent.prompt,
+          ...(parent.negativePrompt ? { negativePrompt: parent.negativePrompt } : {}),
+          providerId: parent.providerId,
+          model: parent.model,
+          ...(typeof params.durationSec === "number"
+            ? { durationSec: params.durationSec }
+            : {}),
+          ...(typeof params.fps === "number" ? { fps: params.fps } : {}),
+          ...(typeof params.resolution === "string"
+            ? { resolution: params.resolution }
+            : {}),
+          ...(typeof params.aspectRatio === "string"
+            ? { aspectRatio: params.aspectRatio }
+            : {}),
+          references: [],
+          assetIds: [],
+        };
+        return { kind: "video" as const, request: req };
+      }
       const req: ImageRequest = {
         prompt: parent.prompt,
         ...(parent.negativePrompt ? { negativePrompt: parent.negativePrompt } : {}),
@@ -464,7 +486,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
         assetIds: [],
         parentId: parent.id,
       };
-      return req;
+      return { kind: "image" as const, request: req };
     },
 
     "gallery.toggleFavorite": async ({ id, favorited }) => {
@@ -588,7 +610,15 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       return { providerId, defaultModel, models };
     },
 
-    // M6 — Assets
+    "video.models": async ({ providerId }) => {
+      const config = await configStore.loadConfig();
+      const provider = runtime.videoRegistry.get(providerId);
+      const models = provider ? [...provider.models.values()] : [];
+      const defaultModel = readDefaultVideoModel(config.providers, providerId);
+      return { providerId, defaultModel, models };
+    },
+
+    // M6 — Assets (M8: + archive/restore + archivedOnly)
     "assets.list": async (input) => {
       const opts = input ?? {};
       const page = assetRepo.listWithFiles({
@@ -596,11 +626,40 @@ export function setupIpc(deps: IpcDeps): IpcServer {
         ...(opts.includeArchived !== undefined
           ? { includeArchived: opts.includeArchived }
           : {}),
+        ...(opts.archivedOnly !== undefined
+          ? { archivedOnly: opts.archivedOnly }
+          : {}),
         ...(opts.search !== undefined ? { search: opts.search } : {}),
         ...(opts.limit !== undefined ? { limit: opts.limit } : {}),
         ...(opts.offset !== undefined ? { offset: opts.offset } : {}),
       });
       return page;
+    },
+
+    "assets.archive": async ({ id }) => {
+      const existing = assetRepo.get(id);
+      if (!existing) {
+        throw new IpcHandlerError("not_found", `asset '${id}' not found`);
+      }
+      assetRepo.archive(id);
+      try {
+        server.emit("assets.changed", { id, op: "updated" });
+      } catch (err) {
+        logger.warn("assets.changed emit failed", { err: String(err) });
+      }
+    },
+
+    "assets.restore": async ({ id }) => {
+      const existing = assetRepo.get(id);
+      if (!existing) {
+        throw new IpcHandlerError("not_found", `asset '${id}' not found`);
+      }
+      assetRepo.restore(id);
+      try {
+        server.emit("assets.changed", { id, op: "updated" });
+      } catch (err) {
+        logger.warn("assets.changed emit failed", { err: String(err) });
+      }
     },
 
     "assets.show": async ({ id }) => {
@@ -755,10 +814,15 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       return next;
     },
 
+    /**
+     * Permanent delete — removes the `assets` row, cascades `asset_files`,
+     * and rm-rf's `~/.imagine-studio/assets/<id>/`. Irreversible. The Assets
+     * page surfaces archive-first; this fires from "Delete permanently" only.
+     */
     "assets.delete": async ({ id }) => {
       const existing = assetRepo.get(id);
       if (!existing) return; // idempotent
-      assetRepo.delete(id);
+      assetRepo.permanentlyDelete(id);
       const dir = paths.assetsDir(id);
       try {
         const stat = await fs.lstat(dir);
@@ -862,8 +926,176 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       }
     },
 
-    // M7 — Video Studio
-    "video.submit": notImplemented("M7", "video.submit"),
+    // M7 — Video Studio. Returns `{ jobId }` immediately; the renderer
+    // subscribes to `job.progress`/`job.completed` for the eventual MP4.
+    "video.submit": async (request) => {
+      const r = request as VideoRequest & {
+        assetSlots?: {
+          character?: string[];
+          object?: string[];
+          background?: string[];
+          style?: string[];
+        };
+        parentId?: string;
+      };
+
+      const slots = r.assetSlots ?? {};
+      const slotInputs = {
+        ...(slots.character ? { character: slots.character } : {}),
+        ...(slots.object ? { object: slots.object } : {}),
+        ...(slots.background ? { background: slots.background } : {}),
+        ...(slots.style ? { style: slots.style } : {}),
+      };
+
+      const provider = runtime.videoRegistry.get(r.providerId);
+      const resolvedModel = provider?.models?.get?.(r.model);
+      const supportsRefs = resolvedModel?.capabilities?.supportsRefImages ?? true;
+      // VideoModelCaps doesn't carry a per-model `maxReferences`; we leave
+      // capping to the provider impl + UI-side hints.
+      const maxRefs: number | undefined = undefined;
+
+      let resolution;
+      try {
+        resolution = resolveAssetSlots(
+          slotInputs,
+          (id) => assetRepo.get(id),
+          (rel) =>
+            path.isAbsolute(rel) ? rel : path.join(paths.dataDir, rel),
+          { supportsReferences: supportsRefs },
+        );
+      } catch (err) {
+        throw new IpcHandlerError(
+          "validation_failed",
+          (err as Error)?.message ?? String(err),
+        );
+      }
+
+      const allRefPaths = [
+        ...(r.references ?? []).map((ref) => ref.path),
+        ...resolution.referencePaths,
+      ];
+      const { references: cappedRefs, capped } = capReferencePaths(
+        allRefPaths,
+        maxRefs,
+      );
+      if (capped !== undefined) {
+        logger.warn("video.submit: cap-at-max references", {
+          providerId: r.providerId,
+          model: r.model,
+          capped,
+          original: allRefPaths.length,
+        });
+      }
+
+      const augmentedPrompt = appendStylePromptSnippets(
+        r.prompt,
+        resolution.stylePromptSnippets,
+      );
+      const finalReq: VideoRequest = {
+        ...r,
+        prompt: augmentedPrompt,
+        references: cappedRefs.map((p) => ({ path: p, role: "freeform" as const })),
+        assetIds: [
+          ...(r.assetIds ?? []),
+          ...resolution.assetIds.filter((id) => !(r.assetIds ?? []).includes(id)),
+        ],
+      };
+
+      const intent = {
+        kind: "video" as const,
+        request: finalReq,
+        ...(r.parentId ? { parentId: r.parentId } : {}),
+        ...(finalReq.boardId ? { boardId: finalReq.boardId } : {}),
+      };
+
+      let jobId: string;
+      try {
+        jobId = await runtime.jobRunner.start(intent);
+      } catch (err) {
+        throw new IpcHandlerError(
+          "provider_error",
+          (err as Error)?.message ?? String(err),
+        );
+      }
+
+      // Best-effort: write gallery_item_assets rows when the job completes.
+      // We listen one-shot for the terminal events on this job id.
+      if (resolution.attachments.length > 0) {
+        const attach = (j: Job): void => {
+          if (j.id !== jobId) return;
+          if (j.state !== "succeeded") {
+            cleanup();
+            return;
+          }
+          if (!j.resultItemId) {
+            cleanup();
+            return;
+          }
+          for (const att of resolution.attachments) {
+            try {
+              galleryRepo.addAssetLink({
+                itemId: j.resultItemId,
+                assetId: att.assetId,
+                role: att.role,
+              });
+            } catch (err) {
+              logger.warn("video.submit addAssetLink failed", {
+                itemId: j.resultItemId,
+                assetId: att.assetId,
+                err: String(err),
+              });
+            }
+          }
+          // Also notify other windows.
+          try {
+            const item = galleryRepo.get(j.resultItemId);
+            if (item) {
+              server.emit("gallery.changed", { id: item.id, op: "created", item });
+            }
+          } catch (err) {
+            logger.warn("gallery.changed (video) emit failed", { err: String(err) });
+          }
+          cleanup();
+        };
+        const onFailed = (j: Job): void => {
+          if (j.id === jobId) cleanup();
+        };
+        const cleanup = (): void => {
+          runtime.jobRunner.off("job.completed", attach);
+          runtime.jobRunner.off("job.failed", onFailed);
+        };
+        runtime.jobRunner.on("job.completed", attach);
+        runtime.jobRunner.on("job.failed", onFailed);
+      } else {
+        // Even with no asset slots, the renderer benefits from a
+        // gallery.changed broadcast on success.
+        const onCompleted = (j: Job): void => {
+          if (j.id !== jobId) return;
+          cleanup();
+          if (j.state === "succeeded" && j.resultItemId) {
+            try {
+              const item = galleryRepo.get(j.resultItemId);
+              if (item) {
+                server.emit("gallery.changed", { id: item.id, op: "created", item });
+              }
+            } catch (err) {
+              logger.warn("gallery.changed (video) emit failed", { err: String(err) });
+            }
+          }
+        };
+        const onFailed = (j: Job): void => {
+          if (j.id === jobId) cleanup();
+        };
+        const cleanup = (): void => {
+          runtime.jobRunner.off("job.completed", onCompleted);
+          runtime.jobRunner.off("job.failed", onFailed);
+        };
+        runtime.jobRunner.on("job.completed", onCompleted);
+        runtime.jobRunner.on("job.failed", onFailed);
+      }
+
+      return { jobId };
+    },
   };
 
   const server = registerIpcHandlers(ipcMain, handlers);
@@ -939,6 +1171,20 @@ function readDefaultModel(
       return prefs.volcengine.defaultImageModel ?? null;
     case "xai":
       return prefs.xai.defaultModel ?? null;
+    default:
+      return null;
+  }
+}
+
+function readDefaultVideoModel(
+  prefs: ProviderPreferences,
+  providerId: string,
+): string | null {
+  switch (providerId) {
+    case "volcengine":
+      return prefs.volcengine.defaultVideoModel ?? null;
+    case "azure-openai":
+      return prefs["azure-openai"].deployments.video || null;
     default:
       return null;
   }

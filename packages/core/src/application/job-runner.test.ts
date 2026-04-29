@@ -7,6 +7,7 @@ import type {
   GalleryRepositoryPort,
   FilesServicePort,
   JobRepositoryPort,
+  ThumbnailServicePort,
 } from "./job-runner.js";
 import { JobRunner } from "./job-runner.js";
 
@@ -323,6 +324,157 @@ describe("JobRunner — video path", () => {
     expect(progressCount).toBeGreaterThanOrEqual(2);
   });
 
+  it("invokes ThumbnailService on video success and persists thumbPath", async () => {
+    const jobs = new InMemoryJobs();
+    const gallery = new InMemoryGallery();
+    const state: FakeVideoState = {
+      pollResults: [{ state: "succeeded" }],
+    };
+    const thumbCalls: Array<{ src: string; dest: string }> = [];
+    const thumbnailService: ThumbnailServicePort = {
+      async generateForVideo(srcPath: string, destPath: string) {
+        thumbCalls.push({ src: srcPath, dest: destPath });
+        return { ok: true } as const;
+      },
+    };
+
+    const setTimer = (cb: () => void) => {
+      queueMicrotask(cb);
+      return Symbol("t");
+    };
+
+    let counter = 0;
+    const runner = new JobRunner({
+      jobs,
+      gallery,
+      files: fakeFiles,
+      imageRegistry: new Map(),
+      videoRegistry: new Map([["fake-video", fakeVideoProvider(state)]]),
+      writeFile: async () => {},
+      ensureDir: async () => {},
+      idFactory: () => `id-${++counter}`,
+      setTimer,
+      clearTimer: () => {},
+      thumbnailService,
+    });
+    const completed = new Promise<Job>((resolve) =>
+      runner.once("job.completed", (j: Job) => resolve(j)),
+    );
+    await runner.start({
+      kind: "video",
+      request: {
+        prompt: "x",
+        providerId: "fake-video",
+        model: "any",
+        references: [],
+        assetIds: [],
+      },
+    });
+    const j = await completed;
+    expect(j.state).toBe("succeeded");
+    expect(thumbCalls).toHaveLength(1);
+    expect(thumbCalls[0]?.src.endsWith(".mp4")).toBe(true);
+    expect(thumbCalls[0]?.dest.endsWith(".thumb.webp")).toBe(true);
+    const item = gallery.items.get(j.resultItemId!);
+    expect(item?.thumbPath).toBeTruthy();
+    expect(item?.thumbPath?.endsWith(".thumb.webp")).toBe(true);
+  });
+
+  it("does not call ThumbnailService on video failure", async () => {
+    const jobs = new InMemoryJobs();
+    const gallery = new InMemoryGallery();
+    const state: FakeVideoState = {
+      pollResults: [{ state: "failed", errorMessage: "boom" }],
+    };
+    let calls = 0;
+    const thumbnailService: ThumbnailServicePort = {
+      async generateForVideo() {
+        calls += 1;
+        return { ok: true } as const;
+      },
+    };
+    const setTimer = (cb: () => void) => {
+      queueMicrotask(cb);
+      return Symbol("t");
+    };
+    const runner = new JobRunner({
+      jobs,
+      gallery,
+      files: fakeFiles,
+      imageRegistry: new Map(),
+      videoRegistry: new Map([["fake-video", fakeVideoProvider(state)]]),
+      writeFile: async () => {},
+      ensureDir: async () => {},
+      setTimer,
+      clearTimer: () => {},
+      thumbnailService,
+    });
+    const failed = new Promise<Job>((resolve) =>
+      runner.once("job.failed", (j: Job) => resolve(j)),
+    );
+    await runner.start({
+      kind: "video",
+      request: {
+        prompt: "x",
+        providerId: "fake-video",
+        model: "any",
+        references: [],
+        assetIds: [],
+      },
+    });
+    await failed;
+    expect(calls).toBe(0);
+  });
+
+  it("survives ThumbnailService failure and still persists the gallery item", async () => {
+    const jobs = new InMemoryJobs();
+    const gallery = new InMemoryGallery();
+    const state: FakeVideoState = {
+      pollResults: [{ state: "succeeded" }],
+    };
+    const thumbnailService: ThumbnailServicePort = {
+      async generateForVideo() {
+        throw new Error("ffmpeg blew up");
+      },
+    };
+    const setTimer = (cb: () => void) => {
+      queueMicrotask(cb);
+      return Symbol("t");
+    };
+    let counter = 0;
+    const runner = new JobRunner({
+      jobs,
+      gallery,
+      files: fakeFiles,
+      imageRegistry: new Map(),
+      videoRegistry: new Map([["fake-video", fakeVideoProvider(state)]]),
+      writeFile: async () => {},
+      ensureDir: async () => {},
+      idFactory: () => `id-${++counter}`,
+      setTimer,
+      clearTimer: () => {},
+      thumbnailService,
+    });
+    const completed = new Promise<Job>((resolve) =>
+      runner.once("job.completed", (j: Job) => resolve(j)),
+    );
+    await runner.start({
+      kind: "video",
+      request: {
+        prompt: "x",
+        providerId: "fake-video",
+        model: "any",
+        references: [],
+        assetIds: [],
+      },
+    });
+    const j = await completed;
+    expect(j.state).toBe("succeeded");
+    const item = gallery.items.get(j.resultItemId!);
+    expect(item).toBeTruthy();
+    expect(item?.thumbPath ?? null).toBeNull();
+  });
+
   it("video failed status emits job.failed", async () => {
     const jobs = new InMemoryJobs();
     const gallery = new InMemoryGallery();
@@ -362,6 +514,62 @@ describe("JobRunner — video path", () => {
 });
 
 describe("JobRunner — resumeRunningJobs", () => {
+  it("resumes a video job from state=running, polls succeeded, and emits job.completed", async () => {
+    const jobs = new InMemoryJobs();
+    const gallery = new InMemoryGallery();
+    const now = Date.now();
+    jobs.create({
+      id: "vid-resume",
+      kind: "video",
+      state: "running",
+      providerId: "fake-video",
+      providerJobId: "task-resume",
+      requestJson: JSON.stringify({
+        prompt: "rotating crystal",
+        providerId: "fake-video",
+        model: "any",
+        references: [],
+        assetIds: [],
+      }),
+      progress: 0.5,
+      errorMessage: null,
+      resultItemId: null,
+      createdAt: now,
+      updatedAt: now,
+      finishedAt: null,
+    });
+    const setTimer = (cb: () => void) => {
+      queueMicrotask(cb);
+      return Symbol("t");
+    };
+    let counter = 0;
+    const runner = new JobRunner({
+      jobs,
+      gallery,
+      files: fakeFiles,
+      imageRegistry: new Map(),
+      videoRegistry: new Map([
+        [
+          "fake-video",
+          fakeVideoProvider({ pollResults: [{ state: "succeeded" }] }),
+        ],
+      ]),
+      writeFile: async () => {},
+      ensureDir: async () => {},
+      idFactory: () => `id-${++counter}`,
+      setTimer,
+      clearTimer: () => {},
+    });
+    const completed = new Promise<Job>((resolve) =>
+      runner.once("job.completed", (j: Job) => resolve(j)),
+    );
+    await runner.resumeRunningJobs();
+    const j = await completed;
+    expect(j.state).toBe("succeeded");
+    expect(j.id).toBe("vid-resume");
+    expect(gallery.items.size).toBe(1);
+  });
+
   it("marks orphaned image jobs failed with 'process restarted' message", async () => {
     const jobs = new InMemoryJobs();
     const gallery = new InMemoryGallery();

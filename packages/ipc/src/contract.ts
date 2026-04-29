@@ -7,6 +7,7 @@ import {
   ImageRequestSchema,
   JobSchema,
   JobsQuerySchema,
+  VideoModelDefSchema,
   VideoRequestSchema,
 } from "@imagine-studio/core";
 import { z } from "zod";
@@ -283,7 +284,27 @@ export const contract = {
     }),
     output: GalleryItemSchema,
   },
-  "video.submit": { input: VideoRequestSchema, output: JobSchema },
+  /**
+   * M7: Submit a Seedance (or future) video job. Unlike `image.generate`
+   * which blocks-and-awaits the gallery item, video submission returns
+   * `{ jobId }` immediately — Seedance jobs run for minutes, so the
+   * renderer subscribes to `job.progress`/`job.completed` push events
+   * instead of awaiting the IPC reply.
+   */
+  "video.submit": {
+    input: VideoRequestSchema.extend({
+      assetSlots: z
+        .object({
+          character: z.array(z.string()).optional(),
+          object: z.array(z.string()).optional(),
+          background: z.array(z.string()).optional(),
+          style: z.array(z.string()).optional(),
+        })
+        .optional(),
+      parentId: z.string().optional(),
+    }),
+    output: z.object({ jobId: z.string() }),
+  },
 
   // Model resolution — returns the deep-merged catalog ← user-override view
   // for an image provider, the same shape JobRunner & validators consume.
@@ -296,16 +317,31 @@ export const contract = {
     }),
   },
 
+  // Same shape, but for video providers (currently Volcengine / Seedance). M7.
+  "video.models": {
+    input: z.object({ providerId: ProviderIdSchema }),
+    output: z.object({
+      providerId: ProviderIdSchema,
+      defaultModel: z.string().nullable(),
+      models: z.array(VideoModelDefSchema),
+    }),
+  },
+
   // Jobs
   "jobs.list": { input: JobsQuerySchema, output: z.array(JobSchema) },
   "jobs.cancel": { input: z.object({ id: z.string() }), output: z.void() },
 
-  // Assets (M3 / M6)
+  // Assets (M3 / M6 / M8)
   "assets.list": {
     input: z
       .object({
         kind: z.enum(["character", "object", "background", "style"]).optional(),
         includeArchived: z.boolean().optional(),
+        /**
+         * M8: When true, return ONLY archived assets — drives the Trash tab
+         * on the Assets page. Mutually exclusive with `includeArchived`.
+         */
+        archivedOnly: z.boolean().optional(),
         search: z.string().optional(),
         limit: z.number().int().positive().optional(),
         offset: z.number().int().nonnegative().optional(),
@@ -349,7 +385,24 @@ export const contract = {
     }),
     output: AssetSchema,
   },
+  /**
+   * `assets.delete` is **permanent** — the row + on-disk files are removed and
+   * cannot be recovered. The Assets page UI surfaces archive-first; this
+   * route is the second-step "Delete permanently" action plus the Trash tab's
+   * row-level "Delete permanently" / "Empty trash" actions. (M8)
+   */
   "assets.delete": { input: z.object({ id: z.string() }), output: z.void() },
+  /**
+   * Soft-delete an asset (M8). Stamps `archived_at`; reversible. Files on
+   * disk are untouched. AssetPicker filters archived assets out so the user
+   * doesn't see them when picking refs in Studio / Video Studio.
+   */
+  "assets.archive": { input: z.object({ id: z.string() }), output: z.void() },
+  /**
+   * Reverse of `assets.archive` (M8). Idempotent — restoring a live asset is
+   * a no-op.
+   */
+  "assets.restore": { input: z.object({ id: z.string() }), output: z.void() },
   "assets.uploadFile": {
     input: z.object({
       assetId: z.string(),
@@ -420,9 +473,18 @@ export const contract = {
         .default([]),
     }),
   },
+  /**
+   * Reconstruct a fresh request from an existing gallery item. Output is a
+   * discriminated union — image parents return an `ImageRequest`, video
+   * parents return a `VideoRequest` (M7). The renderer routes to /studio or
+   * /video respectively based on `kind`.
+   */
   "gallery.remix": {
     input: z.object({ itemId: z.string() }),
-    output: ImageRequestSchema,
+    output: z.discriminatedUnion("kind", [
+      z.object({ kind: z.literal("image"), request: ImageRequestSchema }),
+      z.object({ kind: z.literal("video"), request: VideoRequestSchema }),
+    ]),
   },
   "gallery.toggleFavorite": {
     // `favorited` optional — when omitted, the handler toggles the current value.

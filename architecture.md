@@ -423,13 +423,17 @@ export const contract = {
   "providers.config.get":    { input: z.void(),                 output: ProviderConfigSchema },
   "providers.config.set":    { input: ProviderConfigSchema,     output: z.void() },
   "providers.test":          { input: z.object({id: z.string()}), output: ProviderTestResult },
-  "image.generate":          { input: ImageRequestSchema,       output: GalleryItemSchema },
-  "video.submit":            { input: VideoRequestSchema,       output: JobSchema },
+  "image.generate":          { input: ImageGenerateInput,       output: GalleryItemSchema },        // blocking: awaits terminal event (image is fast)
+  "video.submit":            { input: VideoSubmitInput,         output: z.object({jobId: z.string()}) }, // non-blocking: returns immediately, renderer subscribes to push events
+  "image.models":            { input: z.void(),                 output: z.array(ResolvedImageModel) },
+  "video.models":            { input: z.void(),                 output: z.array(ResolvedVideoModel) },
   "jobs.list":               { input: JobsQuerySchema,          output: z.array(JobSchema) },
   "jobs.cancel":             { input: z.object({id: z.string()}), output: z.void() },
   // assets.{list,create,update,delete,uploadFile}
   // boards.{list,create,update,delete,addItem,removeItem,setCover}
-  // gallery.{query,remix,toggleFavorite,delete}
+  // gallery.{query,show,toggleFavorite,delete}
+  // gallery.remix returns a discriminated union { kind: "image" | "video", request, providerId, modelId, parentId } so video parents preserve duration/fps/resolution
+  // assets.{list,show,create,update,delete,uploadFile,addFile,removeFile}
   // workspace.kv.{get,set,delete}
 } as const;
 

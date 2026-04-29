@@ -14,6 +14,8 @@ import {
   GalleryItemCard,
   IconButton,
   Icons,
+  Input,
+  Tooltip,
 } from "@imagine-studio/ui";
 import type { Board, GalleryItem } from "@imagine-studio/core";
 import { api } from "../lib/api.js";
@@ -44,6 +46,7 @@ export function GalleryPage() {
 
   const navigate = useUIStore((s) => s.navigate);
   const setDraft = useUIStore((s) => s.setStudioDraft);
+  const setVideoDraft = useUIStore((s) => s.setVideoDraft);
   const pushToast = useUIStore((s) => s.pushToast);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -51,6 +54,8 @@ export function GalleryPage() {
   const [activeFilter, setActiveFilter] = useState<string>(BOARD_ALL);
   const [creatingBoard, setCreatingBoard] = useState(false);
   const [newBoardName, setNewBoardName] = useState("");
+  // Local search buffer; debounced into useGalleryStore.setQuery (M8).
+  const [searchInput, setSearchInput] = useState<string>(query.search ?? "");
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -62,17 +67,28 @@ export function GalleryPage() {
     void refreshBoards();
   }, [refresh, refreshBoards]);
 
-  // Apply the active board / favorites filter.
+  // Apply the active board / favorites filter. M7: gallery now mixes image
+  // + video kinds (kind filter dropped).
   useEffect(() => {
     if (activeFilter === BOARD_ALL) {
-      setQuery({ kind: "image", boardId: undefined, favoritedOnly: undefined });
+      setQuery({ kind: undefined, boardId: undefined, favoritedOnly: undefined });
     } else if (activeFilter === BOARD_FAVORITES) {
-      setQuery({ kind: "image", boardId: undefined, favoritedOnly: true });
+      setQuery({ kind: undefined, boardId: undefined, favoritedOnly: true });
     } else {
-      setQuery({ kind: "image", boardId: activeFilter, favoritedOnly: undefined });
+      setQuery({ kind: undefined, boardId: activeFilter, favoritedOnly: undefined });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeFilter]);
+
+  // M8: debounce search input → gallery query → backend FTS5 MATCH.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const trimmed = searchInput.trim();
+      setQuery({ search: trimmed.length > 0 ? trimmed : undefined });
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchInput]);
 
   const onDragEnd = async (e: DragEndEvent): Promise<void> => {
     if (!e.over) return;
@@ -103,8 +119,24 @@ export function GalleryPage() {
 
   const handleRemix = async (id: string): Promise<void> => {
     try {
-      const req = await api["gallery.remix"]({ itemId: id });
-      // Pre-fill Studio with the remix request, then navigate.
+      const result = await api["gallery.remix"]({ itemId: id });
+      if (result.kind === "video") {
+        const req = result.request;
+        setVideoDraft({
+          prompt: req.prompt,
+          providerId: req.providerId,
+          modelId: req.model,
+          ...(typeof req.durationSec === "number" ? { durationSec: req.durationSec } : {}),
+          ...(typeof req.fps === "number" ? { fps: req.fps } : {}),
+          ...(typeof req.resolution === "string" ? { resolution: req.resolution } : {}),
+          ...(typeof req.aspectRatio === "string" ? { aspectRatio: req.aspectRatio } : {}),
+          references: req.references.map((r) => r.path),
+          parentId: id,
+        });
+        navigate("video");
+        return;
+      }
+      const req = result.request;
       setDraft({
         prompt: req.prompt,
         providerId: req.providerId,
@@ -220,6 +252,53 @@ export function GalleryPage() {
         </aside>
 
         <section className="flex-1 overflow-y-auto px-6 py-4">
+          {/* M8: FTS5-backed search bar. `prompt:foo` matches only the prompt column. */}
+          <div className="mb-4 flex items-center gap-3">
+            <div className="relative w-full max-w-md">
+              <Icons.MagnifyingGlass
+                weight="bold"
+                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-(--color-muted)"
+              />
+              <Input
+                placeholder="Search prompts…"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="pl-9 pr-8"
+              />
+              {searchInput ? (
+                <button
+                  type="button"
+                  onClick={() => setSearchInput("")}
+                  aria-label="Clear search"
+                  className={
+                    "absolute right-2 top-1/2 inline-flex size-6 -translate-y-1/2 items-center " +
+                    "justify-center rounded-(--radius-pill) text-(--color-muted) " +
+                    "transition-colors duration-(--duration-fast) hover:bg-(--color-surface-soft) hover:text-(--color-ink)"
+                  }
+                >
+                  <Icons.X weight="bold" className="size-3.5" />
+                </button>
+              ) : null}
+            </div>
+            <Tooltip content="Use 'prompt:foo' to match only the prompt column. FTS5 supports AND/OR/NEAR.">
+              <button
+                type="button"
+                aria-label="Search syntax help"
+                className={
+                  "inline-flex size-7 items-center justify-center rounded-(--radius-pill) " +
+                  "text-(--color-muted) transition-colors duration-(--duration-fast) " +
+                  "hover:bg-(--color-surface-soft) hover:text-(--color-ink)"
+                }
+              >
+                <Icons.Info weight="duotone" className="size-4" />
+              </button>
+            </Tooltip>
+            {query.search ? (
+              <span className="text-(length:--text-caption) text-(--color-muted)">
+                {total} match{total === 1 ? "" : "es"}
+              </span>
+            ) : null}
+          </div>
           {items.length === 0 ? (
             <div className="mx-auto mt-12 max-w-md text-center">
               <Icons.Folder
@@ -235,29 +314,38 @@ export function GalleryPage() {
               style={{ columnWidth: 240, columnGap: 12 }}
               className="w-full"
             >
-              {items.map((it) => (
-                <GalleryItemCard
-                  key={it.id}
-                  id={it.id}
-                  kind="image"
-                  src={resolveGalleryUrl(it.relPath)}
-                  caption={it.prompt}
-                  width={it.width ?? null}
-                  height={it.height ?? null}
-                  favorited={it.favorited}
-                  selected={selectedId === it.id}
-                  boards={boards.map((b) => ({ id: b.id, name: b.name }))}
-                  onSelect={() => setSelectedId(it.id)}
-                  onOpen={() => setDrawerId(it.id)}
-                  onRemix={() => void handleRemix(it.id)}
-                  onToggleFavorite={() => void toggleFav(it.id)}
-                  onAddToBoard={(boardId) => void addItem(boardId, it.id)}
-                  onOpenFileLocation={() => {
-                    void api["system.openPath"]({ path: it.relPath });
-                  }}
-                  onDelete={() => void removeItem(it.id)}
-                />
-              ))}
+              {items.map((it) => {
+                const isVideo = it.kind === "video";
+                const src = isVideo
+                  ? it.thumbPath
+                    ? resolveGalleryUrl(it.thumbPath)
+                    : ""
+                  : resolveGalleryUrl(it.relPath);
+                return (
+                  <GalleryItemCard
+                    key={it.id}
+                    id={it.id}
+                    kind={it.kind}
+                    src={src}
+                    caption={it.prompt}
+                    width={it.width ?? null}
+                    height={it.height ?? null}
+                    durationMs={it.durationMs ?? null}
+                    favorited={it.favorited}
+                    selected={selectedId === it.id}
+                    boards={boards.map((b) => ({ id: b.id, name: b.name }))}
+                    onSelect={() => setSelectedId(it.id)}
+                    onOpen={() => setDrawerId(it.id)}
+                    onRemix={() => void handleRemix(it.id)}
+                    onToggleFavorite={() => void toggleFav(it.id)}
+                    onAddToBoard={(boardId) => void addItem(boardId, it.id)}
+                    onOpenFileLocation={() => {
+                      void api["system.openPath"]({ path: it.relPath });
+                    }}
+                    onDelete={() => void removeItem(it.id)}
+                  />
+                );
+              })}
             </div>
           )}
 
@@ -483,11 +571,21 @@ function DetailDrawer({
           </header>
           {data ? (
             <div className="flex-1 overflow-y-auto p-4">
-              <img
-                src={resolveGalleryUrl(data.item.relPath)}
-                alt={data.item.prompt}
-                className="block w-full rounded-(--radius-md) border border-(--color-hairline)"
-              />
+              {data.item.kind === "video" ? (
+                // eslint-disable-next-line jsx-a11y/media-has-caption
+                <video
+                  src={resolveGalleryUrl(data.item.relPath)}
+                  controls
+                  preload="metadata"
+                  className="block w-full rounded-(--radius-md) border border-(--color-hairline) bg-black"
+                />
+              ) : (
+                <img
+                  src={resolveGalleryUrl(data.item.relPath)}
+                  alt={data.item.prompt}
+                  className="block w-full rounded-(--radius-md) border border-(--color-hairline)"
+                />
+              )}
               <dl className="mt-4 grid grid-cols-[80px_minmax(0,1fr)] gap-x-3 gap-y-1 text-(length:--text-body-sm)">
                 <dt className="text-(--color-muted)">prompt</dt>
                 <dd className="text-(--color-ink) whitespace-pre-wrap">{data.item.prompt}</dd>
@@ -610,16 +708,33 @@ function DetailDrawer({
 }
 
 function LineageTile({ item }: { item: GalleryItem }) {
+  const isVideo = item.kind === "video";
+  const src = isVideo
+    ? item.thumbPath
+      ? resolveGalleryUrl(item.thumbPath)
+      : ""
+    : resolveGalleryUrl(item.relPath);
   return (
     <div
       title={item.prompt}
-      className="aspect-square overflow-hidden rounded-(--radius-sm) border border-(--color-hairline)"
+      className="relative aspect-square overflow-hidden rounded-(--radius-sm) border border-(--color-hairline)"
     >
-      <img
-        src={resolveGalleryUrl(item.relPath)}
-        alt={item.prompt}
-        className="block h-full w-full object-cover"
-      />
+      {src ? (
+        <img
+          src={src}
+          alt={item.prompt}
+          className="block h-full w-full object-cover"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center bg-(--color-surface-soft) text-(--color-muted)">
+          <Icons.FilmReel weight="duotone" className="size-5" />
+        </div>
+      )}
+      {isVideo ? (
+        <span className="pointer-events-none absolute bottom-1 left-1 inline-flex size-4 items-center justify-center rounded-(--radius-pill) bg-black/60 text-white">
+          <Icons.Play weight="fill" className="size-2.5" />
+        </span>
+      ) : null}
     </div>
   );
 }

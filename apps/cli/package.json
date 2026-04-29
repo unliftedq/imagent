@@ -20,7 +20,8 @@
     "test": "vitest run",
     "clean": "rm -rf dist .tsbuildinfo",
     "dev": "tsc -b && node dist/index.js",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "build:binary": "tsc -b && node scripts/build-binary.mjs"
   },
   "dependencies": {
     "@imagine-studio/config": "workspace:*",
@@ -31,6 +32,8 @@
     "commander": "^12.1.0"
   },
   "devDependencies": {
+    "esbuild": "^0.27.7",
+    "postject": "^1.0.0-alpha.6",
     "vitest": "^3.0.0"
   }
 }

@@ -22,23 +22,37 @@ const KIND_LABEL: Record<AssetKind, string> = {
   background: "Backgrounds",
   style: "Styles",
 };
+/**
+ * The Trash tab (M8) joins Characters / Objects / Backgrounds / Styles to
+ * give us five tab values total. It's a top-level value (not a kind) because
+ * it cuts across all four kinds.
+ */
+const TRASH_TAB = "__trash__" as const;
+type AssetsTab = AssetKind | typeof TRASH_TAB;
 const ACTIVE_TAB_LS_KEY = "imagine-studio.activeAssetTab.v1";
 const MAX_UPLOADS = 10;
 
 /**
- * Assets page (M6) — four-tab CRUD per design.md §11.
+ * Assets page (M6) — four-kind CRUD per design.md §11; M8 adds the Trash
+ * tab and the archive-first soft-delete flow. Permanent delete is the
+ * second-step destructive action on the drawer + every Trash row.
  */
 export function AssetsPage() {
   const byKind = useAssetsStore((s) => s.byKind);
+  const archived = useAssetsStore((s) => s.archived);
   const refresh = useAssetsStore((s) => s.refresh);
+  const refreshArchived = useAssetsStore((s) => s.refreshArchived);
   const setSearch = useAssetsStore((s) => s.setSearch);
-  const removeAsset = useAssetsStore((s) => s.remove);
+  const archiveAsset = useAssetsStore((s) => s.archive);
+  const restoreAsset = useAssetsStore((s) => s.restore);
+  const permanentlyDelete = useAssetsStore((s) => s.permanentlyDelete);
   const updateAsset = useAssetsStore((s) => s.update);
   const pushToast = useUIStore((s) => s.pushToast);
 
-  const [activeTab, setActiveTab] = useState<AssetKind>(() => {
+  const [activeTab, setActiveTab] = useState<AssetsTab>(() => {
     if (typeof window === "undefined") return "character";
     const stored = window.localStorage.getItem(ACTIVE_TAB_LS_KEY);
+    if (stored === TRASH_TAB) return TRASH_TAB;
     if (stored && KINDS.includes(stored as AssetKind)) {
       return stored as AssetKind;
     }
@@ -51,7 +65,8 @@ export function AssetsPage() {
 
   useEffect(() => {
     void refresh();
-  }, [refresh]);
+    void refreshArchived();
+  }, [refresh, refreshArchived]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -62,19 +77,19 @@ export function AssetsPage() {
   useEffect(() => {
     const t = setTimeout(() => {
       setSearch(search.trim() || undefined);
-    }, 200);
+    }, 300);
     return () => clearTimeout(t);
   }, [search, setSearch]);
 
-  const visibleAssets = byKind[activeTab] ?? [];
   const drawerAsset = useMemo(() => {
     if (!drawerId) return null;
     for (const k of KINDS) {
       const hit = byKind[k].find((a) => a.id === drawerId);
       if (hit) return hit;
     }
-    return null;
-  }, [byKind, drawerId]);
+    const arch = archived.find((a) => a.id === drawerId);
+    return arch ?? null;
+  }, [byKind, archived, drawerId]);
 
   const onCreated = (created: Asset): void => {
     setCreateOpen(false);
@@ -82,9 +97,40 @@ export function AssetsPage() {
     setDrawerId(created.id);
   };
 
-  const onDelete = async (id: string): Promise<void> => {
+  const onArchive = async (id: string): Promise<void> => {
     try {
-      await removeAsset(id);
+      await archiveAsset(id);
+      setDrawerId(null);
+      pushToast({
+        title: "Moved to Trash",
+        description: "Restore from the Trash tab.",
+        variant: "success",
+      });
+    } catch (err) {
+      pushToast({
+        title: "Archive failed",
+        description: err instanceof IpcClientError ? err.message : (err as Error)?.message,
+        variant: "error",
+      });
+    }
+  };
+
+  const onRestore = async (id: string): Promise<void> => {
+    try {
+      await restoreAsset(id);
+      pushToast({ title: "Restored", variant: "success" });
+    } catch (err) {
+      pushToast({
+        title: "Restore failed",
+        description: err instanceof IpcClientError ? err.message : (err as Error)?.message,
+        variant: "error",
+      });
+    }
+  };
+
+  const onPermanentlyDelete = async (id: string): Promise<void> => {
+    try {
+      await permanentlyDelete(id);
       setDrawerId(null);
     } catch (err) {
       pushToast({
@@ -93,6 +139,34 @@ export function AssetsPage() {
         variant: "error",
       });
     }
+  };
+
+  const onEmptyTrash = async (): Promise<void> => {
+    if (archived.length === 0) return;
+    if (
+      !window.confirm(
+        `Permanently delete ${archived.length} asset${
+          archived.length === 1 ? "" : "s"
+        }? This removes the files on disk and cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    let failures = 0;
+    for (const a of archived) {
+      try {
+        await permanentlyDelete(a.id);
+      } catch {
+        failures += 1;
+      }
+    }
+    pushToast({
+      title:
+        failures === 0
+          ? "Trash emptied"
+          : `Trash emptied (${failures} failed)`,
+      variant: failures === 0 ? "success" : "warning",
+    });
   };
 
   return (
@@ -109,7 +183,9 @@ export function AssetsPage() {
         <Button
           leadingIcon={<Icons.Plus weight="bold" className="size-4" />}
           onClick={() => {
-            setCreateKind(activeTab);
+            // From the Trash tab, default the new-asset dialog to character
+            // (the Trash tab is not a kind).
+            setCreateKind(activeTab === TRASH_TAB ? "character" : activeTab);
             setCreateOpen(true);
           }}
         >
@@ -117,7 +193,7 @@ export function AssetsPage() {
         </Button>
       </header>
 
-      <Tabs.Root value={activeTab} onValueChange={(v) => setActiveTab(v as AssetKind)}>
+      <Tabs.Root value={activeTab} onValueChange={(v) => setActiveTab(v as AssetsTab)}>
         <Tabs.List>
           {KINDS.map((k) => (
             <Tabs.Trigger key={k} value={k}>
@@ -127,25 +203,26 @@ export function AssetsPage() {
               </span>
             </Tabs.Trigger>
           ))}
+          <Tabs.Trigger value={TRASH_TAB}>
+            <Icons.Trash weight="duotone" className="mr-1 size-4" />
+            Trash
+            <span className="ml-2 rounded-(--radius-pill) bg-(--color-surface-soft) px-1.5 text-[10px] font-semibold text-(--color-muted) [font-variant-numeric:tabular-nums]">
+              {archived.length}
+            </span>
+          </Tabs.Trigger>
         </Tabs.List>
 
         {KINDS.map((k) => (
           <Tabs.Content key={k} value={k} className="mt-4 flex flex-col gap-4">
             <div className="flex items-center gap-2">
-              <Input
+              <SearchInput
                 placeholder={`Search ${KIND_LABEL[k].toLowerCase()}…`}
                 value={search}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="max-w-sm"
+                onChange={setSearchInput}
               />
-              {search ? (
-                <Button variant="ghost" size="sm" onClick={() => setSearchInput("")}>
-                  Clear
-                </Button>
-              ) : null}
             </div>
 
-            {visibleAssets.length === 0 ? (
+            {(byKind[k]?.length ?? 0) === 0 ? (
               <EmptyState
                 icon={<Icons.Folder weight="duotone" className="size-10" />}
                 title={`No ${KIND_LABEL[k].toLowerCase()} yet`}
@@ -168,7 +245,7 @@ export function AssetsPage() {
               />
             ) : (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                {visibleAssets.map((a) => (
+                {(byKind[k] ?? []).map((a) => (
                   <AssetCard
                     key={a.id}
                     asset={a}
@@ -180,6 +257,52 @@ export function AssetsPage() {
             )}
           </Tabs.Content>
         ))}
+
+        <Tabs.Content value={TRASH_TAB} className="mt-4 flex flex-col gap-4">
+          <div className="flex items-center justify-between gap-2">
+            <SearchInput
+              placeholder="Search trash…"
+              value={search}
+              onChange={setSearchInput}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => void onEmptyTrash()}
+              disabled={archived.length === 0}
+              leadingIcon={<Icons.Trash weight="bold" className="size-4" />}
+            >
+              Empty Trash
+            </Button>
+          </div>
+          {archived.length === 0 ? (
+            <EmptyState
+              icon={<Icons.Trash weight="duotone" className="size-10" />}
+              title="Trash is empty"
+              description="Archived assets land here and can be restored at any time."
+            />
+          ) : (
+            <ul className="flex flex-col gap-1">
+              {archived.map((a) => (
+                <TrashRow
+                  key={a.id}
+                  asset={a}
+                  onOpen={() => setDrawerId(a.id)}
+                  onRestore={() => void onRestore(a.id)}
+                  onPermanentlyDelete={() => {
+                    if (
+                      window.confirm(
+                        `Permanently delete '${a.name}'? Files on disk will be removed.`,
+                      )
+                    ) {
+                      void onPermanentlyDelete(a.id);
+                    }
+                  }}
+                />
+              ))}
+            </ul>
+          )}
+        </Tabs.Content>
       </Tabs.Root>
 
       <CreateAssetDialog
@@ -193,7 +316,9 @@ export function AssetsPage() {
       <AssetDrawer
         asset={drawerAsset}
         onClose={() => setDrawerId(null)}
-        onDelete={onDelete}
+        onArchive={onArchive}
+        onPermanentlyDelete={onPermanentlyDelete}
+        onRestore={onRestore}
         onSave={async (patch) => {
           if (!drawerAsset) return;
           await updateAsset({ id: drawerAsset.id, ...patch });
@@ -500,7 +625,9 @@ function CreateAssetDialog({
 interface DrawerProps {
   asset: Asset | null;
   onClose: () => void;
-  onDelete: (id: string) => Promise<void>;
+  onArchive: (id: string) => Promise<void>;
+  onRestore: (id: string) => Promise<void>;
+  onPermanentlyDelete: (id: string) => Promise<void>;
   onSave: (patch: {
     name?: string;
     description?: string | null;
@@ -508,19 +635,26 @@ interface DrawerProps {
   }) => Promise<void>;
 }
 
-function AssetDrawer({ asset, onClose, onDelete, onSave }: DrawerProps) {
+function AssetDrawer({
+  asset,
+  onClose,
+  onArchive,
+  onRestore,
+  onPermanentlyDelete,
+  onSave,
+}: DrawerProps) {
   const pushToast = useUIStore((s) => s.pushToast);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [promptSnippet, setPromptSnippet] = useState("");
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmHardDelete, setConfirmHardDelete] = useState(false);
 
   useEffect(() => {
     if (!asset) return;
     setName(asset.name);
     setDescription(asset.description ?? "");
     setPromptSnippet(asset.promptSnippet ?? "");
-    setConfirmDelete(false);
+    setConfirmHardDelete(false);
   }, [asset]);
 
   const dirty =
@@ -630,36 +764,95 @@ function AssetDrawer({ asset, onClose, onDelete, onSave }: DrawerProps) {
               </Field>
             ) : null}
 
-            <div className="mt-auto flex items-center justify-between gap-2 border-t border-(--color-hairline-soft) pt-4">
-              <Button variant="ghost" size="sm" onClick={() => void openFolder()}>
-                Open folder
-              </Button>
-              <div className="flex items-center gap-2">
-                {confirmDelete ? (
+            <div className="mt-auto flex flex-col gap-2 border-t border-(--color-hairline-soft) pt-4">
+              <div className="flex items-center justify-between gap-2">
+                <Button variant="ghost" size="sm" onClick={() => void openFolder()}>
+                  Open folder
+                </Button>
+                <Button size="sm" onClick={() => void save()} disabled={!dirty}>
+                  Save
+                </Button>
+              </div>
+              <div className="flex items-center justify-end gap-2">
+                {asset.archivedAt !== null ? (
+                  // Archived asset: drawer surfaces Restore + permanent delete.
+                  confirmHardDelete ? (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setConfirmHardDelete(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => void onPermanentlyDelete(asset.id)}
+                      >
+                        Confirm permanent delete
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        leadingIcon={
+                          <Icons.ArrowCounterClockwise
+                            weight="bold"
+                            className="size-4"
+                          />
+                        }
+                        onClick={() => void onRestore(asset.id)}
+                      >
+                        Restore
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setConfirmHardDelete(true)}
+                      >
+                        Delete permanently
+                      </Button>
+                    </>
+                  )
+                ) : confirmHardDelete ? (
                   <>
-                    <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setConfirmHardDelete(false)}
+                    >
                       Cancel
                     </Button>
                     <Button
                       variant="danger"
                       size="sm"
-                      onClick={() => void onDelete(asset.id)}
+                      onClick={() => void onPermanentlyDelete(asset.id)}
                     >
-                      Confirm delete
+                      Confirm permanent delete
                     </Button>
                   </>
                 ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setConfirmDelete(true)}
-                  >
-                    Delete
-                  </Button>
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setConfirmHardDelete(true)}
+                    >
+                      Delete permanently
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      leadingIcon={<Icons.Trash weight="bold" className="size-4" />}
+                      onClick={() => void onArchive(asset.id)}
+                    >
+                      Archive
+                    </Button>
+                  </>
                 )}
-                <Button size="sm" onClick={() => void save()} disabled={!dirty}>
-                  Save
-                </Button>
               </div>
             </div>
           </div>
@@ -681,6 +874,121 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       </span>
       {children}
     </label>
+  );
+}
+
+/**
+ * Search input with the Phosphor MagnifyingGlass prefix and a Clear affordance.
+ * 300ms debounce lives at the call site so the input still tracks keystrokes
+ * for snappy typing.
+ */
+function SearchInput({
+  placeholder,
+  value,
+  onChange,
+}: {
+  placeholder: string;
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  return (
+    <div className="relative w-full max-w-sm">
+      <Icons.MagnifyingGlass
+        weight="bold"
+        className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-(--color-muted)"
+      />
+      <Input
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="pl-9 pr-8"
+      />
+      {value ? (
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          aria-label="Clear search"
+          className={
+            "absolute right-2 top-1/2 inline-flex size-6 -translate-y-1/2 items-center " +
+            "justify-center rounded-(--radius-pill) text-(--color-muted) " +
+            "transition-colors duration-(--duration-fast) hover:bg-(--color-surface-soft) hover:text-(--color-ink)"
+          }
+        >
+          <Icons.X weight="bold" className="size-3.5" />
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function TrashRow({
+  asset,
+  onOpen,
+  onRestore,
+  onPermanentlyDelete,
+}: {
+  asset: Asset;
+  onOpen: () => void;
+  onRestore: () => void;
+  onPermanentlyDelete: () => void;
+}) {
+  const thumb = resolveAssetThumbnailUrl(asset);
+  return (
+    <li
+      className={
+        "flex items-center gap-3 rounded-(--radius-md) border border-(--color-hairline) " +
+        "bg-(--color-canvas) px-3 py-2"
+      }
+    >
+      <button
+        type="button"
+        onClick={onOpen}
+        className="size-10 shrink-0 overflow-hidden rounded-(--radius-sm) bg-(--color-surface-soft)"
+        aria-label={`Open ${asset.name}`}
+      >
+        {thumb ? (
+          // biome-ignore lint/a11y/useAltText: alt provided via aria-label on button
+          <img src={thumb} alt={asset.name} className="block h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-(--color-muted)">
+            <Icons.Folder weight="duotone" className="size-5" />
+          </div>
+        )}
+      </button>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex min-w-0 flex-1 flex-col items-start text-left"
+      >
+        <span className="truncate text-(length:--text-body-sm) font-semibold text-(--color-ink)">
+          {asset.name}
+        </span>
+        <span className="text-(length:--text-caption) text-(--color-muted)">
+          {asset.archivedAt
+            ? `Archived ${new Date(asset.archivedAt).toLocaleDateString()}`
+            : "Archived"}
+        </span>
+      </button>
+      <span
+        className={
+          "shrink-0 inline-flex items-center rounded-(--radius-pill) bg-(--color-surface-card) " +
+          "px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[1.5px] text-(--color-ink)"
+        }
+      >
+        {asset.kind}
+      </span>
+      <Button
+        variant="secondary"
+        size="sm"
+        leadingIcon={<Icons.ArrowCounterClockwise weight="bold" className="size-4" />}
+        onClick={onRestore}
+      >
+        Restore
+      </Button>
+      <Button variant="ghost" size="sm" onClick={onPermanentlyDelete}>
+        Delete permanently
+      </Button>
+    </li>
   );
 }
 

@@ -85,13 +85,14 @@ function TopBar({
               key={r.id}
               onClick={() => onNavigate(r.id)}
               className={
-                "rounded-(--radius-pill) px-3 py-1.5 text-(length:--text-nav-link) transition-colors duration-(--duration-fast) " +
+                "inline-flex items-center gap-1.5 rounded-(--radius-pill) px-3 py-1.5 text-(length:--text-nav-link) transition-colors duration-(--duration-fast) " +
                 (active
                   ? "bg-(--color-surface-card) text-(--color-ink)"
                   : "text-(--color-muted) hover:text-(--color-ink)") +
                 (!r.available ? " opacity-60" : "")
               }
             >
+              {r.icon ?? null}
               {r.label}
               {!r.available ? (
                 <span className="ml-1 rounded-(--radius-pill) bg-(--color-surface-strong) px-1.5 py-0.5 text-[10px] font-semibold tracking-[1.5px] text-(--color-muted)">
