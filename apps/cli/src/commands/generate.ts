@@ -1,29 +1,12 @@
-import {
-  createEnvSecretsStore,
-  createFileConfigStore,
-  createFileSecretsStore,
-  mergeSecrets,
-} from "@imagine-studio/config";
-import {
-  type FilesServicePort,
-  type GalleryRepositoryPort,
-  type GenerationIntent,
-  type Job,
-  type JobRepositoryPort,
-  JobRunner,
-  createConsoleLogger,
-} from "@imagine-studio/core";
-import {
-  GalleryRepository,
-  JobRepository,
-  createPathResolver,
-  ensureDataDir,
-  openDatabase,
-} from "@imagine-studio/persistence";
-import { createImageRegistry, createVideoRegistry } from "@imagine-studio/providers";
-import chalk from "chalk";
 import path from "node:path";
+
+import type { GenerationIntent, ImageRequest, Job } from "@imagine-studio/core";
+import chalk from "chalk";
 import type { Command } from "commander";
+
+import { buildAssetSlots, capReferences } from "./asset-slots.js";
+import { buildRunner, loadCliRuntime } from "./runtime.js";
+import { collect } from "./util.js";
 
 interface GenerateOptions {
   provider?: string;
@@ -36,16 +19,23 @@ interface GenerateOptions {
   negative?: string;
   seed?: string;
   aspect?: string;
+  character?: string[];
+  object?: string[];
+  background?: string[];
+  style?: string[];
 }
 
 /**
- * `imagine generate <prompt>` — image-only at M2 (video lands in M3 spec but
- * the runner already supports it). Wires:
+ * `imagine generate <prompt>` — image generation with asset slots (M3).
+ *
+ * Wires:
  *   secrets + config → registry → JobRunner → start image intent.
  *
- * Awaits 'job.completed' or 'job.failed'. On success prints the absolute file
- * path; on failure prints the error and exits 1. Asset / board / refs flags
- * are accepted but no-op for now (M3 wires them through gallery_item_assets).
+ * Awaits `job.completed` or `job.failed`, prints absolute path on success.
+ * `--character/--object/--background/--style` (each repeatable) pull
+ * reference images from the named asset and (for style) optionally append
+ * the asset's prompt_snippet. References are silently capped at the resolved
+ * model's maxReferences with a stderr warning.
  */
 export function registerGenerateCommand(program: Command): void {
   program
@@ -58,13 +48,13 @@ export function registerGenerateCommand(program: Command): void {
     .option("--aspect <ratio>", "Aspect ratio (e.g. 1:1, 16:9)")
     .option("--seed <n>", "Random seed")
     .option("--negative <prompt>", "Negative prompt (provider-dependent)")
-    .option("--ref <path>", "Reference image path (repeatable)", collect, [])
-    .option("--character <id>", "Attach a character asset (M3)")
-    .option("--object <id>", "Attach an object asset (M3)")
-    .option("--background <id>", "Attach a background asset (M3)")
-    .option("--style <id>", "Attach a style asset (M3)")
-    .option("--out <dir>", "Output directory override (M3)")
-    .option("--board <id>", "Add result to a board (M3)")
+    .option("--ref <path>", "Freeform reference image path (repeatable)", collect, [])
+    .option("--character <id>", "Attach a character asset (repeatable)", collect, [])
+    .option("--object <id>", "Attach an object asset (repeatable)", collect, [])
+    .option("--background <id>", "Attach a background asset (repeatable)", collect, [])
+    .option("--style <id>", "Attach a style asset (repeatable)", collect, [])
+    .option("--out <dir>", "Output directory override")
+    .option("--board <id>", "Add result to a board after generation")
     .action(async (prompt: string, options: GenerateOptions) => {
       try {
         await runGenerate(prompt, options);
@@ -75,56 +65,44 @@ export function registerGenerateCommand(program: Command): void {
     });
 }
 
-function collect(value: string, prev: string[]): string[] {
-  return [...(prev ?? []), value];
-}
-
 async function runGenerate(prompt: string, options: GenerateOptions): Promise<void> {
-  const resolver = createPathResolver();
-  await ensureDataDir(resolver);
-
-  const config = await createFileConfigStore(resolver.configFile()).loadConfig();
-  const fileSecrets = await createFileSecretsStore(resolver.secretsFile()).loadSecrets();
-  const envSecrets = await createEnvSecretsStore(process.env).loadSecrets();
-  const secrets = mergeSecrets(fileSecrets, envSecrets);
-
-  const providerId = options.provider ?? config.app.defaultProvider;
-
-  const imageRegistry = createImageRegistry(secrets, config.providers);
-  const videoRegistry = createVideoRegistry(secrets, config.providers);
-
-  const provider = imageRegistry.get(providerId);
+  const runtime = await loadCliRuntime();
+  const providerId = options.provider ?? runtime.config.app.defaultProvider;
+  const provider = runtime.imageRegistry.get(providerId);
   if (!provider) {
     throw new Error(
       `provider '${providerId}' is not configured. Run \`imagine config set ${providerId.split("-")[0]}.apiKey ...\` first.`,
     );
   }
+  const model = pickModel(providerId, options.model, runtime.config, provider.models);
+  const resolved = provider.models.get(model);
+  const maxRefs = resolved?.capabilities?.maxReferences;
 
-  const model = pickModel(providerId, options.model, config, provider.models);
-
-  const db = openDatabase(resolver.dbFile());
+  const { db, gallery, runner } = buildRunner(runtime);
   try {
-    const jobsRepo = new JobRepository(db) satisfies JobRepositoryPort;
-    const galleryRepo = new GalleryRepository(db) satisfies GalleryRepositoryPort;
-    const filesService: FilesServicePort = {
-      dataDir: resolver.dataDir,
-      galleryDir: (date) => resolver.galleryDir(date),
-      galleryItemFile: (id, ext, date) => resolver.galleryItemFile(id, ext, date),
-    };
-
-    const runner = new JobRunner({
-      jobs: jobsRepo,
-      gallery: galleryRepo,
-      files: filesService,
-      imageRegistry,
-      videoRegistry,
-      logger: createConsoleLogger("imagine"),
+    // Asset slots → references + style-snippet additions.
+    const slots = await buildAssetSlots(runtime.resolver, db, {
+      characters: options.character ?? [],
+      objects: options.object ?? [],
+      backgrounds: options.background ?? [],
+      styles: options.style ?? [],
     });
+
+    const allRefPaths = [...(options.ref ?? []), ...slots.referencePaths];
+    const { references: cappedRefs, capped } = capReferences(allRefPaths, maxRefs);
+    if (capped !== undefined) {
+      process.stderr.write(
+        `${chalk.yellow("warn:")} capped at ${capped} references for model '${model}' (had ${allRefPaths.length})\n`,
+      );
+    }
+    const promptWithStyle = slots.stylePromptSnippets.length
+      ? `${prompt} ${slots.stylePromptSnippets.join(" ")}`
+      : prompt;
 
     const intent: GenerationIntent = {
       kind: "image",
       request: {
-        prompt,
+        prompt: promptWithStyle,
         ...(options.negative ? { negativePrompt: options.negative } : {}),
         providerId,
         model,
@@ -132,9 +110,10 @@ async function runGenerate(prompt: string, options: GenerateOptions): Promise<vo
         ...(options.size ? { size: options.size } : {}),
         ...(options.aspect ? { aspectRatio: options.aspect } : {}),
         ...(options.seed ? { seed: Number(options.seed) } : {}),
-        references: (options.ref ?? []).map((p) => ({ path: p, role: "freeform" as const })),
-        assetIds: [],
-      },
+        references: cappedRefs.map((p) => ({ path: p, role: "freeform" as const })),
+        assetIds: slots.assetIds,
+        ...(options.board ? { boardId: options.board } : {}),
+      } satisfies ImageRequest,
     };
 
     const completed = new Promise<Job>((resolve, reject) => {
@@ -152,11 +131,23 @@ async function runGenerate(prompt: string, options: GenerateOptions): Promise<vo
     if (!job.resultItemId) {
       throw new Error("job completed without resultItemId");
     }
-    const item = galleryRepo.get(job.resultItemId);
+
+    // Record gallery_item_assets links for every contributing asset.
+    for (const a of slots.attachments) {
+      gallery.addAssetLink({
+        itemId: job.resultItemId,
+        assetId: a.assetId,
+        role: a.role,
+      });
+    }
+
+    const item = gallery.get(job.resultItemId);
     if (!item) {
       throw new Error("result item missing from gallery_items");
     }
-    const abs = path.isAbsolute(item.relPath) ? item.relPath : path.join(resolver.dataDir, item.relPath);
+    const abs = path.isAbsolute(item.relPath)
+      ? item.relPath
+      : path.join(runtime.resolver.dataDir, item.relPath);
     process.stdout.write(`${chalk.green("ok:")} ${abs}\n`);
   } finally {
     db.close();

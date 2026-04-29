@@ -48,10 +48,11 @@ export function registerConfigCommand(program: Command): void {
 
   config
     .command("path")
-    .description("Print the absolute config.json path")
+    .description("Print the absolute config.json and secrets.json paths")
     .action(async () => {
       const resolver = createPathResolver();
-      process.stdout.write(`${resolver.configFile()}\n`);
+      process.stdout.write(`config:  ${resolver.configFile()}\n`);
+      process.stdout.write(`secrets: ${resolver.secretsFile()}\n`);
     });
 }
 

@@ -1,49 +1,218 @@
-import type { Asset, AssetFile } from "@imagine-studio/core";
+import type { Asset, AssetFile, AssetKind } from "@imagine-studio/core";
 import type { DatabaseType } from "../db.js";
 
+interface AssetRow {
+  id: string;
+  kind: string;
+  name: string;
+  description: string | null;
+  prompt_snippet: string | null;
+  created_at: number;
+  updated_at: number;
+  archived_at: number | null;
+}
+
+interface AssetFileRow {
+  id: string;
+  asset_id: string;
+  role: string;
+  rel_path: string;
+  mime_type: string;
+  width: number | null;
+  height: number | null;
+  bytes: number;
+  sha256: string;
+  position: number;
+  created_at: number;
+}
+
+function rowToAsset(r: AssetRow, files: AssetFile[] = []): Asset {
+  return {
+    id: r.id,
+    kind: r.kind as AssetKind,
+    name: r.name,
+    description: r.description,
+    promptSnippet: r.prompt_snippet,
+    files,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+    archivedAt: r.archived_at,
+  };
+}
+
+function rowToFile(r: AssetFileRow): AssetFile {
+  return {
+    id: r.id,
+    assetId: r.asset_id,
+    role: r.role as AssetFile["role"],
+    relPath: r.rel_path,
+    mimeType: r.mime_type,
+    width: r.width,
+    height: r.height,
+    bytes: r.bytes,
+    sha256: r.sha256,
+    position: r.position,
+    createdAt: r.created_at,
+  };
+}
+
+export interface AssetListOptions {
+  kind?: AssetKind;
+  includeArchived?: boolean;
+  /** FTS5 MATCH expression. When provided, joins assets_fts. */
+  search?: string;
+  limit?: number;
+}
+
 /**
- * AssetRepository surface — full CRUD and reference-file linking. M1 carries
- * type-correct method signatures with minimal implementations; richer queries
- * (search, FTS join, archive filters) layer on in M3 / M6.
+ * AssetRepository — CRUD for `assets` + child `asset_files`. Asset files are
+ * owned by their parent asset; FK cascades clean them up on delete.
  */
 export class AssetRepository {
   constructor(private readonly db: DatabaseType) {}
 
-  list(_opts: { kind?: Asset["kind"]; includeArchived?: boolean } = {}): Asset[] {
-    return [];
+  list(opts: AssetListOptions = {}): Asset[] {
+    const where: string[] = [];
+    const params: unknown[] = [];
+    if (opts.kind) {
+      where.push("a.kind = ?");
+      params.push(opts.kind);
+    }
+    if (!opts.includeArchived) {
+      where.push("a.archived_at IS NULL");
+    }
+
+    let sql: string;
+    if (opts.search && opts.search.trim().length > 0) {
+      // FTS5 MATCH against assets_fts; rowid links back to base table.
+      sql =
+        "SELECT a.* FROM assets a JOIN assets_fts f ON a.rowid = f.rowid " +
+        `WHERE f.assets_fts MATCH ?${where.length ? ` AND ${where.join(" AND ")}` : ""} ` +
+        "ORDER BY a.updated_at DESC";
+      params.unshift(opts.search);
+    } else {
+      sql = `SELECT a.* FROM assets a ${
+        where.length ? `WHERE ${where.join(" AND ")}` : ""
+      } ORDER BY a.updated_at DESC`;
+    }
+    if (opts.limit !== undefined) {
+      sql += " LIMIT ?";
+      params.push(opts.limit);
+    }
+    const rows = this.db.prepare(sql).all(...params) as AssetRow[];
+    return rows.map((r) => rowToAsset(r, this.listFiles(r.id)));
   }
 
-  get(_id: string): Asset | null {
-    return null;
+  get(id: string): Asset | null {
+    const row = this.db.prepare("SELECT * FROM assets WHERE id = ?").get(id) as
+      | AssetRow
+      | undefined;
+    if (!row) return null;
+    return rowToAsset(row, this.listFiles(id));
   }
 
-  create(_asset: Asset): Asset {
-    throw new Error("not implemented (M3)");
+  create(asset: Asset): Asset {
+    this.db
+      .prepare(
+        `INSERT INTO assets (id, kind, name, description, prompt_snippet,
+            created_at, updated_at, archived_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        asset.id,
+        asset.kind,
+        asset.name,
+        asset.description ?? null,
+        asset.promptSnippet ?? null,
+        asset.createdAt,
+        asset.updatedAt,
+        asset.archivedAt ?? null,
+      );
+    return this.get(asset.id) ?? asset;
   }
 
-  update(_id: string, _patch: Partial<Asset>): Asset {
-    throw new Error("not implemented (M3)");
+  update(id: string, patch: Partial<Asset>): Asset {
+    const existing = this.get(id);
+    if (!existing) throw new Error(`asset ${id} not found`);
+    const next: Asset = {
+      ...existing,
+      ...patch,
+      id: existing.id, // never mutate primary key
+      updatedAt: Date.now(),
+    };
+    this.db
+      .prepare(
+        `UPDATE assets SET kind = ?, name = ?, description = ?, prompt_snippet = ?,
+            updated_at = ?, archived_at = ? WHERE id = ?`,
+      )
+      .run(
+        next.kind,
+        next.name,
+        next.description ?? null,
+        next.promptSnippet ?? null,
+        next.updatedAt,
+        next.archivedAt ?? null,
+        id,
+      );
+    return this.get(id) ?? next;
   }
 
-  archive(_id: string): void {
-    throw new Error("not implemented (M3)");
+  archive(id: string): void {
+    this.db
+      .prepare("UPDATE assets SET archived_at = ?, updated_at = ? WHERE id = ?")
+      .run(Date.now(), Date.now(), id);
   }
 
-  delete(_id: string): void {
-    throw new Error("not implemented (M3)");
+  delete(id: string): void {
+    // FK cascade clears asset_files.
+    this.db.prepare("DELETE FROM assets WHERE id = ?").run(id);
   }
 
-  // Asset files are owned by the asset; we expose them through the repo so
-  // FK-cascade semantics live in one place.
-  listFiles(_assetId: string): AssetFile[] {
-    return [];
+  listFiles(assetId: string): AssetFile[] {
+    const rows = this.db
+      .prepare(
+        "SELECT * FROM asset_files WHERE asset_id = ? ORDER BY role, position, created_at",
+      )
+      .all(assetId) as AssetFileRow[];
+    return rows.map(rowToFile);
   }
 
-  addFile(_file: AssetFile): AssetFile {
-    throw new Error("not implemented (M3)");
+  addFile(file: AssetFile): AssetFile {
+    this.db
+      .prepare(
+        `INSERT INTO asset_files (id, asset_id, role, rel_path, mime_type,
+            width, height, bytes, sha256, position, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        file.id,
+        file.assetId,
+        file.role,
+        file.relPath,
+        file.mimeType,
+        file.width ?? null,
+        file.height ?? null,
+        file.bytes,
+        file.sha256,
+        file.position,
+        file.createdAt,
+      );
+    return file;
   }
 
-  removeFile(_fileId: string): void {
-    throw new Error("not implemented (M3)");
+  removeFile(fileId: string): void {
+    this.db.prepare("DELETE FROM asset_files WHERE id = ?").run(fileId);
+  }
+
+  /**
+   * Look up existing asset files by SHA-256. Used by `asset add` to surface
+   * a dedup hint to the user (we still proceed because assets are
+   * independently named).
+   */
+  findFilesBySha256(sha256: string): AssetFile[] {
+    const rows = this.db
+      .prepare("SELECT * FROM asset_files WHERE sha256 = ?")
+      .all(sha256) as AssetFileRow[];
+    return rows.map(rowToFile);
   }
 }

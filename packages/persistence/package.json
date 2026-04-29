@@ -15,13 +15,16 @@
     "build": "tsc -b && bun run copy-sql",
     "copy-sql": "node -e \"const fs=require('fs');const path=require('path');const src=path.join('src','migrations');const dst=path.join('dist','migrations');fs.mkdirSync(dst,{recursive:true});for(const f of fs.readdirSync(src))fs.copyFileSync(path.join(src,f),path.join(dst,f));\"",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "clean": "rm -rf dist .tsbuildinfo"
   },
   "dependencies": {
     "@imagine-studio/core": "workspace:*",
-    "better-sqlite3": "^12.0.0"
+    "better-sqlite3": "^12.0.0",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.12"
+    "@types/better-sqlite3": "^7.6.12",
+    "vitest": "^3.0.0"
   }
 }

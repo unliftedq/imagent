@@ -411,6 +411,16 @@ export class JobRunner extends EventEmitter {
       return;
     }
 
+    // DB-poll-cancellation check: another process / `imagine job cancel`
+    // may have flipped state=cancelled while we were polling. Bail before
+    // we record progress for an already-cancelled job.
+    const persisted = this.deps.jobs.get(id);
+    if (persisted?.state === "cancelled") {
+      this.running.delete(id);
+      this.emit("job.failed", persisted);
+      return;
+    }
+
     if (status.state === "queued" || status.state === "running") {
       const updated = this.deps.jobs.updateState(id, {
         state: status.state,
@@ -494,6 +504,103 @@ export class JobRunner extends EventEmitter {
     });
     this.running.delete(id);
     this.emit("job.failed", updated);
+  }
+
+  /**
+   * Re-attach to a previously-submitted job (e.g. `imagine job watch`).
+   * Resolves on terminal completion, rejects on terminal failure.
+   *
+   * - If the job is already terminal, returns/rejects immediately.
+   * - If `kind=image` and queued/running, marks failed with
+   *   "process restarted before completion" (image jobs aren't resumable per
+   *   M2 design) and rejects.
+   * - If `kind=video` and queued/running, re-schedules the polling loop using
+   *   the persisted provider_job_id and resolves on success.
+   */
+  async attach(id: JobId): Promise<Job> {
+    const existing = this.deps.jobs.get(id);
+    if (!existing) throw new Error(`job ${id} not found`);
+
+    if (existing.state === "succeeded") return existing;
+    if (
+      existing.state === "failed" ||
+      existing.state === "cancelled"
+    ) {
+      throw new Error(existing.errorMessage ?? `job ended in state '${existing.state}'`);
+    }
+
+    if (existing.kind === "image") {
+      const updated = this.deps.jobs.updateState(id, {
+        state: "failed",
+        errorMessage: "process restarted before completion",
+        finishedAt: this.deps.now(),
+      });
+      this.emit("job.failed", updated);
+      throw new Error(updated.errorMessage ?? "image jobs cannot be resumed");
+    }
+
+    if (!existing.providerJobId) {
+      const updated = this.deps.jobs.updateState(id, {
+        state: "failed",
+        errorMessage: "no provider_job_id to resume",
+        finishedAt: this.deps.now(),
+      });
+      this.emit("job.failed", updated);
+      throw new Error(updated.errorMessage ?? "missing provider_job_id");
+    }
+
+    const provider = this.deps.videoRegistry.get(existing.providerId);
+    if (!provider) {
+      const updated = this.deps.jobs.updateState(id, {
+        state: "failed",
+        errorMessage: `provider '${existing.providerId}' is no longer configured`,
+        finishedAt: this.deps.now(),
+      });
+      this.emit("job.failed", updated);
+      throw new Error(updated.errorMessage ?? "provider not configured");
+    }
+
+    // If we're already polling this id, don't double-schedule. Just hook into
+    // the next terminal event.
+    if (!this.running.has(id)) {
+      const handle: VideoJobHandle = {
+        providerId: existing.providerId,
+        providerJobId: existing.providerJobId,
+      };
+      const abort = new AbortController();
+      const entry: RunningEntry = { abort, pollIndex: 0 };
+      this.running.set(id, entry);
+      this.scheduleVideoPoll(
+        id,
+        provider,
+        handle,
+        entry,
+        JSON.parse(existing.requestJson) as VideoRequest,
+      );
+    }
+
+    return new Promise<Job>((resolve, reject) => {
+      const onCompleted = (job: Job): void => {
+        if (job.id !== id) return;
+        cleanup();
+        resolve(job);
+      };
+      const onFailed = (job: Job): void => {
+        if (job.id !== id) return;
+        cleanup();
+        if (job.state === "cancelled") {
+          reject(new Error(job.errorMessage ?? "cancelled"));
+          return;
+        }
+        reject(new Error(job.errorMessage ?? `job ended in state '${job.state}'`));
+      };
+      const cleanup = (): void => {
+        this.off("job.completed", onCompleted);
+        this.off("job.failed", onFailed);
+      };
+      this.on("job.completed", onCompleted);
+      this.on("job.failed", onFailed);
+    });
   }
 
   /** Test/inspection helper. */

@@ -396,3 +396,124 @@ describe("JobRunner — resumeRunningJobs", () => {
     expect(j.errorMessage).toContain("process restarted");
   });
 });
+
+describe("JobRunner — attach", () => {
+  it("attach to a queued video job, mock provider returns succeeded on first poll", async () => {
+    const jobs = new InMemoryJobs();
+    const gallery = new InMemoryGallery();
+    const now = Date.now();
+    jobs.create({
+      id: "video-1",
+      kind: "video",
+      state: "running",
+      providerId: "fake-video",
+      providerJobId: "task-attach",
+      requestJson: JSON.stringify({
+        prompt: "x",
+        providerId: "fake-video",
+        model: "any",
+        references: [],
+        assetIds: [],
+      }),
+      progress: 0.1,
+      errorMessage: null,
+      resultItemId: null,
+      createdAt: now,
+      updatedAt: now,
+      finishedAt: null,
+    });
+
+    const setTimer = (cb: () => void) => {
+      queueMicrotask(cb);
+      return Symbol("t");
+    };
+
+    let counter = 0;
+    const runner = new JobRunner({
+      jobs,
+      gallery,
+      files: fakeFiles,
+      imageRegistry: new Map(),
+      videoRegistry: new Map([
+        [
+          "fake-video",
+          fakeVideoProvider({ pollResults: [{ state: "succeeded" }] }),
+        ],
+      ]),
+      writeFile: async () => {},
+      ensureDir: async () => {},
+      idFactory: () => `id-${++counter}`,
+      setTimer,
+      clearTimer: () => {},
+    });
+
+    const result = await runner.attach("video-1");
+    expect(result.state).toBe("succeeded");
+    expect(result.id).toBe("video-1");
+    expect(result.resultItemId).toBeTruthy();
+    expect(gallery.items.size).toBe(1);
+  });
+
+  it("attach to an image job marks failed (cannot resume across processes)", async () => {
+    const jobs = new InMemoryJobs();
+    const gallery = new InMemoryGallery();
+    const now = Date.now();
+    jobs.create({
+      id: "img-stale",
+      kind: "image",
+      state: "running",
+      providerId: "fake",
+      providerJobId: null,
+      requestJson: "{}",
+      progress: 0.5,
+      errorMessage: null,
+      resultItemId: null,
+      createdAt: now,
+      updatedAt: now,
+      finishedAt: null,
+    });
+    const runner = new JobRunner({
+      jobs,
+      gallery,
+      files: fakeFiles,
+      imageRegistry: new Map(),
+      videoRegistry: new Map(),
+      writeFile: async () => {},
+      ensureDir: async () => {},
+    });
+    await expect(runner.attach("img-stale")).rejects.toThrow(/process restarted/);
+    const j = jobs.get("img-stale");
+    expect(j?.state).toBe("failed");
+  });
+
+  it("attach to a terminal succeeded job returns immediately", async () => {
+    const jobs = new InMemoryJobs();
+    const gallery = new InMemoryGallery();
+    const now = Date.now();
+    jobs.create({
+      id: "done-1",
+      kind: "video",
+      state: "succeeded",
+      providerId: "fake-video",
+      providerJobId: "tt",
+      requestJson: "{}",
+      progress: 1,
+      errorMessage: null,
+      resultItemId: "item-1",
+      createdAt: now,
+      updatedAt: now,
+      finishedAt: now,
+    });
+    const runner = new JobRunner({
+      jobs,
+      gallery,
+      files: fakeFiles,
+      imageRegistry: new Map(),
+      videoRegistry: new Map(),
+      writeFile: async () => {},
+      ensureDir: async () => {},
+    });
+    const result = await runner.attach("done-1");
+    expect(result.state).toBe("succeeded");
+  });
+});

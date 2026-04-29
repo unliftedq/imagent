@@ -1,10 +1,14 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 
+import { registerAssetCommands } from "./commands/asset.js";
+import { registerBoardCommands } from "./commands/board.js";
 import { registerConfigCommand } from "./commands/config.js";
 import { runDoctor } from "./commands/doctor.js";
+import { registerGalleryCommands } from "./commands/gallery.js";
 import { registerGenerateCommand } from "./commands/generate.js";
-import { registerStubCommands } from "./commands/stubs.js";
+import { registerJobCommands } from "./commands/job.js";
+import { registerVideoCommand } from "./commands/video.js";
 import { CLI_VERSION } from "./version.js";
 
 async function main(): Promise<void> {
@@ -30,8 +34,12 @@ async function main(): Promise<void> {
   registerGenerateCommand(program);
   registerConfigCommand(program);
 
-  // M3+ stubs (everything not implemented in M2).
-  registerStubCommands(program);
+  // M3 commands.
+  registerAssetCommands(program);
+  registerBoardCommands(program);
+  registerGalleryCommands(program);
+  registerVideoCommand(program);
+  registerJobCommands(program);
 
   await program.parseAsync(process.argv);
 }

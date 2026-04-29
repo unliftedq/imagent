@@ -46,27 +46,44 @@ function rowToItem(r: GalleryRow): GalleryItem {
 export class GalleryRepository {
   constructor(private readonly db: DatabaseType) {}
 
-  query(query: GalleryQuery): { items: GalleryItem[]; total: number } {
+  query(
+    query: GalleryQuery & { providerId?: string },
+  ): { items: GalleryItem[]; total: number } {
     const where: string[] = [];
     const params: unknown[] = [];
     if (query.kind) {
-      where.push("kind = ?");
+      where.push("g.kind = ?");
       params.push(query.kind);
     }
     if (query.parentId) {
-      where.push("parent_id = ?");
+      where.push("g.parent_id = ?");
       params.push(query.parentId);
     }
     if (query.favoritedOnly) {
-      where.push("favorited = 1");
+      where.push("g.favorited = 1");
+    }
+    if (query.providerId) {
+      where.push("g.provider_id = ?");
+      params.push(query.providerId);
+    }
+    let join = "";
+    if (query.boardId) {
+      join += " JOIN board_items bi ON bi.item_id = g.id";
+      where.push("bi.board_id = ?");
+      params.push(query.boardId);
+    }
+    if (query.search && query.search.trim().length > 0) {
+      join += " JOIN gallery_items_fts f ON g.rowid = f.rowid";
+      where.push("f.gallery_items_fts MATCH ?");
+      params.push(query.search);
     }
     const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
     const totalRow = this.db
-      .prepare(`SELECT COUNT(*) AS n FROM gallery_items ${whereSql}`)
+      .prepare(`SELECT COUNT(*) AS n FROM gallery_items g${join} ${whereSql}`)
       .get(...params) as { n: number };
     const rows = this.db
       .prepare(
-        `SELECT * FROM gallery_items ${whereSql} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+        `SELECT g.* FROM gallery_items g${join} ${whereSql} ORDER BY g.created_at DESC LIMIT ? OFFSET ?`,
       )
       .all(...params, query.limit, query.offset) as GalleryRow[];
     return { items: rows.map(rowToItem), total: totalRow.n };
