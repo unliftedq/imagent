@@ -6,7 +6,7 @@ import type {
   ImageRequest,
   Logger,
   ProviderTestResult,
-} from "@imagine-studio/core";
+} from "@imagine/core";
 import { OpenAIImageProvider } from "../openai/image.js";
 
 const DEFAULT_XAI_BASE_URL = "https://api.x.ai/v1";

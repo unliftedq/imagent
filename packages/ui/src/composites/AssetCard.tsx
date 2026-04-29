@@ -1,4 +1,4 @@
-import type { Asset, AssetKind } from "@imagine-studio/core";
+import type { Asset, AssetKind } from "@imagine/core";
 import { cn } from "../lib/cn.js";
 
 export interface AssetCardProps {

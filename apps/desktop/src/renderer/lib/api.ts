@@ -1,4 +1,4 @@
-import { createIpcClient, type IpcClient, type IpcTransport } from "@imagine-studio/ipc";
+import { createIpcClient, type IpcClient, type IpcTransport } from "@imagine/ipc";
 
 declare global {
   interface Window {

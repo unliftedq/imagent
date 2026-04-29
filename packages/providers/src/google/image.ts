@@ -12,7 +12,7 @@ import {
   type Logger,
   type ProviderTestResult,
   validateImageRequestAgainstModel,
-} from "@imagine-studio/core";
+} from "@imagine/core";
 import { z } from "zod";
 import { aggregateCapabilities, testFailureFromError } from "../openai/image.js";
 import { createHttpClient, type HttpClient } from "../http/index.js";

@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import type { GenerationIntent, ImageRequest, Job } from "@imagine-studio/core";
+import type { GenerationIntent, ImageRequest, Job } from "@imagine/core";
 import chalk from "chalk";
 import type { Command } from "commander";
 

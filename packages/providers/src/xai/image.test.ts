@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ProviderHttpError, type ImageRequest } from "@imagine-studio/core";
+import { ProviderHttpError, type ImageRequest } from "@imagine/core";
 import { XaiImageProvider } from "./image.js";
 import { XAI_IMAGE_MODELS } from "./catalog.js";
 

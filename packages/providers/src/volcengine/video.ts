@@ -15,7 +15,7 @@ import {
   type VideoProvider,
   type VideoRequest,
   validateVideoRequestAgainstModel,
-} from "@imagine-studio/core";
+} from "@imagine/core";
 import { z } from "zod";
 import { createHttpClient, type HttpClient } from "../http/index.js";
 import { testFailureFromError } from "../openai/image.js";

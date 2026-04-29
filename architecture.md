@@ -1,6 +1,6 @@
-# imagine-studio — Architecture
+# imagine — Architecture
 
-A localized image **and** video generation studio shipping as Electron desktop **+** Node CLI from one greenfield monorepo. Single-user, fully local: SQLite + filesystem under `~/.imagine-studio/`, no remote backend, no auth.
+A localized image **and** video generation studio shipping as Electron desktop **+** Node CLI from one greenfield monorepo. Single-user, fully local: SQLite + filesystem under `~/.imagine/`, no remote backend, no auth.
 
 ## 1. Purpose & Scope
 
@@ -29,20 +29,20 @@ A localized image **and** video generation studio shipping as Electron desktop *
 ## 3. Monorepo Layout
 
 ```
-imagine-studio/
+imagine/
   package.json   bun.lock   turbo.json   tsconfig.base.json   biome.jsonc
 
   packages/
-    core/         # @imagine-studio/core         — domain types, ports, use cases (no I/O)
-    providers/    # @imagine-studio/providers    — ImageProvider + VideoProvider impls per vendor
-    persistence/  # @imagine-studio/persistence  — better-sqlite3, migrations, repos, files, thumbnails
-    config/       # @imagine-studio/config       — zod schema, secrets abstraction
-    ipc/          # @imagine-studio/ipc          — zod IPC contract + client/server bindings
-    ui/           # @imagine-studio/ui           — Radix primitives + Tailwind v4 components
+    core/         # @imagine/core         — domain types, ports, use cases (no I/O)
+    providers/    # @imagine/providers    — ImageProvider + VideoProvider impls per vendor
+    persistence/  # @imagine/persistence  — better-sqlite3, migrations, repos, files, thumbnails
+    config/       # @imagine/config       — zod schema, secrets abstraction
+    ipc/          # @imagine/ipc          — zod IPC contract + client/server bindings
+    ui/           # @imagine/ui           — Radix primitives + Tailwind v4 components
 
   apps/
-    desktop/      # @imagine-studio/desktop      — Electron main / preload / renderer (3 Vite configs)
-    cli/          # @imagine-studio/cli (bin: imagine) — Commander, ships as bun-compiled binary
+    desktop/      # @imagine/studio       — Imagine Studio Electron app (3 Vite configs: main / preload / renderer)
+    cli/          # @imagine/cli (bin: imagine) — Commander, ships as bun-compiled binary
 ```
 
 Why Bun + Turbo: matches sibling `editor`, package-manager-familiar from `imagine-cli`. Turbo provides cache for `build/typecheck/test` across 8 packages where `tsc -b` alone breaks down. All packages are private; the CLI binary is the only externally-shippable artifact.
@@ -195,7 +195,7 @@ CREATE TABLE asset_files (
   id            TEXT PRIMARY KEY,
   asset_id      TEXT NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
   role          TEXT NOT NULL CHECK (role IN ('reference','thumbnail')),
-  rel_path      TEXT NOT NULL,               -- relative to ~/.imagine-studio/assets/
+  rel_path      TEXT NOT NULL,               -- relative to ~/.imagine/assets/
   mime_type     TEXT NOT NULL,
   width         INTEGER, height INTEGER,
   bytes         INTEGER NOT NULL,
@@ -225,7 +225,7 @@ CREATE TABLE gallery_items (
   provider_id      TEXT NOT NULL,            -- "openai" | "azure-openai" | "google" | "flux-bfl" | "volcengine" | "xai"
   model            TEXT NOT NULL,
   params_json      TEXT NOT NULL,            -- aspect, size, fps, duration, count, seed, raw provider params
-  rel_path         TEXT NOT NULL,            -- output file under ~/.imagine-studio/gallery/
+  rel_path         TEXT NOT NULL,            -- output file under ~/.imagine/gallery/
   thumb_path       TEXT,
   duration_ms      INTEGER,                  -- video only
   width            INTEGER, height INTEGER,
@@ -287,7 +287,7 @@ CREATE VIRTUAL TABLE assets_fts USING fts5(
 -- Triggers AFTER INSERT/UPDATE/DELETE on each base table mirror into FTS.
 ```
 
-## 6. Filesystem Layout (`~/.imagine-studio/`)
+## 6. Filesystem Layout (`~/.imagine/`)
 
 ```
 config.json               # non-secret app config (zod-validated)
@@ -353,7 +353,7 @@ export const ProviderPreferencesSchema = z.object({
 export const AppPreferencesSchema = z.object({
   theme:                 z.enum(["light","dark","system"]).default("system"),
   defaultProvider:       z.string().default("openai"),
-  defaultOutputDir:      z.string().nullable().default(null),     // null → ~/.imagine-studio/gallery
+  defaultOutputDir:      z.string().nullable().default(null),     // null → ~/.imagine/gallery
   generationConcurrency: z.number().int().min(1).max(8).default(2),
   keepPromptHistory:     z.boolean().default(true),
   openAfterGenerate:     z.boolean().default(false),
@@ -370,7 +370,7 @@ Note: both secrets and preferences are keyed by **provider id** (= vendor). The 
 
 ### 7.2 Access (dependency injection)
 
-`@imagine-studio/config` exposes interfaces, not singletons. Three implementations slot in:
+`@imagine/config` exposes interfaces, not singletons. Three implementations slot in:
 
 ```ts
 export interface ConfigStore {
@@ -394,7 +394,7 @@ CLI startup chains `mergeSecrets(envSecrets, fileSecrets)` — env wins, so `OPE
 ### 7.3 Edit & reload paths
 
 - **UI edits** (Providers / Settings page) → IPC `providers.config.set` / `providers.secrets.set` → main saves → re-instantiates registry → broadcasts `config.changed` → renderer `useConfigStore.refresh()`.
-- **Hand edits** to `config.json` → `fs.watch` detects mtime change → `loadConfig` → broadcasts `config.changed`. Lets `vim ~/.imagine-studio/config.json` workflows just work.
+- **Hand edits** to `config.json` → `fs.watch` detects mtime change → `loadConfig` → broadcasts `config.changed`. Lets `vim ~/.imagine/config.json` workflows just work.
 - **Hand edits to secrets** are not supported in desktop (encrypted blob); CLI users edit `secrets.json` directly or use `imagine config set <vendor>.apiKey ...`.
 - **Workspace state** (`kv` table) flows through `workspace.kv.{get,set,delete}` IPC; only the app itself writes here, no fs watcher needed.
 
@@ -408,7 +408,7 @@ The first-run desktop migration: if `secrets.json` exists alongside no `secrets.
 
 Three Vite configs (matches sibling `agentra`): `vite.main.config.ts`, `vite.preload.config.ts`, `vite.renderer.config.ts`. HMR for renderer, watch+restart for main/preload.
 
-- **Main**: owns DB handle, FS, JobRunner, polling intervals, native dialogs, safeStorage. Imports `@imagine-studio/{persistence,providers,config,ipc}`.
+- **Main**: owns DB handle, FS, JobRunner, polling intervals, native dialogs, safeStorage. Imports `@imagine/{persistence,providers,config,ipc}`.
 - **Preload**: thin — exposes `window.api` as a typed Proxy mirroring the IPC contract; subscribes to push events.
 - **Renderer**: React 19 + Tailwind v4 + Radix + Phosphor. Never imports Node modules. Talks only via `window.api`.
 
@@ -491,7 +491,7 @@ Primitives: Radix `Dialog / DropdownMenu / Select / Tabs / ScrollArea / Tooltip 
 - **Dev**:
   - Root: `bun run dev` → Turbo runs `dev` everywhere.
   - CLI: `tsc -b && node dist/index.js <args>` (Node, not Bun, because of the SQLite constraint above).
-  - Desktop: `concurrently` runs three Vite watchers (main / preload / renderer) + an Electron launcher waiting on `dist/main/main.mjs`. Electron's embedded Node loads `better-sqlite3` natively after a one-time `bun run --filter @imagine-studio/desktop rebuild` (see *Native rebuild* below).
+  - Desktop: `concurrently` runs three Vite watchers (main / preload / renderer) + an Electron launcher waiting on `dist/main/main.mjs`. Electron's embedded Node loads `better-sqlite3` natively after a one-time `bun run --filter @imagine/desktop rebuild` (see *Native rebuild* below).
 
 - **Build**:
   - Packages: `tsc -b` via Turbo.
@@ -505,7 +505,7 @@ Primitives: Radix `Dialog / DropdownMenu / Select / Tabs / ScrollArea / Tooltip 
   - CLI: **Node SEA** (Single Executable Applications, stdlib since Node 21) bundles the CLI + Node runtime into one `imagine.exe`. Migrations and any other static assets get embedded via SEA's asset map. Alternative: `pkg` if Node SEA's Windows code-signing story remains rough at M8.
 
 - **Native rebuild (manual, not postinstall)**: `better-sqlite3` and `sharp` ship prebuilt binaries for the **host Node ABI**, which is what `bun install` lands. Electron 33 embeds a *different* Node ABI, so the desktop app needs `@electron/rebuild` to swap in Electron-ABI binaries. Running this on every `bun install` would also break the CLI and `packages/persistence` tests (which use host Node), so we **don't** wire it into `postinstall`. Instead:
-  - `bun run --filter @imagine-studio/desktop rebuild` — switches `better-sqlite3` + `sharp` to Electron ABI before launching desktop.
+  - `bun run --filter @imagine/desktop rebuild` — switches `better-sqlite3` + `sharp` to Electron ABI before launching desktop.
   - `npm rebuild better-sqlite3` (run inside `node_modules/.bun/better-sqlite3@x.y.z/node_modules/better-sqlite3`) — switches back to host Node ABI before running CLI / persistence tests.
   - The flip is fast (<5s) but a real source of "why does my test suite suddenly fail" if you forget. M8 packaging will pin Electron-ABI binaries inside the produced `electron-builder` artifact.
 

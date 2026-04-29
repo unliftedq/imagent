@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import type { Asset, AssetFile, AssetKind } from "@imagine-studio/core";
+import type { Asset, AssetFile, AssetKind } from "@imagine/core";
 import {
   AssetRepository,
   createPathResolver,
@@ -10,7 +10,7 @@ import {
   generateImageThumbnail,
   openDatabase,
   readImageMetadata,
-} from "@imagine-studio/persistence";
+} from "@imagine/persistence";
 import chalk from "chalk";
 import type { Command } from "commander";
 

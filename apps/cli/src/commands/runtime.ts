@@ -5,7 +5,7 @@ import {
   createFileSecretsStore,
   mergeSecrets,
   type ProviderSecrets,
-} from "@imagine-studio/config";
+} from "@imagine/config";
 import {
   type FilesServicePort,
   type GalleryRepositoryPort,
@@ -15,7 +15,7 @@ import {
   type Logger,
   type VideoRegistry,
   createConsoleLogger,
-} from "@imagine-studio/core";
+} from "@imagine/core";
 import {
   type DatabaseType,
   GalleryRepository,
@@ -24,8 +24,8 @@ import {
   createPathResolver,
   ensureDataDir,
   openDatabase,
-} from "@imagine-studio/persistence";
-import { createImageRegistry, createVideoRegistry } from "@imagine-studio/providers";
+} from "@imagine/persistence";
+import { createImageRegistry, createVideoRegistry } from "@imagine/providers";
 
 export interface CliRuntime {
   resolver: PathResolver;

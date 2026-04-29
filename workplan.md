@@ -1,6 +1,6 @@
-# imagine-studio — Work Plan
+# imagine — Work Plan
 
-Execution sequence to take `Q:/development/imagine-studio` from empty to a packaged Electron app + bun-compiled CLI binary. Architectural decisions live in [`architecture.md`](./architecture.md); this document is the order of operations and acceptance bar.
+Execution sequence to take the `imagine` monorepo (located at `Q:/development/imagine-studio`) from empty to a packaged Electron app + bun-compiled CLI binary. Architectural decisions live in [`architecture.md`](./architecture.md); this document is the order of operations and acceptance bar.
 
 ## 0. Confirmed Decisions
 
@@ -34,11 +34,11 @@ Bun + Turbo monorepo skeleton. `core` ports, `persistence` with migrations + rep
 
 **Acceptance**
 - `bun install` + `bun run typecheck` pass cleanly.
-- `bun run --filter @imagine-studio/cli dev doctor` prints something like:
+- `bun run --filter @imagine/cli dev doctor` prints something like:
   ```
-  imagine-studio v0.0.1
-  DB:        ~/.imagine-studio/studio.db (FTS=ok)
-  Config:    ~/.imagine-studio/config.json (defaults)
+  imagine v0.0.1
+  DB:        ~/.imagine/studio.db (FTS=ok)
+  Config:    ~/.imagine/config.json (defaults)
   Providers: 0 / 6 configured
   ```
 
@@ -54,9 +54,9 @@ All six vendors implemented with mocked-HTTP unit tests. Image `generate()` and 
 - HTTP-mocked unit tests per vendor (one happy path, one error path, one polling/timeout path for video).
 
 **Acceptance**
-- `bun run --filter @imagine-studio/providers test` green.
-- `imagine config set openai.apiKey ...` persists to `~/.imagine-studio/secrets.json` (chmod 600).
-- `imagine generate "a tiny otter on a lily pad" --provider openai` writes a real PNG to `~/.imagine-studio/gallery/<yyyy>/<mm>/<id>.png` and inserts a `gallery_items` row.
+- `bun run --filter @imagine/providers test` green.
+- `imagine config set openai.apiKey ...` persists to `~/.imagine/secrets.json` (chmod 600).
+- `imagine generate "a tiny otter on a lily pad" --provider openai` writes a real PNG to `~/.imagine/gallery/<yyyy>/<mm>/<id>.png` and inserts a `gallery_items` row.
 
 ### M3 — CLI Parity
 
@@ -84,10 +84,10 @@ Three Vite configs, IPC contract wired end-to-end, **Settings** and **Providers*
 - `packages/ipc` complete: `contract.ts`, `server.ts` (registers handlers on `ipcMain`), `client.ts` (renderer Proxy), `events.ts`.
 - `packages/ui` with Radix-wrapped primitives + Tailwind v4 `@theme`.
 - Renderer scaffold: `main.tsx`, `routes.tsx`, layout shell, **Providers** + **Settings** pages.
-- First-run migration: if `~/.imagine-studio/secrets.json` exists, encrypt to `secrets.bin` and delete plaintext.
+- First-run migration: if `~/.imagine/secrets.json` exists, encrypt to `secrets.bin` and delete plaintext.
 
 **Acceptance**
-- `bun run --filter @imagine-studio/desktop dev` opens an Electron window in <3s.
+- `bun run --filter @imagine/desktop dev` opens an Electron window in <3s.
 - Providers page shows all six vendors; entering keys + clicking *Test* turns each indicator green when valid.
 - Closing and reopening the app, the keys persist (decrypted via `safeStorage`).
 
@@ -150,7 +150,7 @@ FTS-backed search, asset archive/restore, signed installers, README + screenshot
 
 **Acceptance**
 - FTS query `prompt:otter` returns the M2 item; no full-table scan in `EXPLAIN QUERY PLAN`.
-- Install NSIS installer on a clean Windows VM → first launch creates `~/.imagine-studio/`, app boots, `imagine.exe doctor` works from a fresh shell.
+- Install NSIS installer on a clean Windows VM → first launch creates `~/.imagine/`, app boots, `imagine.exe doctor` works from a fresh shell.
 - Total cold-start time on the user's host < 2s.
 
 ## 2. Open Items — Status (v1 shipped)
@@ -173,15 +173,15 @@ bun install
 bun run typecheck
 
 # tests
-bun run --filter '@imagine-studio/*' test
+bun run --filter '@imagine/*' test
 
 # CLI dev (tsc -b && node dist/index.js — see architecture.md §11)
-bun run --filter @imagine-studio/cli dev generate "a tiny otter"
+bun run --filter @imagine/cli dev generate "a tiny otter"
 
 # desktop dev (3 Vite watchers + Electron)
 # First-time / after switching from CLI/persistence tests: rebuild native modules for Electron's ABI
-bun run --filter @imagine-studio/desktop rebuild
-bun run --filter @imagine-studio/desktop dev
+bun run --filter @imagine/desktop rebuild
+bun run --filter @imagine/desktop dev
 
 # Switching back to CLI or persistence tests after running desktop:
 # native modules need to be rebuilt for host Node ABI — see architecture.md §11.
@@ -190,10 +190,10 @@ bun run --filter @imagine-studio/desktop dev
 bun run build
 
 # package the desktop installer
-bun run --filter @imagine-studio/desktop package
+bun run --filter @imagine/desktop package
 
 # build the CLI single-file binary (Node SEA — see architecture.md §11)
-bun run --filter @imagine-studio/cli build:binary
+bun run --filter @imagine/cli build:binary
 ```
 
 Per-milestone end-to-end checks (Windows 11, the user's host):
@@ -201,7 +201,7 @@ Per-milestone end-to-end checks (Windows 11, the user's host):
 | Milestone | Command | Expected |
 |---|---|---|
 | M1 | `imagine doctor` | DB path printed, FTS=ok, providers=0/6 |
-| M2 | `imagine generate "a tiny otter"` | PNG under `~/.imagine-studio/gallery/`, `gallery_items` row |
+| M2 | `imagine generate "a tiny otter"` | PNG under `~/.imagine/gallery/`, `gallery_items` row |
 | M3 | `imagine video "rotating crystal" --provider volcengine --model seedance-1.0-pro --wait` | MP4 path printed |
 | M4 | desktop dev → Providers page | Each test indicator green for valid keys |
 | M5 | desktop → Studio → Generate | Result in Gallery within 1s; drag into Board persists |

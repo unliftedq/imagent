@@ -1,4 +1,4 @@
-import { ImageModelEntrySchema, VideoModelEntrySchema } from "@imagine-studio/core";
+import { ImageModelEntrySchema, VideoModelEntrySchema } from "@imagine/core";
 import { z } from "zod";
 
 /**

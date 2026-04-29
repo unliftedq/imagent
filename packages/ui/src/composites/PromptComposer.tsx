@@ -1,5 +1,5 @@
 import { useEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
-import type { Asset, AssetKind } from "@imagine-studio/core";
+import type { Asset, AssetKind } from "@imagine/core";
 import { Plus } from "@phosphor-icons/react";
 import { cn } from "../lib/cn.js";
 import { Tooltip } from "../primitives/Tooltip.js";

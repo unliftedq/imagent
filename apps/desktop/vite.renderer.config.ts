@@ -15,7 +15,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  */
 function nodeProtocolShim(): Plugin {
   return {
-    name: "imagine-studio:node-protocol-shim",
+    name: "imagine:node-protocol-shim",
     enforce: "pre",
     async resolveId(source) {
       if (source === "node:events") {

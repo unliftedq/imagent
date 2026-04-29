@@ -2,8 +2,8 @@ import {
   type ProviderSecrets,
   ProviderSecretsSchema,
   createFileSecretsStore,
-} from "@imagine-studio/config";
-import { createPathResolver, ensureDataDir } from "@imagine-studio/persistence";
+} from "@imagine/config";
+import { createPathResolver, ensureDataDir } from "@imagine/persistence";
 import chalk from "chalk";
 import type { Command } from "commander";
 
@@ -20,7 +20,7 @@ import type { Command } from "commander";
 export function registerConfigCommand(program: Command): void {
   const config = program
     .command("config")
-    .description("Inspect and edit ~/.imagine-studio/config.json and secrets.json");
+    .description("Inspect and edit ~/.imagine/config.json and secrets.json");
 
   config
     .command("set <key> <value>")

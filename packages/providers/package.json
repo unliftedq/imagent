@@ -1,5 +1,5 @@
 {
-  "name": "@imagine-studio/providers",
+  "name": "@imagine/providers",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -18,8 +18,8 @@
     "clean": "rm -rf dist .tsbuildinfo"
   },
   "dependencies": {
-    "@imagine-studio/config": "workspace:*",
-    "@imagine-studio/core": "workspace:*",
+    "@imagine/config": "workspace:*",
+    "@imagine/core": "workspace:*",
     "zod": "^3.24.0"
   },
   "devDependencies": {

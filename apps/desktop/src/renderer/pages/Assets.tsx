@@ -8,9 +8,9 @@ import {
   Input,
   Tabs,
   Textarea,
-} from "@imagine-studio/ui";
-import type { Asset, AssetKind } from "@imagine-studio/core";
-import { IpcClientError } from "@imagine-studio/ipc";
+} from "@imagine/ui";
+import type { Asset, AssetKind } from "@imagine/core";
+import { IpcClientError } from "@imagine/ipc";
 import { api } from "../lib/api.js";
 import { useAssetsStore } from "../state/useAssetsStore.js";
 import { useUIStore } from "../state/useUIStore.js";
@@ -29,7 +29,7 @@ const KIND_LABEL: Record<AssetKind, string> = {
  */
 const TRASH_TAB = "__trash__" as const;
 type AssetsTab = AssetKind | typeof TRASH_TAB;
-const ACTIVE_TAB_LS_KEY = "imagine-studio.activeAssetTab.v1";
+const ACTIVE_TAB_LS_KEY = "imagine.activeAssetTab.v1";
 const MAX_UPLOADS = 10;
 
 /**

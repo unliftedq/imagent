@@ -11,7 +11,7 @@ import { type Logger, NoopLogger } from "./logger.js";
 // ---------------------------------------------------------------------------
 // Repository / files contracts.
 //
-// JobRunner lives in `core`, which must not import @imagine-studio/persistence
+// JobRunner lives in `core`, which must not import @imagine/persistence
 // (better-sqlite3 is a runtime concern). The runner depends on duck-typed
 // interfaces; the persistence package's `JobRepository` and
 // `GalleryRepository` already satisfy these once the M2 implementations land.

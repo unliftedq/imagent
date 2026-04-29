@@ -4,9 +4,9 @@ import {
   createFileSecretsStore,
   mergeSecrets,
   type ProviderSecrets,
-} from "@imagine-studio/config";
-import { countFtsTables, createPathResolver, ensureDataDir, openDatabase } from "@imagine-studio/persistence";
-import { TOTAL_PROVIDER_COUNT, configuredProviderCount } from "@imagine-studio/providers";
+} from "@imagine/config";
+import { countFtsTables, createPathResolver, ensureDataDir, openDatabase } from "@imagine/persistence";
+import { TOTAL_PROVIDER_COUNT, configuredProviderCount } from "@imagine/providers";
 import chalk from "chalk";
 
 import { CLI_VERSION } from "../version.js";
@@ -38,7 +38,7 @@ export async function runDoctor(): Promise<void> {
   const configured = configuredProviderCount(secrets);
 
   // ----- print --------------------------------------------------------
-  process.stdout.write(`${chalk.bold(`imagine-studio v${CLI_VERSION}`)}\n`);
+  process.stdout.write(`${chalk.bold(`imagine v${CLI_VERSION}`)}\n`);
   process.stdout.write(`${chalk.dim("DB:        ")}${dbPath} ${ftsBadge(ftsStatus)}\n`);
   process.stdout.write(`${chalk.dim("Config:    ")}${configPath} (${configLabel})\n`);
   process.stdout.write(

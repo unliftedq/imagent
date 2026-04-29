@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "imagine-studio",
+      "name": "imagine",
       "devDependencies": {
         "@biomejs/biome": "^2.0.0",
         "@types/node": "^22.10.0",
@@ -13,16 +13,16 @@
       },
     },
     "apps/cli": {
-      "name": "@imagine-studio/cli",
+      "name": "@imagine/cli",
       "version": "0.0.1",
       "bin": {
         "imagine": "./dist/index.js",
       },
       "dependencies": {
-        "@imagine-studio/config": "workspace:*",
-        "@imagine-studio/core": "workspace:*",
-        "@imagine-studio/persistence": "workspace:*",
-        "@imagine-studio/providers": "workspace:*",
+        "@imagine/config": "workspace:*",
+        "@imagine/core": "workspace:*",
+        "@imagine/persistence": "workspace:*",
+        "@imagine/providers": "workspace:*",
         "chalk": "^5.3.0",
         "commander": "^12.1.0",
       },
@@ -33,16 +33,16 @@
       },
     },
     "apps/desktop": {
-      "name": "@imagine-studio/desktop",
+      "name": "@imagine/studio",
       "version": "0.0.1",
       "dependencies": {
         "@dnd-kit/core": "^6.3.1",
-        "@imagine-studio/config": "workspace:*",
-        "@imagine-studio/core": "workspace:*",
-        "@imagine-studio/ipc": "workspace:*",
-        "@imagine-studio/persistence": "workspace:*",
-        "@imagine-studio/providers": "workspace:*",
-        "@imagine-studio/ui": "workspace:*",
+        "@imagine/config": "workspace:*",
+        "@imagine/core": "workspace:*",
+        "@imagine/ipc": "workspace:*",
+        "@imagine/persistence": "workspace:*",
+        "@imagine/providers": "workspace:*",
+        "@imagine/ui": "workspace:*",
         "@phosphor-icons/react": "^2.1.7",
         "@radix-ui/react-dialog": "^1.1.15",
         "@radix-ui/react-dropdown-menu": "^2.1.16",
@@ -69,10 +69,10 @@
       },
     },
     "packages/config": {
-      "name": "@imagine-studio/config",
+      "name": "@imagine/config",
       "version": "0.0.1",
       "dependencies": {
-        "@imagine-studio/core": "workspace:*",
+        "@imagine/core": "workspace:*",
         "zod": "^3.24.0",
       },
       "devDependencies": {
@@ -80,7 +80,7 @@
       },
     },
     "packages/core": {
-      "name": "@imagine-studio/core",
+      "name": "@imagine/core",
       "version": "0.0.1",
       "dependencies": {
         "zod": "^3.24.0",
@@ -90,10 +90,10 @@
       },
     },
     "packages/ipc": {
-      "name": "@imagine-studio/ipc",
+      "name": "@imagine/ipc",
       "version": "0.0.1",
       "dependencies": {
-        "@imagine-studio/core": "workspace:*",
+        "@imagine/core": "workspace:*",
         "zod": "^3.24.0",
       },
       "devDependencies": {
@@ -101,10 +101,10 @@
       },
     },
     "packages/persistence": {
-      "name": "@imagine-studio/persistence",
+      "name": "@imagine/persistence",
       "version": "0.0.1",
       "dependencies": {
-        "@imagine-studio/core": "workspace:*",
+        "@imagine/core": "workspace:*",
         "better-sqlite3": "^12.0.0",
         "ffmpeg-static": "^5.3.0",
         "sharp": "^0.34.5",
@@ -115,11 +115,11 @@
       },
     },
     "packages/providers": {
-      "name": "@imagine-studio/providers",
+      "name": "@imagine/providers",
       "version": "0.0.1",
       "dependencies": {
-        "@imagine-studio/config": "workspace:*",
-        "@imagine-studio/core": "workspace:*",
+        "@imagine/config": "workspace:*",
+        "@imagine/core": "workspace:*",
         "zod": "^3.24.0",
       },
       "devDependencies": {
@@ -127,12 +127,12 @@
       },
     },
     "packages/ui": {
-      "name": "@imagine-studio/ui",
+      "name": "@imagine/ui",
       "version": "0.0.1",
       "dependencies": {
         "@dnd-kit/core": "^6.3.1",
-        "@imagine-studio/core": "workspace:*",
-        "@imagine-studio/ipc": "workspace:*",
+        "@imagine/core": "workspace:*",
+        "@imagine/ipc": "workspace:*",
         "@phosphor-icons/react": "^2.1.7",
         "@radix-ui/react-dialog": "^1.1.4",
         "@radix-ui/react-dropdown-menu": "^2.1.4",
@@ -318,21 +318,21 @@
 
     "@hapi/topo": ["@hapi/topo@6.0.2", "", { "dependencies": { "@hapi/hoek": "^11.0.2" } }, "sha512-KR3rD5inZbGMrHmgPxsJ9dbi6zEK+C3ZwUwTa+eMwWLz7oijWUTWD2pMSNNYJAU6Qq+65NkxXjqHr/7LM2Xkqg=="],
 
-    "@imagine-studio/cli": ["@imagine-studio/cli@workspace:apps/cli"],
+    "@imagine/cli": ["@imagine/cli@workspace:apps/cli"],
 
-    "@imagine-studio/config": ["@imagine-studio/config@workspace:packages/config"],
+    "@imagine/config": ["@imagine/config@workspace:packages/config"],
 
-    "@imagine-studio/core": ["@imagine-studio/core@workspace:packages/core"],
+    "@imagine/core": ["@imagine/core@workspace:packages/core"],
 
-    "@imagine-studio/desktop": ["@imagine-studio/desktop@workspace:apps/desktop"],
+    "@imagine/ipc": ["@imagine/ipc@workspace:packages/ipc"],
 
-    "@imagine-studio/ipc": ["@imagine-studio/ipc@workspace:packages/ipc"],
+    "@imagine/persistence": ["@imagine/persistence@workspace:packages/persistence"],
 
-    "@imagine-studio/persistence": ["@imagine-studio/persistence@workspace:packages/persistence"],
+    "@imagine/providers": ["@imagine/providers@workspace:packages/providers"],
 
-    "@imagine-studio/providers": ["@imagine-studio/providers@workspace:packages/providers"],
+    "@imagine/studio": ["@imagine/studio@workspace:apps/desktop"],
 
-    "@imagine-studio/ui": ["@imagine-studio/ui@workspace:packages/ui"],
+    "@imagine/ui": ["@imagine/ui@workspace:packages/ui"],
 
     "@img/colour": ["@img/colour@1.1.0", "", {}, "sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ=="],
 
@@ -720,7 +720,7 @@
 
     "check-error": ["check-error@2.1.3", "", {}, "sha512-PAJdDJusoxnwm1VwW07VWwUN1sl7smmC3OKggvndJFadxxDRyFJBX/ggnu/KE4kQAB7a3Dp8f/YXC1FlUprWmA=="],
 
-    "chownr": ["chownr@3.0.0", "", {}, "sha512-+IxzY9BZOQd/XuYPRmrvEVjF/nqj5kgT4kEq7VofrDoM1MxoRjEWkrCC3EtLi59TVawxTAn+orJwFQcrqEN1+g=="],
+    "chownr": ["chownr@1.1.4", "", {}, "sha512-jJ0bqzaylmJtVnNgzTeSOs8DPavpbYgEr/b0YL8/2GO3xJEhInFmhKMUnEJQjZumK7KXGFhUy89PrsJWlakBVg=="],
 
     "chromium-pickle-js": ["chromium-pickle-js@0.2.0", "", {}, "sha512-1R5Fho+jBq0DDydt+/vHWj5KJNJCKdARKOCwZUen84I5BreWoLqRLANH1U87eJy1tiASPtMnGqJJq0ZsLoRPOw=="],
 
@@ -1410,7 +1410,7 @@
 
     "prebuild-install/node-abi": ["node-abi@3.89.0", "", { "dependencies": { "semver": "^7.3.5" } }, "sha512-6u9UwL0HlAl21+agMN3YAMXcKByMqwGx+pq+P76vii5f7hTPtKDp08/H9py6DY+cfDw7kQNTGEj/rly3IgbNQA=="],
 
-    "tar-fs/chownr": ["chownr@1.1.4", "", {}, "sha512-jJ0bqzaylmJtVnNgzTeSOs8DPavpbYgEr/b0YL8/2GO3xJEhInFmhKMUnEJQjZumK7KXGFhUy89PrsJWlakBVg=="],
+    "tar/chownr": ["chownr@3.0.0", "", {}, "sha512-+IxzY9BZOQd/XuYPRmrvEVjF/nqj5kgT4kEq7VofrDoM1MxoRjEWkrCC3EtLi59TVawxTAn+orJwFQcrqEN1+g=="],
 
     "tiny-async-pool/semver": ["semver@5.7.2", "", { "bin": { "semver": "bin/semver" } }, "sha512-cBznnQ9KjJqU67B52RMC65CMarK2600WFnbkcaiwWq3xy/5haFJlshgnpjovMVJ+Hff49d8GEn0b87C5pDQ10g=="],
 

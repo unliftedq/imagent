@@ -4,9 +4,9 @@ import { fileURLToPath } from "node:url";
 import {
   createElectronSecretsStore,
   createFileConfigStore,
-} from "@imagine-studio/config";
-import { ensureDataDir, openDatabase } from "@imagine-studio/persistence";
-import type { Logger } from "@imagine-studio/core";
+} from "@imagine/config";
+import { ensureDataDir, openDatabase } from "@imagine/persistence";
+import type { Logger } from "@imagine/core";
 import { createDesktopPathResolver } from "./app-paths.js";
 import { bootstrapRuntime, type RuntimeServices } from "./job-runner-bootstrap.js";
 import { setupIpc } from "./ipc-handlers.js";
@@ -33,7 +33,7 @@ async function createWindow() {
     minHeight: 640,
     backgroundColor: "#fffaf0",
     autoHideMenuBar: true,
-    title: "imagine-studio",
+    title: "Imagine Studio",
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,

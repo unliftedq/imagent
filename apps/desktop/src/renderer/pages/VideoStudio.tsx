@@ -7,7 +7,7 @@ import {
   PromptComposer,
   Select,
   type ResolvedModelOption,
-} from "@imagine-studio/ui";
+} from "@imagine/ui";
 import type {
   Asset,
   AssetKind,
@@ -15,9 +15,9 @@ import type {
   Job,
   VideoModelDef,
   VideoRequest,
-} from "@imagine-studio/core";
-import type { ProviderId } from "@imagine-studio/ipc";
-import { IpcClientError } from "@imagine-studio/ipc";
+} from "@imagine/core";
+import type { ProviderId } from "@imagine/ipc";
+import { IpcClientError } from "@imagine/ipc";
 import { api } from "../lib/api.js";
 import { useAssetsStore } from "../state/useAssetsStore.js";
 import { useConfigStore } from "../state/useConfigStore.js";

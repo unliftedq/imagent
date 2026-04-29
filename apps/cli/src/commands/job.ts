@@ -4,14 +4,14 @@ import type {
   Job,
   JobProgressEvent,
   JobState,
-} from "@imagine-studio/core";
+} from "@imagine/core";
 import {
   GalleryRepository,
   JobRepository,
   createPathResolver,
   ensureDataDir,
   openDatabase,
-} from "@imagine-studio/persistence";
+} from "@imagine/persistence";
 import chalk from "chalk";
 import type { Command } from "commander";
 

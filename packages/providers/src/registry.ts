@@ -5,9 +5,9 @@ import type {
   VideoCatalog,
   VideoModelDef,
   VideoProvider,
-} from "@imagine-studio/core";
-import { resolveImageModel, resolveVideoModel } from "@imagine-studio/core";
-import type { ProviderPreferences, ProviderSecrets } from "@imagine-studio/config";
+} from "@imagine/core";
+import { resolveImageModel, resolveVideoModel } from "@imagine/core";
+import type { ProviderPreferences, ProviderSecrets } from "@imagine/config";
 
 import { OPENAI_CATALOG } from "./openai/catalog.js";
 import { OpenAIImageProvider } from "./openai/image.js";

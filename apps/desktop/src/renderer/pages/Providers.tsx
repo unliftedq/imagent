@@ -5,8 +5,8 @@ import {
   Input,
   ProviderRow,
   type ProviderTestStatus,
-} from "@imagine-studio/ui";
-import type { ProviderId, ProviderPreferencesPayload, SecretsWrite } from "@imagine-studio/ipc";
+} from "@imagine/ui";
+import type { ProviderId, ProviderPreferencesPayload, SecretsWrite } from "@imagine/ipc";
 import { useConfigStore } from "../state/useConfigStore.js";
 
 interface RowState {

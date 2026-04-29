@@ -1,4 +1,4 @@
-import type { ImageCatalog, ImageModelDef } from "@imagine-studio/core";
+import type { ImageCatalog, ImageModelDef } from "@imagine/core";
 
 /** Built-in OpenAI image models. Source of truth for capabilities. */
 export const OPENAI_IMAGE_MODELS: Record<string, ImageModelDef> = {

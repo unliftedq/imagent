@@ -5,7 +5,7 @@ import {
   isAbortError,
   type Logger,
   NoopLogger,
-} from "@imagine-studio/core";
+} from "@imagine/core";
 import { type ZodTypeAny, z } from "zod";
 
 /**

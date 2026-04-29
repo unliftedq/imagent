@@ -5,7 +5,7 @@ import type {
   Job,
   JobProgressEvent,
   VideoRequest,
-} from "@imagine-studio/core";
+} from "@imagine/core";
 import chalk from "chalk";
 import type { Command } from "commander";
 

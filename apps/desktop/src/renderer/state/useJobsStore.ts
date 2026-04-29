@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Job, JobsQuery } from "@imagine-studio/core";
+import type { Job, JobsQuery } from "@imagine/core";
 import { api } from "../lib/api.js";
 
 interface JobProgressEvent {

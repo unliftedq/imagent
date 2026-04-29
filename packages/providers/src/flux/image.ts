@@ -15,7 +15,7 @@ import {
   type Logger,
   type ProviderTestResult,
   validateImageRequestAgainstModel,
-} from "@imagine-studio/core";
+} from "@imagine/core";
 import { z } from "zod";
 import { aggregateCapabilities, testFailureFromError } from "../openai/image.js";
 import { createHttpClient, type HttpClient } from "../http/index.js";
@@ -164,7 +164,7 @@ export class FluxImageProvider implements ImageProvider {
     const started = Date.now();
     // Use a syntactically-plausible-but-impossible task id so the only way
     // we get a 200 back is if the API changes shape under us.
-    const fakeId = "imagine-studio-probe-0000-0000-0000-000000000000";
+    const fakeId = "imagine-probe-0000-0000-0000-000000000000";
     const url = `${this.baseUrl}/v1/get_result?id=${encodeURIComponent(fakeId)}`;
     try {
       const opts: { signal?: AbortSignal } = {};

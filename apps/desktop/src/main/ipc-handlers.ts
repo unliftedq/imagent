@@ -8,12 +8,12 @@ import {
   type ProviderSecrets,
   type SecretsStore,
   DEFAULT_CONFIG,
-} from "@imagine-studio/config";
+} from "@imagine/config";
 import {
   configuredProviderCount as _unused,
   type ImageRegistry,
   type VideoRegistry,
-} from "@imagine-studio/providers";
+} from "@imagine/providers";
 import {
   AssetRepository,
   BoardRepository,
@@ -23,14 +23,14 @@ import {
   generateImageThumbnailFromBuffer,
   type DatabaseType,
   type PathResolver,
-} from "@imagine-studio/persistence";
+} from "@imagine/persistence";
 import {
   IpcHandlerError,
   notImplemented,
   registerIpcHandlers,
   type ContractHandlers,
   type IpcServer,
-} from "@imagine-studio/ipc";
+} from "@imagine/ipc";
 import type {
   Asset,
   AssetFile,
@@ -41,12 +41,12 @@ import type {
   Job,
   Logger,
   VideoRequest,
-} from "@imagine-studio/core";
+} from "@imagine/core";
 import {
   appendStylePromptSnippets,
   capReferencePaths,
   resolveAssetSlots,
-} from "@imagine-studio/core";
+} from "@imagine/core";
 import sharp from "sharp";
 import type { RuntimeServices } from "./job-runner-bootstrap.js";
 
@@ -816,7 +816,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
 
     /**
      * Permanent delete — removes the `assets` row, cascades `asset_files`,
-     * and rm-rf's `~/.imagine-studio/assets/<id>/`. Irreversible. The Assets
+     * and rm-rf's `~/.imagine/assets/<id>/`. Irreversible. The Assets
      * page surfaces archive-first; this fires from "Delete permanently" only.
      */
     "assets.delete": async ({ id }) => {

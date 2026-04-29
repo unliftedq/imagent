@@ -260,7 +260,7 @@ async function writePlaceholder(
 
 /**
  * `ThumbnailServicePort`-shaped adapter that wraps `generateVideoThumbnail`
- * for the JobRunner. JobRunner imports the port type from `@imagine-studio/core`;
+ * for the JobRunner. JobRunner imports the port type from `@imagine/core`;
  * persistence implements it without coupling the runner to ffmpeg-static.
  */
 export const videoThumbnailService = {

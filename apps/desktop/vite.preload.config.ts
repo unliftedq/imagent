@@ -6,7 +6,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Preload process — runs in a privileged-but-isolated context. Bundles to
- * a single CJS file. Workspace deps (`@imagine-studio/ipc`) are inlined so
+ * a single CJS file. Workspace deps (`@imagine/ipc`) are inlined so
  * the preload can call `createPreloadBridge` without resolving relative
  * imports at runtime.
  */

@@ -9,7 +9,7 @@ import {
   JobsQuerySchema,
   VideoModelDefSchema,
   VideoRequestSchema,
-} from "@imagine-studio/core";
+} from "@imagine/core";
 import { z } from "zod";
 
 /**

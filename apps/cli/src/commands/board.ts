@@ -6,7 +6,7 @@ import {
   createPathResolver,
   ensureDataDir,
   openDatabase,
-} from "@imagine-studio/persistence";
+} from "@imagine/persistence";
 import chalk from "chalk";
 import type { Command } from "commander";
 

@@ -16,8 +16,8 @@ import {
   Icons,
   Input,
   Tooltip,
-} from "@imagine-studio/ui";
-import type { Board, GalleryItem } from "@imagine-studio/core";
+} from "@imagine/ui";
+import type { Board, GalleryItem } from "@imagine/core";
 import { api } from "../lib/api.js";
 import { useBoardsStore } from "../state/useBoardsStore.js";
 import { useGalleryStore } from "../state/useGalleryStore.js";

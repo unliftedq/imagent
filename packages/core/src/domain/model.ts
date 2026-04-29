@@ -46,7 +46,7 @@ export type VideoModelEntry = z.infer<typeof VideoModelEntrySchema>;
 
 /**
  * Built-in catalog shape: providerId → modelId → ImageModelDef/VideoModelDef.
- * Concrete catalogs live in @imagine-studio/providers.
+ * Concrete catalogs live in @imagine/providers.
  */
 export type ImageCatalog = Record<string, Record<string, ImageModelDef>>;
 export type VideoCatalog = Record<string, Record<string, VideoModelDef>>;

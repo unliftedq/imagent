@@ -3,7 +3,7 @@ import type {
   ImageModelDef,
   VideoCatalog,
   VideoModelDef,
-} from "@imagine-studio/core";
+} from "@imagine/core";
 
 /**
  * Volcengine (Ark) hosts two model families under one provider:

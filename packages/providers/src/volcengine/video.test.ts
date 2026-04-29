@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ProviderHttpError, type VideoRequest } from "@imagine-studio/core";
+import { ProviderHttpError, type VideoRequest } from "@imagine/core";
 import { VolcengineVideoProvider } from "./video.js";
 import { VOLCENGINE_VIDEO_MODELS } from "./catalog.js";
 

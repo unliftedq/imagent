@@ -1,4 +1,4 @@
-import type { ImageCatalog, ImageModelDef } from "@imagine-studio/core";
+import type { ImageCatalog, ImageModelDef } from "@imagine/core";
 
 /**
  * Azure OpenAI deployments are user-named (`my-image-prod`), so the catalog

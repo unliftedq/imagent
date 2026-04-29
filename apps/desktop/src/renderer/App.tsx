@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { TooltipProvider, useTheme } from "@imagine-studio/ui";
+import { TooltipProvider, useTheme } from "@imagine/ui";
 import { ROUTES } from "./routes.js";
 import { useUIStore } from "./state/useUIStore.js";
 import { useConfigStore } from "./state/useConfigStore.js";

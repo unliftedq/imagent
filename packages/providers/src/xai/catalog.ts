@@ -1,4 +1,4 @@
-import type { ImageCatalog, ImageModelDef } from "@imagine-studio/core";
+import type { ImageCatalog, ImageModelDef } from "@imagine/core";
 
 /**
  * Built-in xAI image models. xAI's image API is OpenAI-compatible against

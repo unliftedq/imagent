@@ -6,7 +6,7 @@ import type {
   ImageCapabilities,
   Logger,
   ProviderTestResult,
-} from "@imagine-studio/core";
+} from "@imagine/core";
 import { createHttpClient, type HttpClient } from "../http/index.js";
 import { OpenAIImageProvider, testFailureFromError } from "../openai/image.js";
 

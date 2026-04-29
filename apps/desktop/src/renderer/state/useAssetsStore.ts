@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Asset, AssetKind } from "@imagine-studio/core";
+import type { Asset, AssetKind } from "@imagine/core";
 import { api } from "../lib/api.js";
 
 const KINDS: AssetKind[] = ["character", "object", "background", "style"];

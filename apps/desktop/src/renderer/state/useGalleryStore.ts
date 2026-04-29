@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { GalleryItem, GalleryQuery } from "@imagine-studio/core";
+import type { GalleryItem, GalleryQuery } from "@imagine/core";
 import { api } from "../lib/api.js";
 
 interface GalleryState {

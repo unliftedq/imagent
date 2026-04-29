@@ -90,7 +90,7 @@ async function main() {
   // We also probe the workspace's `packages/persistence/node_modules` because
   // Bun-style hoisting puts the native modules under that workspace.
   const seaRequireBanner =
-    "// imagine-studio CLI bundle (Node SEA)\n" +
+    "// imagine CLI bundle (Node SEA)\n" +
     "var __seaRequire;try{var __sea=require('node:sea');" +
     "if(__sea&&__sea.isSea&&__sea.isSea()){" +
     "var __mod=require('node:module');var __path=require('node:path');" +

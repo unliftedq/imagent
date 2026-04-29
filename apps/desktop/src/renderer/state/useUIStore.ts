@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { ThemePref } from "@imagine-studio/ui";
+import type { ThemePref } from "@imagine/ui";
 
 export type Route =
   | "providers"
@@ -42,8 +42,8 @@ export interface StudioDraft {
   assetIds: StudioDraftAssetIds;
 }
 
-export const STUDIO_DRAFT_LS_KEY = "imagine-studio.studioDraft.v1";
-export const VIDEO_DRAFT_LS_KEY = "imagine-studio.videoDraft.v1";
+export const STUDIO_DRAFT_LS_KEY = "imagine.studioDraft.v1";
+export const VIDEO_DRAFT_LS_KEY = "imagine.videoDraft.v1";
 
 export interface VideoDraftAssetIds {
   character: string[];

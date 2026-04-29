@@ -1,4 +1,4 @@
-import type { Job, JobsQuery, JobState } from "@imagine-studio/core";
+import type { Job, JobsQuery, JobState } from "@imagine/core";
 import type { DatabaseType } from "../db.js";
 
 interface JobRow {

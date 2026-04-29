@@ -6,7 +6,7 @@ import type {
   ImageRequest,
   Logger,
   ProviderTestResult,
-} from "@imagine-studio/core";
+} from "@imagine/core";
 import { OpenAIImageProvider } from "../openai/image.js";
 
 const DEFAULT_VOLCENGINE_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3";

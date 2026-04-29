@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ProviderHttpError, ProviderRequestError, type ImageRequest } from "@imagine-studio/core";
+import { ProviderHttpError, ProviderRequestError, type ImageRequest } from "@imagine/core";
 import { OpenAIImageProvider } from "./image.js";
 import { OPENAI_IMAGE_MODELS } from "./catalog.js";
 

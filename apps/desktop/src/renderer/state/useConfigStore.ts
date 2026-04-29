@@ -8,7 +8,7 @@ import type {
   ProviderSummary,
   ProviderTestResult,
   SecretsWrite,
-} from "@imagine-studio/ipc";
+} from "@imagine/ipc";
 
 export interface TestRun {
   ts: number;

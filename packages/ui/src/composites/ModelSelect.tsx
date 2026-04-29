@@ -4,7 +4,7 @@ import { cn } from "../lib/cn.js";
 
 /**
  * Compact representation of a model the parent has already resolved against
- * the catalog (`@imagine-studio/core` `resolveImageModel`). Each entry carries
+ * the catalog (`@imagine/core` `resolveImageModel`). Each entry carries
  * its capabilities so the dropdown can render them inline as a 3-5 line
  * mono-spaced summary table.
  */

@@ -4,7 +4,7 @@ import path from "node:path";
 
 /**
  * Resolves the on-disk paths described in architecture.md §6. The default
- * data root is `~/.imagine-studio/`. Override with `dataDir` for tests.
+ * data root is `~/.imagine/`. Override with `dataDir` for tests.
  */
 export interface PathResolver {
   readonly dataDir: string;
@@ -23,7 +23,7 @@ export interface PathResolver {
 }
 
 export function createPathResolver(dataDir?: string): PathResolver {
-  const root = dataDir ?? path.join(os.homedir(), ".imagine-studio");
+  const root = dataDir ?? path.join(os.homedir(), ".imagine");
   return {
     dataDir: root,
     configFile: () => path.join(root, "config.json"),

@@ -13,7 +13,7 @@ import {
   type Logger,
   type ProviderTestResult,
   validateImageRequestAgainstModel,
-} from "@imagine-studio/core";
+} from "@imagine/core";
 import { createHttpClient, type HttpClient } from "../http/index.js";
 import { z } from "zod";
 

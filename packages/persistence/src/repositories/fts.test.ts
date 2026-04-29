@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { Asset, GalleryItem } from "@imagine-studio/core";
+import type { Asset, GalleryItem } from "@imagine/core";
 import { openDatabase } from "../db.js";
 import { AssetRepository } from "./assets.repository.js";
 import { GalleryRepository } from "./gallery.repository.js";

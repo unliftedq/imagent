@@ -4,7 +4,7 @@ export type ThemePref = "light" | "dark" | "system";
 export type ResolvedTheme = "light" | "dark";
 
 /** Storage key for the theme preference cached in localStorage (no FOUC). */
-export const THEME_STORAGE_KEY = "imagine-studio.theme";
+export const THEME_STORAGE_KEY = "imagine.theme";
 
 /**
  * Read the user's theme preference + resolve against `prefers-color-scheme`,

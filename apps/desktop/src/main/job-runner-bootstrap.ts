@@ -1,10 +1,10 @@
-import { JobRunner, type Logger } from "@imagine-studio/core";
+import { JobRunner, type Logger } from "@imagine/core";
 import {
   type ConfigStore,
   type ProviderPreferences,
   type ProviderSecrets,
   type SecretsStore,
-} from "@imagine-studio/config";
+} from "@imagine/config";
 import {
   BoardRepository,
   GalleryRepository,
@@ -12,13 +12,13 @@ import {
   videoThumbnailService,
   type DatabaseType,
   type PathResolver,
-} from "@imagine-studio/persistence";
+} from "@imagine/persistence";
 import {
   createImageRegistry,
   createVideoRegistry,
   type ImageRegistry,
   type VideoRegistry,
-} from "@imagine-studio/providers";
+} from "@imagine/providers";
 
 /**
  * Bootstrap state mutated as config changes. The desktop main process holds

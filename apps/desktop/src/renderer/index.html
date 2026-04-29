@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>imagine-studio</title>
+    <title>Imagine Studio</title>
     <script>
       // No-FOUC theme bootstrapping — applied before React mounts so the
       // initial paint matches the user's preference.
       (function () {
         try {
           var pref =
-            localStorage.getItem("imagine-studio.theme") || "system";
+            localStorage.getItem("imagine.theme") || "system";
           var resolved = pref;
           if (pref === "system") {
             resolved = window.matchMedia &&

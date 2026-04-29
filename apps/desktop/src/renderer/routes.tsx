@@ -1,5 +1,5 @@
 import type { ComponentType, ReactElement } from "react";
-import { Icons } from "@imagine-studio/ui";
+import { Icons } from "@imagine/ui";
 import { AssetsPage } from "./pages/Assets.js";
 import { GalleryPage } from "./pages/Gallery.js";
 import { ProvidersPage } from "./pages/Providers.js";

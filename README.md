@@ -1,10 +1,10 @@
-# imagine-studio
+# imagine
 
-A localized image and video generation studio that ships as both an Electron desktop app and a Node CLI from one greenfield monorepo. Single-user, fully local: SQLite plus filesystem under `~/.imagine-studio/`, no remote backend, no auth. Build reusable assets (characters / objects / backgrounds / styles), generate images and videos against six providers (OpenAI, Azure OpenAI, Google Imagen/Gemini, Flux/BFL, Volcengine for Seedream image + Seedance video, xAI Grok), organise outputs into Boards, and remix prior generations.
+A localized image and video generation studio that ships as both an Electron desktop app (**Imagine Studio**) and a Node CLI from one greenfield monorepo. Single-user, fully local: SQLite plus filesystem under `~/.imagine/`, no remote backend, no auth. Build reusable assets (characters / objects / backgrounds / styles), generate images and videos against six providers (OpenAI, Azure OpenAI, Google Imagen/Gemini, Flux/BFL, Volcengine for Seedream image + Seedance video, xAI Grok), organise outputs into Boards, and remix prior generations.
 
 ## Status: prototype
 
-Personal-use prototype, not a shipped product. The schema may change between milestones — expect to wipe `~/.imagine-studio/` between major changes if you upgrade across milestone boundaries. The Windows NSIS installer ships **unsigned** at v1; users get a SmartScreen warning on first install. There is no telemetry, no auto-update, no cloud sync.
+Personal-use prototype, not a shipped product. The schema may change between milestones — expect to wipe `~/.imagine/` between major changes if you upgrade across milestone boundaries. The Windows NSIS installer ships **unsigned** at v1; users get a SmartScreen warning on first install. There is no telemetry, no auto-update, no cloud sync.
 
 ## Quick start
 
@@ -13,19 +13,19 @@ Personal-use prototype, not a shipped product. The schema may change between mil
 bun install
 
 # 2. Verify the setup with the CLI's doctor command.
-bun run --filter @imagine-studio/cli dev doctor
-# → imagine-studio v0.0.1
-# → DB:        ~/.imagine-studio/studio.db (FTS=ok)
-# → Config:    ~/.imagine-studio/config.json (loaded)
+bun run --filter @imagine/cli dev doctor
+# → imagine v0.0.1
+# → DB:        ~/.imagine/studio.db (FTS=ok)
+# → Config:    ~/.imagine/config.json (loaded)
 # → Providers: 0 / 6 configured
 
 # 3. Configure at least one provider (CLI):
-bun run --filter @imagine-studio/cli dev config set openai.apiKey sk-...
+bun run --filter @imagine/cli dev config set openai.apiKey sk-...
 
 # 4. Launch the desktop app. The first launch needs an Electron-ABI rebuild
 #    of the native modules (better-sqlite3 + sharp).
-bun run --filter @imagine-studio/desktop rebuild
-bun run --filter @imagine-studio/desktop dev
+bun run --filter @imagine/studio rebuild
+bun run --filter @imagine/studio dev
 ```
 
 When switching back to the CLI or persistence tests after running the desktop app, rebuild for the host Node ABI:
@@ -39,7 +39,7 @@ The dual-rebuild dance is documented in [`architecture.md`](./architecture.md) �
 ## Project layout
 
 ```
-imagine-studio/
+imagine/
   packages/
     core/         # domain types, ports (ImageProvider, VideoProvider), JobRunner
     providers/    # six vendor impls + shared HTTP wrapper + registry factories
@@ -48,15 +48,15 @@ imagine-studio/
     ipc/          # zod-validated contract, hand-rolled client/server bindings
     ui/           # Radix-wrapped primitives + Tailwind v4 composites
   apps/
-    desktop/      # Electron 33 (3 Vite configs: main / preload / renderer)
-    cli/          # Commander 12, ships as a Node SEA single-file binary
+    desktop/      # @imagine/studio — Imagine Studio Electron app (3 Vite configs)
+    cli/          # @imagine/cli — Commander 12, ships as a Node SEA single-file binary
 ```
 
 See [`architecture.md`](./architecture.md) for the full architectural map (domain model, schema, IPC, provider catalog, build/dev/packaging) and [`workplan.md`](./workplan.md) for the milestone sequence (M1 Foundation through M8 Polish).
 
 ## Configuration
 
-User-facing config splits into three categories by sensitivity and write frequency: secrets, preferences, workspace state. Detail in [`architecture.md`](./architecture.md) §7. The minimal `~/.imagine-studio/config.json` looks like:
+User-facing config splits into three categories by sensitivity and write frequency: secrets, preferences, workspace state. Detail in [`architecture.md`](./architecture.md) §7. The minimal `~/.imagine/config.json` looks like:
 
 ```json
 {
@@ -82,7 +82,7 @@ User-facing config splits into three categories by sensitivity and write frequen
 }
 ```
 
-Secrets land in `~/.imagine-studio/secrets.bin` (Electron `safeStorage`-encrypted) or `secrets.json` (CLI, chmod 600). `OPENAI_API_KEY` and the rest can also be set as environment variables to override the file-backed values for one-off CLI runs.
+Secrets land in `~/.imagine/secrets.bin` (Electron `safeStorage`-encrypted) or `secrets.json` (CLI, chmod 600). `OPENAI_API_KEY` and the rest can also be set as environment variables to override the file-backed values for one-off CLI runs.
 
 ## CLI usage
 
@@ -117,11 +117,11 @@ Six pages, accessible from the left sidebar:
 
 ```bash
 # Windows NSIS installer for the desktop app.
-bun run --filter @imagine-studio/desktop package
-# → apps/desktop/release/imagine-studio Setup <version>.exe
+bun run --filter @imagine/studio package
+# → apps/desktop/release/Imagine Studio Setup <version>.exe
 
 # Single-file CLI binary (Node SEA).
-bun run --filter @imagine-studio/cli build:binary
+bun run --filter @imagine/cli build:binary
 # → apps/cli/dist/imagine.exe (host platform; ~90 MB)
 ```
 

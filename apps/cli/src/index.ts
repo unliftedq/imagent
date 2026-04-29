@@ -15,7 +15,7 @@ async function main(): Promise<void> {
   const program = new Command();
   program
     .name("imagine")
-    .description("imagine-studio CLI — local image and video generation")
+    .description("imagine CLI — local image and video generation")
     .version(CLI_VERSION);
 
   program

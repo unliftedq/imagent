@@ -5,12 +5,12 @@ import {
   type AssetSlotResolution,
   capReferencePaths,
   resolveAssetSlots,
-} from "@imagine-studio/core";
+} from "@imagine/core";
 import {
   AssetRepository,
   type DatabaseType,
   type PathResolver,
-} from "@imagine-studio/persistence";
+} from "@imagine/persistence";
 
 /** CLI-shaped slot input (plural keys mirror the repeatable CLI flags). */
 export interface AssetSlotInputs {

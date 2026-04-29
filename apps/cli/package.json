@@ -1,5 +1,5 @@
 {
-  "name": "@imagine-studio/cli",
+  "name": "@imagine/cli",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -24,10 +24,10 @@
     "build:binary": "tsc -b && node scripts/build-binary.mjs"
   },
   "dependencies": {
-    "@imagine-studio/config": "workspace:*",
-    "@imagine-studio/core": "workspace:*",
-    "@imagine-studio/persistence": "workspace:*",
-    "@imagine-studio/providers": "workspace:*",
+    "@imagine/config": "workspace:*",
+    "@imagine/core": "workspace:*",
+    "@imagine/persistence": "workspace:*",
+    "@imagine/providers": "workspace:*",
     "chalk": "^5.3.0",
     "commander": "^12.1.0"
   },
