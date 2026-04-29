@@ -5,6 +5,7 @@ import type {
   VideoJobHandle,
   VideoJobStatus,
 } from "../domain/result.js";
+import type { ProviderTestResult } from "./image-provider.js";
 
 export interface VideoCapabilities {
   readonly durationsSec: readonly number[];
@@ -25,6 +26,11 @@ export interface VideoProvider {
   poll(handle: VideoJobHandle): Promise<VideoJobStatus>;
   fetch(handle: VideoJobHandle): Promise<VideoGenerationResult>;
   cancel?(handle: VideoJobHandle): Promise<void>;
+  /**
+   * Optional minimal authenticated probe. Same contract as ImageProvider.test:
+   * never throws, returns `{ ok: false, reason }` on any failure.
+   */
+  test?(signal?: AbortSignal): Promise<ProviderTestResult>;
 }
 
 export type { VideoJobHandle, VideoJobStatus, VideoGenerationResult };

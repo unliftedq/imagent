@@ -1,5 +1,6 @@
 import {
   ProviderError,
+  ProviderHttpError,
   ProviderRequestError,
   ProviderTimeoutError,
   ProviderAbortError,
@@ -12,10 +13,11 @@ import {
   type ImageProvider,
   type ImageRequest,
   type Logger,
+  type ProviderTestResult,
   validateImageRequestAgainstModel,
 } from "@imagine-studio/core";
 import { z } from "zod";
-import { aggregateCapabilities } from "../openai/image.js";
+import { aggregateCapabilities, testFailureFromError } from "../openai/image.js";
 import { createHttpClient, type HttpClient } from "../http/index.js";
 
 const DEFAULT_FLUX_BASE_URL = "https://api.bfl.ai";
@@ -149,6 +151,36 @@ export class FluxImageProvider implements ImageProvider {
       }
       // Pending / Processing / Queued / etc. — continue polling.
       interval = Math.min(Math.round(interval * POLL_BACKOFF), POLL_MAX_MS);
+    }
+  }
+
+  /**
+   * BFL has no listing endpoint, so we probe `GET {baseUrl}/v1/get_result?id=<fake>`:
+   * - With a valid key, BFL returns 404 ("task not found").
+   * - With an invalid key, BFL returns 401 (auth rejected).
+   * Anything else surfaces as a generic failure with the upstream status.
+   */
+  async test(signal?: AbortSignal): Promise<ProviderTestResult> {
+    const started = Date.now();
+    // Use a syntactically-plausible-but-impossible task id so the only way
+    // we get a 200 back is if the API changes shape under us.
+    const fakeId = "imagine-studio-probe-0000-0000-0000-000000000000";
+    const url = `${this.baseUrl}/v1/get_result?id=${encodeURIComponent(fakeId)}`;
+    try {
+      const opts: { signal?: AbortSignal } = {};
+      if (signal) opts.signal = signal;
+      // Hitting an unknown id should never succeed — but if it ever did, we
+      // accept that as "auth ok".
+      await this.http.get(url, opts);
+      const latencyMs = Date.now() - started;
+      return { ok: true, latencyMs };
+    } catch (err) {
+      // Map 404 → ok (auth fine, task missing as expected).
+      if (err instanceof ProviderHttpError && err.status === 404) {
+        const latencyMs = Date.now() - started;
+        return { ok: true, latencyMs };
+      }
+      return testFailureFromError(err);
     }
   }
 

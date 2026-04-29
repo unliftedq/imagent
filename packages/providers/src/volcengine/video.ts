@@ -4,6 +4,7 @@ import {
   ProviderRequestError,
   applyVideoDefaults,
   type Logger,
+  type ProviderTestResult,
   type VideoCapabilities,
   type VideoGenerationResult,
   type VideoJobHandle,
@@ -17,6 +18,7 @@ import {
 } from "@imagine-studio/core";
 import { z } from "zod";
 import { createHttpClient, type HttpClient } from "../http/index.js";
+import { testFailureFromError } from "../openai/image.js";
 
 const DEFAULT_SEEDANCE_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3";
 
@@ -154,6 +156,32 @@ export class SeedanceVideoProvider implements VideoProvider {
     if (response.content?.width !== undefined) out.width = response.content.width;
     if (response.content?.height !== undefined) out.height = response.content.height;
     return { output: out };
+  }
+
+  /**
+   * Seedance shares Ark base URL + API key with Seedream; the OpenAI-compatible
+   * `GET /models` listing endpoint serves as the auth probe.
+   */
+  async test(signal?: AbortSignal): Promise<ProviderTestResult> {
+    const started = Date.now();
+    const url = `${this.baseUrl}/models`;
+    try {
+      const opts: { signal?: AbortSignal } = {};
+      if (signal) opts.signal = signal;
+      const response = await this.http.get<{ data?: Array<{ id?: string }> }>(url, opts);
+      const latencyMs = Date.now() - started;
+      const ids = (response?.data ?? [])
+        .map((m) => m.id)
+        .filter((s): s is string => typeof s === "string");
+      const configured = [...this.models.keys()];
+      const matched = configured.find((id) => ids.includes(id));
+      const out: ProviderTestResult = matched
+        ? { ok: true, latencyMs, sampleModelId: matched }
+        : { ok: true, latencyMs };
+      return out;
+    } catch (err) {
+      return testFailureFromError(err);
+    }
   }
 
   async cancel(handle: VideoJobHandle): Promise<void> {

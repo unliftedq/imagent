@@ -483,19 +483,23 @@ Primitives: Radix `Dialog / DropdownMenu / Select / Tabs / ScrollArea / Tooltip 
 - **Dev**:
   - Root: `bun run dev` → Turbo runs `dev` everywhere.
   - CLI: `tsc -b && node dist/index.js <args>` (Node, not Bun, because of the SQLite constraint above).
-  - Desktop: `concurrently` runs three Vite watchers (main / preload / renderer) + an Electron launcher waiting on `dist/main/main.js`. Electron's embedded Node loads `better-sqlite3` natively.
+  - Desktop: `concurrently` runs three Vite watchers (main / preload / renderer) + an Electron launcher waiting on `dist/main/main.mjs`. Electron's embedded Node loads `better-sqlite3` natively after a one-time `bun run --filter @imagine-studio/desktop rebuild` (see *Native rebuild* below).
 
 - **Build**:
   - Packages: `tsc -b` via Turbo.
   - Renderer: `vite build`.
-  - Main + preload: `vite build --ssr`, externalising `electron`, `better-sqlite3`, `sharp`.
+  - Main: `vite build --ssr` emitting **ESM (`main.mjs`)**, target `node20`, externalising `electron`, `better-sqlite3`, `sharp`. Main is ESM (not CJS) because workspace packages declare `"type":"module"` — a CJS main cannot `require()` ESM workspace deps, and Electron 28+ supports ESM main natively.
+  - Preload: `vite build --ssr` emitting **CJS (`preload.cjs`)** — preload runs in Electron's `sandbox` context where ESM is restricted, and the bridge is small enough that CJS isn't a burden.
   - CLI: `tsc -b` + a `copy-sql` post-step so migrations land in `dist/`. (No `tsdown` / `bun build --compile` — those would force Bun runtime and break SQLite.)
 
 - **Package**:
   - Desktop: `electron-builder` with NSIS for Windows (primary host), DMG for macOS, AppImage for Linux. Block matches sibling `agentra`.
   - CLI: **Node SEA** (Single Executable Applications, stdlib since Node 21) bundles the CLI + Node runtime into one `imagine.exe`. Migrations and any other static assets get embedded via SEA's asset map. Alternative: `pkg` if Node SEA's Windows code-signing story remains rough at M8.
 
-- **Native rebuild**: postinstall in `apps/desktop` runs `electron-rebuild` for `better-sqlite3` and `sharp`. The CLI runs against the prebuilt Node binary so no rebuild step there.
+- **Native rebuild (manual, not postinstall)**: `better-sqlite3` and `sharp` ship prebuilt binaries for the **host Node ABI**, which is what `bun install` lands. Electron 33 embeds a *different* Node ABI, so the desktop app needs `@electron/rebuild` to swap in Electron-ABI binaries. Running this on every `bun install` would also break the CLI and `packages/persistence` tests (which use host Node), so we **don't** wire it into `postinstall`. Instead:
+  - `bun run --filter @imagine-studio/desktop rebuild` — switches `better-sqlite3` + `sharp` to Electron ABI before launching desktop.
+  - `npm rebuild better-sqlite3` (run inside `node_modules/.bun/better-sqlite3@x.y.z/node_modules/better-sqlite3`) — switches back to host Node ABI before running CLI / persistence tests.
+  - The flip is fast (<5s) but a real source of "why does my test suite suddenly fail" if you forget. M8 packaging will pin Electron-ABI binaries inside the produced `electron-builder` artifact.
 
 ### Tooling pin
 

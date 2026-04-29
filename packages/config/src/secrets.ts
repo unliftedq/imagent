@@ -98,19 +98,139 @@ export function createEnvSecretsStore(env: NodeJS.ProcessEnv): SecretsStore {
 }
 
 /**
- * Electron safeStorage variant. Stub for M1 — wired in M4 alongside the
- * Electron main process and first-run secrets.json migration (architecture.md
- * §7.4).
+ * Subset of Electron's `safeStorage` we depend on. Defining the interface
+ * locally lets the config package avoid a hard dependency on `electron` (which
+ * isn't installed in the CLI build path).
  */
-export function createElectronSecretsStore(_safeStorage: unknown): SecretsStore {
+export interface SafeStorageLike {
+  isEncryptionAvailable(): boolean;
+  encryptString(plain: string): Buffer;
+  decryptString(encrypted: Buffer): string;
+}
+
+export interface CreateElectronSecretsStoreOptions {
+  safeStorage: SafeStorageLike;
+  /** Encrypted blob path. Default: `<dataDir>/secrets.bin`. */
+  binPath: string;
+  /** Sibling plaintext path used for first-run migration. Default: `<dataDir>/secrets.json`. */
+  jsonPath?: string;
+  /** Logger; defaults to console for the migration message. */
+  logger?: { info: (msg: string) => void; warn: (msg: string) => void };
+  /** OS platform; default `process.platform`. Linux without keyring → fallback. */
+  platform?: NodeJS.Platform;
+}
+
+/**
+ * Electron `safeStorage`-backed secrets store. On first run, migrates a
+ * plaintext `secrets.json` sibling into `secrets.bin` and unlinks the
+ * original (architecture.md §7.4).
+ *
+ * If `safeStorage.isEncryptionAvailable()` returns false:
+ *   - On Linux (where it can fail without a keyring), we fall back to the
+ *     plaintext file store with a console warning.
+ *   - On Windows + macOS, we throw — those should always have an OS-level
+ *     credential store available.
+ */
+export function createElectronSecretsStore(
+  opts: CreateElectronSecretsStoreOptions,
+): SecretsStore {
+  const platform = opts.platform ?? process.platform;
+  const logger = opts.logger ?? {
+    info: (msg) => console.info(msg),
+    warn: (msg) => console.warn(msg),
+  };
+  const binPath = opts.binPath;
+  const jsonPath = opts.jsonPath ?? path.join(path.dirname(binPath), "secrets.json");
+
+  if (!opts.safeStorage.isEncryptionAvailable()) {
+    if (platform === "linux") {
+      logger.warn(
+        "[secrets] safeStorage.isEncryptionAvailable() = false on Linux; " +
+          "falling back to plaintext secrets.json (no system keyring)",
+      );
+      return createFileSecretsStore(jsonPath);
+    }
+    throw new Error(
+      "Electron safeStorage encryption is unavailable on this platform — " +
+        "expected on Windows + macOS. Refusing to write plaintext secrets.",
+    );
+  }
+
+  let migrationLogged = false;
+
+  async function migrateIfNeeded(): Promise<void> {
+    // First-run migration: encrypted blob missing AND plaintext present.
+    const binExists = await pathExists(binPath);
+    if (binExists) return;
+    const jsonExists = await pathExists(jsonPath);
+    if (!jsonExists) return;
+    const raw = await fs.readFile(jsonPath, "utf8");
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (err) {
+      logger.warn(`[secrets] could not parse plaintext ${jsonPath}: ${(err as Error).message}`);
+      return;
+    }
+    const safe = ProviderSecretsSchema.parse(parsed);
+    const encrypted = opts.safeStorage.encryptString(JSON.stringify(safe));
+    await fs.mkdir(path.dirname(binPath), { recursive: true });
+    await atomicWrite(binPath, encrypted);
+    await fs.unlink(jsonPath);
+    if (!migrationLogged) {
+      logger.info(`[secrets] migrated plaintext secrets.json → encrypted secrets.bin`);
+      migrationLogged = true;
+    }
+  }
+
   return {
     async loadSecrets(): Promise<ProviderSecrets> {
-      throw new Error("not implemented (M4)");
+      await migrateIfNeeded();
+      let raw: Buffer;
+      try {
+        raw = await fs.readFile(binPath);
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+          return {};
+        }
+        throw err;
+      }
+      let plain: string;
+      try {
+        plain = opts.safeStorage.decryptString(raw);
+      } catch (err) {
+        throw new Error(
+          `[secrets] failed to decrypt ${binPath}: ${(err as Error).message}. ` +
+            "The OS keyring may have changed since the file was written.",
+        );
+      }
+      const parsed = JSON.parse(plain);
+      return ProviderSecretsSchema.parse(parsed);
     },
-    async saveSecrets(): Promise<void> {
-      throw new Error("not implemented (M4)");
+    async saveSecrets(patch): Promise<void> {
+      await migrateIfNeeded();
+      const current = await this.loadSecrets();
+      const next = ProviderSecretsSchema.parse(deepMergeSecrets(current, patch));
+      const encrypted = opts.safeStorage.encryptString(JSON.stringify(next));
+      await fs.mkdir(path.dirname(binPath), { recursive: true });
+      await atomicWrite(binPath, encrypted);
     },
   };
+}
+
+async function pathExists(p: string): Promise<boolean> {
+  try {
+    await fs.access(p);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function atomicWrite(filePath: string, bytes: Buffer): Promise<void> {
+  const tmp = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+  await fs.writeFile(tmp, bytes);
+  await fs.rename(tmp, filePath);
 }
 
 /**

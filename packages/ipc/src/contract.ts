@@ -11,6 +11,34 @@ import {
 import { z } from "zod";
 
 /**
+ * Structured error envelope returned across the IPC boundary. The renderer
+ * never sees a thrown Error — it sees `{ ok: false, error }` and the client
+ * Proxy unwraps that into a thrown `IpcError` for the caller.
+ */
+export const IpcErrorCodeSchema = z.enum([
+  "validation_failed",
+  "not_implemented",
+  "provider_error",
+  "internal",
+  "not_found",
+]);
+export type IpcErrorCode = z.infer<typeof IpcErrorCodeSchema>;
+
+export const IpcErrorSchema = z.object({
+  code: IpcErrorCodeSchema,
+  message: z.string(),
+  details: z.record(z.unknown()).optional(),
+});
+export type IpcError = z.infer<typeof IpcErrorSchema>;
+
+/** Server → renderer envelope. Never thrown across IPC. */
+export const IpcResponseSchema = <T extends z.ZodTypeAny>(out: T) =>
+  z.discriminatedUnion("ok", [
+    z.object({ ok: z.literal(true), value: out }),
+    z.object({ ok: z.literal(false), error: IpcErrorSchema }),
+  ]);
+
+/**
  * Hand-rolled IPC contract — one zod object per method, no tRPC. The renderer
  * `client.ts` is a Proxy that calls `output.parse()` on every reply, which
  * gives us runtime guarantees with no decorators or codegen.
@@ -40,19 +68,144 @@ export const ProviderSummarySchema = z.object({
 });
 export type ProviderSummary = z.infer<typeof ProviderSummarySchema>;
 
-export const ProviderTestResultSchema = z.object({
-  ok: z.boolean(),
-  latencyMs: z.number().int().nonnegative().optional(),
-  errorMessage: z.string().optional(),
-});
+export const ProviderTestResultSchema = z.union([
+  z.object({
+    ok: z.literal(true),
+    latencyMs: z.number().int().nonnegative(),
+    sampleModelId: z.string().optional(),
+  }),
+  z.object({
+    ok: z.literal(false),
+    reason: z.string(),
+    status: z.number().int().optional(),
+  }),
+]);
 export type ProviderTestResult = z.infer<typeof ProviderTestResultSchema>;
 
 /**
- * Combined provider config payload (preferences + secrets surface) used by
- * the Providers / Settings page.
+ * Provider preferences block — non-secret per-provider config (model lists,
+ * baseUrl overrides, default model). Mirrors `config.providers` in shape.
+ */
+export const ProviderPreferencesPayloadSchema = z.object({
+  openai: z.object({
+    baseUrl: z.string().nullable(),
+    models: z.array(z.string()),
+    defaultModel: z.string(),
+  }),
+  "azure-openai": z.object({
+    deployments: z.object({
+      image: z.string(),
+      video: z.string().nullable(),
+    }),
+    defaultDeployment: z.enum(["image", "video"]),
+  }),
+  google: z.object({
+    models: z.array(z.string()),
+    defaultModel: z.string(),
+  }),
+  "flux-bfl": z.object({
+    baseUrl: z.string(),
+    models: z.array(z.string()),
+    defaultModel: z.string(),
+  }),
+  seedream: z.object({
+    baseUrl: z.string(),
+    models: z.array(z.string()),
+    defaultModel: z.string(),
+  }),
+  seedance: z.object({
+    baseUrl: z.string(),
+    models: z.array(z.string()),
+    defaultModel: z.string(),
+  }),
+});
+export type ProviderPreferencesPayload = z.infer<typeof ProviderPreferencesPayloadSchema>;
+
+/**
+ * Secrets payload returned to the renderer is **always masked** (first 4 +
+ * last 4 chars only). Writing accepts the plaintext; the renderer never
+ * reads back its own writes.
+ */
+export const MaskedSecretsSchema = z.object({
+  openai: z.object({ apiKey: z.string().nullable() }).optional(),
+  "azure-openai": z
+    .object({
+      endpoint: z.string().nullable(),
+      apiKey: z.string().nullable(),
+      apiVersion: z.string().nullable(),
+    })
+    .optional(),
+  google: z.object({ apiKey: z.string().nullable() }).optional(),
+  "flux-bfl": z.object({ apiKey: z.string().nullable() }).optional(),
+  volcengine: z
+    .object({
+      apiKey: z.string().nullable(),
+      region: z.string().nullable(),
+    })
+    .optional(),
+});
+export type MaskedSecrets = z.infer<typeof MaskedSecretsSchema>;
+
+/** Plaintext secrets the renderer is allowed to write. */
+export const SecretsWriteSchema = z.object({
+  openai: z.object({ apiKey: z.string().min(1) }).partial().optional(),
+  "azure-openai": z
+    .object({
+      endpoint: z.string().min(1).optional(),
+      apiKey: z.string().min(1).optional(),
+      apiVersion: z.string().min(1).optional(),
+    })
+    .optional(),
+  google: z.object({ apiKey: z.string().min(1) }).partial().optional(),
+  "flux-bfl": z.object({ apiKey: z.string().min(1) }).partial().optional(),
+  volcengine: z
+    .object({
+      apiKey: z.string().min(1).optional(),
+      region: z.string().min(1).optional(),
+    })
+    .optional(),
+});
+export type SecretsWrite = z.infer<typeof SecretsWriteSchema>;
+
+export const AppPreferencesPayloadSchema = z.object({
+  theme: z.enum(["light", "dark", "system"]),
+  defaultProvider: z.string(),
+  defaultOutputDir: z.string().nullable(),
+  generationConcurrency: z.number().int().min(1).max(8),
+  keepPromptHistory: z.boolean(),
+  openAfterGenerate: z.boolean(),
+});
+export type AppPreferencesPayload = z.infer<typeof AppPreferencesPayloadSchema>;
+
+export const AppVersionInfoSchema = z.object({
+  app: z.string(),
+  electron: z.string(),
+  node: z.string(),
+  chrome: z.string().optional(),
+  platform: z.string(),
+  arch: z.string(),
+  dataDir: z.string(),
+});
+export type AppVersionInfo = z.infer<typeof AppVersionInfoSchema>;
+
+export const StoragePathsSchema = z.object({
+  dataDir: z.string(),
+  configFile: z.string(),
+  secretsBin: z.string(),
+  secretsJson: z.string(),
+  dbFile: z.string(),
+  galleryDir: z.string(),
+  assetsDir: z.string(),
+  logsDir: z.string(),
+});
+export type StoragePaths = z.infer<typeof StoragePathsSchema>;
+
+/**
+ * Legacy combined provider config payload (kept for backward compat with the
+ * M1 contract; nothing in M4 calls it). New code uses providers.preferences.*
+ * + providers.secrets.* directly.
  */
 export const ProviderConfigSchema = z.object({
-  /** Stringified config.json subset for the page. M4 will tighten this. */
   configJson: z.string(),
 });
 export type ProviderConfig = z.infer<typeof ProviderConfigSchema>;
@@ -65,12 +218,35 @@ export const KvValueSchema = z.unknown();
 export const contract = {
   // Providers
   "providers.list": { input: z.void(), output: z.array(ProviderSummarySchema) },
-  "providers.config.get": { input: z.void(), output: ProviderConfigSchema },
-  "providers.config.set": { input: ProviderConfigSchema, output: z.void() },
+  "providers.config.get": { input: z.void(), output: ProviderPreferencesPayloadSchema },
+  "providers.config.set": {
+    input: ProviderPreferencesPayloadSchema,
+    output: ProviderPreferencesPayloadSchema,
+  },
+  "providers.secrets.get": { input: z.void(), output: MaskedSecretsSchema },
+  "providers.secrets.set": { input: SecretsWriteSchema, output: MaskedSecretsSchema },
   "providers.test": {
     input: z.object({ id: ProviderIdSchema }),
     output: ProviderTestResultSchema,
   },
+
+  // App preferences (theme, default provider, output dir, etc.)
+  "app.preferences.get": { input: z.void(), output: AppPreferencesPayloadSchema },
+  "app.preferences.set": {
+    input: AppPreferencesPayloadSchema.partial(),
+    output: AppPreferencesPayloadSchema,
+  },
+  "app.version": { input: z.void(), output: AppVersionInfoSchema },
+  "app.storagePaths": { input: z.void(), output: StoragePathsSchema },
+
+  // System (shell + dialogs)
+  "system.openExternal": { input: z.object({ url: z.string() }), output: z.void() },
+  "system.openPath": { input: z.object({ path: z.string() }), output: z.void() },
+  "system.chooseDirectory": {
+    input: z.object({ defaultPath: z.string().optional() }).optional(),
+    output: z.object({ path: z.string().nullable() }),
+  },
+  "system.resetConfig": { input: z.void(), output: z.void() },
 
   // Image / Video
   "image.generate": { input: ImageRequestSchema, output: GalleryItemSchema },

@@ -179,7 +179,12 @@ bun run --filter '@imagine-studio/*' test
 bun run --filter @imagine-studio/cli dev generate "a tiny otter"
 
 # desktop dev (3 Vite watchers + Electron)
+# First-time / after switching from CLI/persistence tests: rebuild native modules for Electron's ABI
+bun run --filter @imagine-studio/desktop rebuild
 bun run --filter @imagine-studio/desktop dev
+
+# Switching back to CLI or persistence tests after running desktop:
+# native modules need to be rebuilt for host Node ABI — see architecture.md §11.
 
 # build everything
 bun run build

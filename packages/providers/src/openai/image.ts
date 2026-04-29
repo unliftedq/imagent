@@ -1,5 +1,6 @@
 import {
   ProviderError,
+  ProviderHttpError,
   ProviderRequestError,
   ProviderResponseError,
   applyImageDefaults,
@@ -10,6 +11,7 @@ import {
   type ImageProvider,
   type ImageRequest,
   type Logger,
+  type ProviderTestResult,
   validateImageRequestAgainstModel,
 } from "@imagine-studio/core";
 import { createHttpClient, type HttpClient } from "../http/index.js";
@@ -136,6 +138,34 @@ export class OpenAIImageProvider implements ImageProvider {
     return { outputs };
   }
 
+  /**
+   * Minimal auth probe — `GET {baseUrl}/models`. A 200 with at least one of
+   * the configured model ids present (if any) is a strong signal that the key
+   * is valid; otherwise we accept any 200 as authenticated.
+   */
+  async test(signal?: AbortSignal): Promise<ProviderTestResult> {
+    const started = Date.now();
+    const baseUrl = this.options.baseUrl ?? DEFAULT_OPENAI_BASE_URL;
+    const url = `${baseUrl.replace(/\/+$/, "")}/models`;
+    try {
+      const opts: { signal?: AbortSignal } = {};
+      if (signal) opts.signal = signal;
+      const response = await this.http.get<{ data?: Array<{ id?: string }> }>(url, opts);
+      const latencyMs = Date.now() - started;
+      const ids = (response?.data ?? [])
+        .map((m) => m.id)
+        .filter((s): s is string => typeof s === "string");
+      const configured = [...this.models.keys()];
+      const matched = configured.find((id) => ids.includes(id));
+      const out: ProviderTestResult = matched
+        ? { ok: true, latencyMs, sampleModelId: matched }
+        : { ok: true, latencyMs };
+      return out;
+    } catch (err) {
+      return testFailureFromError(err);
+    }
+  }
+
   protected buildRequestBody(req: ImageRequest, model: ImageModelDef): Record<string, unknown> {
     const caps = model.capabilities;
     const body: Record<string, unknown> = {
@@ -204,4 +234,25 @@ function parseSize(size: string | undefined): { width?: number; height?: number 
   const m = /^(\d+)x(\d+)$/.exec(size);
   if (!m) return {};
   return { width: Number(m[1]), height: Number(m[2]) };
+}
+
+/**
+ * Convert any thrown error into a `ProviderTestResult` failure shape.
+ * Shared by every vendor's `test()` so they have identical never-throws
+ * semantics.
+ */
+export function testFailureFromError(err: unknown): ProviderTestResult {
+  if (err instanceof ProviderHttpError) {
+    return { ok: false, reason: err.message, status: err.status ?? 0 };
+  }
+  if (err instanceof ProviderError) {
+    const out: ProviderTestResult = err.status !== undefined
+      ? { ok: false, reason: err.message, status: err.status }
+      : { ok: false, reason: err.message };
+    return out;
+  }
+  if (err instanceof Error) {
+    return { ok: false, reason: err.message };
+  }
+  return { ok: false, reason: String(err) };
 }

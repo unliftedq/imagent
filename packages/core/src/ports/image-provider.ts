@@ -17,6 +17,16 @@ export interface ImageCapabilities {
   readonly supportsStyleRef: boolean;
 }
 
+/**
+ * Result of `provider.test()` — a minimal authenticated probe used by the
+ * Providers UI to verify credentials without spending generation budget.
+ *
+ * Providers never throw from test(); failures are returned as `{ ok: false }`.
+ */
+export type ProviderTestResult =
+  | { readonly ok: true; readonly latencyMs: number; readonly sampleModelId?: string }
+  | { readonly ok: false; readonly reason: string; readonly status?: number };
+
 export interface ImageProvider {
   readonly id: string;
   readonly displayName: string;
@@ -24,4 +34,10 @@ export interface ImageProvider {
   /** Resolved models known to this provider instance, keyed by model id. */
   readonly models: ReadonlyMap<string, ImageModelDef>;
   generate(req: ImageRequest, signal?: AbortSignal): Promise<ImageGenerationResult>;
+  /**
+   * Optional minimal authenticated probe. Implementations should hit a
+   * cheap listing/no-op endpoint; never trigger real generation. Implementations
+   * MUST NOT throw — wrap any errors as `{ ok: false }`.
+   */
+  test?(signal?: AbortSignal): Promise<ProviderTestResult>;
 }

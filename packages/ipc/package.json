@@ -14,10 +14,14 @@
   "scripts": {
     "build": "tsc -b",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "clean": "rm -rf dist .tsbuildinfo"
   },
   "dependencies": {
     "@imagine-studio/core": "workspace:*",
     "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0"
   }
 }

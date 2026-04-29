@@ -10,10 +10,11 @@ import {
   type ImageProvider,
   type ImageRequest,
   type Logger,
+  type ProviderTestResult,
   validateImageRequestAgainstModel,
 } from "@imagine-studio/core";
 import { z } from "zod";
-import { aggregateCapabilities } from "../openai/image.js";
+import { aggregateCapabilities, testFailureFromError } from "../openai/image.js";
 import { createHttpClient, type HttpClient } from "../http/index.js";
 
 const DEFAULT_GOOGLE_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
@@ -127,6 +128,36 @@ export class GoogleImageProvider implements ImageProvider {
       throw new ProviderError("no predictions returned", { vendorId: this.id });
     }
     return { outputs };
+  }
+
+  /**
+   * `GET {baseUrl}/models?key=<apiKey>` — Google's model listing endpoint.
+   * 200 + at least one entry → ok. 401/403 → bad auth.
+   */
+  async test(signal?: AbortSignal): Promise<ProviderTestResult> {
+    const started = Date.now();
+    const url = `${this.baseUrl}/models?key=${encodeURIComponent(this.apiKey)}`;
+    try {
+      const opts: { signal?: AbortSignal } = {};
+      if (signal) opts.signal = signal;
+      const response = await this.http.get<{ models?: Array<{ name?: string }> }>(url, opts);
+      const latencyMs = Date.now() - started;
+      const names = (response?.models ?? [])
+        .map((m) => m.name)
+        .filter((s): s is string => typeof s === "string");
+      if (names.length === 0) {
+        return { ok: false, reason: "model list returned no entries" };
+      }
+      const configured = [...this.models.keys()];
+      // Google model names are like 'models/imagen-3'; match on suffix.
+      const matched = configured.find((id) => names.some((n) => n.endsWith(id)));
+      const out: ProviderTestResult = matched
+        ? { ok: true, latencyMs, sampleModelId: matched }
+        : { ok: true, latencyMs };
+      return out;
+    } catch (err) {
+      return testFailureFromError(err);
+    }
   }
 }
 

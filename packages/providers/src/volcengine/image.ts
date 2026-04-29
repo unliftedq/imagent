@@ -5,6 +5,7 @@ import type {
   ImageProvider,
   ImageRequest,
   Logger,
+  ProviderTestResult,
 } from "@imagine-studio/core";
 import { OpenAIImageProvider } from "../openai/image.js";
 
@@ -54,5 +55,18 @@ export class SeedreamImageProvider implements ImageProvider {
 
   generate(req: ImageRequest, signal?: AbortSignal): Promise<ImageGenerationResult> {
     return this.inner.generate(req, signal);
+  }
+
+  /**
+   * Seedream test piggybacks on the OpenAI-compatible inner provider's
+   * `GET /models` probe — Ark is OpenAI-compatible and exposes the same shape.
+   */
+  test(signal?: AbortSignal): Promise<ProviderTestResult> {
+    if (!this.inner.test) {
+      // Should never happen — OpenAIImageProvider always has test() — but
+      // satisfy the optional-method contract regardless.
+      return Promise.resolve({ ok: false, reason: "test() unavailable" });
+    }
+    return this.inner.test(signal);
   }
 }
