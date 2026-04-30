@@ -14,6 +14,9 @@ export const ImageRequestSchema = z.object({
   model: z.string(),
   size: z.string().optional(),
   aspectRatio: z.string().optional(),
+  /** Quality tier (e.g. OpenAI's `low | medium | high | auto`). Validated
+   * against the resolved model's `capabilities.qualities` list when set. */
+  quality: z.string().optional(),
   count: z.number().int().min(1).default(1),
   seed: z.number().int().optional(),
   references: z.array(ImageReferenceSchema).default([]),

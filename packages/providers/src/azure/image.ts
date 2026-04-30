@@ -1,60 +1,85 @@
-import type {
-  ImageGenerationResult,
-  ImageModelDef,
-  ImageProvider,
-  ImageRequest,
-  ImageCapabilities,
-  Logger,
-  ProviderTestResult,
+import {
+  ProviderError,
+  ProviderRequestError,
+  ProviderResponseError,
+  applyImageDefaults,
+  type ImageCapabilities,
+  type ImageGenerationResult,
+  type ImageModelDef,
+  type ImageOutput,
+  type ImageProvider,
+  type ImageRequest,
+  type Logger,
+  type ProviderTestResult,
+  validateImageRequestAgainstModel,
 } from "@imagine/core";
+import { AzureOpenAI } from "openai";
 import { createHttpClient, type HttpClient } from "../http/index.js";
-import { OpenAIImageProvider, testFailureFromError } from "../openai/image.js";
+import {
+  aggregateCapabilities,
+  buildOpenAIImageBody,
+  decodeBase64,
+  parseSize,
+  rethrowOpenAIError,
+  testFailureFromError,
+  type OpenAIClientLike,
+} from "../openai/image.js";
 
 export interface AzureOpenAIImageProviderOptions {
   endpoint: string;
   apiKey: string;
   apiVersion: string;
+  /** Optional default deployment. The catalog map keys are deployment names. */
+  deployment?: string;
   /** Deployment name → resolved model definition. */
   models: ReadonlyMap<string, ImageModelDef>;
+  /** Inject SDK client (tests). */
+  client?: OpenAIClientLike;
+  /** Inject fetch for test() (deployments listing — no SDK method exists). */
   fetch?: typeof fetch;
   logger?: Logger;
 }
 
 /**
- * Azure shares the OpenAI image schema entirely; only the URL and auth header
- * differ. We compose `OpenAIImageProvider` with custom `urlBuilder` (deployment +
- * api-version) and `authHeader` (`api-key` instead of `Bearer`). Body shape,
- * caps validation, b64 decode — all reused.
+ * Azure OpenAI image provider — own class, own SDK client. Uses the
+ * `openai` package's `AzureOpenAI` subclass which understands Azure's
+ * `/openai/deployments/{deployment}/images/generations?api-version=...` URL
+ * shape. The deployment name is the catalog key and rides in the `model`
+ * slot of the request.
  */
 export class AzureOpenAIImageProvider implements ImageProvider {
-  private readonly inner: OpenAIImageProvider;
+  readonly id = "azure-openai";
+  readonly displayName = "Azure";
+  readonly capabilities: ImageCapabilities;
+  readonly models: ReadonlyMap<string, ImageModelDef>;
+  private readonly client: OpenAIClientLike;
   private readonly listHttp: HttpClient;
   private readonly endpoint: string;
   private readonly apiVersion: string;
-  readonly id = "azure-openai";
-  readonly displayName = "Azure OpenAI";
-  readonly models: ReadonlyMap<string, ImageModelDef>;
-  readonly capabilities: ImageCapabilities;
+  private readonly logger?: Logger;
 
   constructor(options: AzureOpenAIImageProviderOptions) {
     const endpoint = options.endpoint.replace(/\/+$/, "");
-    const apiVersion = options.apiVersion;
     this.endpoint = endpoint;
-    this.apiVersion = apiVersion;
+    this.apiVersion = options.apiVersion;
     this.models = options.models;
-    this.inner = new OpenAIImageProvider({
-      apiKey: options.apiKey,
-      models: options.models,
-      providerId: "azure-openai",
-      displayName: "Azure OpenAI",
-      // Azure path: {endpoint}/openai/deployments/{deployment}/images/generations?api-version=...
-      urlBuilder: (deployment) =>
-        `${endpoint}/openai/deployments/${encodeURIComponent(deployment)}/images/generations?api-version=${encodeURIComponent(apiVersion)}`,
-      authHeader: (k) => ({ "api-key": k }),
-      ...(options.fetch !== undefined ? { fetch: options.fetch } : {}),
-      ...(options.logger !== undefined ? { logger: options.logger } : {}),
-    });
-    this.capabilities = this.inner.capabilities;
+    this.capabilities = aggregateCapabilities(options.models);
+    if (options.logger) this.logger = options.logger;
+
+    if (options.client) {
+      this.client = options.client;
+    } else {
+      // AzureOpenAI accepts deployment? — we leave it unset so the URL slot
+      // stays driven by req.model (the catalog deployment key).
+      const azureOpts: ConstructorParameters<typeof AzureOpenAI>[0] = {
+        endpoint,
+        apiKey: options.apiKey,
+        apiVersion: options.apiVersion,
+      };
+      if (options.deployment) azureOpts.deployment = options.deployment;
+      this.client = new AzureOpenAI(azureOpts) as unknown as OpenAIClientLike;
+    }
+
     this.listHttp = createHttpClient({
       vendorId: this.id,
       headers: { "api-key": options.apiKey },
@@ -63,14 +88,53 @@ export class AzureOpenAIImageProvider implements ImageProvider {
     });
   }
 
-  generate(req: ImageRequest, signal?: AbortSignal): Promise<ImageGenerationResult> {
-    return this.inner.generate(req, signal);
+  async generate(req: ImageRequest, signal?: AbortSignal): Promise<ImageGenerationResult> {
+    const model = this.models.get(req.model);
+    if (!model) {
+      throw new ProviderRequestError(`unknown model '${req.model}' for ${this.id}`, {
+        vendorId: this.id,
+      });
+    }
+    const merged = applyImageDefaults(req, model);
+    validateImageRequestAgainstModel(this.id, merged, model);
+
+    const body = buildOpenAIImageBody(merged, model);
+    const opts: { signal?: AbortSignal } = {};
+    if (signal) opts.signal = signal;
+
+    let response: { data?: Array<{ b64_json?: string; url?: string; revised_prompt?: string }> };
+    try {
+      response = await this.client.images.generate(body, opts);
+    } catch (err) {
+      throw rethrowOpenAIError(err, this.id);
+    }
+
+    const data = response?.data ?? [];
+    const outputs: ImageOutput[] = [];
+    for (const entry of data) {
+      if (entry.b64_json) {
+        outputs.push({
+          bytes: decodeBase64(entry.b64_json),
+          mimeType: "image/png",
+          ...parseSize(merged.size),
+          ...(entry.revised_prompt ? { raw: { revised_prompt: entry.revised_prompt } } : {}),
+        });
+      } else {
+        throw new ProviderResponseError("response entry missing b64_json", {
+          vendorId: this.id,
+        });
+      }
+    }
+    if (outputs.length === 0) {
+      throw new ProviderError("no image outputs returned", { vendorId: this.id });
+    }
+    return { outputs };
   }
 
   /**
    * `GET {endpoint}/openai/deployments?api-version=...` — Azure lists the
-   * resource's deployments. We require at least one configured deployment to
-   * appear; if not, treat as auth-ok-but-misconfigured.
+   * resource's deployments. No SDK helper exposes this directly, so we still
+   * use raw HTTP for the probe.
    */
   async test(signal?: AbortSignal): Promise<ProviderTestResult> {
     const started = Date.now();
@@ -90,13 +154,14 @@ export class AzureOpenAIImageProvider implements ImageProvider {
       const out: ProviderTestResult = matched
         ? { ok: true, latencyMs, sampleModelId: matched }
         : configured.length === 0
-        ? { ok: true, latencyMs }
-        : {
-            ok: false,
-            reason: `auth ok but no configured deployment found in resource (${configured.join(", ")})`,
-          };
+          ? { ok: true, latencyMs }
+          : {
+              ok: false,
+              reason: `auth ok but no configured deployment found in resource (${configured.join(", ")})`,
+            };
       return out;
     } catch (err) {
+      this.logger?.debug?.("azure-openai test() failed", { err: String(err) });
       return testFailureFromError(err);
     }
   }

@@ -190,6 +190,7 @@ export function SettingsPage() {
               <PathRow label="Data directory" value={paths.dataDir} target={paths.dataDir} />
               <PathRow label="Database" value={paths.dbFile} target={paths.dataDir} />
               <PathRow label="Config" value={paths.configFile} target={paths.dataDir} />
+              <PathRow label="Catalog" value={paths.catalogFile} target={paths.dataDir} />
               <PathRow label="Encrypted secrets" value={paths.secretsBin} target={paths.dataDir} />
               <PathRow label="Gallery" value={paths.galleryDir} target={paths.galleryDir} />
               <PathRow label="Assets" value={paths.assetsDir} target={paths.assetsDir} />

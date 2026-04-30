@@ -12,10 +12,19 @@ import type { Command } from "commander";
  * `imagine config get <vendor>.<key>`
  * `imagine config path`
  *
- * Walks the dotted path against the secrets schema; recognised vendors are
- * the ProviderSecretsSchema keys (openai | azure-openai | google | flux-bfl |
- * volcengine). M2 ships secrets-only support; richer config.json mutation
- * lands in M3.
+ * Walks the dotted path against the secrets schema. After the
+ * "minimum-auth" reshape, only **secrets** paths are accepted: the catalog
+ * is the source of truth for model lists, and Azure deployment names live
+ * in `config.json` (edit by hand or via the desktop UI).
+ *
+ * Recognised paths:
+ *   - `<vendor>.apiKey`
+ *   - `azure-openai.endpoint` / `.apiVersion`
+ *   - `bytedance.endpoint`
+ *   - any `<vendor>.baseUrl` (advanced override)
+ *
+ * Anything else (e.g. `<vendor>.models`, `<vendor>.defaultModel`) is rejected
+ * with `unknown config path: <key>`.
  */
 export function registerConfigCommand(program: Command): void {
   const config = program
@@ -24,7 +33,9 @@ export function registerConfigCommand(program: Command): void {
 
   config
     .command("set <key> <value>")
-    .description("Set a secret (e.g. openai.apiKey, volcengine.region)")
+    .description(
+      "Set a secret (e.g. openai.apiKey, bytedance.endpoint, azure-openai.endpoint)",
+    )
     .action(async (key: string, value: string) => {
       try {
         await runSet(key, value);
@@ -53,11 +64,26 @@ export function registerConfigCommand(program: Command): void {
       const resolver = createPathResolver();
       process.stdout.write(`config:  ${resolver.configFile()}\n`);
       process.stdout.write(`secrets: ${resolver.secretsFile()}\n`);
+      process.stdout.write(
+        `${chalk.dim(
+          "note: model lists come from the built-in catalog; Azure deployment names live in config.json — edit by hand or use the desktop Providers page.",
+        )}\n`,
+      );
     });
 }
 
-const VENDOR_KEYS = ["openai", "azure-openai", "google", "flux-bfl", "volcengine", "xai"] as const;
+const VENDOR_KEYS = ["openai", "azure-openai", "google", "flux-bfl", "bytedance", "xai"] as const;
 type VendorId = (typeof VENDOR_KEYS)[number];
+
+/** Allow-listed config field paths per vendor. Anything else is rejected. */
+const ALLOWED_FIELDS: Record<VendorId, ReadonlySet<string>> = {
+  openai: new Set(["apiKey", "baseUrl"]),
+  "azure-openai": new Set(["apiKey", "endpoint", "apiVersion"]),
+  google: new Set(["apiKey", "baseUrl"]),
+  "flux-bfl": new Set(["apiKey", "baseUrl"]),
+  bytedance: new Set(["apiKey", "endpoint"]),
+  xai: new Set(["apiKey", "baseUrl"]),
+};
 
 function isVendorKey(s: string): s is VendorId {
   return (VENDOR_KEYS as readonly string[]).includes(s);
@@ -65,6 +91,12 @@ function isVendorKey(s: string): s is VendorId {
 
 async function runSet(dottedKey: string, value: string): Promise<void> {
   const { vendor, field } = parseKey(dottedKey);
+  if (!ALLOWED_FIELDS[vendor].has(field)) {
+    throw new Error(
+      `unknown config path: ${dottedKey}. ` +
+        `Allowed for ${vendor}: ${[...ALLOWED_FIELDS[vendor]].join(", ")}`,
+    );
+  }
   const resolver = createPathResolver();
   await ensureDataDir(resolver);
   const store = createFileSecretsStore(resolver.secretsFile());
@@ -92,6 +124,12 @@ async function runGet(dottedKey: string | undefined): Promise<void> {
   }
 
   const { vendor, field } = parseKey(dottedKey);
+  if (!ALLOWED_FIELDS[vendor].has(field)) {
+    throw new Error(
+      `unknown config path: ${dottedKey}. ` +
+        `Allowed for ${vendor}: ${[...ALLOWED_FIELDS[vendor]].join(", ")}`,
+    );
+  }
   const block = (secrets as Record<string, Record<string, string>>)[vendor];
   if (!block) {
     process.stdout.write(`${chalk.dim(`${vendor} not configured`)}\n`);
@@ -134,11 +172,9 @@ function applyPatch(
   };
   const block = { ...(next[vendor] ?? {}) };
   block[field] = value;
-  // Apply default region/apiVersion so the schema's required fields are
-  // satisfied when the user sets the apiKey first.
-  if (vendor === "volcengine") {
-    block.region ??= "cn-beijing";
-  }
+  // Apply default apiVersion so the schema's required fields are satisfied
+  // when the user sets the apiKey first. ByteDance has no defaults — the
+  // user must supply both `endpoint` and `apiKey` (mirrors Azure's shape).
   if (vendor === "azure-openai") {
     block.apiVersion ??= "2024-10-21";
   }

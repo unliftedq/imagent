@@ -291,7 +291,7 @@ describe("registerIpcHandlers", () => {
           kind: "video" as const,
           request: {
             prompt: "rotating crystal",
-            providerId: "volcengine",
+            providerId: "bytedance",
             model: "seedance-1.0-pro",
             durationSec: 5,
             fps: 24,
@@ -321,7 +321,7 @@ describe("registerIpcHandlers", () => {
       });
       const reply = (await invoke("video.submit", {
         prompt: "rotating crystal",
-        providerId: "volcengine",
+        providerId: "bytedance",
         model: "seedance-1.0-pro",
         durationSec: 5,
         references: [],
@@ -646,5 +646,52 @@ describe("registerIpcHandlers", () => {
     const fns = subscribers.get("config.changed") ?? [];
     fns[0]?.(events["config.changed"].parse({ configJson: "{}" }));
     expect(seen).toEqual([{ configJson: "{}" }]);
+  });
+
+  describe("Phase 2 catalog routes", () => {
+    it("catalog.path: returns the absolute file path", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      registerIpcHandlers(ipcMain, {
+        "catalog.path": async () => ({ path: "/home/u/.imagine/catalog.json" }),
+      });
+      const reply = (await invoke("catalog.path", undefined)) as {
+        ok: true;
+        value: { path: string };
+      };
+      expect(reply.ok).toBe(true);
+      expect(reply.value.path).toBe("/home/u/.imagine/catalog.json");
+    });
+
+    it("catalog.get: returns the loaded catalog snapshot", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      registerIpcHandlers(ipcMain, {
+        "catalog.get": async () => ({
+          version: 1 as const,
+          image: {
+            openai: [
+              {
+                id: "gpt-image-2",
+                displayName: "GPT Image 2",
+                capabilities: {
+                  sizes: ["1024x1024"],
+                  maxOutputs: 10,
+                  supportsNegativePrompt: false,
+                  supportsSeed: false,
+                  supportsStyleRef: true,
+                },
+                defaults: { size: "1024x1024", count: 1 },
+              },
+            ],
+          },
+          video: {},
+        }),
+      });
+      const reply = (await invoke("catalog.get", undefined)) as {
+        ok: true;
+        value: { image: { openai: Array<{ id: string }> } };
+      };
+      expect(reply.ok).toBe(true);
+      expect(reply.value.image.openai[0]?.id).toBe("gpt-image-2");
+    });
   });
 });

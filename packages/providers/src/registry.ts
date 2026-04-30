@@ -1,81 +1,65 @@
 import type {
-  ImageCatalog,
   ImageModelDef,
   ImageProvider,
-  VideoCatalog,
   VideoModelDef,
   VideoProvider,
 } from "@imagine/core";
-import { resolveImageModel, resolveVideoModel } from "@imagine/core";
 import type { ProviderPreferences, ProviderSecrets } from "@imagine/config";
 
-import { OPENAI_CATALOG } from "./openai/catalog.js";
+import type { ModelCatalog } from "./catalog/schema.js";
 import { OpenAIImageProvider } from "./openai/image.js";
-import { AZURE_OPENAI_CATALOG } from "./azure/catalog.js";
 import { AzureOpenAIImageProvider } from "./azure/image.js";
-import { GOOGLE_CATALOG } from "./google/catalog.js";
 import { GoogleImageProvider } from "./google/image.js";
-import { FLUX_CATALOG } from "./flux/catalog.js";
+import { GoogleVideoProvider } from "./google/video.js";
 import { FluxImageProvider } from "./flux/image.js";
-import {
-  VOLCENGINE_IMAGE_CATALOG,
-  VOLCENGINE_IMAGE_MODELS,
-  VOLCENGINE_VIDEO_CATALOG,
-  VOLCENGINE_VIDEO_MODELS,
-} from "./volcengine/catalog.js";
-import { VolcengineImageProvider } from "./volcengine/image.js";
-import { VolcengineVideoProvider } from "./volcengine/video.js";
-import { XAI_CATALOG, XAI_IMAGE_MODELS } from "./xai/catalog.js";
+import { ByteDanceImageProvider } from "./bytedance/image.js";
+import { ByteDanceVideoProvider } from "./bytedance/video.js";
 import { XaiImageProvider } from "./xai/image.js";
-
-/** Aggregate built-in image catalog merged across vendors. */
-export const BUILTIN_IMAGE_CATALOG: ImageCatalog = {
-  ...OPENAI_CATALOG,
-  ...AZURE_OPENAI_CATALOG,
-  ...GOOGLE_CATALOG,
-  ...FLUX_CATALOG,
-  ...VOLCENGINE_IMAGE_CATALOG,
-  ...XAI_CATALOG,
-};
-
-/** Aggregate built-in video catalog. */
-export const BUILTIN_VIDEO_CATALOG: VideoCatalog = {
-  ...VOLCENGINE_VIDEO_CATALOG,
-};
+import { XaiVideoProvider } from "./xai/video.js";
 
 export type ImageRegistry = ReadonlyMap<string, ImageProvider>;
 export type VideoRegistry = ReadonlyMap<string, VideoProvider>;
 
 /**
- * Build the image-provider registry. Providers without configured secrets
- * are skipped silently — `imagine doctor` reports the gap to the user.
+ * Build the image-provider registry. The **catalog is the source of truth**
+ * for the model list of every well-known provider — users only configure
+ * authentication. Azure OpenAI is deployment-based; the user supplies the
+ * deployment name, which we map to a baseline image capability shape
+ * (typically `image-default` from the catalog, which mirrors gpt-image-2
+ * capabilities).
  *
- * Keys: `"openai" | "azure-openai" | "google" | "flux-bfl" | "volcengine" | "xai"`.
+ * Each provider is **its own class** with its own SDK client (Phase 3b):
+ *   - OpenAI / Azure / xAI / ByteDance image → `openai` SDK.
+ *   - Google image / video → `@google/genai` SDK.
+ *   - Flux + ByteDance Seedance + xAI video → raw HTTP (no usable SDK).
+ *
+ * Providers without configured secrets are skipped silently — `imagine
+ * doctor` reports the gap.
+ *
+ * Keys: `"openai" | "azure-openai" | "google" | "flux-bfl" | "bytedance" | "xai"`.
  */
 export function createImageRegistry(
   secrets: ProviderSecrets,
   prefs: ProviderPreferences,
-  catalog: ImageCatalog = BUILTIN_IMAGE_CATALOG,
+  catalog: ModelCatalog,
 ): ImageRegistry {
   const out = new Map<string, ImageProvider>();
 
   if (secrets.openai) {
-    const entries = ensureDefaultModel(prefs.openai.models, prefs.openai.defaultModel);
-    const models = resolveModelMap("openai", entries, catalog);
-    out.set(
-      "openai",
-      new OpenAIImageProvider({
-        apiKey: secrets.openai.apiKey,
-        baseUrl: prefs.openai.baseUrl,
-        models,
-      }),
-    );
+    const openaiOpts: ConstructorParameters<typeof OpenAIImageProvider>[0] = {
+      apiKey: secrets.openai.apiKey,
+      models: mapFromList(catalog.image.openai ?? []),
+    };
+    if (secrets.openai.baseUrl) openaiOpts.baseUrl = secrets.openai.baseUrl;
+    out.set("openai", new OpenAIImageProvider(openaiOpts));
   }
 
   if (secrets["azure-openai"]) {
-    // Azure resolves deployments rather than catalog ids; we look up
-    // `image-default` capabilities as a baseline shared across deployments.
-    const models = resolveAzureDeployments(prefs["azure-openai"].deployments);
+    const baseline = pickBaseline(catalog.image["azure-openai"] ?? []);
+    const models = resolveDeploymentMap(
+      prefs["azure-openai"].deployments,
+      baseline,
+    );
     out.set(
       "azure-openai",
       new AzureOpenAIImageProvider({
@@ -88,94 +72,92 @@ export function createImageRegistry(
   }
 
   if (secrets.google) {
-    const entries = ensureDefaultModel(prefs.google.models, prefs.google.defaultModel);
-    const models = resolveModelMap("google", entries, catalog);
-    out.set("google", new GoogleImageProvider({ apiKey: secrets.google.apiKey, models }));
+    const googleOpts: ConstructorParameters<typeof GoogleImageProvider>[0] = {
+      apiKey: secrets.google.apiKey,
+      models: mapFromList(catalog.image.google ?? []),
+    };
+    if (secrets.google.baseUrl) googleOpts.baseUrl = secrets.google.baseUrl;
+    out.set("google", new GoogleImageProvider(googleOpts));
   }
 
   if (secrets["flux-bfl"]) {
-    const entries = ensureDefaultModel(prefs["flux-bfl"].models, prefs["flux-bfl"].defaultModel);
-    const models = resolveModelMap("flux-bfl", entries, catalog);
-    out.set(
-      "flux-bfl",
-      new FluxImageProvider({
-        apiKey: secrets["flux-bfl"].apiKey,
-        baseUrl: prefs["flux-bfl"].baseUrl,
-        models,
-      }),
-    );
+    const fluxOpts: ConstructorParameters<typeof FluxImageProvider>[0] = {
+      apiKey: secrets["flux-bfl"].apiKey,
+      models: mapFromList(catalog.image["flux-bfl"] ?? []),
+    };
+    if (secrets["flux-bfl"].baseUrl) fluxOpts.baseUrl = secrets["flux-bfl"].baseUrl;
+    out.set("flux-bfl", new FluxImageProvider(fluxOpts));
   }
 
-  // Volcengine consolidates Seedream (image) under one provider id.
-  if (secrets.volcengine) {
-    const entries = ensureDefaultModel(
-      prefs.volcengine.imageModels,
-      prefs.volcengine.defaultImageModel,
-    );
-    const models = resolveModelMap("volcengine", entries, catalog, {
-      volcengine: VOLCENGINE_IMAGE_MODELS,
-    });
-    out.set(
-      "volcengine",
-      new VolcengineImageProvider({
-        apiKey: secrets.volcengine.apiKey,
-        baseUrl: prefs.volcengine.baseUrl,
-        region: secrets.volcengine.region,
-        models,
-      }),
-    );
+  if (secrets.bytedance) {
+    const bdOpts: ConstructorParameters<typeof ByteDanceImageProvider>[0] = {
+      apiKey: secrets.bytedance.apiKey,
+      endpoint: secrets.bytedance.endpoint,
+      models: mapFromList(catalog.image.bytedance ?? []),
+    };
+    out.set("bytedance", new ByteDanceImageProvider(bdOpts));
   }
 
   if (secrets.xai) {
-    const entries = ensureDefaultModel(prefs.xai.models, prefs.xai.defaultModel);
-    const models = resolveModelMap("xai", entries, catalog, {
-      xai: XAI_IMAGE_MODELS,
-    });
-    out.set(
-      "xai",
-      new XaiImageProvider({
-        apiKey: secrets.xai.apiKey,
-        baseUrl: prefs.xai.baseUrl,
-        models,
-      }),
-    );
-  }
-
-  return out;
-}
-
-/** Video registry. v1 only Volcengine (Seedance). */
-export function createVideoRegistry(
-  secrets: ProviderSecrets,
-  prefs: ProviderPreferences,
-  catalog: VideoCatalog = BUILTIN_VIDEO_CATALOG,
-): VideoRegistry {
-  const out = new Map<string, VideoProvider>();
-
-  if (secrets.volcengine) {
-    const entries = ensureDefaultModel(
-      prefs.volcengine.videoModels,
-      prefs.volcengine.defaultVideoModel,
-    );
-    const models = resolveVideoModelMap("volcengine", entries, catalog, {
-      volcengine: VOLCENGINE_VIDEO_MODELS,
-    });
-    out.set(
-      "volcengine",
-      new VolcengineVideoProvider({
-        apiKey: secrets.volcengine.apiKey,
-        baseUrl: prefs.volcengine.baseUrl,
-        region: secrets.volcengine.region,
-        models,
-      }),
-    );
+    const xaiOpts: ConstructorParameters<typeof XaiImageProvider>[0] = {
+      apiKey: secrets.xai.apiKey,
+      models: mapFromList(catalog.image.xai ?? []),
+    };
+    if (secrets.xai.baseUrl) xaiOpts.baseUrl = secrets.xai.baseUrl;
+    out.set("xai", new XaiImageProvider(xaiOpts));
   }
 
   return out;
 }
 
 /**
- * Distinct vendor-secret count. Configuring `volcengine.apiKey` increments
+ * Video registry. Phase 3a wires real raw-HTTP implementations for all three
+ * vendors:
+ *   - ByteDance (Seedance) — Ark `contents/generations/tasks` long-poll.
+ *   - Google (Veo) — Gemini `predictLongRunning` long operation.
+ *   - xAI (Grok Imagine Video) — `/v1/videos/generations` + `/v1/videos/{id}`.
+ *
+ * A vendor is included only when its secret is configured in `secrets.*`.
+ */
+export function createVideoRegistry(
+  secrets: ProviderSecrets,
+  _prefs: ProviderPreferences,
+  catalog: ModelCatalog,
+): VideoRegistry {
+  const out = new Map<string, VideoProvider>();
+
+  if (secrets.bytedance) {
+    const opts: ConstructorParameters<typeof ByteDanceVideoProvider>[0] = {
+      apiKey: secrets.bytedance.apiKey,
+      endpoint: secrets.bytedance.endpoint,
+      models: mapFromList(catalog.video.bytedance ?? []),
+    };
+    out.set("bytedance", new ByteDanceVideoProvider(opts));
+  }
+
+  if (secrets.google) {
+    const googleOpts: ConstructorParameters<typeof GoogleVideoProvider>[0] = {
+      apiKey: secrets.google.apiKey,
+      models: mapFromList(catalog.video.google ?? []),
+    };
+    if (secrets.google.baseUrl) googleOpts.baseUrl = secrets.google.baseUrl;
+    out.set("google", new GoogleVideoProvider(googleOpts));
+  }
+
+  if (secrets.xai) {
+    const xaiOpts: ConstructorParameters<typeof XaiVideoProvider>[0] = {
+      apiKey: secrets.xai.apiKey,
+      models: mapFromList(catalog.video.xai ?? []),
+    };
+    if (secrets.xai.baseUrl) xaiOpts.baseUrl = secrets.xai.baseUrl;
+    out.set("xai", new XaiVideoProvider(xaiOpts));
+  }
+
+  return out;
+}
+
+/**
+ * Distinct vendor-secret count. Configuring `bytedance.apiKey` increments
  * by 1 even though it unlocks both image + video; `xai.apiKey` increments
  * by 1 too. Used by `imagine doctor` to render "Providers: X / 6 configured".
  */
@@ -185,7 +167,7 @@ export function configuredProviderCount(secrets: ProviderSecrets): number {
   if (secrets["azure-openai"]) n += 1;
   if (secrets.google) n += 1;
   if (secrets["flux-bfl"]) n += 1;
-  if (secrets.volcengine) n += 1;
+  if (secrets.bytedance) n += 1;
   if (secrets.xai) n += 1;
   return n;
 }
@@ -195,66 +177,57 @@ export const TOTAL_PROVIDER_COUNT = 6;
 
 // --- internal helpers ---------------------------------------------------
 
+function mapFromList<T extends { id: string }>(
+  list: readonly T[],
+): ReadonlyMap<string, T> {
+  return new Map(list.map((item) => [item.id, item]));
+}
+
 /**
- * Ensure the configured `defaultModel` (which doctor and `imagine generate`
- * fall back to) is present in the resolved models list. Users with empty
- * `models: []` still get a working registry against the catalog defaults.
+ * Pick a baseline capability shape for deployment-based providers. Prefer an
+ * entry with id `image-default`; otherwise use the first entry; otherwise
+ * fall back to a generic shape via `undefined` (resolveDeploymentMap handles).
  */
-function ensureDefaultModel<T extends string | { id: string }>(
-  entries: readonly T[],
-  defaultModel: string | undefined,
-): readonly (string | T)[] {
-  if (!defaultModel) return entries;
-  for (const e of entries) {
-    const id = typeof e === "string" ? e : e.id;
-    if (id === defaultModel) return entries;
-  }
-  return [defaultModel as string, ...entries];
+function pickBaseline(
+  list: readonly ImageModelDef[],
+): ImageModelDef | undefined {
+  const named = list.find((m) => m.id === "image-default");
+  if (named) return named;
+  return list[0];
 }
 
-function resolveModelMap(
-  providerId: string,
-  entries: readonly (string | ImageModelDef)[],
-  catalog: ImageCatalog,
-  extraCatalog: ImageCatalog = {},
-): ReadonlyMap<string, ImageModelDef> {
-  const out = new Map<string, ImageModelDef>();
-  const merged: ImageCatalog = { ...catalog, ...extraCatalog };
-  for (const entry of entries) {
-    const resolved = resolveImageModel(providerId, entry, merged);
-    out.set(resolved.id, resolved);
-  }
-  return out;
-}
-
-function resolveVideoModelMap(
-  providerId: string,
-  entries: readonly (string | VideoModelDef)[],
-  catalog: VideoCatalog,
-  extraCatalog: VideoCatalog = {},
-): ReadonlyMap<string, VideoModelDef> {
-  const out = new Map<string, VideoModelDef>();
-  const merged: VideoCatalog = { ...catalog, ...extraCatalog };
-  for (const entry of entries) {
-    const resolved = resolveVideoModel(providerId, entry, merged);
-    out.set(resolved.id, resolved);
-  }
-  return out;
-}
-
-function resolveAzureDeployments(
+/**
+ * Build a deployment-name → model-def map for Azure-style providers. The
+ * underlying model behind a deployment is unknown to us, so we borrow a
+ * baseline capability shape (typically gpt-image-2) and key it by the
+ * user-supplied deployment name.
+ */
+function resolveDeploymentMap(
   deployments: { image: string; video: string | null },
+  baseline: ImageModelDef | undefined,
 ): ReadonlyMap<string, ImageModelDef> {
   const out = new Map<string, ImageModelDef>();
+  const cap: ImageModelDef = baseline
+    ? { ...baseline }
+    : { id: "image-default" };
   if (deployments.image) {
-    // Borrow the canonical 'image-default' shape; users can override via the
-    // `models` list once we surface that knob in the Azure prefs (M4).
-    const baseline = AZURE_OPENAI_CATALOG["azure-openai"]?.["image-default"];
-    if (baseline) {
-      out.set(deployments.image, { ...baseline, id: deployments.image });
-    } else {
-      out.set(deployments.image, { id: deployments.image });
-    }
+    out.set(deployments.image, { ...cap, id: deployments.image });
   }
+  // Video deployment is not used by the image port; image port only knows
+  // about image deployments.
   return out;
 }
+
+// Re-export the catalog types so consumers can import them via @imagine/providers.
+export type { ModelCatalog } from "./catalog/schema.js";
+export { ModelCatalogSchema } from "./catalog/schema.js";
+export {
+  loadCatalog,
+  saveCatalog,
+  getBundledCatalog,
+  type CatalogLoaderOptions,
+  type CatalogSaveOptions,
+} from "./catalog/loader.js";
+
+// Re-export VideoModelDef helpers so other internal code can resolve types.
+export type { VideoModelDef };

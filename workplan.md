@@ -8,7 +8,7 @@ Execution sequence to take the `imagine` monorepo (located at `Q:/development/im
 |---|---|
 | Repo strategy | Greenfield. **Do not** reuse `imagine-cli` code; mirror patterns only. |
 | Shipping form | Electron desktop **+** Node CLI from one Bun + Turbo monorepo. |
-| Providers v1 | All six day-one: OpenAI, Azure OpenAI, Google (Imagen/Gemini), Flux (BFL official `api.bfl.ai`), Volcengine (one provider hosting Seedream image + Seedance video, shared key), xAI (Grok image). |
+| Providers v1 | All six day-one: OpenAI, Azure OpenAI, Google (Imagen/Gemini), Flux (BFL official `api.bfl.ai`), ByteDance (one provider hosting Seedream image + Seedance video, shared key), xAI (Grok image). |
 | Asset taxonomy | `character | object | background | style`. CB/O/B = reference-image based. Styles can be reference image AND/OR prompt snippet. |
 | Killer features | Boards/Collections + Remix + first-class video generation. |
 | Out of scope | LoRA training, ComfyUI workflow editor, img2img/inpaint, social discovery feed, multi-user. |
@@ -47,7 +47,7 @@ Bun + Turbo monorepo skeleton. `core` ports, `persistence` with migrations + rep
 All six vendors implemented with mocked-HTTP unit tests. Image `generate()` and Video `submit/poll/fetch` real against vendor APIs. JobRunner persists, polls with exponential backoff (capped 15s), emits `job.progress` / `job.completed` events.
 
 **Deliverables**
-- `packages/providers/src/{openai,azure,google,flux,volcengine,xai}/{image,video}.ts`. Volcengine has both ports (Seedream image + Seedance video, same `id: "volcengine"`); OpenAI/Azure/Google/Flux/xAI are image-only at v1.
+- `packages/providers/src/{openai,azure,google,flux,bytedance,xai}/{image,video}.ts`. ByteDance has both ports (Seedream image + Seedance video, same `id: "bytedance"`); OpenAI/Azure/Google/Flux/xAI are image-only at v1.
 - `packages/providers/src/http/` shared fetch wrapper with auth, retry-on-429, timeouts.
 - `packages/providers/src/registry.ts` with `createImageRegistry` / `createVideoRegistry`.
 - `JobRunner` complete: persistence, scheduled polling, events, abort handling.
@@ -64,13 +64,13 @@ All CLI commands listed in `architecture.md` §9 are functional. You can produce
 
 **Deliverables**
 - `imagine generate` with `--character/--object/--background/--style` flags pulling assets and attaching `gallery_item_assets`.
-- `imagine video <prompt> --provider volcengine [--model seedance-1.0-pro] [--wait]` (without `--wait`, prints job id and exits; with `--wait`, polls and prints progress).
+- `imagine video <prompt> --provider bytedance [--model seedance-1.0-pro] [--wait]` (without `--wait`, prints job id and exits; with `--wait`, polls and prints progress).
 - `imagine asset add <kind> --name X --ref path... [--prompt "..."]` (prompt only meaningful for `style`).
 - `imagine asset {list,rm,show}`, `imagine board {create,add,ls,rm}`, `imagine gallery {ls,remix,rm,favorite}`, `imagine config {get,set,path}`.
 - `imagine job {status,cancel,watch}` for inspecting/aborting in-flight jobs.
 
 **Acceptance**
-- `imagine video "rotating crystal in a misty forest" --provider volcengine --model seedance-1.0-pro --wait` blocks, prints progress, then prints the MP4 path.
+- `imagine video "rotating crystal in a misty forest" --provider bytedance --model seedance-1.0-pro --wait` blocks, prints progress, then prints the MP4 path.
 - `imagine gallery ls --kind video` shows the new item.
 - `imagine asset add character --name Alice --ref ./alice1.png --ref ./alice2.png` then `imagine generate "Alice waving" --character <id>` records the asset link in `gallery_item_assets`.
 
@@ -202,7 +202,7 @@ Per-milestone end-to-end checks (Windows 11, the user's host):
 |---|---|---|
 | M1 | `imagine doctor` | DB path printed, FTS=ok, providers=0/6 |
 | M2 | `imagine generate "a tiny otter"` | PNG under `~/.imagine/gallery/`, `gallery_items` row |
-| M3 | `imagine video "rotating crystal" --provider volcengine --model seedance-1.0-pro --wait` | MP4 path printed |
+| M3 | `imagine video "rotating crystal" --provider bytedance --model seedance-1.0-pro --wait` | MP4 path printed |
 | M4 | desktop dev → Providers page | Each test indicator green for valid keys |
 | M5 | desktop → Studio → Generate | Result in Gallery within 1s; drag into Board persists |
 | M6 | desktop → Assets → create Character → Studio → generate | `gallery_item_assets` row written |

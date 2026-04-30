@@ -14,78 +14,61 @@ import {
   type ProviderTestResult,
   validateImageRequestAgainstModel,
 } from "@imagine/core";
-import { createHttpClient, type HttpClient } from "../http/index.js";
-import { z } from "zod";
+import OpenAI, { APIError } from "openai";
 
 /**
- * URL strategy. OpenAI default = `${baseUrl}/images/generations`. Azure
- * composes its own `urlBuilder` to inject deployment + api-version.
+ * Canonical OpenAI base URL. Hardcoded — users configure auth only. A
+ * power-user override is available via `secrets.openai.baseUrl` (not
+ * surfaced in the desktop UI).
  */
-export type OpenAIUrlBuilder = (modelOrDeployment: string) => string;
+export const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
 
 /**
- * Auth header strategy. OpenAI uses `Authorization: Bearer ...`; Azure swaps
- * for `api-key`. Seedream reuses `Bearer` against a different baseUrl.
+ * Minimal SDK client surface used by `OpenAIImageProvider`. Tests inject a
+ * fake; production constructs a real `OpenAI` instance. Defined structurally
+ * so test fakes don't need to satisfy the full `OpenAI` shape.
  */
-export type OpenAIAuthHeader = (apiKey: string) => Record<string, string>;
+export interface OpenAIClientLike {
+  images: {
+    generate: (
+      body: Record<string, unknown>,
+      options?: { signal?: AbortSignal },
+    ) => Promise<{ data?: Array<{ b64_json?: string; url?: string; revised_prompt?: string }> }>;
+  };
+  models: {
+    list: (
+      options?: { signal?: AbortSignal },
+    ) => Promise<{ data?: Array<{ id?: string }> }> | AsyncIterable<{ id?: string }>;
+  };
+}
 
 export interface OpenAIImageProviderOptions {
   apiKey: string;
   baseUrl?: string | null;
   models: ReadonlyMap<string, ImageModelDef>;
-  /** Override the provider id when composing for Azure / Seedream. */
-  providerId?: string;
-  displayName?: string;
-  /** URL builder; defaults to `${baseUrl}/images/generations`. */
-  urlBuilder?: OpenAIUrlBuilder;
-  /** Auth header builder; defaults to Bearer. */
-  authHeader?: OpenAIAuthHeader;
-  /** Inject a fetch (tests). */
-  fetch?: typeof fetch;
+  /** Inject a SDK client (tests). In production we construct one. */
+  client?: OpenAIClientLike;
   logger?: Logger;
 }
 
-/** Vendor response schema for the b64-style response_format. */
-const OpenAIImageResponseSchema = z.object({
-  created: z.number().optional(),
-  data: z
-    .array(
-      z.object({
-        b64_json: z.string().optional(),
-        url: z.string().optional(),
-        revised_prompt: z.string().optional(),
-      }),
-    )
-    .min(1),
-});
-
-const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
-
 export class OpenAIImageProvider implements ImageProvider {
-  readonly id: string;
-  readonly displayName: string;
+  readonly id = "openai";
+  readonly displayName = "OpenAI";
   readonly capabilities: ImageCapabilities;
   readonly models: ReadonlyMap<string, ImageModelDef>;
-  protected readonly http: HttpClient;
-  protected readonly options: OpenAIImageProviderOptions;
-  protected readonly urlBuilder: OpenAIUrlBuilder;
+  protected readonly client: OpenAIClientLike;
+  protected readonly logger?: Logger;
 
   constructor(options: OpenAIImageProviderOptions) {
-    this.options = options;
-    this.id = options.providerId ?? "openai";
-    this.displayName = options.displayName ?? "OpenAI";
     this.models = options.models;
     this.capabilities = aggregateCapabilities(options.models);
-    const baseUrl = options.baseUrl ?? DEFAULT_OPENAI_BASE_URL;
-    const auth = options.authHeader ?? defaultBearerAuth;
-    this.urlBuilder = options.urlBuilder ?? ((_model: string) => `${baseUrl}/images/generations`);
-    this.http = createHttpClient({
-      baseUrl: undefined, // url builder returns absolute URLs
-      headers: auth(options.apiKey),
-      vendorId: this.id,
-      ...(options.fetch !== undefined ? { fetch: options.fetch } : {}),
-      ...(options.logger !== undefined ? { logger: options.logger } : {}),
-    });
+    if (options.logger) this.logger = options.logger;
+    this.client =
+      options.client ??
+      (new OpenAI({
+        apiKey: options.apiKey,
+        baseURL: options.baseUrl ?? DEFAULT_OPENAI_BASE_URL,
+      }) as unknown as OpenAIClientLike);
   }
 
   async generate(req: ImageRequest, signal?: AbortSignal): Promise<ImageGenerationResult> {
@@ -96,20 +79,23 @@ export class OpenAIImageProvider implements ImageProvider {
       });
     }
 
-    // Apply defaults, then validate.
     const merged = applyImageDefaults(req, model);
     validateImageRequestAgainstModel(this.id, merged, model);
 
-    const body = this.buildRequestBody(merged, model);
-    const url = this.urlBuilder(model.id);
-    const opts: { signal?: AbortSignal; schema: typeof OpenAIImageResponseSchema } = {
-      schema: OpenAIImageResponseSchema,
-    };
+    const body = buildOpenAIImageBody(merged, model);
+    const opts: { signal?: AbortSignal } = {};
     if (signal) opts.signal = signal;
-    const response = await this.http.post<z.infer<typeof OpenAIImageResponseSchema>>(url, body, opts);
 
+    let response: { data?: Array<{ b64_json?: string; url?: string; revised_prompt?: string }> };
+    try {
+      response = await this.client.images.generate(body, opts);
+    } catch (err) {
+      throw rethrowOpenAIError(err, this.id);
+    }
+
+    const data = response?.data ?? [];
     const outputs: ImageOutput[] = [];
-    for (const entry of response.data) {
+    for (const entry of data) {
       if (entry.b64_json) {
         const bytes = decodeBase64(entry.b64_json);
         outputs.push({
@@ -119,11 +105,11 @@ export class OpenAIImageProvider implements ImageProvider {
           ...(entry.revised_prompt ? { raw: { revised_prompt: entry.revised_prompt } } : {}),
         });
       } else if (entry.url) {
-        // Some deployments return URLs even when b64 is requested.
-        const dl = await this.http.getBytes(entry.url, signal ? { signal } : {});
+        // Fallback for deployments that ignore response_format and return URLs.
+        const dl = await fetchBytesFromUrl(entry.url, signal);
         outputs.push({
           bytes: dl.bytes,
-          mimeType: dl.mimeType.startsWith("image/") ? dl.mimeType : "image/png",
+          mimeType: dl.mimeType,
           ...parseSize(merged.size),
         });
       } else {
@@ -139,22 +125,16 @@ export class OpenAIImageProvider implements ImageProvider {
   }
 
   /**
-   * Minimal auth probe — `GET {baseUrl}/models`. A 200 with at least one of
-   * the configured model ids present (if any) is a strong signal that the key
-   * is valid; otherwise we accept any 200 as authenticated.
+   * Auth probe — `client.models.list()`. A response with at least one entry
+   * means the key is valid. We additionally annotate the response when one of
+   * our configured model ids is present in the listing.
    */
   async test(signal?: AbortSignal): Promise<ProviderTestResult> {
     const started = Date.now();
-    const baseUrl = this.options.baseUrl ?? DEFAULT_OPENAI_BASE_URL;
-    const url = `${baseUrl.replace(/\/+$/, "")}/models`;
+    const probeSignal = signal ?? AbortSignal.timeout(8000);
     try {
-      const opts: { signal?: AbortSignal } = {};
-      if (signal) opts.signal = signal;
-      const response = await this.http.get<{ data?: Array<{ id?: string }> }>(url, opts);
+      const ids = await listModelIds(this.client, probeSignal);
       const latencyMs = Date.now() - started;
-      const ids = (response?.data ?? [])
-        .map((m) => m.id)
-        .filter((s): s is string => typeof s === "string");
       const configured = [...this.models.keys()];
       const matched = configured.find((id) => ids.includes(id));
       const out: ProviderTestResult = matched
@@ -165,26 +145,101 @@ export class OpenAIImageProvider implements ImageProvider {
       return testFailureFromError(err);
     }
   }
-
-  protected buildRequestBody(req: ImageRequest, model: ImageModelDef): Record<string, unknown> {
-    const caps = model.capabilities;
-    const body: Record<string, unknown> = {
-      model: model.id,
-      prompt: req.prompt,
-      n: req.count,
-      response_format: "b64_json",
-    };
-    if (req.size) body.size = req.size;
-    // `quality` and `style` are dall-e-3 specific and gated on caps.supportsStyleRef.
-    const raw = (req.raw ?? {}) as { quality?: string; style?: string };
-    if (raw.quality) body.quality = raw.quality;
-    if (raw.style && caps?.supportsStyleRef) body.style = raw.style;
-    return body;
-  }
 }
 
-function defaultBearerAuth(apiKey: string): Record<string, string> {
-  return { Authorization: `Bearer ${apiKey}` };
+/**
+ * Build the OpenAI-compatible images.generate body. Shared by Azure / xAI /
+ * ByteDance via direct import (each provider stays its own class but doesn't
+ * need to re-derive what defaults to forward).
+ */
+export function buildOpenAIImageBody(
+  req: ImageRequest,
+  model: ImageModelDef,
+): Record<string, unknown> {
+  const caps = model.capabilities;
+  const body: Record<string, unknown> = {
+    model: model.id,
+    prompt: req.prompt,
+    n: req.count,
+    response_format: "b64_json",
+  };
+  if (req.size) body.size = req.size;
+  // Quality flows through when the model declares a non-empty `qualities`
+  // list (validated upstream against `caps.qualities`). Falls back to
+  // `req.raw.quality` for power-user requests that bypass the schema field.
+  const raw = (req.raw ?? {}) as { quality?: string; style?: string };
+  if (req.quality && caps?.qualities && caps.qualities.length > 0) {
+    body.quality = req.quality;
+  } else if (raw.quality) {
+    body.quality = raw.quality;
+  }
+  if (raw.style && caps?.supportsStyleRef) body.style = raw.style;
+  return body;
+}
+
+/**
+ * Convert SDK errors (or anything else) into our ProviderError hierarchy so
+ * callers see consistent shapes regardless of which path threw.
+ */
+export function rethrowOpenAIError(err: unknown, vendorId: string): never {
+  if (err instanceof APIError) {
+    if (typeof err.status === "number") {
+      throw new ProviderHttpError(`HTTP ${err.status} from openai SDK: ${err.message}`, {
+        vendorId,
+        status: err.status,
+      });
+    }
+    throw new ProviderError(err.message, { vendorId });
+  }
+  if (err instanceof Error) throw new ProviderError(err.message, { vendorId, cause: err });
+  throw new ProviderError(String(err), { vendorId });
+}
+
+/**
+ * `models.list()` returns a `PagePromise` (async iterable) in the real SDK.
+ * For tests we accept either an array-shaped `{ data }` value or an async
+ * iterable. Either path returns the model id list.
+ */
+export async function listModelIds(
+  client: OpenAIClientLike,
+  signal?: AbortSignal,
+): Promise<string[]> {
+  const opts: { signal?: AbortSignal } = {};
+  if (signal) opts.signal = signal;
+  const result = await client.models.list(opts);
+  // Real SDK PagePromise: has both AsyncIterable<Item> AND a resolved Page that
+  // exposes `data`. The resolved value (after await) IS the page; PagePromise's
+  // resolution exposes `data`. Tests typically return `{ data: [...] }`.
+  if (result && typeof (result as { data?: unknown }).data !== "undefined") {
+    const data = (result as { data?: Array<{ id?: string }> }).data ?? [];
+    return data.map((m) => m?.id).filter((s): s is string => typeof s === "string");
+  }
+  // Fall back: drain the async iterable.
+  const ids: string[] = [];
+  if (typeof (result as AsyncIterable<{ id?: string }>)[Symbol.asyncIterator] === "function") {
+    for await (const m of result as AsyncIterable<{ id?: string }>) {
+      if (typeof m?.id === "string") ids.push(m.id);
+    }
+  }
+  return ids;
+}
+
+async function fetchBytesFromUrl(
+  url: string,
+  signal?: AbortSignal,
+): Promise<{ bytes: Uint8Array<ArrayBuffer>; mimeType: string }> {
+  const init: RequestInit = signal ? { signal } : {};
+  const res = await fetch(url, init);
+  if (!res.ok) {
+    throw new ProviderHttpError(`HTTP ${res.status} downloading ${url}`, {
+      vendorId: "openai",
+      status: res.status,
+    });
+  }
+  const buf = await res.arrayBuffer();
+  const bytes = new Uint8Array(buf as ArrayBuffer);
+  const mimeType = res.headers.get("content-type") ?? "image/png";
+  return { bytes, mimeType: mimeType.startsWith("image/") ? mimeType : "image/png" };
 }
 
 export function aggregateCapabilities(
@@ -219,9 +274,7 @@ export function aggregateCapabilities(
   };
 }
 
-function decodeBase64(s: string): Uint8Array<ArrayBuffer> {
-  // Buffer.from(...) yields Uint8Array<ArrayBufferLike>; copy into a fresh
-  // ArrayBuffer so the resulting Uint8Array is the strictly-typed variant.
+export function decodeBase64(s: string): Uint8Array<ArrayBuffer> {
   const b = Buffer.from(s, "base64");
   const ab = new ArrayBuffer(b.byteLength);
   const out = new Uint8Array(ab);
@@ -229,7 +282,7 @@ function decodeBase64(s: string): Uint8Array<ArrayBuffer> {
   return out;
 }
 
-function parseSize(size: string | undefined): { width?: number; height?: number } {
+export function parseSize(size: string | undefined): { width?: number; height?: number } {
   if (!size) return {};
   const m = /^(\d+)x(\d+)$/.exec(size);
   if (!m) return {};
@@ -237,11 +290,13 @@ function parseSize(size: string | undefined): { width?: number; height?: number 
 }
 
 /**
- * Convert any thrown error into a `ProviderTestResult` failure shape.
- * Shared by every vendor's `test()` so they have identical never-throws
- * semantics.
+ * Convert any thrown error into a `ProviderTestResult` failure shape. Shared
+ * by every vendor's `test()` so they have identical never-throws semantics.
  */
 export function testFailureFromError(err: unknown): ProviderTestResult {
+  if (err instanceof APIError && typeof err.status === "number") {
+    return { ok: false, reason: `HTTP ${err.status}: ${err.message}`, status: err.status };
+  }
   if (err instanceof ProviderHttpError) {
     return { ok: false, reason: err.message, status: err.status ?? 0 };
   }

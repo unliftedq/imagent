@@ -106,7 +106,12 @@ export function setupIpc(deps: IpcDeps): IpcServer {
     "providers.list": async () => {
       const config = await configStore.loadConfig();
       const secrets = await secretsStore.loadSecrets();
-      return providerSummaryList(config.providers, secrets);
+      return providerSummaryList(
+        config.providers,
+        secrets,
+        runtime.imageRegistry,
+        runtime.videoRegistry,
+      );
     },
 
     "providers.config.get": async () => {
@@ -139,14 +144,13 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       }
       if (input.google?.apiKey) patch.google = { apiKey: input.google.apiKey };
       if (input["flux-bfl"]?.apiKey) patch["flux-bfl"] = { apiKey: input["flux-bfl"].apiKey };
-      if (input.volcengine) {
-        const cur = (await secretsStore.loadSecrets()).volcengine;
-        if (input.volcengine.apiKey || input.volcengine.region) {
-          patch.volcengine = {
-            apiKey: input.volcengine.apiKey ?? cur?.apiKey ?? "",
-            region: input.volcengine.region ?? cur?.region ?? "cn-beijing",
-          };
-        }
+      if (input.bytedance) {
+        const cur = (await secretsStore.loadSecrets()).bytedance;
+        const merged = {
+          endpoint: input.bytedance.endpoint ?? cur?.endpoint ?? "",
+          apiKey: input.bytedance.apiKey ?? cur?.apiKey ?? "",
+        };
+        if (merged.endpoint && merged.apiKey) patch.bytedance = merged;
       }
       if (input.xai?.apiKey) patch.xai = { apiKey: input.xai.apiKey };
       await secretsStore.saveSecrets(patch);
@@ -196,6 +200,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
     "app.storagePaths": async () => ({
       dataDir: paths.dataDir,
       configFile: paths.configFile(),
+      catalogFile: paths.catalogFile(),
       secretsBin: paths.secretsBin(),
       secretsJson: paths.secretsFile(),
       dbFile: paths.dbFile(),
@@ -203,6 +208,9 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       assetsDir: paths.assetsDir(),
       logsDir: paths.logsDir(),
     }),
+
+    "catalog.get": async () => runtime.catalog,
+    "catalog.path": async () => ({ path: runtime.catalogPath }),
 
     "system.openExternal": async ({ url }) => {
       // Only allow http/https/mailto — refuse `file://` and shell handlers.
@@ -606,7 +614,11 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       const config = await configStore.loadConfig();
       const provider = runtime.imageRegistry.get(providerId);
       const models = provider ? [...provider.models.values()] : [];
-      const defaultModel = readDefaultModel(config.providers, providerId);
+      const defaultModel = readDefaultModel(
+        config.providers,
+        providerId,
+        runtime.imageRegistry,
+      );
       return { providerId, defaultModel, models };
     },
 
@@ -614,7 +626,11 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       const config = await configStore.loadConfig();
       const provider = runtime.videoRegistry.get(providerId);
       const models = provider ? [...provider.models.values()] : [];
-      const defaultModel = readDefaultVideoModel(config.providers, providerId);
+      const defaultModel = readDefaultVideoModel(
+        config.providers,
+        providerId,
+        runtime.videoRegistry,
+      );
       return { providerId, defaultModel, models };
     },
 
@@ -1152,69 +1168,86 @@ function parseJsonObject(s: string): Record<string, unknown> {
   }
 }
 
+/**
+ * For well-known providers, return the registry's first model id (catalog
+ * is the source of truth). For Azure, return the user-named image
+ * deployment. The result is used by the renderer's ModelSelect to
+ * pre-populate a default.
+ */
 function readDefaultModel(
   prefs: ProviderPreferences,
   providerId: string,
+  imageRegistry: ImageRegistry,
 ): string | null {
   switch (providerId) {
-    case "openai":
-      return prefs.openai.defaultModel ?? null;
     case "azure-openai":
       return prefs["azure-openai"].deployments.image || null;
-    case "google":
-      return prefs.google.defaultModel ?? null;
-    case "flux-bfl":
-      return prefs["flux-bfl"].defaultModel ?? null;
-    case "volcengine":
-      // For image surface; video default is `defaultVideoModel` and is not
-      // exposed by `image.models`.
-      return prefs.volcengine.defaultImageModel ?? null;
-    case "xai":
-      return prefs.xai.defaultModel ?? null;
-    default:
-      return null;
+    default: {
+      const provider = imageRegistry.get(providerId);
+      if (!provider) return null;
+      const first = provider.models.keys().next().value;
+      return typeof first === "string" ? first : null;
+    }
   }
 }
 
 function readDefaultVideoModel(
   prefs: ProviderPreferences,
   providerId: string,
+  videoRegistry: VideoRegistry,
 ): string | null {
   switch (providerId) {
-    case "volcengine":
-      return prefs.volcengine.defaultVideoModel ?? null;
     case "azure-openai":
       return prefs["azure-openai"].deployments.video || null;
-    default:
-      return null;
+    default: {
+      const provider = videoRegistry.get(providerId);
+      if (!provider) return null;
+      const first = provider.models.keys().next().value;
+      return typeof first === "string" ? first : null;
+    }
   }
 }
 
 function providerSummaryList(
   prefs: ProviderPreferences,
   secrets: ProviderSecrets,
+  imageRegistry: ImageRegistry,
+  videoRegistry: VideoRegistry,
 ): Array<{
-  id: "openai" | "azure-openai" | "google" | "flux-bfl" | "volcengine" | "xai";
+  id: "openai" | "azure-openai" | "google" | "flux-bfl" | "bytedance" | "xai";
   displayName: string;
   configured: boolean;
   kinds: ("image" | "video")[];
   defaultModel: string | null;
   modelIds: string[];
 }> {
-  const idsOf = (entries: ReadonlyArray<string | { id: string }>): string[] =>
-    entries.map((m) => (typeof m === "string" ? m : m.id));
+  // Pull the model id list from the live registry — the catalog is the
+  // canonical source of truth. Azure resolves to the user's configured
+  // deployment names, also via the registry map.
+  const imageIds = (id: string): string[] => {
+    const p = imageRegistry.get(id);
+    return p ? [...p.models.keys()] : [];
+  };
+  const videoIds = (id: string): string[] => {
+    const p = videoRegistry.get(id);
+    return p ? [...p.models.keys()] : [];
+  };
+  const firstImage = (id: string): string | null => {
+    const ids = imageIds(id);
+    return ids[0] ?? null;
+  };
   return [
     {
       id: "openai",
       displayName: "OpenAI",
       configured: !!secrets.openai,
       kinds: ["image"],
-      defaultModel: prefs.openai.defaultModel ?? null,
-      modelIds: idsOf(prefs.openai.models),
+      defaultModel: firstImage("openai"),
+      modelIds: imageIds("openai"),
     },
     {
       id: "azure-openai",
-      displayName: "Azure OpenAI",
+      displayName: "Azure",
       configured: !!secrets["azure-openai"],
       kinds: ["image"],
       defaultModel: prefs["azure-openai"].deployments.image || null,
@@ -1222,39 +1255,38 @@ function providerSummaryList(
     },
     {
       id: "google",
-      displayName: "Google (Imagen / Gemini)",
+      displayName: "Google AI Studio",
       configured: !!secrets.google,
-      kinds: ["image"],
-      defaultModel: prefs.google.defaultModel ?? null,
-      modelIds: idsOf(prefs.google.models),
+      // Google AI Studio spans both kinds: Imagen / Nano Banana image + Veo video.
+      kinds: ["image", "video"],
+      defaultModel: firstImage("google"),
+      modelIds: [...imageIds("google"), ...videoIds("google")],
     },
     {
       id: "flux-bfl",
-      displayName: "Flux (BFL)",
+      displayName: "Flux",
       configured: !!secrets["flux-bfl"],
       kinds: ["image"],
-      defaultModel: prefs["flux-bfl"].defaultModel ?? null,
-      modelIds: idsOf(prefs["flux-bfl"].models),
+      defaultModel: firstImage("flux-bfl"),
+      modelIds: imageIds("flux-bfl"),
     },
     {
-      id: "volcengine",
-      displayName: "Volcengine",
-      configured: !!secrets.volcengine,
-      // Volcengine spans both kinds: Seedream image + Seedance video.
+      id: "bytedance",
+      displayName: "ByteDance",
+      configured: !!secrets.bytedance,
+      // ByteDance spans both kinds: Seedream image + Seedance video.
       kinds: ["image", "video"],
-      defaultModel: prefs.volcengine.defaultImageModel ?? null,
-      modelIds: [
-        ...idsOf(prefs.volcengine.imageModels),
-        ...idsOf(prefs.volcengine.videoModels),
-      ],
+      defaultModel: firstImage("bytedance"),
+      modelIds: [...imageIds("bytedance"), ...videoIds("bytedance")],
     },
     {
       id: "xai",
       displayName: "xAI",
       configured: !!secrets.xai,
-      kinds: ["image"],
-      defaultModel: prefs.xai.defaultModel ?? null,
-      modelIds: idsOf(prefs.xai.models),
+      // xAI spans both kinds: Grok Imagine image + grok-imagine-video video.
+      kinds: ["image", "video"],
+      defaultModel: firstImage("xai"),
+      modelIds: [...imageIds("xai"), ...videoIds("xai")],
     },
   ];
 }
@@ -1271,7 +1303,7 @@ function maskSecrets(s: ProviderSecrets): {
   "azure-openai"?: { endpoint: string | null; apiKey: string | null; apiVersion: string | null };
   google?: { apiKey: string | null };
   "flux-bfl"?: { apiKey: string | null };
-  volcengine?: { apiKey: string | null; region: string | null };
+  bytedance?: { endpoint: string | null; apiKey: string | null };
   xai?: { apiKey: string | null };
 } {
   const out: Record<string, unknown> = {};
@@ -1286,77 +1318,56 @@ function maskSecrets(s: ProviderSecrets): {
   }
   if (s.google) out.google = { apiKey: maskValue(s.google.apiKey) };
   if (s["flux-bfl"]) out["flux-bfl"] = { apiKey: maskValue(s["flux-bfl"].apiKey) };
-  if (s.volcengine) {
-    out.volcengine = {
-      apiKey: maskValue(s.volcengine.apiKey),
-      region: s.volcengine.region || null,
+  if (s.bytedance) {
+    out.bytedance = {
+      // Endpoint isn't a secret — surface it unmasked (mirrors Azure).
+      endpoint: s.bytedance.endpoint || null,
+      apiKey: maskValue(s.bytedance.apiKey),
     };
   }
   if (s.xai) out.xai = { apiKey: maskValue(s.xai.apiKey) };
   return out as ReturnType<typeof maskSecrets>;
 }
 
+/**
+ * Translate the on-disk provider prefs into the renderer-facing payload.
+ * After the "minimum-auth" reshape, well-known providers carry empty slots
+ * (catalog is the source of truth); only Azure OpenAI carries deployment
+ * names.
+ */
 function prefsPayloadFromConfig(p: ProviderPreferences): {
-  openai: { baseUrl: string | null; models: string[]; defaultModel: string };
+  openai: Record<string, never>;
   "azure-openai": {
     deployments: { image: string; video: string | null };
     defaultDeployment: "image" | "video";
   };
-  google: { models: string[]; defaultModel: string };
-  "flux-bfl": { baseUrl: string; models: string[]; defaultModel: string };
-  volcengine: {
-    baseUrl: string;
-    imageModels: string[];
-    videoModels: string[];
-    defaultImageModel: string;
-    defaultVideoModel: string;
-  };
-  xai: { baseUrl: string; models: string[]; defaultModel: string };
+  google: Record<string, never>;
+  "flux-bfl": Record<string, never>;
+  bytedance: Record<string, never>;
+  xai: Record<string, never>;
 } {
-  const ids = (entries: ReadonlyArray<string | { id: string }>): string[] =>
-    entries.map((e) => (typeof e === "string" ? e : e.id));
   return {
-    openai: {
-      baseUrl: p.openai.baseUrl,
-      models: ids(p.openai.models),
-      defaultModel: p.openai.defaultModel,
-    },
+    openai: {},
     "azure-openai": {
       deployments: p["azure-openai"].deployments,
       defaultDeployment: p["azure-openai"].defaultDeployment,
     },
-    google: { models: ids(p.google.models), defaultModel: p.google.defaultModel },
-    "flux-bfl": {
-      baseUrl: p["flux-bfl"].baseUrl,
-      models: ids(p["flux-bfl"].models),
-      defaultModel: p["flux-bfl"].defaultModel,
-    },
-    volcengine: {
-      baseUrl: p.volcengine.baseUrl,
-      imageModels: ids(p.volcengine.imageModels),
-      videoModels: ids(p.volcengine.videoModels),
-      defaultImageModel: p.volcengine.defaultImageModel,
-      defaultVideoModel: p.volcengine.defaultVideoModel,
-    },
-    xai: {
-      baseUrl: p.xai.baseUrl,
-      models: ids(p.xai.models),
-      defaultModel: p.xai.defaultModel,
-    },
+    google: {},
+    "flux-bfl": {},
+    bytedance: {},
+    xai: {},
   };
 }
 
 function prefsConfigFromPayload(
   payload: ReturnType<typeof prefsPayloadFromConfig>,
 ): ProviderPreferences {
-  // Models come back as bare strings; the catalog merge happens at registry
-  // construction so storing strings is exactly what config.json expects.
   return {
     openai: payload.openai,
     "azure-openai": payload["azure-openai"],
     google: payload.google,
     "flux-bfl": payload["flux-bfl"],
-    volcengine: payload.volcengine,
+    bytedance: payload.bytedance,
     xai: payload.xai,
   };
 }

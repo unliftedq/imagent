@@ -6,27 +6,24 @@ import {
   ProviderRow,
   type ProviderTestStatus,
 } from "@imagine/ui";
-import type { ProviderId, ProviderPreferencesPayload, SecretsWrite } from "@imagine/ipc";
+import {
+  IpcClientError,
+  type ProviderId,
+  type ProviderPreferencesPayload,
+  type SecretsWrite,
+} from "@imagine/ipc";
 import { useConfigStore } from "../state/useConfigStore.js";
+import { useUIStore } from "../state/useUIStore.js";
 
 interface RowState {
   apiKey: string;
-  // Azure-only
+  // Shared `endpoint` field — used by Azure and ByteDance (both require an
+  // endpoint URL alongside the apiKey).
   endpoint: string;
   apiVersion: string;
-  // Volcengine-only
-  region: string;
-  // Per-provider config blocks (string-edit form):
-  baseUrl: string;
-  models: string; // comma-separated (single-list providers)
-  defaultModel: string;
-  // Volcengine has two model lists, one per port.
-  imageModels: string;
-  videoModels: string;
-  defaultImageModel: string;
-  defaultVideoModel: string;
-  azureImageDeployment: string;
-  azureVideoDeployment: string;
+  // Azure deployments
+  imageDeployment: string;
+  videoDeployment: string;
 }
 
 function emptyRowState(): RowState {
@@ -34,16 +31,8 @@ function emptyRowState(): RowState {
     apiKey: "",
     endpoint: "",
     apiVersion: "2024-10-21",
-    region: "cn-beijing",
-    baseUrl: "",
-    models: "",
-    defaultModel: "",
-    imageModels: "",
-    videoModels: "",
-    defaultImageModel: "",
-    defaultVideoModel: "",
-    azureImageDeployment: "",
-    azureVideoDeployment: "",
+    imageDeployment: "",
+    videoDeployment: "",
   };
 }
 
@@ -60,35 +49,15 @@ function rowStateFromConfig(
   const r = emptyRowState();
   if (!prefs) return r;
   switch (id) {
-    case "openai":
-      r.baseUrl = prefs.openai.baseUrl ?? "";
-      r.models = prefs.openai.models.join(", ");
-      r.defaultModel = prefs.openai.defaultModel;
-      break;
     case "azure-openai":
-      r.azureImageDeployment = prefs["azure-openai"].deployments.image;
-      r.azureVideoDeployment = prefs["azure-openai"].deployments.video ?? "";
+      r.imageDeployment = prefs["azure-openai"].deployments.image;
+      r.videoDeployment = prefs["azure-openai"].deployments.video ?? "";
       break;
-    case "google":
-      r.models = prefs.google.models.join(", ");
-      r.defaultModel = prefs.google.defaultModel;
-      break;
-    case "flux-bfl":
-      r.baseUrl = prefs["flux-bfl"].baseUrl;
-      r.models = prefs["flux-bfl"].models.join(", ");
-      r.defaultModel = prefs["flux-bfl"].defaultModel;
-      break;
-    case "volcengine":
-      r.baseUrl = prefs.volcengine.baseUrl;
-      r.imageModels = prefs.volcengine.imageModels.join(", ");
-      r.videoModels = prefs.volcengine.videoModels.join(", ");
-      r.defaultImageModel = prefs.volcengine.defaultImageModel;
-      r.defaultVideoModel = prefs.volcengine.defaultVideoModel;
-      break;
-    case "xai":
-      r.baseUrl = prefs.xai.baseUrl;
-      r.models = prefs.xai.models.join(", ");
-      r.defaultModel = prefs.xai.defaultModel;
+    default:
+      // OpenAI / Google / Flux / ByteDance / xAI carry no per-provider
+      // prefs — the catalog is the source of truth and base URLs are
+      // hardcoded canonical values (with a power-user override available
+      // via secrets.json).
       break;
   }
   return r;
@@ -107,14 +76,18 @@ export function ProvidersPage() {
     testProvider,
   } = useConfigStore();
 
-  const [rows, setRows] = useState<Record<ProviderId, RowState>>(() => ({
-    openai: emptyRowState(),
-    "azure-openai": emptyRowState(),
-    google: emptyRowState(),
-    "flux-bfl": emptyRowState(),
-    volcengine: emptyRowState(),
-    xai: emptyRowState(),
-  }));
+  const pushToast = useUIStore((s) => s.pushToast);
+
+  const [rows, setRows] = useState<Record<ProviderId, RowState>>(() => {
+    return {
+      openai: emptyRowState(),
+      "azure-openai": emptyRowState(),
+      google: emptyRowState(),
+      "flux-bfl": emptyRowState(),
+      bytedance: emptyRowState(),
+      xai: emptyRowState(),
+    };
+  });
 
   useEffect(() => {
     void refresh();
@@ -128,13 +101,13 @@ export function ProvidersPage() {
       "azure-openai": rowStateFromConfig("azure-openai", providerPrefs),
       google: rowStateFromConfig("google", providerPrefs),
       "flux-bfl": rowStateFromConfig("flux-bfl", providerPrefs),
-      volcengine: rowStateFromConfig("volcengine", providerPrefs),
+      bytedance: rowStateFromConfig("bytedance", providerPrefs),
       xai: rowStateFromConfig("xai", providerPrefs),
     });
   }, [providerPrefs]);
 
   const order: ProviderId[] = useMemo(
-    () => ["openai", "azure-openai", "google", "flux-bfl", "volcengine", "xai"],
+    () => ["openai", "azure-openai", "google", "flux-bfl", "bytedance", "xai"],
     [],
   );
 
@@ -163,63 +136,19 @@ export function ProvidersPage() {
     const nextPrefs: ProviderPreferencesPayload = JSON.parse(
       JSON.stringify(providerPrefs),
     ) as ProviderPreferencesPayload;
-    const splitList = (s: string): string[] =>
-      s.split(",").map((x) => x.trim()).filter(Boolean);
-    const modelList = splitList(r.models);
     switch (id) {
-      case "openai":
-        nextPrefs.openai = {
-          baseUrl: r.baseUrl ? r.baseUrl : null,
-          models: modelList,
-          defaultModel: r.defaultModel || modelList[0] || nextPrefs.openai.defaultModel,
-        };
-        break;
       case "azure-openai":
         nextPrefs["azure-openai"] = {
           deployments: {
-            image: r.azureImageDeployment,
-            video: r.azureVideoDeployment || null,
+            image: r.imageDeployment,
+            video: r.videoDeployment || null,
           },
           defaultDeployment: nextPrefs["azure-openai"].defaultDeployment,
         };
         break;
-      case "google":
-        nextPrefs.google = {
-          models: modelList,
-          defaultModel: r.defaultModel || modelList[0] || nextPrefs.google.defaultModel,
-        };
-        break;
-      case "flux-bfl":
-        nextPrefs["flux-bfl"] = {
-          baseUrl: r.baseUrl || nextPrefs["flux-bfl"].baseUrl,
-          models: modelList,
-          defaultModel: r.defaultModel || modelList[0] || nextPrefs["flux-bfl"].defaultModel,
-        };
-        break;
-      case "volcengine": {
-        const imageModels = splitList(r.imageModels);
-        const videoModels = splitList(r.videoModels);
-        nextPrefs.volcengine = {
-          baseUrl: r.baseUrl || nextPrefs.volcengine.baseUrl,
-          imageModels,
-          videoModels,
-          defaultImageModel:
-            r.defaultImageModel ||
-            imageModels[0] ||
-            nextPrefs.volcengine.defaultImageModel,
-          defaultVideoModel:
-            r.defaultVideoModel ||
-            videoModels[0] ||
-            nextPrefs.volcengine.defaultVideoModel,
-        };
-        break;
-      }
-      case "xai":
-        nextPrefs.xai = {
-          baseUrl: r.baseUrl || nextPrefs.xai.baseUrl,
-          models: modelList,
-          defaultModel: r.defaultModel || modelList[0] || nextPrefs.xai.defaultModel,
-        };
+      default:
+        // No prefs to write for well-known providers — auth is the only thing
+        // we persist.
         break;
     }
 
@@ -235,19 +164,36 @@ export function ProvidersPage() {
     }
     if (id === "google" && r.apiKey) secretsPatch.google = { apiKey: r.apiKey };
     if (id === "flux-bfl" && r.apiKey) secretsPatch["flux-bfl"] = { apiKey: r.apiKey };
-    if (id === "volcengine") {
-      const block: NonNullable<SecretsWrite["volcengine"]> = {};
+    if (id === "bytedance") {
+      const block: NonNullable<SecretsWrite["bytedance"]> = {};
       if (r.apiKey) block.apiKey = r.apiKey;
-      if (r.region) block.region = r.region;
-      if (Object.keys(block).length > 0) secretsPatch.volcengine = block;
+      if (r.endpoint) block.endpoint = r.endpoint;
+      if (Object.keys(block).length > 0) secretsPatch.bytedance = block;
     }
     if (id === "xai" && r.apiKey) secretsPatch.xai = { apiKey: r.apiKey };
 
-    await saveProviderPrefs(nextPrefs);
-    if (Object.keys(secretsPatch).length > 0) {
-      await saveSecrets(secretsPatch);
-      // Clear the local apiKey input so it shows the masked value next time.
-      setRows((s) => ({ ...s, [id]: { ...s[id], apiKey: "" } }));
+    try {
+      await saveProviderPrefs(nextPrefs);
+      if (Object.keys(secretsPatch).length > 0) {
+        await saveSecrets(secretsPatch);
+        // Clear the local apiKey input so it shows the masked value next time.
+        setRows((s) => ({ ...s, [id]: { ...s[id], apiKey: "" } }));
+      }
+      pushToast({
+        title: "Saved provider settings",
+        description: summaries.find((s) => s.id === id)?.displayName ?? id,
+        variant: "success",
+      });
+    } catch (err) {
+      const msg =
+        err instanceof IpcClientError
+          ? err.message
+          : (err as Error)?.message ?? String(err);
+      pushToast({
+        title: "Failed to save provider settings",
+        description: msg,
+        variant: "error",
+      });
     }
   }
 
@@ -262,7 +208,8 @@ export function ProvidersPage() {
           Providers
         </h1>
         <p className="mt-2 text-(length:--text-body-md) text-(--text)">
-          Configure API access for image and video generation.
+          Configure API access for image and video generation. Models come from
+          the built-in catalog — only authentication is needed.
         </p>
       </header>
 
@@ -272,8 +219,14 @@ export function ProvidersPage() {
           const r = rows[id];
           const status = statusFor(id);
           const maskedKey = secretMaskFor(id, secrets);
+          // Drive the badge off the IPC `summary.kinds` so any provider that
+          // spans both image and video (Google AI Studio, ByteDance, xAI) gets
+          // it without a per-id hardcoded check.
           const kindsBadge =
-            id === "volcengine" ? <KindsBadge text="Image + Video" /> : null;
+            summary && summary.kinds.length > 1 ? (
+              <KindsBadge text="Image + Video" />
+            ) : null;
+          const catalogModelIds = summary?.modelIds ?? [];
           return (
             <ProviderRow
               key={id}
@@ -286,20 +239,6 @@ export function ProvidersPage() {
               defaultOpen={!summary?.configured}
             >
               <div className="flex flex-col gap-4">
-                {id !== "azure-openai" ? (
-                  <SecretField
-                    label="API key"
-                    placeholder={maskedKey ?? "paste your key here"}
-                    value={r.apiKey}
-                    onChange={(v) => update(id, "apiKey", v)}
-                    helperText={
-                      maskedKey
-                        ? `Stored: ${maskedKey} — leave empty to keep it.`
-                        : "Required for Test + Save to work."
-                    }
-                  />
-                ) : null}
-
                 {id === "azure-openai" ? (
                   <>
                     <Field label="Endpoint">
@@ -326,120 +265,59 @@ export function ProvidersPage() {
                         onChange={(e) => update(id, "apiVersion", e.target.value)}
                       />
                     </Field>
-                    <Field label="Image deployment">
+                    <Field
+                      label="Image deployment"
+                      helperText="Deployment name from the Azure portal."
+                    >
                       <Input
-                        value={r.azureImageDeployment}
+                        value={r.imageDeployment}
                         onChange={(e) =>
-                          update(id, "azureImageDeployment", e.target.value)
+                          update(id, "imageDeployment", e.target.value)
                         }
-                        placeholder="my-deployment"
+                        placeholder="my-image-deployment"
                       />
                     </Field>
                     <Field label="Video deployment (optional)">
                       <Input
-                        value={r.azureVideoDeployment}
+                        value={r.videoDeployment}
                         onChange={(e) =>
-                          update(id, "azureVideoDeployment", e.target.value)
+                          update(id, "videoDeployment", e.target.value)
                         }
                       />
                     </Field>
                   </>
-                ) : null}
-
-                {(id === "openai" || id === "flux-bfl" || id === "volcengine" || id === "xai") ? (
-                  <Field
-                    label="Base URL"
-                    helperText={
-                      id === "openai"
-                        ? "Optional — leave empty for OpenAI's default."
-                        : "Override the vendor's default endpoint if needed."
-                    }
-                  >
-                    <Input
-                      value={r.baseUrl}
-                      onChange={(e) => update(id, "baseUrl", e.target.value)}
-                      placeholder={
-                        id === "flux-bfl"
-                          ? "https://api.bfl.ai"
-                          : id === "openai"
-                          ? "https://api.openai.com/v1"
-                          : id === "xai"
-                          ? "https://api.x.ai/v1"
-                          : "https://ark.cn-beijing.volces.com/api/v3"
+                ) : (
+                  <>
+                    {id === "bytedance" ? (
+                      <Field
+                        label="Endpoint"
+                        helperText="Ark base URL. Regional info is encoded here."
+                      >
+                        <Input
+                          placeholder="https://ark.cn-beijing.volces.com/api/v3"
+                          value={r.endpoint}
+                          onChange={(e) => update(id, "endpoint", e.target.value)}
+                        />
+                      </Field>
+                    ) : null}
+                    <SecretField
+                      label="API key"
+                      placeholder={maskedKey ?? "paste your key here"}
+                      value={r.apiKey}
+                      onChange={(v) => update(id, "apiKey", v)}
+                      helperText={
+                        maskedKey
+                          ? `Stored: ${maskedKey} — leave empty to keep it.`
+                          : "Required for Test + Save to work."
                       }
                     />
-                  </Field>
-                ) : null}
-
-                {id === "volcengine" ? (
-                  <Field label="Region">
-                    <Input
-                      value={r.region}
-                      onChange={(e) => update(id, "region", e.target.value)}
-                    />
-                  </Field>
-                ) : null}
-
-                {/* Single-list providers (openai/google/flux-bfl/xai). */}
-                {(id === "openai" || id === "google" || id === "flux-bfl" || id === "xai") ? (
-                  <>
-                    <Field label="Models" helperText="Comma-separated list. The first one is used as the default if none is set below.">
-                      <Input
-                        value={r.models}
-                        onChange={(e) => update(id, "models", e.target.value)}
-                        placeholder={modelPlaceholder(id)}
-                      />
-                    </Field>
-                    <Field label="Default model">
-                      <Input
-                        value={r.defaultModel}
-                        onChange={(e) => update(id, "defaultModel", e.target.value)}
-                      />
-                    </Field>
+                    {catalogModelIds.length > 0 ? (
+                      <p className="text-(length:--text-caption) text-(--text-muted)">
+                        Models from catalog: {catalogModelIds.join(", ")}
+                      </p>
+                    ) : null}
                   </>
-                ) : null}
-
-                {/* Volcengine has two parallel model editors — one per port. */}
-                {id === "volcengine" ? (
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div className="flex flex-col gap-3 rounded-(--radius-md) border border-(--border) p-3">
-                      <span className="text-(length:--text-caption-uppercase) tracking-[1.5px] text-(--text-muted)">
-                        Image models (Seedream)
-                      </span>
-                      <Field label="Models" helperText="Comma-separated.">
-                        <Input
-                          value={r.imageModels}
-                          onChange={(e) => update(id, "imageModels", e.target.value)}
-                          placeholder="seedream-3.0"
-                        />
-                      </Field>
-                      <Field label="Default image model">
-                        <Input
-                          value={r.defaultImageModel}
-                          onChange={(e) => update(id, "defaultImageModel", e.target.value)}
-                        />
-                      </Field>
-                    </div>
-                    <div className="flex flex-col gap-3 rounded-(--radius-md) border border-(--border) p-3">
-                      <span className="text-(length:--text-caption-uppercase) tracking-[1.5px] text-(--text-muted)">
-                        Video models (Seedance)
-                      </span>
-                      <Field label="Models" helperText="Comma-separated.">
-                        <Input
-                          value={r.videoModels}
-                          onChange={(e) => update(id, "videoModels", e.target.value)}
-                          placeholder="seedance-1.0-pro"
-                        />
-                      </Field>
-                      <Field label="Default video model">
-                        <Input
-                          value={r.defaultVideoModel}
-                          onChange={(e) => update(id, "defaultVideoModel", e.target.value)}
-                        />
-                      </Field>
-                    </div>
-                  </div>
-                ) : null}
+                )}
               </div>
             </ProviderRow>
           );
@@ -447,21 +325,6 @@ export function ProvidersPage() {
       </div>
     </div>
   );
-}
-
-function modelPlaceholder(id: ProviderId): string {
-  switch (id) {
-    case "openai":
-      return "gpt-image-1, dall-e-3";
-    case "google":
-      return "imagen-3";
-    case "flux-bfl":
-      return "flux-pro-1.1, flux-dev";
-    case "xai":
-      return "grok-2-image-1212";
-    default:
-      return "";
-  }
 }
 
 function secretMaskFor(id: ProviderId, masked: ReturnType<typeof useConfigStore.getState>["secrets"]) {
@@ -474,8 +337,8 @@ function secretMaskFor(id: ProviderId, masked: ReturnType<typeof useConfigStore.
       return masked.google?.apiKey ?? null;
     case "flux-bfl":
       return masked["flux-bfl"]?.apiKey ?? null;
-    case "volcengine":
-      return masked.volcengine?.apiKey ?? null;
+    case "bytedance":
+      return masked.bytedance?.apiKey ?? null;
     case "xai":
       return masked.xai?.apiKey ?? null;
     default:

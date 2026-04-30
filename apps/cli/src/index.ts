@@ -3,6 +3,7 @@ import { Command } from "commander";
 
 import { registerAssetCommands } from "./commands/asset.js";
 import { registerBoardCommands } from "./commands/board.js";
+import { registerCatalogCommands } from "./commands/catalog.js";
 import { registerConfigCommand } from "./commands/config.js";
 import { runDoctor } from "./commands/doctor.js";
 import { registerGalleryCommands } from "./commands/gallery.js";
@@ -33,6 +34,7 @@ async function main(): Promise<void> {
   // M2 commands.
   registerGenerateCommand(program);
   registerConfigCommand(program);
+  registerCatalogCommands(program);
 
   // M3 commands.
   registerAssetCommands(program);

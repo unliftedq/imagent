@@ -14,6 +14,7 @@ export interface ResolvedModelOption {
   capabilities?: {
     sizes?: readonly string[];
     aspectRatios?: readonly string[];
+    qualities?: readonly string[];
     maxReferences?: number;
     maxOutputs?: number;
     supportsSeed?: boolean;

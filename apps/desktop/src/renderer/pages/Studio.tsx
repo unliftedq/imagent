@@ -206,6 +206,24 @@ function ImageRail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caps?.sizes?.join(",")]);
 
+  // Quality is conditional on `model.capabilities.qualities`. When the user
+  // switches to a model that doesn't surface qualities, drop the prior value
+  // so it doesn't leak into the request payload.
+  useEffect(() => {
+    const supported = caps?.qualities;
+    if (!supported || supported.length === 0) {
+      if (draft.quality !== undefined) setDraft({ quality: undefined });
+      return;
+    }
+    if (!draft.quality || !supported.includes(draft.quality)) {
+      const fallback =
+        (selectedModel?.defaults as { quality?: string } | undefined)?.quality ??
+        supported[0];
+      setDraft({ quality: fallback });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caps?.qualities?.join(","), draft.modelId]);
+
   const generate = async (): Promise<void> => {
     setValidationError(null);
     if (!draft.prompt.trim()) {
@@ -248,6 +266,7 @@ function ImageRail() {
       count: draft.count,
       ...(draft.size ? { size: draft.size } : {}),
       ...(draft.aspectRatio ? { aspectRatio: draft.aspectRatio } : {}),
+      ...(draft.quality ? { quality: draft.quality } : {}),
       references: draft.references.map((path) => ({ path, role: "freeform" as const })),
       assetIds: [],
       ...(draft.parentId ? { parentId: draft.parentId } : {}),
@@ -406,6 +425,25 @@ function ImageRail() {
           </Field>
         ) : null}
       </div>
+      {caps?.qualities && caps.qualities.length > 0 ? (
+        <Field label="Quality">
+          <Select.Root
+            value={draft.quality ?? caps.qualities[0]}
+            onValueChange={(v) => setDraft({ quality: v })}
+          >
+            <Select.Trigger>
+              <Select.Value />
+            </Select.Trigger>
+            <Select.Content>
+              {caps.qualities.map((q) => (
+                <Select.Item key={q} value={q}>
+                  {q}
+                </Select.Item>
+              ))}
+            </Select.Content>
+          </Select.Root>
+        </Field>
+      ) : null}
       <Field label={`Count (max ${caps?.maxOutputs ?? 1})`}>
         <input
           type="range"
@@ -518,12 +556,9 @@ function VideoRail() {
         if (cancelled) return;
         setModels(r.models);
         if (!r.models.some((m) => m.id === draft.modelId)) {
-          const pref = providerPrefs?.volcengine?.defaultVideoModel;
-          const fallback =
-            (pref && r.models.some((m) => m.id === pref) ? pref : null) ??
-            r.defaultModel ??
-            r.models[0]?.id ??
-            "";
+          // Catalog drives the default; the IPC route returns it via
+          // `r.defaultModel` (registry's first model id).
+          const fallback = r.defaultModel ?? r.models[0]?.id ?? "";
           if (fallback) setDraft({ modelId: fallback });
         }
       } catch (err) {
@@ -647,7 +682,7 @@ function VideoRail() {
           No video provider
         </h2>
         <p className="mt-1 text-[12px] text-(--text-muted)">
-          Configure Volcengine to start generating videos.
+          Configure ByteDance to start generating videos.
         </p>
         <div className="mt-3 inline-flex">
           <Button size="sm" onClick={() => navigate("providers")}>

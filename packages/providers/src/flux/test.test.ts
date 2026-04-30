@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { FluxImageProvider } from "./image.js";
-import { FLUX_IMAGE_MODELS } from "./catalog.js";
+import { FLUX_IMAGE_MODELS } from "../catalog/test-fixtures.js";
 
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {

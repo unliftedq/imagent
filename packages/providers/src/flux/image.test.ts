@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { ProviderError, ProviderHttpError, type ImageRequest } from "@imagine/core";
 import { FluxImageProvider } from "./image.js";
-import { FLUX_IMAGE_MODELS } from "./catalog.js";
+import { FLUX_IMAGE_MODELS } from "../catalog/test-fixtures.js";
 
 function jsonResponse(status: number, body: unknown, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -26,7 +26,7 @@ function makeProvider(fetcher: typeof fetch) {
 const baseRequest: ImageRequest = {
   prompt: "obsidian glass cathedral",
   providerId: "flux-bfl",
-  model: "flux-pro-1.1",
+  model: "flux-2-pro",
   count: 1,
   aspectRatio: "1:1",
   references: [],
@@ -55,7 +55,7 @@ describe("FluxImageProvider", () => {
     expect(Array.from(result.outputs[0]!.bytes)).toEqual(Array.from(samplePng));
     expect(fetchMock).toHaveBeenCalledTimes(4);
     const [submitUrl, submitInit] = fetchMock.mock.calls[0]!;
-    expect(submitUrl).toBe("https://api.bfl.ai/v1/flux-pro-1.1");
+    expect(submitUrl).toBe("https://api.bfl.ai/v1/flux-2-pro");
     expect((submitInit as RequestInit).headers as Record<string, string>).toMatchObject({
       "x-key": "bfl-key",
     });

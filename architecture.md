@@ -8,7 +8,7 @@ A localized image **and** video generation studio shipping as Electron desktop *
 
 **In scope (v1).**
 - Electron desktop + headless CLI from one monorepo.
-- Six providers day-one: OpenAI, Azure OpenAI, Google (Imagen/Gemini), Flux (BFL official `api.bfl.ai`), Volcengine (Seedream image + Seedance video, shared key), xAI (Grok image).
+- Six providers day-one: OpenAI, Azure OpenAI, Google (Imagen/Gemini), Flux (BFL official `api.bfl.ai`), ByteDance (Seedream image + Seedance video, shared key), xAI (Grok image).
 - Asset taxonomy: `character | object | background | style`. Characters/objects/backgrounds are reference-image based; styles can carry a reference image AND/OR a prompt snippet.
 - Boards/Collections with drag-and-drop, masonry gallery, Remix flow.
 - Video pipeline with async job lifecycle that survives app restarts.
@@ -54,7 +54,7 @@ Two ports in `packages/core/src/ports/`. **No fake unification** — image is sy
 ```ts
 // packages/core/src/ports/image-provider.ts
 export interface ImageProvider {
-  readonly id: string;                      // "openai" | "azure-openai" | "google" | "flux-bfl" | "volcengine" | "xai"
+  readonly id: string;                      // "openai" | "azure-openai" | "google" | "flux-bfl" | "bytedance" | "xai"
   readonly displayName: string;
   readonly capabilities: ImageCapabilities; // sizes, max refs, supports style ref
   generate(req: ImageRequest, signal?: AbortSignal): Promise<ImageGenerationResult>;
@@ -62,7 +62,7 @@ export interface ImageProvider {
 
 // packages/core/src/ports/video-provider.ts
 export interface VideoProvider {
-  readonly id: string;                      // "volcengine" | (future) "sora" | "veo"
+  readonly id: string;                      // "bytedance" | (future) "sora" | "veo"
   readonly displayName: string;
   readonly capabilities: VideoCapabilities; // durations, fps, resolutions, ref-image support
   submit(req: VideoRequest): Promise<VideoJobHandle>;          // returns provider job id quickly
@@ -88,28 +88,30 @@ JobRunner.start(intent: GenerationIntent): Promise<JobId>
 
 Because every state transition is in SQLite (`jobs` table), the runner can resume on app launch by selecting `state IN ('queued','running')` and rescheduling polls — Seedance jobs survive the 12h server-side TTL.
 
-**Vendor = Provider.** A provider is the unit a user configures, not a model. Volcengine (Ark) hosts two model families — Seedream for image, Seedance for video — under one set of credentials, so the user sees **one** "Volcengine" provider with **one** key field; the model picker in Studio / Video Studio decides whether the request goes to Seedream or Seedance. Concretely: `packages/providers/src/volcengine/` exposes `VolcengineImageProvider` (default model: Seedream) and `VolcengineVideoProvider` (default model: Seedance), **both with `id: "volcengine"`**. The runtime discriminator is the port type — the same id appears in both `createImageRegistry` and `createVideoRegistry` outputs. `azure/image.ts` composes `OpenAIImageProvider` with an Azure URL builder + `api-key` header strategy — no copy-paste of the OpenAI body schema. `xai/image.ts` and Volcengine's image side both compose `OpenAIImageProvider` against their own base URL (xAI and Volcengine Ark are OpenAI-API-compatible).
+**Vendor = Provider.** A provider is the unit a user configures, not a model. ByteDance (Ark) hosts two model families — Seedream for image, Seedance for video — under one set of credentials, so the user sees **one** "ByteDance" provider with **one** key field; the model picker in Studio / Video Studio decides whether the request goes to Seedream or Seedance. Concretely: `packages/providers/src/bytedance/` exposes `ByteDanceImageProvider` (default model: Seedream) and `ByteDanceVideoProvider` (default model: Seedance), **both with `id: "bytedance"`**. The runtime discriminator is the port type — the same id appears in both `createImageRegistry` and `createVideoRegistry` outputs. Each provider has its own class; OpenAI / Azure / xAI / ByteDance image / Google all use the relevant official SDK; Flux + ByteDance Seedance + xAI video remain on raw HTTP.
 
 **Flux v1 = BFL official.** `POST /v1/flux-{model}` returns `{id, polling_url}`; we then `GET polling_url` until `status === "Ready"`, then download `result.sample`. Same shape as Seedance, so the polling logic generalises.
 
 `packages/providers/src/registry.ts` exports two factories:
 ```
-createImageRegistry(secrets, settings) -> { openai, "azure-openai", google, "flux-bfl", volcengine, xai }
-createVideoRegistry(secrets, settings) -> { volcengine }                                  // v1 (same vendor id, video port)
+createImageRegistry(secrets, settings) -> { openai, "azure-openai", google, "flux-bfl", bytedance, xai }
+createVideoRegistry(secrets, settings) -> { bytedance }                                   // v1 (same vendor id, video port)
 ```
 
 ### Models & Capabilities
 
-A model is more than a string id — different models within one provider expose different sizes, max-reference counts, durations, fps. Two layers cooperate:
+A model is more than a string id — different models within one provider expose different sizes, max-reference counts, durations, fps.
 
-1. **Built-in catalog** (read-only, `packages/providers/src/<vendor>/catalog.ts`) carries canonical capabilities per known vendor model. New vendor releases are absorbed by editing the catalog and republishing the package — no schema or DB migration.
-2. **User overrides** in `config.json` reference models by id, picking from the catalog (short form) or supplying a full `ImageModelDef` / `VideoModelDef` (long form) for models the catalog hasn't caught up with.
+The **built-in default catalog** ships as `packages/providers/src/catalog.default.json`; the **runtime** catalog lives at `~/.imagine/catalog.json` (user-editable JSON, validated against `ModelCatalogSchema` on load). On first run the bundled default is written to that path; on subsequent runs the user file is **authoritative** (no merge with bundled). On parse failure the loader logs a warning and falls back to bundled in-memory without overwriting the broken file. Users never maintain `models[]` in `config.json` — they only configure authentication, and the registry pulls the catalog slice per vendor (`catalog.image.openai`, `catalog.video.bytedance`, etc.). New vendor releases are absorbed by editing `catalog.default.json` and republishing, or by hand-editing the runtime file.
+
+Azure OpenAI is a **deployment-based exception**. The deployment name is user-defined in the Azure portal (where the user also chooses the underlying base model), so the user supplies the deployment name in `config.providers["azure-openai"].deployments.image|video`. We assume `gpt-image-1`-class capabilities for those deployments by default; a per-deployment underlying-model picker is a deferred enhancement.
 
 ```ts
 // packages/core/src/domain/model.ts
 export const ImageModelCapsSchema = z.object({
   sizes:                  z.array(z.string()).optional(),   // ["1024x1024", "1536x1024"]
   aspectRatios:           z.array(z.string()).optional(),   // for ratio-based vendors (Gemini)
+  qualities:              z.array(z.string()).optional(),   // OpenAI's `low|medium|high|auto`; absent = no quality knob, request must not set quality
   maxReferences:          z.number().int().nonnegative().optional(),
   maxOutputs:             z.number().int().min(1).default(1),
   supportsNegativePrompt: z.boolean().default(false),
@@ -222,7 +224,7 @@ CREATE TABLE gallery_items (
   parent_id        TEXT REFERENCES gallery_items(id) ON DELETE SET NULL,  -- remix lineage
   prompt           TEXT NOT NULL,
   negative_prompt  TEXT,
-  provider_id      TEXT NOT NULL,            -- "openai" | "azure-openai" | "google" | "flux-bfl" | "volcengine" | "xai"
+  provider_id      TEXT NOT NULL,            -- "openai" | "azure-openai" | "google" | "flux-bfl" | "bytedance" | "xai"
   model            TEXT NOT NULL,
   params_json      TEXT NOT NULL,            -- aspect, size, fps, duration, count, seed, raw provider params
   rel_path         TEXT NOT NULL,            -- output file under ~/.imagine/gallery/
@@ -291,6 +293,7 @@ CREATE VIRTUAL TABLE assets_fts USING fts5(
 
 ```
 config.json               # non-secret app config (zod-validated)
+catalog.json              # user-editable model catalog (zod-validated, seeded from bundled default on first run)
 secrets.bin               # safeStorage-encrypted blob (desktop)
 secrets.json              # plaintext fallback for CLI / non-Electron contexts (chmod 600)
 studio.db {-wal, -shm}    # SQLite + WAL siblings
@@ -311,7 +314,7 @@ User-facing configuration splits into **three categories** by sensitivity and wr
 
 | Category | Examples | Storage | Writers |
 |---|---|---|---|
-| **Secrets** | API keys; Volcengine `apiKey`; Azure `endpoint+apiKey` | `secrets.bin` (safeStorage, desktop) / `secrets.json` (CLI, chmod 600) / env vars (CLI, highest priority) | Main process / CLI |
+| **Secrets** | API keys; ByteDance `endpoint+apiKey`; Azure `endpoint+apiKey` | `secrets.bin` (safeStorage, desktop) / `secrets.json` (CLI, chmod 600) / env vars (CLI, highest priority) | Main process / CLI |
 | **Preferences** | Default provider/model, model lists per provider, theme, output dir, concurrency, generation defaults | `config.json` (plaintext, hand-edit friendly, zod-validated) | Main + UI |
 | **Workspace state** | Recent boards, prompt drafts, sidebar collapsed, last-used assets, window bounds | SQLite `kv` table | Renderer (frequent writes) |
 
@@ -320,34 +323,35 @@ Workspace state is deliberately **not** in `config.json` — prompt drafts churn
 ### 7.1 Schema (`packages/config/src/schema.ts`)
 
 ```ts
+// Secrets: minimum required to authenticate. `baseUrl` is an optional
+// power-user override (not surfaced in the desktop UI).
 export const ProviderSecretsSchema = z.object({
-  openai:         z.object({ apiKey: z.string() }).optional(),
+  openai:         z.object({ apiKey: z.string(),
+                             baseUrl: z.string().optional() }).optional(),
   "azure-openai": z.object({ endpoint: z.string(), apiKey: z.string(),
                              apiVersion: z.string().default("2024-10-21") }).optional(),
-  google:         z.object({ apiKey: z.string() }).optional(),
-  "flux-bfl":     z.object({ apiKey: z.string() }).optional(),
-  volcengine:     z.object({ apiKey: z.string(),
-                             region: z.string().default("cn-beijing") }).optional(),  // one key drives Seedream (image) + Seedance (video)
-  xai:            z.object({ apiKey: z.string() }).optional(),
+  google:         z.object({ apiKey: z.string(),
+                             baseUrl: z.string().optional() }).optional(),
+  "flux-bfl":     z.object({ apiKey: z.string(),
+                             baseUrl: z.string().optional() }).optional(),
+  bytedance:      z.object({ endpoint: z.string(),
+                             apiKey: z.string() }).optional(),  // one key drives Seedream (image) + Seedance (video). Endpoint encodes the region (e.g. cn-beijing).
+  xai:            z.object({ apiKey: z.string(),
+                             baseUrl: z.string().optional() }).optional(),
 });
 
+// Preferences: the catalog is the source of truth for well-known providers
+// (so their slot is empty by design). Azure OpenAI is deployment-based: the
+// user supplies the deployment name in the URL path.
 export const ProviderPreferencesSchema = z.object({
-  openai:         z.object({ baseUrl: z.string().nullable().default(null),
-                             models: z.array(ImageModelEntrySchema), defaultModel: z.string() }),
+  openai:         z.object({}).default({}),
   "azure-openai": z.object({ deployments: z.object({ image: z.string(),
                                                      video: z.string().nullable().default(null) }),
                              defaultDeployment: z.enum(["image","video"]).default("image") }),
-  google:         z.object({ models: z.array(ImageModelEntrySchema), defaultModel: z.string() }),
-  "flux-bfl":     z.object({ baseUrl: z.string().default("https://api.bfl.ai"),
-                             models: z.array(ImageModelEntrySchema), defaultModel: z.string() }),
-  volcengine:     z.object({ baseUrl: z.string().default("https://ark.cn-beijing.volces.com/api/v3"),
-                             imageModels:        z.array(ImageModelEntrySchema),
-                             videoModels:        z.array(VideoModelEntrySchema),
-                             defaultImageModel:  z.string(),                       // e.g. "seedream-3.0"
-                             defaultVideoModel:  z.string(),                       // e.g. "seedance-1.0-pro"
-                             videoDefaults:      z.record(z.unknown()).optional() }),
-  xai:            z.object({ baseUrl: z.string().default("https://api.x.ai/v1"),
-                             models: z.array(ImageModelEntrySchema), defaultModel: z.string() }),
+  google:         z.object({}).default({}),
+  "flux-bfl":     z.object({}).default({}),
+  bytedance:      z.object({}).default({}),
+  xai:            z.object({}).default({}),
 });
 
 export const AppPreferencesSchema = z.object({
@@ -366,7 +370,7 @@ export const ConfigFileSchema = z.object({
 });
 ```
 
-Note: both secrets and preferences are keyed by **provider id** (= vendor). The Volcengine entry has both `imageModels` and `videoModels` arrays under one provider because Seedream and Seedance share Ark credentials and base URL; the model picker in Studio / Video Studio chooses the port. This keeps "one provider = one key field" — the user sees six rows on the Providers page (OpenAI, Azure, Google, Flux, Volcengine, xAI) regardless of how many model families a provider hosts internally.
+Note: both secrets and preferences are keyed by **provider id** (= vendor). ByteDance's single API key drives both Seedream (image, via the image registry) and Seedance (video, via the video registry); the runtime discriminator is the port type. The user sees six rows on the Providers page (OpenAI, Azure, Google, Flux, ByteDance, xAI) regardless of how many model families a provider hosts internally. After the "minimum-auth" reshape, well-known providers carry empty preferences blocks — model lists come from the catalog, not from user input.
 
 ### 7.2 Access (dependency injection)
 
@@ -449,10 +453,10 @@ export const events = {
 The CLI imports the same packages as the main process (no IPC). It opens the same `studio.db` and writes to the same `gallery/` tree, so anything generated from the shell shows up next time the desktop opens. Commander 12; ships as one bun-compiled binary `imagine.exe`.
 
 ```
-imagine generate "<prompt>"  [--provider volcengine] [--model seedream-3.0] [--ref path,path]
+imagine generate "<prompt>"  [--provider bytedance] [--model seedream-3.0] [--ref path,path]
                              [--character id] [--object id] [--background id] [--style id]
                              [--count 4] [--out dir] [--board boardId]
-imagine video <prompt>       [--provider volcengine] [--model seedance-1.0-pro] [--duration 5] [--ref ...] [--wait]
+imagine video <prompt>       [--provider bytedance] [--model seedance-1.0-pro] [--duration 5] [--ref ...] [--wait]
 imagine job {status|cancel|watch} <jobId>
 imagine asset {add|list|rm|show} ...
 imagine board {create|add|ls|rm} ...
@@ -513,12 +517,20 @@ Primitives: Radix `Dialog / DropdownMenu / Select / Tabs / ScrollArea / Tooltip 
 
 - Root `package.json` declares `"packageManager": "bun@1.3.x"` — Turbo 2.9 fails workspace resolution without it.
 
+### Provider runtime deps
+
+- `packages/providers` lists `openai` (used by OpenAI / Azure / ByteDance **image** — Vercel's AI SDK does not cover Seedream, so image stays on `openai@6` against the Ark base URL), `@google/genai` (used by Google image + video), `@ai-sdk/xai@4-beta` + `ai@7-beta` (used by both xAI image **and** xAI video via the Vercel AI SDK), and `@ai-sdk/bytedance@2-beta` + `ai@7-beta` (used by ByteDance **video** — Seedance — via the Vercel AI SDK) as runtime dependencies. The split inside `bytedance/` between video (Vercel SDK) and image (OpenAI SDK) is intentional: the OpenAI SDK pointed at Ark still works for Seedream image generation, and Vercel's Bytedance SDK currently only exposes `.video(...)`. Flux remains on the in-house `http/client.ts` raw-fetch wrapper. Both xAI video and ByteDance video bridge the SDK's single blocking `experimental_generateVideo(...)` onto our split `submit/poll/fetch/cancel` port via an in-memory `Map` keyed by a synthetic `providerJobId`; the auth probe in `test()` still uses the raw `httpClient` against `GET /models` (Ark) / `GET /v1/models` (xAI) since the Vercel SDK exposes no model-list call.
+
+### Catalog load order
+
+The model catalog loader (`@imagine/providers#loadCatalog`) runs at app boot (desktop main: in `bootstrapRuntime`) and once per CLI invocation (`loadCliRuntime`), parsed against `ModelCatalogSchema` **before** the image / video registries are constructed. The desktop `RuntimeServices.refresh()` re-reads the catalog so hand-edits to `~/.imagine/catalog.json` take effect without an app restart.
+
 ## 12. Critical Files (net-new)
 
 ```
 packages/core/src/ports/{image-provider,video-provider}.ts
 packages/core/src/application/{job-runner,generate-image,submit-video,remix}.ts
-packages/providers/src/{openai,azure,google,flux,volcengine}/{image,video}.ts
+packages/providers/src/{openai,azure,google,flux,bytedance}/{image,video}.ts
 packages/providers/src/registry.ts
 packages/persistence/src/{db,files,thumbnails}.ts
 packages/persistence/src/migrations/{001_init,002_fts}.sql
@@ -535,6 +547,6 @@ apps/cli/src/{index,commands/*}.ts
 
 Read-only references (sibling patterns we mirror but do not import):
 - `Q:/development/imagine-cli/packages/core/src/ports/image-provider.ts` — port shape
-- `Q:/development/imagine-cli/packages/providers/src/providers/*` — vendor HTTP patterns (esp. Volcengine signing)
+- `Q:/development/imagine-cli/packages/providers/src/providers/*` — vendor HTTP patterns (esp. ByteDance signing)
 - `Q:/development/agentra/{vite.{main,preload,renderer}.config.ts, package.json}` — Electron + Vite triple-config layout, electron-builder block
 - `Q:/development/openclaw/tsdown.config.ts` — CLI bundling

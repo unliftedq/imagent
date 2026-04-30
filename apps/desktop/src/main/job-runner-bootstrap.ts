@@ -16,7 +16,9 @@ import {
 import {
   createImageRegistry,
   createVideoRegistry,
+  loadCatalog,
   type ImageRegistry,
+  type ModelCatalog,
   type VideoRegistry,
 } from "@imagine/providers";
 
@@ -28,6 +30,10 @@ export interface RuntimeServices {
   imageRegistry: ImageRegistry;
   videoRegistry: VideoRegistry;
   jobRunner: JobRunner;
+  /** Current resolved catalog snapshot. Refreshed on `refresh()`. */
+  catalog: ModelCatalog;
+  /** Absolute path to the on-disk runtime catalog file. */
+  catalogPath: string;
   refresh(): Promise<void>;
   /**
    * Drain queued + running jobs from a previous session. Called *after*
@@ -74,10 +80,16 @@ export async function bootstrapRuntime(deps: BootstrapDeps): Promise<RuntimeServ
   const imageRegistry = new Map() as Map<string, never>;
   const videoRegistry = new Map() as Map<string, never>;
 
+  // Load the JSON model catalog once. On `refresh()` we re-read from disk so
+  // hand-edits to ~/.imagine/catalog.json take effect on the next IPC tick.
+  const catalogPath = paths.catalogFile();
+  let catalog = await loadCatalog({ path: catalogPath, logger });
+
   const repopulate = async (): Promise<void> => {
+    catalog = await loadCatalog({ path: catalogPath, logger });
     const snap = await loadSnapshot(configStore, secretsStore);
-    const nextImage = createImageRegistry(snap.secrets, snap.preferences);
-    const nextVideo = createVideoRegistry(snap.secrets, snap.preferences);
+    const nextImage = createImageRegistry(snap.secrets, snap.preferences, catalog);
+    const nextVideo = createVideoRegistry(snap.secrets, snap.preferences, catalog);
     imageRegistry.clear();
     for (const [k, v] of nextImage) {
       (imageRegistry as Map<string, unknown>).set(k, v);
@@ -116,6 +128,11 @@ export async function bootstrapRuntime(deps: BootstrapDeps): Promise<RuntimeServ
     imageRegistry: imageRegistry as unknown as ImageRegistry,
     videoRegistry: videoRegistry as unknown as VideoRegistry,
     jobRunner: runner,
+    // Read-through getter so callers see the latest catalog after refresh().
+    get catalog() {
+      return catalog;
+    },
+    catalogPath,
     async refresh() {
       await repopulate();
       logger.info("[runtime] registries refreshed", {

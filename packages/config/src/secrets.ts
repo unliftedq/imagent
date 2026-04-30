@@ -13,7 +13,7 @@ const ENV_KEYS = {
   },
   google: { apiKey: "GOOGLE_API_KEY" },
   "flux-bfl": { apiKey: "FLUX_BFL_API_KEY" },
-  volcengine: { apiKey: "VOLCENGINE_API_KEY", region: "VOLCENGINE_REGION" },
+  bytedance: { apiKey: "BYTEDANCE_API_KEY", endpoint: "BYTEDANCE_ENDPOINT" },
   xai: { apiKey: "XAI_API_KEY" },
 } as const;
 
@@ -83,11 +83,12 @@ export function createEnvSecretsStore(env: NodeJS.ProcessEnv): SecretsStore {
       const fluxKey = env[ENV_KEYS["flux-bfl"].apiKey];
       if (fluxKey) out["flux-bfl"] = { apiKey: fluxKey };
 
-      const volcKey = env[ENV_KEYS.volcengine.apiKey];
-      if (volcKey) {
-        out.volcengine = {
-          apiKey: volcKey,
-          region: env[ENV_KEYS.volcengine.region] ?? "cn-beijing",
+      const bdKey = env[ENV_KEYS.bytedance.apiKey];
+      const bdEndpoint = env[ENV_KEYS.bytedance.endpoint];
+      if (bdKey && bdEndpoint) {
+        out.bytedance = {
+          apiKey: bdKey,
+          endpoint: bdEndpoint,
         };
       }
 

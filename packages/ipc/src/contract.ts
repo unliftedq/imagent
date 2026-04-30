@@ -13,6 +13,21 @@ import {
 import { z } from "zod";
 
 /**
+ * Inline ModelCatalog schema. We deliberately define this here (rather than
+ * importing from @imagine/providers) so the IPC package stays free of a
+ * dependency on @imagine/providers — the renderer needs the contract types
+ * to compile and the renderer must not pull in provider implementations.
+ *
+ * Shape mirrors `@imagine/providers#ModelCatalogSchema`.
+ */
+const IpcModelCatalogSchema = z.object({
+  version: z.literal(1),
+  image: z.record(z.string(), z.array(ImageModelDefSchema)),
+  video: z.record(z.string(), z.array(VideoModelDefSchema)),
+  comments: z.string().optional(),
+});
+
+/**
  * Structured error envelope returned across the IPC boundary. The renderer
  * never sees a thrown Error — it sees `{ ok: false, error }` and the client
  * Proxy unwraps that into a thrown `IpcError` for the caller.
@@ -55,13 +70,13 @@ export const ProviderIdSchema = z.enum([
   "azure-openai",
   "google",
   "flux-bfl",
-  "volcengine",
+  "bytedance",
   "xai",
 ]);
 export type ProviderId = z.infer<typeof ProviderIdSchema>;
 
 /**
- * Which generation kinds a provider participates in. Volcengine spans both
+ * Which generation kinds a provider participates in. ByteDance spans both
  * `image` and `video` because Seedream + Seedance share Ark credentials
  * under one provider id (architecture.md §4 vendor=provider).
  */
@@ -95,15 +110,17 @@ export const ProviderTestResultSchema = z.union([
 export type ProviderTestResult = z.infer<typeof ProviderTestResultSchema>;
 
 /**
- * Provider preferences block — non-secret per-provider config (model lists,
- * baseUrl overrides, default model). Mirrors `config.providers` in shape.
+ * Provider preferences block — non-secret per-provider config. After the
+ * "users only fill in the minimum required to authenticate" reshape, the
+ * catalog is the canonical model list for every well-known provider. Only
+ * Azure OpenAI carries a deployment name slot because the user defines
+ * those names in their Azure portal.
+ *
+ * Each provider keeps an explicit slot (even when empty) so future settings
+ * have a stable home. Mirrors `config.providers` in shape.
  */
 export const ProviderPreferencesPayloadSchema = z.object({
-  openai: z.object({
-    baseUrl: z.string().nullable(),
-    models: z.array(z.string()),
-    defaultModel: z.string(),
-  }),
+  openai: z.object({}),
   "azure-openai": z.object({
     deployments: z.object({
       image: z.string(),
@@ -111,27 +128,10 @@ export const ProviderPreferencesPayloadSchema = z.object({
     }),
     defaultDeployment: z.enum(["image", "video"]),
   }),
-  google: z.object({
-    models: z.array(z.string()),
-    defaultModel: z.string(),
-  }),
-  "flux-bfl": z.object({
-    baseUrl: z.string(),
-    models: z.array(z.string()),
-    defaultModel: z.string(),
-  }),
-  volcengine: z.object({
-    baseUrl: z.string(),
-    imageModels: z.array(z.string()),
-    videoModels: z.array(z.string()),
-    defaultImageModel: z.string(),
-    defaultVideoModel: z.string(),
-  }),
-  xai: z.object({
-    baseUrl: z.string(),
-    models: z.array(z.string()),
-    defaultModel: z.string(),
-  }),
+  google: z.object({}),
+  "flux-bfl": z.object({}),
+  bytedance: z.object({}),
+  xai: z.object({}),
 });
 export type ProviderPreferencesPayload = z.infer<typeof ProviderPreferencesPayloadSchema>;
 
@@ -151,10 +151,10 @@ export const MaskedSecretsSchema = z.object({
     .optional(),
   google: z.object({ apiKey: z.string().nullable() }).optional(),
   "flux-bfl": z.object({ apiKey: z.string().nullable() }).optional(),
-  volcengine: z
+  bytedance: z
     .object({
+      endpoint: z.string().nullable(),
       apiKey: z.string().nullable(),
-      region: z.string().nullable(),
     })
     .optional(),
   xai: z.object({ apiKey: z.string().nullable() }).optional(),
@@ -173,10 +173,10 @@ export const SecretsWriteSchema = z.object({
     .optional(),
   google: z.object({ apiKey: z.string().min(1) }).partial().optional(),
   "flux-bfl": z.object({ apiKey: z.string().min(1) }).partial().optional(),
-  volcengine: z
+  bytedance: z
     .object({
+      endpoint: z.string().min(1).optional(),
       apiKey: z.string().min(1).optional(),
-      region: z.string().min(1).optional(),
     })
     .optional(),
   xai: z.object({ apiKey: z.string().min(1) }).partial().optional(),
@@ -207,6 +207,8 @@ export type AppVersionInfo = z.infer<typeof AppVersionInfoSchema>;
 export const StoragePathsSchema = z.object({
   dataDir: z.string(),
   configFile: z.string(),
+  /** Path to the user-editable JSON model catalog (`~/.imagine/catalog.json`). */
+  catalogFile: z.string(),
   secretsBin: z.string(),
   secretsJson: z.string(),
   dbFile: z.string(),
@@ -254,6 +256,13 @@ export const contract = {
   },
   "app.version": { input: z.void(), output: AppVersionInfoSchema },
   "app.storagePaths": { input: z.void(), output: StoragePathsSchema },
+
+  // Catalog (Phase 2). The runtime catalog file lives at `~/.imagine/catalog.json`
+  // and is user-editable. `catalog.get` returns the loaded snapshot;
+  // `catalog.path` returns its absolute path so the UI / CLI can offer an
+  // "open in editor" affordance.
+  "catalog.get": { input: z.void(), output: IpcModelCatalogSchema },
+  "catalog.path": { input: z.void(), output: z.object({ path: z.string() }) },
 
   // System (shell + dialogs)
   "system.openExternal": { input: z.object({ url: z.string() }), output: z.void() },
@@ -317,7 +326,7 @@ export const contract = {
     }),
   },
 
-  // Same shape, but for video providers (currently Volcengine / Seedance). M7.
+  // Same shape, but for video providers (currently ByteDance / Seedance). M7.
   "video.models": {
     input: z.object({ providerId: ProviderIdSchema }),
     output: z.object({

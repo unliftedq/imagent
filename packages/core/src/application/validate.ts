@@ -65,6 +65,22 @@ export function validateImageRequestAgainstModel(
   if (req.seed !== undefined && caps.supportsSeed === false) {
     throw new ProviderRequestError(`model ${model.id} does not support seed`, { vendorId });
   }
+
+  if (req.quality !== undefined) {
+    if (!caps.qualities || caps.qualities.length === 0) {
+      throw new ProviderRequestError(
+        `model ${model.id} does not support a quality parameter`,
+        { vendorId },
+      );
+    }
+    if (!caps.qualities.includes(req.quality)) {
+      throw new ProviderRequestError(
+        `model ${model.id} does not support quality '${req.quality}'. ` +
+          `Supported: ${caps.qualities.join(", ")}`,
+        { vendorId },
+      );
+    }
+  }
 }
 
 export function validateVideoRequestAgainstModel(
@@ -136,12 +152,14 @@ export function applyImageDefaults(req: ImageRequest, model: ImageModelDef): Ima
   const d = (model.defaults ?? {}) as {
     size?: string;
     aspectRatio?: string;
+    quality?: string;
     count?: number;
   };
   return {
     ...req,
     size: req.size ?? d.size,
     aspectRatio: req.aspectRatio ?? d.aspectRatio,
+    quality: req.quality ?? d.quality,
     count: req.count || d.count || 1,
   };
 }

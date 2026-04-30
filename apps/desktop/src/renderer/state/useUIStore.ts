@@ -46,6 +46,10 @@ export interface ImageDraft {
   count: number;
   size?: string;
   aspectRatio?: string;
+  /** Quality tier (e.g. OpenAI's `low | medium | high | auto`). Surfaced
+   * when the resolved model's `capabilities.qualities` is non-empty;
+   * dropped on switch to a model without qualities. */
+  quality?: string;
   references: string[];
   parentId?: string;
   assetIds: StudioDraftAssetIds;
@@ -130,6 +134,7 @@ function loadImageDraftFromStorage(): ImageDraft {
       ...(typeof parsed.aspectRatio === "string"
         ? { aspectRatio: parsed.aspectRatio }
         : {}),
+      ...(typeof parsed.quality === "string" ? { quality: parsed.quality } : {}),
       references: Array.isArray(parsed.references)
         ? (parsed.references as string[])
         : [],

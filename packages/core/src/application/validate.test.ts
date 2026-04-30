@@ -13,6 +13,7 @@ const imageModel: ImageModelDef = {
   id: "gpt-image-1",
   capabilities: {
     sizes: ["1024x1024", "1024x1536"],
+    qualities: ["low", "medium", "high", "auto"],
     maxReferences: 4,
     maxOutputs: 4,
     supportsNegativePrompt: false,
@@ -20,6 +21,18 @@ const imageModel: ImageModelDef = {
     supportsStyleRef: true,
   },
   defaults: { size: "1024x1024", count: 1 },
+};
+
+const imageModelNoQuality: ImageModelDef = {
+  id: "no-quality-model",
+  capabilities: {
+    sizes: ["1024x1024"],
+    maxReferences: 0,
+    maxOutputs: 1,
+    supportsNegativePrompt: false,
+    supportsSeed: false,
+    supportsStyleRef: false,
+  },
 };
 
 function imageRequest(over: Partial<ImageRequest> = {}): ImageRequest {
@@ -95,6 +108,36 @@ describe("validateImageRequestAgainstModel", () => {
         imageModel,
       ),
     ).toThrow(ProviderRequestError);
+  });
+
+  it("accepts a quality value present in the supported list", () => {
+    expect(() =>
+      validateImageRequestAgainstModel(
+        "openai",
+        imageRequest({ quality: "high" }),
+        imageModel,
+      ),
+    ).not.toThrow();
+  });
+
+  it("rejects a quality value not in the supported list", () => {
+    expect(() =>
+      validateImageRequestAgainstModel(
+        "openai",
+        imageRequest({ quality: "ultra" }),
+        imageModel,
+      ),
+    ).toThrow(/quality 'ultra'/);
+  });
+
+  it("rejects quality when the model declares no qualities", () => {
+    expect(() =>
+      validateImageRequestAgainstModel(
+        "openai",
+        imageRequest({ quality: "high", model: "no-quality-model" }),
+        imageModelNoQuality,
+      ),
+    ).toThrow(/does not support a quality parameter/);
   });
 });
 

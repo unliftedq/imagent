@@ -20,7 +20,8 @@ import { z } from "zod";
 import { aggregateCapabilities, testFailureFromError } from "../openai/image.js";
 import { createHttpClient, type HttpClient } from "../http/index.js";
 
-const DEFAULT_FLUX_BASE_URL = "https://api.bfl.ai";
+/** Canonical BFL base URL. */
+export const DEFAULT_FLUX_BASE_URL = "https://api.bfl.ai";
 // Polling envelope: 1s start, exponential to 5s, max 60s total.
 const POLL_INITIAL_MS = 1_000;
 const POLL_MAX_MS = 5_000;
@@ -61,7 +62,7 @@ const FluxPollResponseSchema = z.object({
 
 export class FluxImageProvider implements ImageProvider {
   readonly id = "flux-bfl";
-  readonly displayName = "Flux (BFL)";
+  readonly displayName = "Flux";
   readonly models: ReadonlyMap<string, ImageModelDef>;
   readonly capabilities: ImageCapabilities;
   private readonly http: HttpClient;

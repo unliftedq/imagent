@@ -25,12 +25,18 @@ import {
   ensureDataDir,
   openDatabase,
 } from "@imagine/persistence";
-import { createImageRegistry, createVideoRegistry } from "@imagine/providers";
+import {
+  createImageRegistry,
+  createVideoRegistry,
+  loadCatalog,
+  type ModelCatalog,
+} from "@imagine/providers";
 
 export interface CliRuntime {
   resolver: PathResolver;
   config: ConfigFile;
   secrets: ProviderSecrets;
+  catalog: ModelCatalog;
   imageRegistry: ImageRegistry;
   videoRegistry: VideoRegistry;
 }
@@ -49,10 +55,14 @@ export async function loadCliRuntime(): Promise<CliRuntime> {
   const envSecrets = await createEnvSecretsStore(process.env).loadSecrets();
   const secrets = mergeSecrets(fileSecrets, envSecrets);
 
-  const imageRegistry = createImageRegistry(secrets, config.providers);
-  const videoRegistry = createVideoRegistry(secrets, config.providers);
+  // Catalog: USER FILE IS AUTHORITATIVE. First run seeds bundled defaults to
+  // ~/.imagine/catalog.json; subsequent runs read whatever the user edited.
+  const catalog = await loadCatalog({ path: resolver.catalogFile() });
 
-  return { resolver, config, secrets, imageRegistry, videoRegistry };
+  const imageRegistry = createImageRegistry(secrets, config.providers, catalog);
+  const videoRegistry = createVideoRegistry(secrets, config.providers, catalog);
+
+  return { resolver, config, secrets, catalog, imageRegistry, videoRegistry };
 }
 
 export interface RunnerBundle {

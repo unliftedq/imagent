@@ -1,6 +1,6 @@
 # imagine
 
-A localized image and video generation studio that ships as both an Electron desktop app (**Imagine Studio**) and a Node CLI from one greenfield monorepo. Single-user, fully local: SQLite plus filesystem under `~/.imagine/`, no remote backend, no auth. Build reusable assets (characters / objects / backgrounds / styles), generate images and videos against six providers (OpenAI, Azure OpenAI, Google Imagen/Gemini, Flux/BFL, Volcengine for Seedream image + Seedance video, xAI Grok), organise outputs into Boards, and remix prior generations.
+A localized image and video generation studio that ships as both an Electron desktop app (**Imagine Studio**) and a Node CLI from one greenfield monorepo. Single-user, fully local: SQLite plus filesystem under `~/.imagine/`, no remote backend, no auth. Build reusable assets (characters / objects / backgrounds / styles), generate images and videos against six providers (OpenAI, Azure OpenAI, Google Imagen/Gemini, Flux/BFL, ByteDance for Seedream image + Seedance video, xAI Grok), organise outputs into Boards, and remix prior generations.
 
 ## Status: prototype
 
@@ -56,7 +56,7 @@ See [`architecture.md`](./architecture.md) for the full architectural map (domai
 
 ## Configuration
 
-User-facing config splits into three categories by sensitivity and write frequency: secrets, preferences, workspace state. Detail in [`architecture.md`](./architecture.md) §7. The minimal `~/.imagine/config.json` looks like:
+User-facing config splits into three categories by sensitivity and write frequency: secrets, preferences, workspace state. Detail in [`architecture.md`](./architecture.md) §7. After the "minimum-auth" reshape, the model catalog is built into the providers package — users only configure authentication. The minimal `~/.imagine/config.json` looks like:
 
 ```json
 {
@@ -70,19 +70,19 @@ User-facing config splits into three categories by sensitivity and write frequen
     "openAfterGenerate": false
   },
   "providers": {
-    "openai":         { "baseUrl": null, "models": ["gpt-image-1"], "defaultModel": "gpt-image-1" },
+    "openai":         {},
     "azure-openai":   { "deployments": { "image": "", "video": null }, "defaultDeployment": "image" },
-    "google":         { "models": ["imagen-3.0"], "defaultModel": "imagen-3.0" },
-    "flux-bfl":       { "baseUrl": "https://api.bfl.ai", "models": ["flux-pro-1.1"], "defaultModel": "flux-pro-1.1" },
-    "volcengine":     { "baseUrl": "https://ark.cn-beijing.volces.com/api/v3",
-                        "imageModels": ["seedream-3.0"], "videoModels": ["seedance-1.0-pro"],
-                        "defaultImageModel": "seedream-3.0", "defaultVideoModel": "seedance-1.0-pro" },
-    "xai":            { "baseUrl": "https://api.x.ai/v1", "models": ["grok-2-image"], "defaultModel": "grok-2-image" }
+    "google":         {},
+    "flux-bfl":       {},
+    "bytedance":      {},
+    "xai":            {}
   }
 }
 ```
 
-Secrets land in `~/.imagine/secrets.bin` (Electron `safeStorage`-encrypted) or `secrets.json` (CLI, chmod 600). `OPENAI_API_KEY` and the rest can also be set as environment variables to override the file-backed values for one-off CLI runs.
+Azure OpenAI is the exception — it requires a user-supplied deployment name because the user creates that deployment in the Azure portal. Every other provider gets its model list from the catalog at runtime.
+
+Secrets land in `~/.imagine/secrets.bin` (Electron `safeStorage`-encrypted) or `secrets.json` (CLI, chmod 600). `OPENAI_API_KEY` and the rest can also be set as environment variables to override the file-backed values for one-off CLI runs. A `baseUrl` field is accepted in `secrets.json` for any well-known provider as an advanced override (e.g. point at a proxy); it isn't surfaced in the desktop UI.
 
 ## CLI usage
 
@@ -94,7 +94,7 @@ imagine config {get|set|path}                            # secrets + preferences
 imagine generate "<prompt>" [--provider ...] [--model ...] [--ref ...]
                             [--character id] [--object id] [--background id] [--style id]
                             [--count 4] [--out dir] [--board boardId]
-imagine video <prompt>      [--provider volcengine] [--model seedance-1.0-pro]
+imagine video <prompt>      [--provider bytedance] [--model seedance-1.0-pro]
                             [--duration 5] [--ref ...] [--wait]
 imagine asset {add|list|rm|show} ...
 imagine board {create|add|ls|rm} ...

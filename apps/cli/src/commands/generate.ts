@@ -41,7 +41,7 @@ export function registerGenerateCommand(program: Command): void {
   program
     .command("generate <prompt>")
     .description("Generate one or more images from a prompt")
-    .option("--provider <id>", "Provider id (openai|azure-openai|google|flux-bfl|volcengine|xai)")
+    .option("--provider <id>", "Provider id (openai|azure-openai|google|flux-bfl|bytedance|xai)")
     .option("--model <id>", "Model id within the chosen provider")
     .option("--count <n>", "Number of outputs", "1")
     .option("--size <WxH>", "Output size (provider-dependent)")
@@ -161,17 +161,16 @@ function pickModel(
   providerModels: ReadonlyMap<string, unknown>,
 ): string {
   if (modelOverride) return modelOverride;
-  const block = config.providers[providerId] as
-    | { defaultModel?: string; defaultImageModel?: string }
-    | undefined;
-  // Volcengine carries `defaultImageModel` (because it also has video). Other
-  // providers carry `defaultModel`.
-  const candidate =
-    providerId === "volcengine" ? block?.defaultImageModel : block?.defaultModel;
-  if (candidate && providerModels.has(candidate)) {
-    return candidate;
+  // Azure OpenAI: the user-named deployment is the model id we expose in
+  // the registry. Other providers: the catalog is the source of truth —
+  // pick the first model.
+  if (providerId === "azure-openai") {
+    const block = config.providers[providerId] as
+      | { deployments?: { image?: string } }
+      | undefined;
+    const deploy = block?.deployments?.image;
+    if (deploy && providerModels.has(deploy)) return deploy;
   }
-  // Fallback to the first known model.
   const first = providerModels.keys().next().value;
   if (typeof first === "string") return first;
   throw new Error(`no model configured for provider '${providerId}'`);

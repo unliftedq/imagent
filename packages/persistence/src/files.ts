@@ -9,6 +9,8 @@ import path from "node:path";
 export interface PathResolver {
   readonly dataDir: string;
   configFile(): string;
+  /** Path to the user-editable JSON model catalog (`~/.imagine/catalog.json`). */
+  catalogFile(): string;
   secretsFile(): string;
   secretsBin(): string;
   dbFile(): string;
@@ -27,6 +29,7 @@ export function createPathResolver(dataDir?: string): PathResolver {
   return {
     dataDir: root,
     configFile: () => path.join(root, "config.json"),
+    catalogFile: () => path.join(root, "catalog.json"),
     secretsFile: () => path.join(root, "secrets.json"),
     secretsBin: () => path.join(root, "secrets.bin"),
     dbFile: () => path.join(root, "studio.db"),

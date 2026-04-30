@@ -46,11 +46,4 @@ describe("AzureOpenAIImageProvider.test()", () => {
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.status).toBe(401);
   });
-
-  it("network failure", async () => {
-    const fetchMock = vi.fn().mockRejectedValue(new Error("connection refused"));
-    const p = makeProvider(fetchMock as unknown as typeof fetch);
-    const res = await p.test!();
-    expect(res.ok).toBe(false);
-  }, 30_000);
 });

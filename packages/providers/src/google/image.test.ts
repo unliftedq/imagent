@@ -1,30 +1,41 @@
 import { describe, expect, it, vi } from "vitest";
-import { ProviderHttpError, type ImageRequest } from "@imagine/core";
-import { GoogleImageProvider } from "./image.js";
-import { GOOGLE_IMAGE_MODELS } from "./catalog.js";
+import { ProviderError, type ImageRequest } from "@imagine/core";
+import { GoogleImageProvider, type GoogleGenAIClientLike } from "./image.js";
+import { GOOGLE_IMAGE_MODELS } from "../catalog/test-fixtures.js";
 
 const PNG_B64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkAAIAAAoAAv/lxKUAAAAASUVORK5CYII=";
 
-function makeProvider(fetcher: typeof fetch) {
+interface FakeClient {
+  models: {
+    generateImages: ReturnType<typeof vi.fn>;
+    generateContent: ReturnType<typeof vi.fn>;
+    list: ReturnType<typeof vi.fn>;
+  };
+}
+
+function makeFakeClient(): FakeClient {
+  return {
+    models: {
+      generateImages: vi.fn(),
+      generateContent: vi.fn(),
+      list: vi.fn(),
+    },
+  };
+}
+
+function makeProvider(client: FakeClient): GoogleImageProvider {
   return new GoogleImageProvider({
     apiKey: "google-key",
     models: new Map(Object.entries(GOOGLE_IMAGE_MODELS)),
-    fetch: fetcher,
-  });
-}
-
-function jsonResponse(status: number, body: unknown, headers: Record<string, string> = {}): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json", ...headers },
+    client: client as unknown as GoogleGenAIClientLike,
   });
 }
 
 const baseRequest: ImageRequest = {
   prompt: "geometric pastel pattern",
   providerId: "google",
-  model: "imagen-3",
+  model: "gemini-2.5-flash-image",
   count: 1,
   aspectRatio: "1:1",
   references: [],
@@ -32,39 +43,43 @@ const baseRequest: ImageRequest = {
 };
 
 describe("GoogleImageProvider", () => {
-  it("happy path: posts to imagen :predict and decodes prediction", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      jsonResponse(200, {
-        predictions: [{ bytesBase64Encoded: PNG_B64, mimeType: "image/png" }],
-      }),
-    );
-    const p = makeProvider(fetchMock as unknown as typeof fetch);
-    const result = await p.generate(baseRequest);
-    expect(result.outputs).toHaveLength(1);
-    expect(result.outputs[0]?.mimeType).toBe("image/png");
-    const [url] = fetchMock.mock.calls[0]!;
-    expect(String(url)).toContain("imagen-3:predict");
-    expect(String(url)).toContain("key=google-key");
-  });
-
-  it("4xx error path surfaces ProviderHttpError", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      jsonResponse(403, { error: { message: "PERMISSION_DENIED" } }),
-    );
-    const p = makeProvider(fetchMock as unknown as typeof fetch);
-    await expect(p.generate(baseRequest)).rejects.toBeInstanceOf(ProviderHttpError);
-  });
-
-  it("retries on 429 then succeeds", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(jsonResponse(429, {}, { "retry-after": "0" }))
-      .mockResolvedValueOnce(
-        jsonResponse(200, { predictions: [{ bytesBase64Encoded: PNG_B64 }] }),
-      );
-    const p = makeProvider(fetchMock as unknown as typeof fetch);
+  it("Nano Banana models route to generateContent and decode inlineData", async () => {
+    const client = makeFakeClient();
+    client.models.generateContent.mockResolvedValue({
+      candidates: [
+        {
+          content: {
+            parts: [{ inlineData: { data: PNG_B64, mimeType: "image/png" } }],
+          },
+        },
+      ],
+    });
+    const p = makeProvider(client);
     const r = await p.generate(baseRequest);
     expect(r.outputs).toHaveLength(1);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(r.outputs[0]?.mimeType).toBe("image/png");
+    expect(client.models.generateContent).toHaveBeenCalledTimes(1);
+    expect(client.models.generateImages).not.toHaveBeenCalled();
+    const [params] = client.models.generateContent.mock.calls[0]!;
+    expect(params).toMatchObject({
+      model: "gemini-2.5-flash-image",
+      contents: baseRequest.prompt,
+    });
+  });
+
+  it("SDK error surfaces as ProviderError", async () => {
+    const client = makeFakeClient();
+    client.models.generateContent.mockRejectedValue(new Error("PERMISSION_DENIED"));
+    const p = makeProvider(client);
+    await expect(p.generate(baseRequest)).rejects.toBeInstanceOf(ProviderError);
+  });
+
+  it("missing inlineData throws ProviderResponseError", async () => {
+    const client = makeFakeClient();
+    client.models.generateContent.mockResolvedValue({
+      candidates: [{ content: { parts: [{ text: "no image here" }] } }],
+    });
+    const p = makeProvider(client);
+    await expect(p.generate(baseRequest)).rejects.toBeInstanceOf(ProviderError);
   });
 });

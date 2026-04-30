@@ -1,14 +1,28 @@
-import { ImageModelEntrySchema, VideoModelEntrySchema } from "@imagine/core";
 import { z } from "zod";
 
 /**
- * Secrets are keyed by **vendor**. Volcengine secrets unlock both image
- * (Seedream) and video (Seedance) ports under the single `volcengine`
+ * Secrets are keyed by **vendor**. ByteDance secrets unlock both image
+ * (Seedream) and video (Seedance) ports under the single `bytedance`
  * provider id. xAI is OpenAI-API-compatible image-only at v1.
- * See architecture.md §7.1.
+ *
+ * Most well-known vendors (OpenAI / Google / Flux / xAI) carry a canonical
+ * base URL hardcoded in the provider class; `baseUrl` here is an **optional
+ * advanced override** for power users who want to point at a proxy or
+ * self-hosted compatible endpoint (the desktop UI does not surface it —
+ * edit `~/.imagine/secrets.json` by hand).
+ *
+ * Azure OpenAI and ByteDance break that pattern: both require an
+ * `endpoint + apiKey` pair. Azure's endpoint encodes the user's resource
+ * name; ByteDance's encodes the Ark region (`cn-beijing`,
+ * `ap-southeast`, …). See architecture.md §7.1.
  */
 export const ProviderSecretsSchema = z.object({
-  openai: z.object({ apiKey: z.string() }).optional(),
+  openai: z
+    .object({
+      apiKey: z.string(),
+      baseUrl: z.string().optional(),
+    })
+    .optional(),
   "azure-openai": z
     .object({
       endpoint: z.string(),
@@ -16,29 +30,47 @@ export const ProviderSecretsSchema = z.object({
       apiVersion: z.string().default("2024-10-21"),
     })
     .optional(),
-  google: z.object({ apiKey: z.string() }).optional(),
-  "flux-bfl": z.object({ apiKey: z.string() }).optional(),
-  volcengine: z
+  google: z
     .object({
       apiKey: z.string(),
-      region: z.string().default("cn-beijing"),
+      baseUrl: z.string().optional(),
     })
     .optional(),
-  xai: z.object({ apiKey: z.string() }).optional(),
+  "flux-bfl": z
+    .object({
+      apiKey: z.string(),
+      baseUrl: z.string().optional(),
+    })
+    .optional(),
+  bytedance: z
+    .object({
+      endpoint: z.string(),
+      apiKey: z.string(),
+    })
+    .optional(),
+  xai: z
+    .object({
+      apiKey: z.string(),
+      baseUrl: z.string().optional(),
+    })
+    .optional(),
 });
 export type ProviderSecrets = z.infer<typeof ProviderSecretsSchema>;
 
 /**
- * Preferences are keyed by **provider id** (= vendor). Volcengine carries
- * both image and video model lists under one block because Seedream and
- * Seedance share Ark credentials.
+ * Preferences are keyed by **provider id** (= vendor). The catalog (in
+ * `@imagine/providers`) is the canonical source of model lists for every
+ * well-known provider — users no longer maintain `models[]` in config.json.
+ *
+ * Each provider's slot is kept (as `z.object({}).default({})`) so future
+ * provider-scoped knobs (e.g. concurrency overrides) have a stable home.
+ *
+ * Azure OpenAI is the **exception**: its deployment names are user-defined
+ * in the Azure portal, so the user must tell us what to put in the URL
+ * path.
  */
 export const ProviderPreferencesSchema = z.object({
-  openai: z.object({
-    baseUrl: z.string().nullable().default(null),
-    models: z.array(ImageModelEntrySchema),
-    defaultModel: z.string(),
-  }),
+  openai: z.object({}).default({}),
   "azure-openai": z.object({
     deployments: z.object({
       image: z.string(),
@@ -46,28 +78,10 @@ export const ProviderPreferencesSchema = z.object({
     }),
     defaultDeployment: z.enum(["image", "video"]).default("image"),
   }),
-  google: z.object({
-    models: z.array(ImageModelEntrySchema),
-    defaultModel: z.string(),
-  }),
-  "flux-bfl": z.object({
-    baseUrl: z.string().default("https://api.bfl.ai"),
-    models: z.array(ImageModelEntrySchema),
-    defaultModel: z.string(),
-  }),
-  volcengine: z.object({
-    baseUrl: z.string().default("https://ark.cn-beijing.volces.com/api/v3"),
-    imageModels: z.array(ImageModelEntrySchema),
-    videoModels: z.array(VideoModelEntrySchema),
-    defaultImageModel: z.string(),
-    defaultVideoModel: z.string(),
-    videoDefaults: z.record(z.unknown()).optional(),
-  }),
-  xai: z.object({
-    baseUrl: z.string().default("https://api.x.ai/v1"),
-    models: z.array(ImageModelEntrySchema),
-    defaultModel: z.string(),
-  }),
+  google: z.object({}).default({}),
+  "flux-bfl": z.object({}).default({}),
+  bytedance: z.object({}).default({}),
+  xai: z.object({}).default({}),
 });
 export type ProviderPreferences = z.infer<typeof ProviderPreferencesSchema>;
 
@@ -89,19 +103,15 @@ export const ConfigFileSchema = z.object({
 export type ConfigFile = z.infer<typeof ConfigFileSchema>;
 
 /**
- * Defaults applied when config.json is missing or partial. Models lists are
- * empty by default — users opt in per provider via the catalog short-form
- * ids.
+ * Defaults applied when config.json is missing or partial. Well-known
+ * providers carry empty slots (catalog is consulted at runtime); only Azure
+ * OpenAI needs user-supplied deployment names.
  */
 export const DEFAULT_CONFIG: ConfigFile = {
   version: 1,
   app: AppPreferencesSchema.parse({}),
   providers: {
-    openai: {
-      baseUrl: null,
-      models: [],
-      defaultModel: "gpt-image-1",
-    },
+    openai: {},
     "azure-openai": {
       deployments: {
         image: "",
@@ -109,26 +119,9 @@ export const DEFAULT_CONFIG: ConfigFile = {
       },
       defaultDeployment: "image",
     },
-    google: {
-      models: [],
-      defaultModel: "imagen-3",
-    },
-    "flux-bfl": {
-      baseUrl: "https://api.bfl.ai",
-      models: [],
-      defaultModel: "flux-pro-1.1",
-    },
-    volcengine: {
-      baseUrl: "https://ark.cn-beijing.volces.com/api/v3",
-      imageModels: [],
-      videoModels: [],
-      defaultImageModel: "seedream-3.0",
-      defaultVideoModel: "seedance-1.0-pro",
-    },
-    xai: {
-      baseUrl: "https://api.x.ai/v1",
-      models: [],
-      defaultModel: "grok-2-image-1212",
-    },
+    google: {},
+    "flux-bfl": {},
+    bytedance: {},
+    xai: {},
   },
 };

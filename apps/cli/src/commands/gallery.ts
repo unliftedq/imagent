@@ -314,7 +314,7 @@ async function runRemix(itemId: string, options: GalleryRemixOptions): Promise<v
     const provider = runtime.videoRegistry.get(providerId);
     if (!provider) {
       throw new Error(
-        `video provider '${providerId}' is not configured. Run \`imagine config set volcengine.apiKey ...\` first.`,
+        `video provider '${providerId}' is not configured. Run \`imagine config set bytedance.apiKey ...\` first.`,
       );
     }
     const req: VideoRequest = {

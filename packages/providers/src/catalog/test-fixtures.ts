@@ -1,0 +1,205 @@
+import type { ImageModelDef, VideoModelDef } from "@imagine/core";
+import type { ModelCatalog } from "./schema.js";
+
+/**
+ * Lightweight in-memory model fixtures used across provider tests. These do
+ * NOT need to match the bundled `catalog.default.json` exactly — they exist
+ * so per-vendor tests construct providers with a deterministic shape rather
+ * than reaching into the JSON file. New entries added here are not affected
+ * by user catalog edits in `~/.imagine/catalog.json`.
+ */
+
+export const OPENAI_IMAGE_MODELS: Record<string, ImageModelDef> = {
+  "gpt-image-2": {
+    id: "gpt-image-2",
+    displayName: "GPT Image 2",
+    capabilities: {
+      sizes: ["1024x1024", "1024x1536", "1536x1024", "2048x2048", "2160x3840", "3840x2160"],
+      qualities: ["low", "medium", "high", "auto"],
+      maxReferences: 16,
+      maxOutputs: 10,
+      supportsNegativePrompt: false,
+      supportsSeed: false,
+      supportsStyleRef: true,
+    },
+    defaults: { size: "1024x1024", quality: "auto", count: 1 },
+  },
+  "gpt-image-1": {
+    id: "gpt-image-1",
+    displayName: "GPT Image 1",
+    capabilities: {
+      sizes: ["1024x1024", "1024x1536", "1536x1024"],
+      qualities: ["low", "medium", "high", "auto"],
+      maxReferences: 16,
+      maxOutputs: 4,
+      supportsNegativePrompt: false,
+      supportsSeed: false,
+      supportsStyleRef: true,
+    },
+    defaults: { size: "1024x1024", quality: "auto", count: 1 },
+  },
+};
+
+export const AZURE_OPENAI_IMAGE_MODELS: Record<string, ImageModelDef> = {
+  "image-default": {
+    id: "image-default",
+    displayName: "Azure OpenAI image deployment",
+    capabilities: {
+      sizes: ["1024x1024", "1024x1536", "1536x1024"],
+      maxReferences: 16,
+      maxOutputs: 4,
+      supportsNegativePrompt: false,
+      supportsSeed: false,
+      supportsStyleRef: true,
+    },
+    defaults: { size: "1024x1024", count: 1 },
+  },
+};
+
+export const GOOGLE_IMAGE_MODELS: Record<string, ImageModelDef> = {
+  "gemini-2.5-flash-image": {
+    id: "gemini-2.5-flash-image",
+    displayName: "Nano Banana (Gemini 2.5 Flash Image)",
+    capabilities: {
+      aspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
+      maxReferences: 3,
+      maxOutputs: 1,
+      supportsNegativePrompt: false,
+      supportsSeed: false,
+      supportsStyleRef: true,
+    },
+    defaults: { aspectRatio: "1:1", count: 1 },
+  },
+};
+
+export const FLUX_IMAGE_MODELS: Record<string, ImageModelDef> = {
+  "flux-2-pro": {
+    id: "flux-2-pro",
+    displayName: "FLUX.2 [pro]",
+    capabilities: {
+      aspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4", "21:9", "9:21", "3:2", "2:3"],
+      maxReferences: 8,
+      maxOutputs: 1,
+      supportsNegativePrompt: false,
+      supportsSeed: true,
+      supportsStyleRef: true,
+    },
+    defaults: { aspectRatio: "1:1", count: 1 },
+  },
+};
+
+export const BYTEDANCE_IMAGE_MODELS: Record<string, ImageModelDef> = {
+  "doubao-seedream-4-0-250828": {
+    id: "doubao-seedream-4-0-250828",
+    displayName: "Seedream 4.0",
+    capabilities: {
+      sizes: ["1024x1024", "1K", "2K", "4K"],
+      maxReferences: 3,
+      maxOutputs: 15,
+      supportsNegativePrompt: true,
+      supportsSeed: true,
+      supportsStyleRef: true,
+    },
+    defaults: { size: "2K", count: 1 },
+  },
+  "doubao-seedream-3-0-t2i-250415": {
+    id: "doubao-seedream-3-0-t2i-250415",
+    displayName: "Seedream 3.0",
+    capabilities: {
+      sizes: ["1024x1024", "864x1152", "1152x864", "768x1344", "1344x768"],
+      maxReferences: 4,
+      maxOutputs: 4,
+      supportsNegativePrompt: true,
+      supportsSeed: true,
+      supportsStyleRef: true,
+    },
+    defaults: { size: "1024x1024", count: 1 },
+  },
+};
+
+export const BYTEDANCE_VIDEO_MODELS: Record<string, VideoModelDef> = {
+  "doubao-seedance-1-0-pro-250428": {
+    id: "doubao-seedance-1-0-pro-250428",
+    displayName: "Seedance 1.0 Pro",
+    capabilities: {
+      durationsSec: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+      maxDurationSec: 12,
+      fpsOptions: [24],
+      resolutions: ["480p", "720p", "1080p"],
+      supportsFirstFrame: true,
+      supportsLastFrame: true,
+      supportsRefImages: true,
+    },
+    defaults: { durationSec: 5, fps: 24, resolution: "720p" },
+  },
+};
+
+export const GOOGLE_VIDEO_MODELS: Record<string, VideoModelDef> = {
+  "veo-3.0-generate-001": {
+    id: "veo-3.0-generate-001",
+    displayName: "Veo 3",
+    capabilities: {
+      durationsSec: [4, 6, 8],
+      maxDurationSec: 8,
+      fpsOptions: [24],
+      resolutions: ["720p", "1080p"],
+      supportsFirstFrame: true,
+      supportsLastFrame: true,
+      supportsRefImages: true,
+    },
+    defaults: { durationSec: 8, fps: 24, resolution: "720p", aspectRatio: "16:9" },
+  },
+};
+
+export const XAI_VIDEO_MODELS: Record<string, VideoModelDef> = {
+  "grok-imagine-video": {
+    id: "grok-imagine-video",
+    displayName: "Grok Imagine Video",
+    capabilities: {
+      durationsSec: [5, 10, 15],
+      maxDurationSec: 15,
+      fpsOptions: [24],
+      resolutions: ["480p", "720p"],
+      supportsFirstFrame: true,
+      supportsLastFrame: false,
+      supportsRefImages: true,
+    },
+    defaults: { durationSec: 10, fps: 24, resolution: "720p", aspectRatio: "16:9" },
+  },
+};
+
+export const XAI_IMAGE_MODELS: Record<string, ImageModelDef> = {
+  "grok-imagine-image": {
+    id: "grok-imagine-image",
+    displayName: "Grok Imagine",
+    capabilities: {
+      aspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
+      maxReferences: 5,
+      maxOutputs: 10,
+      supportsNegativePrompt: false,
+      supportsSeed: false,
+      supportsStyleRef: true,
+    },
+    defaults: { aspectRatio: "1:1", count: 1 },
+  },
+};
+
+/** Build a small in-memory ModelCatalog from the fixtures above. */
+export function buildTestCatalog(): ModelCatalog {
+  return {
+    version: 1,
+    image: {
+      openai: Object.values(OPENAI_IMAGE_MODELS),
+      "azure-openai": Object.values(AZURE_OPENAI_IMAGE_MODELS),
+      google: Object.values(GOOGLE_IMAGE_MODELS),
+      "flux-bfl": Object.values(FLUX_IMAGE_MODELS),
+      bytedance: Object.values(BYTEDANCE_IMAGE_MODELS),
+      xai: Object.values(XAI_IMAGE_MODELS),
+    },
+    video: {
+      bytedance: Object.values(BYTEDANCE_VIDEO_MODELS),
+      google: Object.values(GOOGLE_VIDEO_MODELS),
+      xai: Object.values(XAI_VIDEO_MODELS),
+    },
+  };
+}

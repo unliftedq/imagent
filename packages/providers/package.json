@@ -12,14 +12,19 @@
     }
   },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && node -e \"require('node:fs').cpSync('src/catalog.default.json','dist/catalog.default.json')\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "clean": "rm -rf dist .tsbuildinfo"
   },
   "dependencies": {
+    "@ai-sdk/bytedance": "^2.0.0-beta.30",
+    "@ai-sdk/xai": "^4.0.0-beta.46",
+    "@google/genai": "^1.51.0",
     "@imagine/config": "workspace:*",
     "@imagine/core": "workspace:*",
+    "ai": "^7.0.0-beta.113",
+    "openai": "^6.35.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {

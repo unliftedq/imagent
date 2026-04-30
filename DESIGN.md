@@ -729,7 +729,7 @@ Five tabs across the top: `Characters` `Objects` `Backgrounds` `Styles` `Trash`.
 
 ### 11.4 Providers
 
-Six rows, each a §10.10 ProviderRow. Order: `OpenAI`, `Azure OpenAI`, `Google`, `Flux BFL`, `Volcengine`, `xAI`. Each row collapses to show its config form.
+Six rows, each a §10.10 ProviderRow. Order: `OpenAI`, `Azure OpenAI`, `Google`, `Flux BFL`, `ByteDance`, `xAI`. Each row collapses to show its config form.
 
 ```
 ┌──────┬───────────────────────────────────────────────┐
@@ -743,7 +743,7 @@ Six rows, each a §10.10 ProviderRow. Order: `OpenAI`, `Azure OpenAI`, `Google`,
 │      │     Base URL [https://...]                    │
 │      │     [Test connection]   [Save]                │
 │      │ ▸ Flux BFL          ○ Not conf. ▾             │
-│      │ ▸ Volcengine        ○ Not conf. ▾             │
+│      │ ▸ ByteDance         ○ Not conf. ▾             │
 │      │ ▸ xAI               ● Online    ▾             │
 └──────┴───────────────────────────────────────────────┘
 ```

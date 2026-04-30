@@ -33,8 +33,8 @@ interface VideoOptions {
 export function registerVideoCommand(program: Command): void {
   program
     .command("video <prompt>")
-    .description("Submit a video generation job (default provider: volcengine)")
-    .option("--provider <id>", "Provider id", "volcengine")
+    .description("Submit a video generation job (default provider: bytedance)")
+    .option("--provider <id>", "Provider id", "bytedance")
     .option("--model <id>", "Model id within the chosen provider")
     .option("--duration <sec>", "Clip duration in seconds")
     .option("--fps <n>", "Frames per second")
@@ -60,11 +60,11 @@ export function registerVideoCommand(program: Command): void {
 
 async function runVideo(prompt: string, options: VideoOptions): Promise<void> {
   const runtime = await loadCliRuntime();
-  const providerId = options.provider ?? "volcengine";
+  const providerId = options.provider ?? "bytedance";
   const provider = runtime.videoRegistry.get(providerId);
   if (!provider) {
     throw new Error(
-      `video provider '${providerId}' is not configured. Run \`imagine config set volcengine.apiKey ...\` first.`,
+      `video provider '${providerId}' is not configured. Run \`imagine config set bytedance.apiKey ...\` first.`,
     );
   }
   const model = pickVideoModel(providerId, options.model, runtime.config, provider.models);
@@ -172,14 +172,13 @@ function pickVideoModel(
   providerModels: ReadonlyMap<string, unknown>,
 ): string {
   if (modelOverride) return modelOverride;
-  const block = config.providers[providerId] as
-    | { defaultModel?: string; defaultVideoModel?: string }
-    | undefined;
-  // Volcengine carries `defaultVideoModel` (separate from its image default).
-  const candidate =
-    providerId === "volcengine" ? block?.defaultVideoModel : block?.defaultModel;
-  if (candidate && providerModels.has(candidate)) {
-    return candidate;
+  // Azure: its video deployment when set; otherwise catalog default.
+  if (providerId === "azure-openai") {
+    const block = config.providers[providerId] as
+      | { deployments?: { video?: string | null } }
+      | undefined;
+    const deploy = block?.deployments?.video ?? null;
+    if (deploy && providerModels.has(deploy)) return deploy;
   }
   const first = providerModels.keys().next().value;
   if (typeof first === "string") return first;

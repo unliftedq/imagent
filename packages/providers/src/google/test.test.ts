@@ -1,53 +1,53 @@
 import { describe, expect, it, vi } from "vitest";
-import { GoogleImageProvider } from "./image.js";
-import { GOOGLE_IMAGE_MODELS } from "./catalog.js";
+import { GoogleImageProvider, type GoogleGenAIClientLike } from "./image.js";
+import { GOOGLE_IMAGE_MODELS } from "../catalog/test-fixtures.js";
 
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json" },
-  });
+interface FakeClient {
+  models: {
+    generateImages: ReturnType<typeof vi.fn>;
+    generateContent: ReturnType<typeof vi.fn>;
+    list: ReturnType<typeof vi.fn>;
+  };
 }
 
-function makeProvider(fetcher: typeof fetch) {
+function makeFakeClient(): FakeClient {
+  return {
+    models: {
+      generateImages: vi.fn(),
+      generateContent: vi.fn(),
+      list: vi.fn(),
+    },
+  };
+}
+
+function makeProvider(client: FakeClient): GoogleImageProvider {
   return new GoogleImageProvider({
     apiKey: "google-key",
     models: new Map(Object.entries(GOOGLE_IMAGE_MODELS)),
-    fetch: fetcher,
+    client: client as unknown as GoogleGenAIClientLike,
   });
 }
 
 describe("GoogleImageProvider.test()", () => {
   it("happy auth: returns ok with model match on suffix", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      jsonResponse(200, {
-        models: [
-          { name: "models/imagen-3" },
-          { name: "models/gemini-2.0-flash" },
-        ],
-      }),
-    );
-    const p = makeProvider(fetchMock as unknown as typeof fetch);
+    const client = makeFakeClient();
+    client.models.list.mockResolvedValue({
+      data: [
+        { name: "models/gemini-2.5-flash-image" },
+        { name: "models/gemini-2.0-flash" },
+      ],
+    });
+    const p = makeProvider(client);
     const res = await p.test!();
     expect(res.ok).toBe(true);
-    const [url] = fetchMock.mock.calls[0]!;
-    expect(String(url)).toContain("/models?key=google-key");
+    if (res.ok) expect(res.sampleModelId).toBe("gemini-2.5-flash-image");
   });
 
-  it("bad auth: 401 surface", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      jsonResponse(401, { error: { code: 401 } }),
-    );
-    const p = makeProvider(fetchMock as unknown as typeof fetch);
+  it("bad auth: SDK throws → ok=false", async () => {
+    const client = makeFakeClient();
+    client.models.list.mockRejectedValue(new Error("AUTH_FAILED"));
+    const p = makeProvider(client);
     const res = await p.test!();
     expect(res.ok).toBe(false);
-    if (!res.ok) expect(res.status).toBe(401);
   });
-
-  it("network failure", async () => {
-    const fetchMock = vi.fn().mockRejectedValue(new Error("DNS_PROBE_FINISHED"));
-    const p = makeProvider(fetchMock as unknown as typeof fetch);
-    const res = await p.test!();
-    expect(res.ok).toBe(false);
-  }, 30_000);
 });

@@ -3,6 +3,13 @@ import { z } from "zod";
 export const ImageModelCapsSchema = z.object({
   sizes: z.array(z.string()).optional(),
   aspectRatios: z.array(z.string()).optional(),
+  /**
+   * Declares which `quality` values the model accepts (e.g. OpenAI's
+   * `low | medium | high | auto`). When absent the model has no quality
+   * knob — requests must not set `quality`. When present, requests with
+   * `quality` set are validated against this list.
+   */
+  qualities: z.array(z.string()).optional(),
   maxReferences: z.number().int().nonnegative().optional(),
   maxOutputs: z.number().int().min(1).default(1),
   supportsNegativePrompt: z.boolean().default(false),
