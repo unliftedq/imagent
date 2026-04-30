@@ -1,4 +1,11 @@
-import { Image, SquaresFour, Cube, Plug, Gear } from "@phosphor-icons/react";
+import {
+  Image,
+  SquaresFour,
+  Cube,
+  Plug,
+  Gear,
+  Brain,
+} from "@phosphor-icons/react";
 import type { ComponentType } from "react";
 import { cn } from "../lib/cn.js";
 
@@ -6,6 +13,7 @@ export type NavRoute =
   | "studio"
   | "gallery"
   | "assets"
+  | "models"
   | "providers"
   | "settings";
 
@@ -16,14 +24,14 @@ interface NavRailRow {
 }
 
 /**
- * Five rows in the exact order specified in DESIGN.md §10.1. Phosphor
- * duotone icons at 20px. The wordmark sits above the rows; Settings is
- * pinned to the bottom.
+ * Persistent rail rows. Phosphor duotone icons at 20px. The wordmark sits
+ * above the rows; Settings is pinned to the bottom.
  */
 const NAV_ROWS: ReadonlyArray<NavRailRow> = [
   { id: "studio", label: "Studio", Icon: Image },
   { id: "gallery", label: "Gallery", Icon: SquaresFour },
   { id: "assets", label: "Assets", Icon: Cube },
+  { id: "models", label: "Models", Icon: Brain },
   { id: "providers", label: "Providers", Icon: Plug },
   { id: "settings", label: "Settings", Icon: Gear },
 ] as const;

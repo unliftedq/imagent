@@ -12,6 +12,7 @@ import {
 import {
   configuredProviderCount as _unused,
   type ImageRegistry,
+  type ModelCatalog,
   type VideoRegistry,
 } from "@imagine/providers";
 import {
@@ -649,6 +650,11 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       return { providerId, defaultModel, models };
     },
 
+    "models.list": async () => {
+      const secrets = await secretsStore.loadSecrets();
+      return buildUnifiedModelList(runtime.catalog, secrets);
+    },
+
     // M6 — Assets (M8: + archive/restore + archivedOnly)
     "assets.list": async (input) => {
       const opts = input ?? {};
@@ -1190,38 +1196,43 @@ function parseJsonObject(s: string): Record<string, unknown> {
  * pre-populate a default.
  */
 function readDefaultModel(
-  prefs: ProviderPreferences,
+  _prefs: ProviderPreferences,
   providerId: string,
   imageRegistry: ImageRegistry,
 ): string | null {
-  switch (providerId) {
-    case "azure-openai":
-      return prefs["azure-openai"].deployments.image || null;
-    default: {
-      const provider = imageRegistry.get(providerId);
-      if (!provider) return null;
-      const first = provider.models.keys().next().value;
-      return typeof first === "string" ? first : null;
-    }
-  }
+  const provider = imageRegistry.get(providerId);
+  if (!provider) return null;
+  const first = provider.models.keys().next().value;
+  return typeof first === "string" ? first : null;
 }
 
 function readDefaultVideoModel(
-  prefs: ProviderPreferences,
+  _prefs: ProviderPreferences,
   providerId: string,
   videoRegistry: VideoRegistry,
 ): string | null {
-  switch (providerId) {
-    case "azure-openai":
-      return prefs["azure-openai"].deployments.video || null;
-    default: {
-      const provider = videoRegistry.get(providerId);
-      if (!provider) return null;
-      const first = provider.models.keys().next().value;
-      return typeof first === "string" ? first : null;
-    }
-  }
+  const provider = videoRegistry.get(providerId);
+  if (!provider) return null;
+  const first = provider.models.keys().next().value;
+  return typeof first === "string" ? first : null;
 }
+
+type ProviderId =
+  | "openai"
+  | "azure-openai"
+  | "google"
+  | "flux-bfl"
+  | "bytedance"
+  | "xai";
+
+const PROVIDER_DISPLAY_NAMES: Record<ProviderId, string> = {
+  openai: "OpenAI",
+  "azure-openai": "Azure",
+  google: "Google AI Studio",
+  "flux-bfl": "Flux",
+  bytedance: "ByteDance",
+  xai: "xAI",
+};
 
 function providerSummaryList(
   prefs: ProviderPreferences,
@@ -1229,7 +1240,7 @@ function providerSummaryList(
   imageRegistry: ImageRegistry,
   videoRegistry: VideoRegistry,
 ): Array<{
-  id: "openai" | "azure-openai" | "google" | "flux-bfl" | "bytedance" | "xai";
+  id: ProviderId;
   displayName: string;
   configured: boolean;
   kinds: ("image" | "video")[];
@@ -1265,8 +1276,8 @@ function providerSummaryList(
       displayName: "Azure",
       configured: !!secrets["azure-openai"],
       kinds: ["image"],
-      defaultModel: prefs["azure-openai"].deployments.image || null,
-      modelIds: [prefs["azure-openai"].deployments.image].filter(Boolean) as string[],
+      defaultModel: firstImage("azure-openai"),
+      modelIds: imageIds("azure-openai"),
     },
     {
       id: "google",
@@ -1304,6 +1315,94 @@ function providerSummaryList(
       modelIds: [...imageIds("xai"), ...videoIds("xai")],
     },
   ];
+}
+
+/**
+ * Group every catalog model by `id` across providers and produce the unified
+ * shape the Models page consumes — one row per logical model with a list of
+ * provider sources and per-provider `configured` flags.
+ */
+function buildUnifiedModelList(
+  catalog: ModelCatalog,
+  secrets: ProviderSecrets,
+): {
+  image: Array<{
+    id: string;
+    displayName: string | null;
+    providers: Array<{ providerId: ProviderId; displayName: string; configured: boolean }>;
+  }>;
+  video: Array<{
+    id: string;
+    displayName: string | null;
+    providers: Array<{ providerId: ProviderId; displayName: string; configured: boolean }>;
+  }>;
+} {
+  const isProviderConfigured = (id: ProviderId): boolean => {
+    if (id === "azure-openai") {
+      const b = secrets["azure-openai"];
+      return !!(b && b.endpoint && b.apiKey);
+    }
+    if (id === "bytedance") {
+      const b = secrets.bytedance;
+      return !!(b && b.endpoint && b.apiKey);
+    }
+    const b = secrets[id] as { apiKey?: string } | undefined;
+    return !!(b && b.apiKey);
+  };
+  const groupKind = <T extends { id: string; displayName?: string }>(
+    perProvider: Record<string, T[]>,
+  ): Array<{
+    id: string;
+    displayName: string | null;
+    providers: Array<{ providerId: ProviderId; displayName: string; configured: boolean }>;
+  }> => {
+    const grouped = new Map<
+      string,
+      {
+        id: string;
+        displayName: string | null;
+        providers: Array<{ providerId: ProviderId; displayName: string; configured: boolean }>;
+      }
+    >();
+    // Stable provider iteration matches the provider summary order.
+    const providerOrder: ProviderId[] = [
+      "openai",
+      "azure-openai",
+      "google",
+      "flux-bfl",
+      "bytedance",
+      "xai",
+    ];
+    for (const providerId of providerOrder) {
+      const list = perProvider[providerId] ?? [];
+      for (const model of list) {
+        const existing = grouped.get(model.id);
+        const providerEntry = {
+          providerId,
+          displayName: PROVIDER_DISPLAY_NAMES[providerId],
+          configured: isProviderConfigured(providerId),
+        };
+        if (existing) {
+          existing.providers.push(providerEntry);
+          // Prefer the first non-null displayName encountered.
+          if (!existing.displayName && model.displayName) {
+            existing.displayName = model.displayName;
+          }
+        } else {
+          grouped.set(model.id, {
+            id: model.id,
+            displayName: model.displayName ?? null,
+            providers: [providerEntry],
+          });
+        }
+      }
+    }
+    return [...grouped.values()];
+  };
+  return {
+    image: groupKind(catalog.image),
+    video: groupKind(catalog.video),
+  };
 }
 
 /** Mask a secret value: keep first 4 + last 4 characters, ellide the middle. */
@@ -1349,12 +1448,9 @@ function maskSecrets(s: ProviderSecrets): {
  * (catalog is the source of truth); only Azure OpenAI carries deployment
  * names.
  */
-function prefsPayloadFromConfig(p: ProviderPreferences): {
+function prefsPayloadFromConfig(_p: ProviderPreferences): {
   openai: Record<string, never>;
-  "azure-openai": {
-    deployments: { image: string; video: string | null };
-    defaultDeployment: "image" | "video";
-  };
+  "azure-openai": Record<string, never>;
   google: Record<string, never>;
   "flux-bfl": Record<string, never>;
   bytedance: Record<string, never>;
@@ -1362,10 +1458,7 @@ function prefsPayloadFromConfig(p: ProviderPreferences): {
 } {
   return {
     openai: {},
-    "azure-openai": {
-      deployments: p["azure-openai"].deployments,
-      defaultDeployment: p["azure-openai"].defaultDeployment,
-    },
+    "azure-openai": {},
     google: {},
     "flux-bfl": {},
     bytedance: {},
@@ -1374,15 +1467,15 @@ function prefsPayloadFromConfig(p: ProviderPreferences): {
 }
 
 function prefsConfigFromPayload(
-  payload: ReturnType<typeof prefsPayloadFromConfig>,
+  _payload: ReturnType<typeof prefsPayloadFromConfig>,
 ): ProviderPreferences {
   return {
-    openai: payload.openai,
-    "azure-openai": payload["azure-openai"],
-    google: payload.google,
-    "flux-bfl": payload["flux-bfl"],
-    bytedance: payload.bytedance,
-    xai: payload.xai,
+    openai: {},
+    "azure-openai": {},
+    google: {},
+    "flux-bfl": {},
+    bytedance: {},
+    xai: {},
   };
 }
 

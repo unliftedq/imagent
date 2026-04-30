@@ -11,7 +11,8 @@ export type Route =
   | "settings"
   | "studio"
   | "gallery"
-  | "assets";
+  | "assets"
+  | "models";
 
 export type StudioMode = "image" | "video";
 

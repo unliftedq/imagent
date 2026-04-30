@@ -2,6 +2,7 @@ import type { ComponentType, ReactElement } from "react";
 import { Icons } from "@imagine/ui";
 import { AssetsPage } from "./pages/Assets.js";
 import { GalleryPage } from "./pages/Gallery.js";
+import { ModelsPage } from "./pages/Models.js";
 import { ProvidersPage } from "./pages/Providers.js";
 import { SettingsPage } from "./pages/Settings.js";
 import { StudioPage } from "./pages/Studio.js";
@@ -40,6 +41,13 @@ export const ROUTES: RouteDef[] = [
     label: "Assets",
     Component: AssetsPage,
     icon: <Icons.Cube weight="duotone" className="size-5" />,
+    available: true,
+  },
+  {
+    id: "models",
+    label: "Models",
+    Component: ModelsPage,
+    icon: <Icons.Brain weight="duotone" className="size-5" />,
     available: true,
   },
   {

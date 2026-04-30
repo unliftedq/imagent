@@ -15,10 +15,17 @@ import { NavRail, NAV_RAIL_ROWS, type NavRoute } from "./NavRail.js";
  */
 
 describe("NavRail", () => {
-  it("exports the five DESIGN.md rows in the exact order", () => {
+  it("exports the canonical rows in the exact order", () => {
     const ids = NAV_RAIL_ROWS.map((r) => r.id);
-    expect(ids).toEqual(["studio", "gallery", "assets", "providers", "settings"]);
-    expect(ids).toHaveLength(5);
+    expect(ids).toEqual([
+      "studio",
+      "gallery",
+      "assets",
+      "models",
+      "providers",
+      "settings",
+    ]);
+    expect(ids).toHaveLength(6);
   });
 
   it("does NOT include a Video item in the nav", () => {
@@ -45,7 +52,14 @@ describe("NavRail", () => {
         onNavigate: vi.fn(),
       }),
     );
-    const labels = ["Studio", "Gallery", "Assets", "Providers", "Settings"];
+    const labels = [
+      "Studio",
+      "Gallery",
+      "Assets",
+      "Models",
+      "Providers",
+      "Settings",
+    ];
     let lastIdx = -1;
     for (const label of labels) {
       const idx = html.indexOf(`>${label}<`);
@@ -83,8 +97,8 @@ describe("NavRail", () => {
     expect(mtAutoUlIdx).toBeGreaterThan(-1);
     // Settings should appear AFTER the mt-auto <ul> opens.
     expect(settingsIdx).toBeGreaterThan(mtAutoUlIdx);
-    // And the four primary rows should appear BEFORE the mt-auto <ul>.
-    for (const label of ["Studio", "Gallery", "Assets", "Providers"]) {
+    // And the primary rows should appear BEFORE the mt-auto <ul>.
+    for (const label of ["Studio", "Gallery", "Assets", "Models", "Providers"]) {
       const idx = html.indexOf(`>${label}<`);
       expect(idx, `${label} should render before the bottom mt-auto <ul>`).toBeLessThan(mtAutoUlIdx);
     }

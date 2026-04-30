@@ -25,6 +25,7 @@ export {
   Info,
   Plus,
   X,
+  Brain,
   Image,
   FilmReel,
   FilmStrip,

@@ -112,22 +112,16 @@ export type ProviderTestResult = z.infer<typeof ProviderTestResultSchema>;
 /**
  * Provider preferences block — non-secret per-provider config. After the
  * "users only fill in the minimum required to authenticate" reshape, the
- * catalog is the canonical model list for every well-known provider. Only
- * Azure OpenAI carries a deployment name slot because the user defines
- * those names in their Azure portal.
+ * catalog is the canonical model list for every well-known provider — Azure
+ * deployments must be named after the model id (e.g. deploy `gpt-image-2`
+ * under that exact name); the catalog file is the override path.
  *
  * Each provider keeps an explicit slot (even when empty) so future settings
  * have a stable home. Mirrors `config.providers` in shape.
  */
 export const ProviderPreferencesPayloadSchema = z.object({
   openai: z.object({}),
-  "azure-openai": z.object({
-    deployments: z.object({
-      image: z.string(),
-      video: z.string().nullable(),
-    }),
-    defaultDeployment: z.enum(["image", "video"]),
-  }),
+  "azure-openai": z.object({}),
   google: z.object({}),
   "flux-bfl": z.object({}),
   bytedance: z.object({}),
@@ -331,6 +325,45 @@ export const contract = {
       providerId: ProviderIdSchema,
       defaultModel: z.string().nullable(),
       models: z.array(VideoModelDefSchema),
+    }),
+  },
+
+  /**
+   * Unified, multi-provider catalog view for the Models page. One row per
+   * logical model id — when several providers ship the same id (e.g.
+   * `gpt-image-2` from both `openai` and `azure-openai`), they're merged
+   * into a single entry with `providers[]` listing each routable source and
+   * whether that source is currently configured (auth saved).
+   */
+  "models.list": {
+    input: z.void(),
+    output: z.object({
+      image: z.array(
+        z.object({
+          id: z.string(),
+          displayName: z.string().nullable(),
+          providers: z.array(
+            z.object({
+              providerId: ProviderIdSchema,
+              displayName: z.string(),
+              configured: z.boolean(),
+            }),
+          ),
+        }),
+      ),
+      video: z.array(
+        z.object({
+          id: z.string(),
+          displayName: z.string().nullable(),
+          providers: z.array(
+            z.object({
+              providerId: ProviderIdSchema,
+              displayName: z.string(),
+              configured: z.boolean(),
+            }),
+          ),
+        }),
+      ),
     }),
   },
 

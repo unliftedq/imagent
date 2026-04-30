@@ -55,17 +55,12 @@ export function createImageRegistry(
   }
 
   if (secrets["azure-openai"]) {
-    const baseline = pickBaseline(catalog.image["azure-openai"] ?? []);
-    const models = resolveDeploymentMap(
-      prefs["azure-openai"].deployments,
-      baseline,
-    );
     out.set(
       "azure-openai",
       new AzureOpenAIImageProvider({
         endpoint: secrets["azure-openai"].endpoint,
         apiKey: secrets["azure-openai"].apiKey,
-        models,
+        models: mapFromList(catalog.image["azure-openai"] ?? []),
       }),
     );
   }
@@ -180,41 +175,6 @@ function mapFromList<T extends { id: string }>(
   list: readonly T[],
 ): ReadonlyMap<string, T> {
   return new Map(list.map((item) => [item.id, item]));
-}
-
-/**
- * Pick a baseline capability shape for deployment-based providers. Prefer an
- * entry with id `image-default`; otherwise use the first entry; otherwise
- * fall back to a generic shape via `undefined` (resolveDeploymentMap handles).
- */
-function pickBaseline(
-  list: readonly ImageModelDef[],
-): ImageModelDef | undefined {
-  const named = list.find((m) => m.id === "image-default");
-  if (named) return named;
-  return list[0];
-}
-
-/**
- * Build a deployment-name → model-def map for Azure-style providers. The
- * underlying model behind a deployment is unknown to us, so we borrow a
- * baseline capability shape (typically gpt-image-2) and key it by the
- * user-supplied deployment name.
- */
-function resolveDeploymentMap(
-  deployments: { image: string; video: string | null },
-  baseline: ImageModelDef | undefined,
-): ReadonlyMap<string, ImageModelDef> {
-  const out = new Map<string, ImageModelDef>();
-  const cap: ImageModelDef = baseline
-    ? { ...baseline }
-    : { id: "image-default" };
-  if (deployments.image) {
-    out.set(deployments.image, { ...cap, id: deployments.image });
-  }
-  // Video deployment is not used by the image port; image port only knows
-  // about image deployments.
-  return out;
 }
 
 // Re-export the catalog types so consumers can import them via @imagine/providers.

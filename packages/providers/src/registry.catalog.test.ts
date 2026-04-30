@@ -6,10 +6,7 @@ import { buildTestCatalog } from "./catalog/test-fixtures.js";
 function emptyPrefs(): ProviderPreferences {
   return {
     openai: {},
-    "azure-openai": {
-      deployments: { image: "my-image-prod", video: null },
-      defaultDeployment: "image",
-    },
+    "azure-openai": {},
     google: {},
     "flux-bfl": {},
     bytedance: {},
@@ -47,7 +44,7 @@ describe("createImageRegistry (catalog-driven)", () => {
     expect([...bd.models.keys()]).toContain("doubao-seedream-3-0-t2i-250415");
   });
 
-  it("Azure: deployment name overrides model id but inherits baseline caps", () => {
+  it("Azure: catalog slice drives the model map (deployment names match model ids)", () => {
     const secrets: ProviderSecrets = {
       "azure-openai": {
         endpoint: "https://r.openai.azure.com",
@@ -58,9 +55,9 @@ describe("createImageRegistry (catalog-driven)", () => {
     const reg = createImageRegistry(secrets, emptyPrefs(), catalog);
 
     const azure = reg.get("azure-openai")!;
-    expect([...azure.models.keys()]).toEqual(["my-image-prod"]);
-    const m = azure.models.get("my-image-prod")!;
-    expect(m.capabilities?.sizes).toContain("1024x1024");
+    expect([...azure.models.keys()].sort()).toEqual(
+      catalog.image["azure-openai"]!.map((m) => m.id).sort(),
+    );
   });
 
   it("ignores secrets that are absent (no provider entry created)", () => {

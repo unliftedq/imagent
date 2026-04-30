@@ -63,20 +63,13 @@ export type ProviderSecrets = z.infer<typeof ProviderSecretsSchema>;
  *
  * Each provider's slot is kept (as `z.object({}).default({})`) so future
  * provider-scoped knobs (e.g. concurrency overrides) have a stable home.
- *
- * Azure OpenAI is the **exception**: its deployment names are user-defined
- * in the Azure portal, so the user must tell us what to put in the URL
- * path.
+ * Azure OpenAI used to carry deployment-name overrides, but the convention
+ * is now "deployment name == model id" — power users override per-resource
+ * names by editing `~/.imagine/catalog.json`.
  */
 export const ProviderPreferencesSchema = z.object({
   openai: z.object({}).default({}),
-  "azure-openai": z.object({
-    deployments: z.object({
-      image: z.string(),
-      video: z.string().nullable().default(null),
-    }),
-    defaultDeployment: z.enum(["image", "video"]).default("image"),
-  }),
+  "azure-openai": z.object({}).default({}),
   google: z.object({}).default({}),
   "flux-bfl": z.object({}).default({}),
   bytedance: z.object({}).default({}),
@@ -111,13 +104,7 @@ export const DEFAULT_CONFIG: ConfigFile = {
   app: AppPreferencesSchema.parse({}),
   providers: {
     openai: {},
-    "azure-openai": {
-      deployments: {
-        image: "",
-        video: null,
-      },
-      defaultDeployment: "image",
-    },
+    "azure-openai": {},
     google: {},
     "flux-bfl": {},
     bytedance: {},

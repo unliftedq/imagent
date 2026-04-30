@@ -157,15 +157,32 @@ export class AzureOpenAIImageProvider implements ImageProvider {
         .map((d) => d.deploymentName ?? d.id ?? d.model)
         .filter((s): s is string => typeof s === "string");
       const configured = [...this.models.keys()];
-      const matched = configured.find((id) => ids.includes(id));
+      // Match a configured deployment against the returned list. Azure's v1
+      // `/models` endpoint may return underlying model names (e.g.
+      // `gpt-image-2`) instead of the user's deployment name (e.g.
+      // `gpt-image-2-1`), so we also accept loose matches in either direction
+      // — the field is only used as an informational sample-id annotation.
+      const matched = configured.find((d) =>
+        ids.some(
+          (listed) =>
+            listed === d ||
+            d.startsWith(listed) ||
+            listed.startsWith(d),
+        ),
+      );
+      // Auth working is the only hard requirement — mirror the OpenAI probe
+      // and never flag `ok:false` just because the deployment name didn't
+      // happen to appear in the listing. Generation calls give the precise
+      // error if the deployment is actually missing.
       const out: ProviderTestResult = matched
         ? { ok: true, latencyMs, sampleModelId: matched }
-        : configured.length === 0
-          ? { ok: true, latencyMs }
-          : {
-              ok: false,
-              reason: `auth ok but no configured deployment found in resource (${configured.join(", ")})`,
-            };
+        : { ok: true, latencyMs };
+      if (!matched && configured.length > 0) {
+        this.logger?.debug?.(
+          "azure-openai test(): no exact deployment match in /models listing",
+          { configured, listed: ids },
+        );
+      }
       return out;
     } catch (err) {
       this.logger?.debug?.("azure-openai test() failed", { err: String(err) });

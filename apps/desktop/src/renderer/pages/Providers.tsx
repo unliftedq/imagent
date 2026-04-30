@@ -21,17 +21,12 @@ interface RowState {
   // Shared `endpoint` field — used by Azure and ByteDance (both require an
   // endpoint URL alongside the apiKey).
   endpoint: string;
-  // Azure deployments
-  imageDeployment: string;
-  videoDeployment: string;
 }
 
 function emptyRowState(): RowState {
   return {
     apiKey: "",
     endpoint: "",
-    imageDeployment: "",
-    videoDeployment: "",
   };
 }
 
@@ -43,16 +38,12 @@ function emptyRowState(): RowState {
  */
 function rowStateFromConfig(
   id: ProviderId,
-  prefs: ProviderPreferencesPayload | null,
+  _prefs: ProviderPreferencesPayload | null,
   secrets: MaskedSecrets,
 ): RowState {
   const r = emptyRowState();
   switch (id) {
     case "azure-openai":
-      if (prefs) {
-        r.imageDeployment = prefs["azure-openai"].deployments.image;
-        r.videoDeployment = prefs["azure-openai"].deployments.video ?? "";
-      }
       // Endpoint is stored under secrets but isn't actually secret — the
       // masked payload returns it in plaintext so the form can show what's
       // saved instead of falling back to empty.
@@ -139,25 +130,11 @@ export function ProvidersPage() {
     if (!providerPrefs) return;
     const r = rows[id];
 
-    // Build the prefs payload — start from a fresh copy of the snapshot.
+    // Provider prefs no longer carry deployment-name overrides — every
+    // provider's slot is empty so we just round-trip the loaded snapshot.
     const nextPrefs: ProviderPreferencesPayload = JSON.parse(
       JSON.stringify(providerPrefs),
     ) as ProviderPreferencesPayload;
-    switch (id) {
-      case "azure-openai":
-        nextPrefs["azure-openai"] = {
-          deployments: {
-            image: r.imageDeployment,
-            video: r.videoDeployment || null,
-          },
-          defaultDeployment: nextPrefs["azure-openai"].defaultDeployment,
-        };
-        break;
-      default:
-        // No prefs to write for well-known providers — auth is the only thing
-        // we persist.
-        break;
-    }
 
     // Secrets patch — only fields the user actually populated this session.
     const secretsPatch: SecretsWrite = {};
@@ -247,9 +224,12 @@ export function ProvidersPage() {
               <div className="flex flex-col gap-4">
                 {id === "azure-openai" ? (
                   <>
-                    <Field label="Endpoint">
+                    <Field
+                      label="Endpoint"
+                      helperText="Foundry/AOAI base URL — name your Azure deployments after the model id (e.g. `gpt-image-2`)."
+                    >
                       <Input
-                        placeholder="https://my-resource.openai.azure.com"
+                        placeholder="https://my-resource.services.ai.azure.com"
                         value={r.endpoint}
                         onChange={(e) => update(id, "endpoint", e.target.value)}
                       />
@@ -265,26 +245,6 @@ export function ProvidersPage() {
                           : "Required for Test + Save to work."
                       }
                     />
-                    <Field
-                      label="Image deployment"
-                      helperText="Deployment name from the Azure portal."
-                    >
-                      <Input
-                        value={r.imageDeployment}
-                        onChange={(e) =>
-                          update(id, "imageDeployment", e.target.value)
-                        }
-                        placeholder="my-image-deployment"
-                      />
-                    </Field>
-                    <Field label="Video deployment (optional)">
-                      <Input
-                        value={r.videoDeployment}
-                        onChange={(e) =>
-                          update(id, "videoDeployment", e.target.value)
-                        }
-                      />
-                    </Field>
                   </>
                 ) : (
                   <>

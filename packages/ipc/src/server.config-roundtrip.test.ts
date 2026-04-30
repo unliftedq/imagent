@@ -73,13 +73,10 @@ function makeTransport(invoke: (channel: string, input: unknown) => Promise<unkn
 }
 
 // ----- payload bridge (mirrors apps/desktop/src/main/ipc-handlers.ts) -------
-function prefsPayloadFromConfig(p: ProviderPreferences): ProviderPreferencesPayload {
+function prefsPayloadFromConfig(_p: ProviderPreferences): ProviderPreferencesPayload {
   return {
     openai: {},
-    "azure-openai": {
-      deployments: p["azure-openai"].deployments,
-      defaultDeployment: p["azure-openai"].defaultDeployment,
-    },
+    "azure-openai": {},
     google: {},
     "flux-bfl": {},
     bytedance: {},
@@ -87,14 +84,14 @@ function prefsPayloadFromConfig(p: ProviderPreferences): ProviderPreferencesPayl
   };
 }
 
-function prefsConfigFromPayload(payload: ProviderPreferencesPayload): ProviderPreferences {
+function prefsConfigFromPayload(_payload: ProviderPreferencesPayload): ProviderPreferences {
   return {
-    openai: payload.openai,
-    "azure-openai": payload["azure-openai"],
-    google: payload.google,
-    "flux-bfl": payload["flux-bfl"],
-    bytedance: payload.bytedance,
-    xai: payload.xai,
+    openai: {},
+    "azure-openai": {},
+    google: {},
+    "flux-bfl": {},
+    bytedance: {},
+    xai: {},
   };
 }
 
@@ -212,20 +209,10 @@ describe("providers.config.set + providers.config.get round-trip", () => {
     expect(reloaded.openai).toEqual({});
   });
 
-  it("azure-openai: persists deployments + defaultDeployment", async () => {
+  it("azure-openai: empty slot round-trips (deployments removed in latest revision)", async () => {
     const client = buildClient();
-    const initial = await client["providers.config.get"]();
-    const next: ProviderPreferencesPayload = {
-      ...initial,
-      "azure-openai": {
-        deployments: { image: "my-img-deploy", video: "my-vid-deploy" },
-        defaultDeployment: "image",
-      },
-    };
-    const saved = await client["providers.config.set"](next);
-    expect(saved["azure-openai"]).toEqual(next["azure-openai"]);
     const reloaded = await client["providers.config.get"]();
-    expect(reloaded["azure-openai"]).toEqual(next["azure-openai"]);
+    expect(reloaded["azure-openai"]).toEqual({});
   });
 
   it("google: empty slot round-trips", async () => {
@@ -252,25 +239,19 @@ describe("providers.config.set + providers.config.get round-trip", () => {
     expect(reloaded.xai).toEqual({});
   });
 
-  it("regression: full multi-provider save reloads exactly (Azure survives a save)", async () => {
+  it("regression: full multi-provider save reloads exactly", async () => {
     // Reproduces the original bug: the renderer ships the FULL prefs payload
     // on every Save click. If `prefsConfigFromPayload` (or a side-channel)
     // drops or reshapes any provider's block, the subsequent reload looks
-    // empty for that provider — which is what the user reported.
+    // empty for that provider. After the deployment-name removal there's no
+    // configurable surface left in prefs, so the round-trip is a no-op
+    // identity check; the hook stays in case future per-provider knobs land.
     const client = buildClient();
     const initial = await client["providers.config.get"]();
-    const next: ProviderPreferencesPayload = {
-      ...initial,
-      "azure-openai": {
-        deployments: { image: "azure-deploy", video: null },
-        defaultDeployment: "image",
-      },
-    };
-    const saved = await client["providers.config.set"](next);
-    expect(saved).toEqual(next);
+    const saved = await client["providers.config.set"](initial);
+    expect(saved).toEqual(initial);
     const reloaded = await client["providers.config.get"]();
-    expect(reloaded).toEqual(next);
-    expect(reloaded["azure-openai"].deployments.image).toBe("azure-deploy");
+    expect(reloaded).toEqual(initial);
   });
 });
 
