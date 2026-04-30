@@ -65,7 +65,6 @@ export function createImageRegistry(
       new AzureOpenAIImageProvider({
         endpoint: secrets["azure-openai"].endpoint,
         apiKey: secrets["azure-openai"].apiKey,
-        apiVersion: secrets["azure-openai"].apiVersion,
         models,
       }),
     );

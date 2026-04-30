@@ -16,10 +16,19 @@ export const TooltipContent = forwardRef<
         ref={ref}
         sideOffset={sideOffset}
         className={cn(
-          "z-50 max-w-sm rounded-(--radius-sm) bg-(--accent) px-3 py-1.5 " +
-            "text-(length:--text-caption) text-(--accent-fg) shadow-md " +
-            "data-[state=closed]:animate-out data-[state=delayed-open]:animate-in " +
-            "data-[state=delayed-open]:fade-in-0 data-[state=closed]:fade-out-0",
+          // `w-max` makes the tooltip hug its content; `max-w-[20rem]` caps it
+          // for long error reasons (Tailwind v4 dropped the named `max-w-sm`
+          // token, so we use a literal). `whitespace-normal` keeps wrapping
+          // available within the cap.
+          "z-50 w-max max-w-[20rem] whitespace-normal",
+          "rounded-(--radius-sm) bg-(--accent) px-3 py-1.5",
+          "text-(length:--text-caption) text-(--accent-fg) shadow-md",
+          // Plain opacity transition driven by Radix's data-state — avoids
+          // depending on the `tailwindcss-animate` plugin (which isn't in the
+          // workspace) for animate-in/out + fade-in/out-0 utilities.
+          "transition-opacity duration-(--duration-fast)",
+          "data-[state=delayed-open]:opacity-100 data-[state=instant-open]:opacity-100",
+          "data-[state=closed]:opacity-0",
           className,
         )}
         {...rest}

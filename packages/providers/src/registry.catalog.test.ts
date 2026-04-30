@@ -52,7 +52,6 @@ describe("createImageRegistry (catalog-driven)", () => {
       "azure-openai": {
         endpoint: "https://r.openai.azure.com",
         apiKey: "k",
-        apiVersion: "2024-10-21",
       },
     };
     const catalog = buildTestCatalog();

@@ -9,13 +9,14 @@
         "capabilities": {
           "sizes": ["1024x1024", "1024x1536", "1536x1024", "2048x2048", "2160x3840", "3840x2160"],
           "qualities": ["low", "medium", "high", "auto"],
+          "outputFormats": ["png", "jpeg", "webp"],
           "maxReferences": 16,
           "maxOutputs": 10,
           "supportsNegativePrompt": false,
           "supportsSeed": false,
           "supportsStyleRef": true
         },
-        "defaults": { "size": "1024x1024", "quality": "auto", "count": 1 }
+        "defaults": { "size": "1024x1024", "quality": "auto", "outputFormat": "png", "count": 1 }
       },
       {
         "id": "gpt-image-1.5",
@@ -23,13 +24,14 @@
         "capabilities": {
           "sizes": ["1024x1024", "1024x1536", "1536x1024"],
           "qualities": ["low", "medium", "high", "auto"],
+          "outputFormats": ["png", "jpeg", "webp"],
           "maxReferences": 16,
           "maxOutputs": 10,
           "supportsNegativePrompt": false,
           "supportsSeed": false,
           "supportsStyleRef": true
         },
-        "defaults": { "size": "1024x1024", "quality": "auto", "count": 1 }
+        "defaults": { "size": "1024x1024", "quality": "auto", "outputFormat": "png", "count": 1 }
       },
       {
         "id": "gpt-image-1-mini",
@@ -37,13 +39,14 @@
         "capabilities": {
           "sizes": ["1024x1024", "1024x1536", "1536x1024"],
           "qualities": ["low", "medium", "high", "auto"],
+          "outputFormats": ["png", "jpeg", "webp"],
           "maxReferences": 16,
           "maxOutputs": 10,
           "supportsNegativePrompt": false,
           "supportsSeed": false,
           "supportsStyleRef": true
         },
-        "defaults": { "size": "1024x1024", "quality": "auto", "count": 1 }
+        "defaults": { "size": "1024x1024", "quality": "auto", "outputFormat": "png", "count": 1 }
       }
     ],
     "azure-openai": [
@@ -53,13 +56,14 @@
         "capabilities": {
           "sizes": ["1024x1024", "1024x1536", "1536x1024", "2048x2048", "2160x3840", "3840x2160"],
           "qualities": ["low", "medium", "high", "auto"],
+          "outputFormats": ["png", "jpeg", "webp"],
           "maxReferences": 16,
           "maxOutputs": 10,
           "supportsNegativePrompt": false,
           "supportsSeed": false,
           "supportsStyleRef": true
         },
-        "defaults": { "size": "1024x1024", "quality": "auto", "count": 1 }
+        "defaults": { "size": "1024x1024", "quality": "auto", "outputFormat": "png", "count": 1 }
       }
     ],
     "google": [

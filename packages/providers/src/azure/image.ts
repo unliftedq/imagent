@@ -13,12 +13,13 @@ import {
   type ProviderTestResult,
   validateImageRequestAgainstModel,
 } from "@imagine/core";
-import { AzureOpenAI } from "openai";
+import OpenAI from "openai";
 import { createHttpClient, type HttpClient } from "../http/index.js";
 import {
   aggregateCapabilities,
   buildOpenAIImageBody,
   decodeBase64,
+  mimeTypeForOutputFormat,
   parseSize,
   rethrowOpenAIError,
   testFailureFromError,
@@ -28,7 +29,6 @@ import {
 export interface AzureOpenAIImageProviderOptions {
   endpoint: string;
   apiKey: string;
-  apiVersion: string;
   /** Optional default deployment. The catalog map keys are deployment names. */
   deployment?: string;
   /** Deployment name → resolved model definition. */
@@ -41,11 +41,20 @@ export interface AzureOpenAIImageProviderOptions {
 }
 
 /**
- * Azure OpenAI image provider — own class, own SDK client. Uses the
- * `openai` package's `AzureOpenAI` subclass which understands Azure's
- * `/openai/deployments/{deployment}/images/generations?api-version=...` URL
- * shape. The deployment name is the catalog key and rides in the `model`
- * slot of the request.
+ * Azure OpenAI image provider — own class, own SDK client. Routes through the
+ * v1 endpoint surface: `{endpoint}/openai/v1/images/generations`.
+ *
+ * Why not the legacy `/openai/deployments/{deployment}/...` route?
+ *
+ *   - Newer image models (gpt-image-2 family) on Azure AI Foundry resources
+ *     return 404 from the per-deployment URL — they're only routable via v1.
+ *   - Foundry resources (`*.services.ai.azure.com`) and recent Azure OpenAI
+ *     resources (`*.openai.azure.com`) both expose `/openai/v1/...`.
+ *
+ * The v1 endpoint authenticates with `Authorization: Bearer <api-key>` (the
+ * OpenAI SDK's default) and does not require an `api-version` query param —
+ * matching the canonical Azure AI Foundry sample. The deployment name rides
+ * in the request body's `model` field.
  */
 export class AzureOpenAIImageProvider implements ImageProvider {
   readonly id = "azure-openai";
@@ -55,13 +64,11 @@ export class AzureOpenAIImageProvider implements ImageProvider {
   private readonly client: OpenAIClientLike;
   private readonly listHttp: HttpClient;
   private readonly endpoint: string;
-  private readonly apiVersion: string;
   private readonly logger?: Logger;
 
   constructor(options: AzureOpenAIImageProviderOptions) {
     const endpoint = options.endpoint.replace(/\/+$/, "");
     this.endpoint = endpoint;
-    this.apiVersion = options.apiVersion;
     this.models = options.models;
     this.capabilities = aggregateCapabilities(options.models);
     if (options.logger) this.logger = options.logger;
@@ -69,20 +76,18 @@ export class AzureOpenAIImageProvider implements ImageProvider {
     if (options.client) {
       this.client = options.client;
     } else {
-      // AzureOpenAI accepts deployment? — we leave it unset so the URL slot
-      // stays driven by req.model (the catalog deployment key).
-      const azureOpts: ConstructorParameters<typeof AzureOpenAI>[0] = {
-        endpoint,
+      // Plain `OpenAI` (not `AzureOpenAI`) — see class doc above for why.
+      this.client = new OpenAI({
         apiKey: options.apiKey,
-        apiVersion: options.apiVersion,
-      };
-      if (options.deployment) azureOpts.deployment = options.deployment;
-      this.client = new AzureOpenAI(azureOpts) as unknown as OpenAIClientLike;
+        baseURL: `${endpoint}/openai/v1`,
+      }) as unknown as OpenAIClientLike;
     }
 
+    // The v1 endpoint authenticates with `Authorization: Bearer <api-key>`
+    // (same as the SDK above) — matches the canonical Foundry sample.
     this.listHttp = createHttpClient({
       vendorId: this.id,
-      headers: { "api-key": options.apiKey },
+      headers: { Authorization: `Bearer ${options.apiKey}` },
       ...(options.fetch !== undefined ? { fetch: options.fetch } : {}),
       ...(options.logger !== undefined ? { logger: options.logger } : {}),
     });
@@ -115,7 +120,7 @@ export class AzureOpenAIImageProvider implements ImageProvider {
       if (entry.b64_json) {
         outputs.push({
           bytes: decodeBase64(entry.b64_json),
-          mimeType: "image/png",
+          mimeType: mimeTypeForOutputFormat(merged.outputFormat),
           ...parseSize(merged.size),
           ...(entry.revised_prompt ? { raw: { revised_prompt: entry.revised_prompt } } : {}),
         });
@@ -132,13 +137,15 @@ export class AzureOpenAIImageProvider implements ImageProvider {
   }
 
   /**
-   * `GET {endpoint}/openai/deployments?api-version=...` — Azure lists the
-   * resource's deployments. No SDK helper exposes this directly, so we still
-   * use raw HTTP for the probe.
+   * `GET {endpoint}/openai/v1/models` — list the resource's deployments via
+   * the v1 surface. (The legacy `/openai/deployments?api-version=...` route
+   * still works on most resources but requires a dated api-version; the v1
+   * `/models` endpoint matches the auth/URL shape we use for generation, so
+   * we keep them aligned.)
    */
   async test(signal?: AbortSignal): Promise<ProviderTestResult> {
     const started = Date.now();
-    const url = `${this.endpoint}/openai/deployments?api-version=${encodeURIComponent(this.apiVersion)}`;
+    const url = `${this.endpoint}/openai/v1/models`;
     try {
       const opts: { signal?: AbortSignal } = {};
       if (signal) opts.signal = signal;

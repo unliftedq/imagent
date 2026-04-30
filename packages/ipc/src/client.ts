@@ -64,7 +64,9 @@ export function createIpcClient(transport: IpcTransport): IpcClient {
 }
 
 function makeInvoker<M extends ContractMethod>(method: M, transport: IpcTransport) {
-  const route = contract[method] as { input: { parse: (v: unknown) => Input<M> }; output: { parse: (v: unknown) => Output<M> } } | undefined;
+  const route = contract[method] as unknown as
+    | { input: { parse: (v: unknown) => Input<M> }; output: { parse: (v: unknown) => Output<M> } }
+    | undefined;
   return async (input: Input<M>): Promise<Output<M>> => {
     if (!route) {
       throw new IpcClientError({

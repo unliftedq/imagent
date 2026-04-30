@@ -8,6 +8,7 @@ import {
 } from "@imagine/ui";
 import {
   IpcClientError,
+  type MaskedSecrets,
   type ProviderId,
   type ProviderPreferencesPayload,
   type SecretsWrite,
@@ -20,7 +21,6 @@ interface RowState {
   // Shared `endpoint` field — used by Azure and ByteDance (both require an
   // endpoint URL alongside the apiKey).
   endpoint: string;
-  apiVersion: string;
   // Azure deployments
   imageDeployment: string;
   videoDeployment: string;
@@ -30,7 +30,6 @@ function emptyRowState(): RowState {
   return {
     apiKey: "",
     endpoint: "",
-    apiVersion: "2024-10-21",
     imageDeployment: "",
     videoDeployment: "",
   };
@@ -45,19 +44,27 @@ function emptyRowState(): RowState {
 function rowStateFromConfig(
   id: ProviderId,
   prefs: ProviderPreferencesPayload | null,
+  secrets: MaskedSecrets,
 ): RowState {
   const r = emptyRowState();
-  if (!prefs) return r;
   switch (id) {
     case "azure-openai":
-      r.imageDeployment = prefs["azure-openai"].deployments.image;
-      r.videoDeployment = prefs["azure-openai"].deployments.video ?? "";
+      if (prefs) {
+        r.imageDeployment = prefs["azure-openai"].deployments.image;
+        r.videoDeployment = prefs["azure-openai"].deployments.video ?? "";
+      }
+      // Endpoint is stored under secrets but isn't actually secret — the
+      // masked payload returns it in plaintext so the form can show what's
+      // saved instead of falling back to empty.
+      r.endpoint = secrets["azure-openai"]?.endpoint ?? "";
+      break;
+    case "bytedance":
+      r.endpoint = secrets.bytedance?.endpoint ?? "";
       break;
     default:
-      // OpenAI / Google / Flux / ByteDance / xAI carry no per-provider
-      // prefs — the catalog is the source of truth and base URLs are
-      // hardcoded canonical values (with a power-user override available
-      // via secrets.json).
+      // OpenAI / Google / Flux / xAI carry no per-provider prefs — the catalog
+      // is the source of truth and base URLs are hardcoded canonical values
+      // (with a power-user override available via secrets.json).
       break;
   }
   return r;
@@ -93,18 +100,18 @@ export function ProvidersPage() {
     void refresh();
   }, [refresh]);
 
-  // Reset form rows when prefs change (e.g. after refresh).
+  // Reset form rows when prefs or secrets change (e.g. after refresh/save).
   useEffect(() => {
     if (!providerPrefs) return;
     setRows({
-      openai: rowStateFromConfig("openai", providerPrefs),
-      "azure-openai": rowStateFromConfig("azure-openai", providerPrefs),
-      google: rowStateFromConfig("google", providerPrefs),
-      "flux-bfl": rowStateFromConfig("flux-bfl", providerPrefs),
-      bytedance: rowStateFromConfig("bytedance", providerPrefs),
-      xai: rowStateFromConfig("xai", providerPrefs),
+      openai: rowStateFromConfig("openai", providerPrefs, secrets),
+      "azure-openai": rowStateFromConfig("azure-openai", providerPrefs, secrets),
+      google: rowStateFromConfig("google", providerPrefs, secrets),
+      "flux-bfl": rowStateFromConfig("flux-bfl", providerPrefs, secrets),
+      bytedance: rowStateFromConfig("bytedance", providerPrefs, secrets),
+      xai: rowStateFromConfig("xai", providerPrefs, secrets),
     });
-  }, [providerPrefs]);
+  }, [providerPrefs, secrets]);
 
   const order: ProviderId[] = useMemo(
     () => ["openai", "azure-openai", "google", "flux-bfl", "bytedance", "xai"],
@@ -159,7 +166,6 @@ export function ProvidersPage() {
       const block: NonNullable<SecretsWrite["azure-openai"]> = {};
       if (r.apiKey) block.apiKey = r.apiKey;
       if (r.endpoint) block.endpoint = r.endpoint;
-      if (r.apiVersion) block.apiVersion = r.apiVersion;
       if (Object.keys(block).length > 0) secretsPatch["azure-openai"] = block;
     }
     if (id === "google" && r.apiKey) secretsPatch.google = { apiKey: r.apiKey };
@@ -259,12 +265,6 @@ export function ProvidersPage() {
                           : "Required for Test + Save to work."
                       }
                     />
-                    <Field label="API version">
-                      <Input
-                        value={r.apiVersion}
-                        onChange={(e) => update(id, "apiVersion", e.target.value)}
-                      />
-                    </Field>
                     <Field
                       label="Image deployment"
                       helperText="Deployment name from the Azure portal."

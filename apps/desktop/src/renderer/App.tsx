@@ -4,6 +4,7 @@ import { ROUTES } from "./routes.js";
 import { useUIStore } from "./state/useUIStore.js";
 import { useConfigStore } from "./state/useConfigStore.js";
 import { api } from "./lib/api.js";
+import { Toaster } from "./components/Toaster.js";
 
 /**
  * App shell — DESIGN.md §5.4. The window is a 2-column grid: the persistent
@@ -23,17 +24,6 @@ export function App() {
 
   useEffect(() => {
     void refresh();
-    // Stash the data dir on a window global so renderer-side helpers can
-    // build `file://` URLs for gallery items without an extra IPC per image.
-    void (async () => {
-      try {
-        const paths = await api["app.storagePaths"]();
-        const w = window as unknown as { __imagineDataDir__?: string };
-        w.__imagineDataDir__ = paths.dataDir;
-      } catch {
-        // Best-effort; the Studio recent strip degrades gracefully.
-      }
-    })();
   }, [refresh]);
 
   useEffect(() => {
@@ -68,6 +58,7 @@ export function App() {
           <Active />
         </main>
       </div>
+      <Toaster />
     </TooltipProvider>
   );
 }

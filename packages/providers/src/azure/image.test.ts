@@ -24,7 +24,6 @@ function makeProvider(client: FakeClient): AzureOpenAIImageProvider {
   return new AzureOpenAIImageProvider({
     endpoint: "https://my-aoai.openai.azure.com",
     apiKey: "azure-key",
-    apiVersion: "2024-10-21",
     models: new Map(Object.entries(AZURE_OPENAI_IMAGE_MODELS)),
     client: client as unknown as OpenAIClientLike,
   });

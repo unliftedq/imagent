@@ -57,8 +57,11 @@ describe("OpenAIImageProvider", () => {
       prompt: baseRequest.prompt,
       n: 1,
       size: "1024x1024",
-      response_format: "b64_json",
     });
+    // gpt-image-* family rejects `response_format` — the body builder uses
+    // an id-pattern heuristic to omit it even when the catalog lacks the
+    // `outputFormats` capability flag.
+    expect(body).not.toHaveProperty("response_format");
   });
 
   it("rejects when count exceeds maxOutputs", async () => {

@@ -44,7 +44,7 @@ export type IpcErrorCode = z.infer<typeof IpcErrorCodeSchema>;
 export const IpcErrorSchema = z.object({
   code: IpcErrorCodeSchema,
   message: z.string(),
-  details: z.record(z.unknown()).optional(),
+  details: z.record(z.string(), z.unknown()).optional(),
 });
 export type IpcError = z.infer<typeof IpcErrorSchema>;
 
@@ -146,7 +146,6 @@ export const MaskedSecretsSchema = z.object({
     .object({
       endpoint: z.string().nullable(),
       apiKey: z.string().nullable(),
-      apiVersion: z.string().nullable(),
     })
     .optional(),
   google: z.object({ apiKey: z.string().nullable() }).optional(),
@@ -168,7 +167,6 @@ export const SecretsWriteSchema = z.object({
     .object({
       endpoint: z.string().min(1).optional(),
       apiKey: z.string().min(1).optional(),
-      apiVersion: z.string().min(1).optional(),
     })
     .optional(),
   google: z.object({ apiKey: z.string().min(1) }).partial().optional(),

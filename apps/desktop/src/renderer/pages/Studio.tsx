@@ -224,6 +224,22 @@ function ImageRail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caps?.qualities?.join(","), draft.modelId]);
 
+  // OutputFormat (png/jpeg/webp) — same conditional shape as Quality.
+  useEffect(() => {
+    const supported = caps?.outputFormats;
+    if (!supported || supported.length === 0) {
+      if (draft.outputFormat !== undefined) setDraft({ outputFormat: undefined });
+      return;
+    }
+    if (!draft.outputFormat || !supported.includes(draft.outputFormat)) {
+      const fallback =
+        (selectedModel?.defaults as { outputFormat?: string } | undefined)?.outputFormat ??
+        supported[0];
+      setDraft({ outputFormat: fallback });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caps?.outputFormats?.join(","), draft.modelId]);
+
   const generate = async (): Promise<void> => {
     setValidationError(null);
     if (!draft.prompt.trim()) {
@@ -267,6 +283,7 @@ function ImageRail() {
       ...(draft.size ? { size: draft.size } : {}),
       ...(draft.aspectRatio ? { aspectRatio: draft.aspectRatio } : {}),
       ...(draft.quality ? { quality: draft.quality } : {}),
+      ...(draft.outputFormat ? { outputFormat: draft.outputFormat } : {}),
       references: draft.references.map((path) => ({ path, role: "freeform" as const })),
       assetIds: [],
       ...(draft.parentId ? { parentId: draft.parentId } : {}),
@@ -280,13 +297,15 @@ function ImageRail() {
       upsertOne(item);
       if (draft.parentId) setDraft({ parentId: undefined });
     } catch (err) {
-      const msg =
-        err instanceof IpcClientError
-          ? `${err.message}`
-          : (err as Error)?.message ?? String(err);
+      const msg = (err as Error)?.message ?? String(err);
+      // Tag the toast title with the provider so a user with several
+      // configured can spot which one failed at a glance.
+      const providerLabel =
+        configuredProviders.find((p) => p.id === draft.providerId)?.displayName ??
+        draft.providerId;
       pushToast({
-        title: "Generate failed",
-        description: msg,
+        title: `${providerLabel} generation failed`,
+        description: msg || "Provider returned no error message.",
         variant: "error",
       });
     } finally {
@@ -438,6 +457,25 @@ function ImageRail() {
               {caps.qualities.map((q) => (
                 <Select.Item key={q} value={q}>
                   {q}
+                </Select.Item>
+              ))}
+            </Select.Content>
+          </Select.Root>
+        </Field>
+      ) : null}
+      {caps?.outputFormats && caps.outputFormats.length > 0 ? (
+        <Field label="Format">
+          <Select.Root
+            value={draft.outputFormat ?? caps.outputFormats[0]}
+            onValueChange={(v) => setDraft({ outputFormat: v })}
+          >
+            <Select.Trigger>
+              <Select.Value />
+            </Select.Trigger>
+            <Select.Content>
+              {caps.outputFormats.map((f) => (
+                <Select.Item key={f} value={f}>
+                  {f}
                 </Select.Item>
               ))}
             </Select.Content>
@@ -1197,21 +1235,16 @@ function nearestNumber(allowed: readonly number[], target: number): number {
 }
 
 /**
- * Renderer-side helper to convert a `gallery_items.rel_path` into a URL the
- * <img> tag can load. Electron with `webSecurity:true` won't load `file://`
- * unless the protocol is registered — in dev we rely on the dev server to
- * serve the cached image; in prod the renderer reads via `file://` after
- * the dataDir is exposed via `app.storagePaths`.
+ * Build a renderer-loadable URL for a gallery rel-path. We can't use plain
+ * `file://` URLs — Electron's web security blocks them when the renderer is
+ * served over `http://localhost` (dev) or `file://app/...` (prod). The main
+ * process registers an `imagine://local/...` scheme that maps back to the
+ * data dir; this function just produces those URLs.
  */
 function resolveGalleryUrl(relPath: string): string {
-  const w = window as unknown as { __imagineDataDir__?: string };
-  const dataDir = w.__imagineDataDir__ ?? "";
-  if (!dataDir) {
-    return relPath;
-  }
-  const norm = relPath.replace(/\\/g, "/");
-  const root = dataDir.replace(/\\/g, "/");
-  return `file:///${root}/${norm}`.replace(/\/+/g, "/").replace("file:/", "file:///");
+  const norm = relPath.replace(/\\/g, "/").replace(/^\/+/, "");
+  const segments = norm.split("/").map(encodeURIComponent).join("/");
+  return `imagine://local/${segments}`;
 }
 
 export { resolveGalleryUrl };

@@ -19,7 +19,7 @@ import type { Command } from "commander";
  *
  * Recognised paths:
  *   - `<vendor>.apiKey`
- *   - `azure-openai.endpoint` / `.apiVersion`
+ *   - `azure-openai.endpoint`
  *   - `bytedance.endpoint`
  *   - any `<vendor>.baseUrl` (advanced override)
  *
@@ -78,7 +78,7 @@ type VendorId = (typeof VENDOR_KEYS)[number];
 /** Allow-listed config field paths per vendor. Anything else is rejected. */
 const ALLOWED_FIELDS: Record<VendorId, ReadonlySet<string>> = {
   openai: new Set(["apiKey", "baseUrl"]),
-  "azure-openai": new Set(["apiKey", "endpoint", "apiVersion"]),
+  "azure-openai": new Set(["apiKey", "endpoint"]),
   google: new Set(["apiKey", "baseUrl"]),
   "flux-bfl": new Set(["apiKey", "baseUrl"]),
   bytedance: new Set(["apiKey", "endpoint"]),
@@ -172,12 +172,6 @@ function applyPatch(
   };
   const block = { ...(next[vendor] ?? {}) };
   block[field] = value;
-  // Apply default apiVersion so the schema's required fields are satisfied
-  // when the user sets the apiKey first. ByteDance has no defaults — the
-  // user must supply both `endpoint` and `apiKey` (mirrors Azure's shape).
-  if (vendor === "azure-openai") {
-    block.apiVersion ??= "2024-10-21";
-  }
   next[vendor] = block;
   return next as unknown as ProviderSecrets;
 }

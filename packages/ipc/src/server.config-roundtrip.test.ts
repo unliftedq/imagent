@@ -111,7 +111,6 @@ function maskSecrets(s: ProviderSecrets): MaskedSecrets {
     out["azure-openai"] = {
       endpoint: s["azure-openai"].endpoint || null,
       apiKey: maskValue(s["azure-openai"].apiKey),
-      apiVersion: s["azure-openai"].apiVersion || null,
     };
   }
   if (s.google) out.google = { apiKey: maskValue(s.google.apiKey) };
@@ -137,7 +136,6 @@ async function applySecretsWrite(
     const merged = {
       endpoint: input["azure-openai"].endpoint ?? cur?.endpoint ?? "",
       apiKey: input["azure-openai"].apiKey ?? cur?.apiKey ?? "",
-      apiVersion: input["azure-openai"].apiVersion ?? cur?.apiVersion ?? "2024-10-21",
     };
     if (merged.endpoint && merged.apiKey) patch["azure-openai"] = merged;
   }
@@ -295,7 +293,6 @@ describe("providers.secrets.set + providers.secrets.get round-trip", () => {
       "azure-openai": {
         endpoint: "https://r.openai.azure.com",
         apiKey: "azure-key-123456",
-        apiVersion: "2024-10-21",
       },
     };
     await client["providers.secrets.set"](patch);
@@ -303,7 +300,6 @@ describe("providers.secrets.set + providers.secrets.get round-trip", () => {
     expect(raw["azure-openai"]).toEqual({
       endpoint: "https://r.openai.azure.com",
       apiKey: "azure-key-123456",
-      apiVersion: "2024-10-21",
     });
   });
 
@@ -332,14 +328,12 @@ describe("providers.secrets.set + providers.secrets.get round-trip", () => {
       "azure-openai": {
         endpoint: "https://prev.openai.azure.com",
         apiKey: "old-key",
-        apiVersion: "2024-10-21",
       },
     });
     const client = buildClient();
     const patch: SecretsWrite = {
       "azure-openai": {
         apiKey: "new-key-shiny",
-        apiVersion: "2024-10-21",
       },
     };
     await client["providers.secrets.set"](patch);

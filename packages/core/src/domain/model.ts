@@ -10,6 +10,15 @@ export const ImageModelCapsSchema = z.object({
    * `quality` set are validated against this list.
    */
   qualities: z.array(z.string()).optional(),
+  /**
+   * Declares which output image formats the model accepts as
+   * `output_format` (e.g. `png | jpeg | webp`). The presence of this list
+   * also signals that the model uses the newer `output_format` parameter
+   * instead of the legacy `response_format` knob — providers route on it.
+   * Absent ⇒ model has no format knob and we fall back to the legacy
+   * `response_format: "b64_json"` shape.
+   */
+  outputFormats: z.array(z.string()).optional(),
   maxReferences: z.number().int().nonnegative().optional(),
   maxOutputs: z.number().int().min(1).default(1),
   supportsNegativePrompt: z.boolean().default(false),
@@ -33,7 +42,7 @@ export const ImageModelDefSchema = z.object({
   id: z.string(),
   displayName: z.string().optional(),
   capabilities: ImageModelCapsSchema.optional(),
-  defaults: z.record(z.unknown()).optional(),
+  defaults: z.record(z.string(), z.unknown()).optional(),
 });
 export type ImageModelDef = z.infer<typeof ImageModelDefSchema>;
 
@@ -41,7 +50,7 @@ export const VideoModelDefSchema = z.object({
   id: z.string(),
   displayName: z.string().optional(),
   capabilities: VideoModelCapsSchema.optional(),
-  defaults: z.record(z.unknown()).optional(),
+  defaults: z.record(z.string(), z.unknown()).optional(),
 });
 export type VideoModelDef = z.infer<typeof VideoModelDefSchema>;
 

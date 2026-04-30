@@ -12,7 +12,9 @@ export const ToastViewport = forwardRef<
     <ToastPrimitive.Viewport
       ref={ref}
       className={cn(
-        "fixed bottom-4 right-4 z-50 flex max-h-screen w-full max-w-sm flex-col gap-2 outline-none",
+        // `max-w-sm` is broken in Tailwind v4 default theme (no --container-sm),
+        // so we use a literal cap. Bottom-right anchored stack.
+        "fixed bottom-4 right-4 z-50 flex max-h-screen w-[24rem] max-w-[calc(100vw-2rem)] flex-col gap-2 outline-none",
         className,
       )}
       {...rest}
@@ -28,11 +30,16 @@ export const ToastRoot = forwardRef<
     <ToastPrimitive.Root
       ref={ref}
       className={cn(
-        "flex items-center gap-3 rounded-(--radius-lg) border border-(--border) " +
-          "bg-(--bg) p-4 text-(length:--text-body-sm) text-(--text) shadow-lg " +
-          "data-[state=open]:animate-in data-[state=closed]:animate-out " +
-          "data-[swipe=move]:translate-x-(--radix-toast-swipe-move-x) " +
-          "data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-(--radix-toast-swipe-end-x)",
+        "flex items-start gap-3 rounded-(--radius-lg) border border-(--border)",
+        "bg-(--surface-raised) p-4 text-(length:--text-body-sm) text-(--text) shadow-lg",
+        // Plain opacity transition driven by Radix's data-state — replaces the
+        // broken animate-in/out classes that depended on the missing
+        // tailwindcss-animate plugin.
+        "transition-opacity duration-(--duration-base)",
+        "data-[state=open]:opacity-100 data-[state=closed]:opacity-0",
+        "data-[swipe=move]:translate-x-(--radix-toast-swipe-move-x)",
+        "data-[swipe=cancel]:translate-x-0",
+        "data-[swipe=end]:translate-x-(--radix-toast-swipe-end-x)",
         className,
       )}
       {...rest}

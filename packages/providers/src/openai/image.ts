@@ -100,7 +100,7 @@ export class OpenAIImageProvider implements ImageProvider {
         const bytes = decodeBase64(entry.b64_json);
         outputs.push({
           bytes,
-          mimeType: "image/png",
+          mimeType: mimeTypeForOutputFormat(merged.outputFormat),
           ...parseSize(merged.size),
           ...(entry.revised_prompt ? { raw: { revised_prompt: entry.revised_prompt } } : {}),
         });
@@ -157,12 +157,31 @@ export function buildOpenAIImageBody(
   model: ImageModelDef,
 ): Record<string, unknown> {
   const caps = model.capabilities;
+  const supportsOutputFormat =
+    caps?.outputFormats !== undefined && caps.outputFormats.length > 0;
+  // Backstop for catalogs that pre-date the `outputFormats` capability:
+  // any deployment whose id matches the gpt-image family also gets routed
+  // through the new `output_format` knob and must NOT receive
+  // `response_format` (it 400s with `unknown_parameter`). The id check
+  // covers both the canonical OpenAI catalog ids (`gpt-image-2`,
+  // `gpt-image-1.5`, `gpt-image-1-mini`) and Azure deployment names users
+  // typically suffix from those (e.g. `gpt-image-2-1`).
+  const looksLikeGptImage = /^gpt-image-/i.test(model.id);
+  const useOutputFormat = supportsOutputFormat || looksLikeGptImage;
   const body: Record<string, unknown> = {
     model: model.id,
     prompt: req.prompt,
     n: req.count,
-    response_format: "b64_json",
   };
+  // Newer image models (gpt-image-* family) use `output_format` (png/jpeg/
+  // webp) and reject `response_format`. Legacy DALL-E models do the opposite
+  // — they default to URL responses and need `response_format: "b64_json"`
+  // explicit.
+  if (useOutputFormat) {
+    if (req.outputFormat) body.output_format = req.outputFormat;
+  } else {
+    body.response_format = "b64_json";
+  }
   if (req.size) body.size = req.size;
   // Quality flows through when the model declares a non-empty `qualities`
   // list (validated upstream against `caps.qualities`). Falls back to
@@ -180,16 +199,27 @@ export function buildOpenAIImageBody(
 /**
  * Convert SDK errors (or anything else) into our ProviderError hierarchy so
  * callers see consistent shapes regardless of which path threw.
+ *
+ * For `APIError` (the openai SDK's own error class), we preserve the original
+ * as `cause` so the desktop's main-process logger walks the chain and shows
+ * the SDK's own stack + parsed body. We also fold the response body's `code`
+ * and `message` into our wrapped message — Azure's 404 reasons (e.g.
+ * `DeploymentNotFound`) live in `err.error?.code` and are otherwise lost.
  */
 export function rethrowOpenAIError(err: unknown, vendorId: string): never {
   if (err instanceof APIError) {
+    const body = (err as { error?: { code?: string; message?: string; type?: string } }).error;
+    const code = body?.code ?? (err as { code?: string }).code;
+    const detail = [code, body?.message ?? err.message].filter(Boolean).join(": ");
+    const summary = detail || err.message;
     if (typeof err.status === "number") {
-      throw new ProviderHttpError(`HTTP ${err.status} from openai SDK: ${err.message}`, {
+      throw new ProviderHttpError(`HTTP ${err.status} from openai SDK: ${summary}`, {
         vendorId,
         status: err.status,
+        cause: err,
       });
     }
-    throw new ProviderError(err.message, { vendorId });
+    throw new ProviderError(summary, { vendorId, cause: err });
   }
   if (err instanceof Error) throw new ProviderError(err.message, { vendorId, cause: err });
   throw new ProviderError(String(err), { vendorId });
@@ -280,6 +310,23 @@ export function decodeBase64(s: string): Uint8Array<ArrayBuffer> {
   const out = new Uint8Array(ab);
   out.set(b);
   return out;
+}
+
+/**
+ * Map a requested `output_format` (or absence thereof) to the MIME type the
+ * decoded base64 bytes will carry. gpt-image-* defaults to PNG when the
+ * request omits the parameter; legacy DALL-E always returns PNG.
+ */
+export function mimeTypeForOutputFormat(outputFormat: string | undefined): string {
+  switch (outputFormat) {
+    case "jpeg":
+    case "jpg":
+      return "image/jpeg";
+    case "webp":
+      return "image/webp";
+    default:
+      return "image/png";
+  }
 }
 
 export function parseSize(size: string | undefined): { width?: number; height?: number } {

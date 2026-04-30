@@ -19,9 +19,10 @@
   },
   "dependencies": {
     "@imagine/core": "workspace:*",
-    "zod": "^3.24.0"
+    "zod": "^4.4.1"
   },
   "devDependencies": {
-    "vitest": "^3.0.0"
+    "@types/node": "^25.6.0",
+    "vitest": "^4.1.5"
   }
 }

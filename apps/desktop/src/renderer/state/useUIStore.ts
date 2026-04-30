@@ -50,6 +50,9 @@ export interface ImageDraft {
    * when the resolved model's `capabilities.qualities` is non-empty;
    * dropped on switch to a model without qualities. */
   quality?: string;
+  /** Output image format (e.g. `png | jpeg | webp`). Surfaced when the
+   * resolved model's `capabilities.outputFormats` is non-empty. */
+  outputFormat?: string;
   references: string[];
   parentId?: string;
   assetIds: StudioDraftAssetIds;
@@ -135,6 +138,9 @@ function loadImageDraftFromStorage(): ImageDraft {
         ? { aspectRatio: parsed.aspectRatio }
         : {}),
       ...(typeof parsed.quality === "string" ? { quality: parsed.quality } : {}),
+      ...(typeof parsed.outputFormat === "string"
+        ? { outputFormat: parsed.outputFormat }
+        : {}),
       references: Array.isArray(parsed.references)
         ? (parsed.references as string[])
         : [],

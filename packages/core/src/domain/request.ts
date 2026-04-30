@@ -17,6 +17,10 @@ export const ImageRequestSchema = z.object({
   /** Quality tier (e.g. OpenAI's `low | medium | high | auto`). Validated
    * against the resolved model's `capabilities.qualities` list when set. */
   quality: z.string().optional(),
+  /** Output image format (e.g. `png | jpeg | webp`). Validated against the
+   * resolved model's `capabilities.outputFormats` list. Required when the
+   * provider uses the newer `output_format` parameter (gpt-image-*). */
+  outputFormat: z.string().optional(),
   count: z.number().int().min(1).default(1),
   seed: z.number().int().optional(),
   references: z.array(ImageReferenceSchema).default([]),
@@ -27,7 +31,7 @@ export const ImageRequestSchema = z.object({
   /** Optional remix lineage — records gallery_items.parent_id on the result. */
   parentId: z.string().optional(),
   /** Provider-specific raw params passthrough (will land in params_json). */
-  raw: z.record(z.unknown()).optional(),
+  raw: z.record(z.string(), z.unknown()).optional(),
 });
 export type ImageRequest = z.infer<typeof ImageRequestSchema>;
 
@@ -45,7 +49,7 @@ export const VideoRequestSchema = z.object({
   references: z.array(ImageReferenceSchema).default([]),
   assetIds: z.array(z.string()).default([]),
   boardId: z.string().optional(),
-  raw: z.record(z.unknown()).optional(),
+  raw: z.record(z.string(), z.unknown()).optional(),
 });
 export type VideoRequest = z.infer<typeof VideoRequestSchema>;
 

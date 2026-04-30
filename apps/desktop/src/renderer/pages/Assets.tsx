@@ -993,12 +993,9 @@ function TrashRow({
 }
 
 function resolveDataUrl(relPath: string): string {
-  const w = window as unknown as { __imagineDataDir__?: string };
-  const dataDir = w.__imagineDataDir__ ?? "";
-  if (!dataDir) return relPath;
-  const norm = relPath.replace(/\\/g, "/");
-  const root = dataDir.replace(/\\/g, "/");
-  return `file:///${root}/${norm}`.replace(/\/+/g, "/").replace("file:/", "file:///");
+  const norm = relPath.replace(/\\/g, "/").replace(/^\/+/, "");
+  const segments = norm.split("/").map(encodeURIComponent).join("/");
+  return `imagine://local/${segments}`;
 }
 
 export function resolveAssetThumbnailUrl(asset: Asset): string | null {

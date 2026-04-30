@@ -81,6 +81,22 @@ export function validateImageRequestAgainstModel(
       );
     }
   }
+
+  if (req.outputFormat !== undefined) {
+    if (!caps.outputFormats || caps.outputFormats.length === 0) {
+      throw new ProviderRequestError(
+        `model ${model.id} does not support an outputFormat parameter`,
+        { vendorId },
+      );
+    }
+    if (!caps.outputFormats.includes(req.outputFormat)) {
+      throw new ProviderRequestError(
+        `model ${model.id} does not support outputFormat '${req.outputFormat}'. ` +
+          `Supported: ${caps.outputFormats.join(", ")}`,
+        { vendorId },
+      );
+    }
+  }
 }
 
 export function validateVideoRequestAgainstModel(
@@ -153,6 +169,7 @@ export function applyImageDefaults(req: ImageRequest, model: ImageModelDef): Ima
     size?: string;
     aspectRatio?: string;
     quality?: string;
+    outputFormat?: string;
     count?: number;
   };
   return {
@@ -160,6 +177,7 @@ export function applyImageDefaults(req: ImageRequest, model: ImageModelDef): Ima
     size: req.size ?? d.size,
     aspectRatio: req.aspectRatio ?? d.aspectRatio,
     quality: req.quality ?? d.quality,
+    outputFormat: req.outputFormat ?? d.outputFormat,
     count: req.count || d.count || 1,
   };
 }

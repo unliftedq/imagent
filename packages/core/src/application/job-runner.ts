@@ -382,6 +382,14 @@ export class JobRunner extends EventEmitter {
       this.running.delete(job.id);
       this.intentOverrides.delete(job.id);
       const aborted = isAbortError(err) || err instanceof ProviderAbortError;
+      if (!aborted) {
+        this.deps.logger.error("image generation failed", {
+          jobId: job.id,
+          providerId: job.providerId,
+          model: req.model,
+          err,
+        });
+      }
       const updated = this.deps.jobs.updateState(job.id, {
         state: aborted ? "cancelled" : "failed",
         errorMessage: aborted ? "cancelled" : (err as Error)?.message ?? String(err),
@@ -439,6 +447,14 @@ export class JobRunner extends EventEmitter {
       } catch (err) {
         this.running.delete(id);
         const aborted = isAbortError(err);
+        if (!aborted) {
+          this.deps.logger.error("video submit failed", {
+            jobId: id,
+            providerId: req.providerId,
+            model: req.model,
+            err,
+          });
+        }
         const updated = this.deps.jobs.updateState(id, {
           state: aborted ? "cancelled" : "failed",
           errorMessage: aborted ? "cancelled" : (err as Error)?.message ?? String(err),
@@ -479,6 +495,12 @@ export class JobRunner extends EventEmitter {
       status = await provider.poll(handle);
     } catch (err) {
       if (isAbortError(err)) return;
+      this.deps.logger.error("video poll failed", {
+        jobId: id,
+        providerId: provider.id,
+        providerJobId: handle.providerJobId,
+        err,
+      });
       const updated = this.deps.jobs.updateState(id, {
         state: "failed",
         errorMessage: (err as Error)?.message ?? String(err),
@@ -612,6 +634,12 @@ export class JobRunner extends EventEmitter {
         this.emit("job.completed", updated);
       } catch (err) {
         this.intentOverrides.delete(id);
+        this.deps.logger.error("video fetch failed", {
+          jobId: id,
+          providerId: provider.id,
+          providerJobId: handle.providerJobId,
+          err,
+        });
         const updated = this.deps.jobs.updateState(id, {
           state: "failed",
           errorMessage: (err as Error)?.message ?? String(err),
@@ -625,6 +653,14 @@ export class JobRunner extends EventEmitter {
 
     // failed / cancelled
     this.intentOverrides.delete(id);
+    if (status.state === "failed") {
+      this.deps.logger.error("video provider reported failure", {
+        jobId: id,
+        providerId: provider.id,
+        providerJobId: handle.providerJobId,
+        errorMessage: status.errorMessage ?? null,
+      });
+    }
     const updated = this.deps.jobs.updateState(id, {
       state: status.state,
       errorMessage: status.errorMessage ?? null,

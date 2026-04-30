@@ -9,7 +9,6 @@ const ENV_KEYS = {
   "azure-openai": {
     apiKey: "AZURE_OPENAI_API_KEY",
     endpoint: "AZURE_OPENAI_ENDPOINT",
-    apiVersion: "AZURE_OPENAI_API_VERSION",
   },
   google: { apiKey: "GOOGLE_API_KEY" },
   "flux-bfl": { apiKey: "FLUX_BFL_API_KEY" },
@@ -73,7 +72,6 @@ export function createEnvSecretsStore(env: NodeJS.ProcessEnv): SecretsStore {
         out["azure-openai"] = {
           apiKey: azureKey,
           endpoint: azureEndpoint,
-          apiVersion: env[ENV_KEYS["azure-openai"].apiVersion] ?? "2024-10-21",
         };
       }
 

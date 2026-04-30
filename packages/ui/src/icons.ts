@@ -4,6 +4,7 @@
  */
 export {
   Check,
+  CheckCircle,
   CaretDown,
   CaretUp,
   CaretRight,

@@ -11,7 +11,7 @@ export const ImageOutputSchema = z.object({
   height: z.number().int().optional(),
   seed: z.number().int().optional(),
   /** Raw provider response metadata, persisted into params_json. */
-  raw: z.record(z.unknown()).optional(),
+  raw: z.record(z.string(), z.unknown()).optional(),
 });
 export type ImageOutput = z.infer<typeof ImageOutputSchema>;
 
@@ -26,7 +26,7 @@ export const VideoJobHandleSchema = z.object({
   /** Vendor-specific URL (e.g. Flux polling_url, Seedance status URL). */
   pollingUrl: z.string().optional(),
   /** Anything else the provider needs to keep across poll calls. */
-  meta: z.record(z.unknown()).optional(),
+  meta: z.record(z.string(), z.unknown()).optional(),
 });
 export type VideoJobHandle = z.infer<typeof VideoJobHandleSchema>;
 
@@ -52,7 +52,7 @@ export const VideoOutputSchema = z.object({
   width: z.number().int().optional(),
   height: z.number().int().optional(),
   durationMs: z.number().int().optional(),
-  raw: z.record(z.unknown()).optional(),
+  raw: z.record(z.string(), z.unknown()).optional(),
 });
 export type VideoOutput = z.infer<typeof VideoOutputSchema>;
 

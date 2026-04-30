@@ -138,7 +138,6 @@ export function setupIpc(deps: IpcDeps): IpcServer {
         const merged = {
           endpoint: input["azure-openai"].endpoint ?? cur?.endpoint ?? "",
           apiKey: input["azure-openai"].apiKey ?? cur?.apiKey ?? "",
-          apiVersion: input["azure-openai"].apiVersion ?? cur?.apiVersion ?? "2024-10-21",
         };
         if (merged.endpoint && merged.apiKey) patch["azure-openai"] = merged;
       }
@@ -374,9 +373,25 @@ export function setupIpc(deps: IpcDeps): IpcServer {
         targetId = await runtime.jobRunner.start(intent);
       } catch (err) {
         cleanup();
+        logger.error("image.generate: start() threw", {
+          providerId: r.providerId,
+          model: r.model,
+          err,
+        });
         throw err;
       }
-      const job = await completed;
+      let job: Job;
+      try {
+        job = await completed;
+      } catch (err) {
+        logger.error("image.generate failed", {
+          jobId: targetId,
+          providerId: r.providerId,
+          model: r.model,
+          err,
+        });
+        throw err;
+      }
       if (!job.resultItemId) {
         throw new IpcHandlerError(
           "internal",
@@ -1300,7 +1315,7 @@ export function maskValue(v: string | null | undefined): string | null {
 
 function maskSecrets(s: ProviderSecrets): {
   openai?: { apiKey: string | null };
-  "azure-openai"?: { endpoint: string | null; apiKey: string | null; apiVersion: string | null };
+  "azure-openai"?: { endpoint: string | null; apiKey: string | null };
   google?: { apiKey: string | null };
   "flux-bfl"?: { apiKey: string | null };
   bytedance?: { endpoint: string | null; apiKey: string | null };
@@ -1310,10 +1325,9 @@ function maskSecrets(s: ProviderSecrets): {
   if (s.openai) out.openai = { apiKey: maskValue(s.openai.apiKey) };
   if (s["azure-openai"]) {
     out["azure-openai"] = {
-      // Endpoint and apiVersion aren't really secret — surface them unmasked.
+      // Endpoint isn't actually a secret — surface it unmasked.
       endpoint: s["azure-openai"].endpoint || null,
       apiKey: maskValue(s["azure-openai"].apiKey),
-      apiVersion: s["azure-openai"].apiVersion || null,
     };
   }
   if (s.google) out.google = { apiKey: maskValue(s.google.apiKey) };

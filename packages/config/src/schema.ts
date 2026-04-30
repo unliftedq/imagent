@@ -27,7 +27,6 @@ export const ProviderSecretsSchema = z.object({
     .object({
       endpoint: z.string(),
       apiKey: z.string(),
-      apiVersion: z.string().default("2024-10-21"),
     })
     .optional(),
   google: z
