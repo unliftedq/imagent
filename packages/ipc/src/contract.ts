@@ -3,10 +3,12 @@ import {
   BoardSchema,
   GalleryItemSchema,
   GalleryQuerySchema,
+  ImageModelCapsOverrideSchema,
   ImageModelDefSchema,
   ImageRequestSchema,
   JobSchema,
   JobsQuerySchema,
+  VideoModelCapsOverrideSchema,
   VideoModelDefSchema,
   VideoRequestSchema,
 } from "@imagine/core";
@@ -20,10 +22,36 @@ import { z } from "zod";
  *
  * Shape mirrors `@imagine/providers#ModelCatalogSchema`.
  */
+const IpcImageProviderModelSchema = z.object({
+  id: z.string(),
+  modelId: z.string(),
+  displayName: z.string().optional(),
+  capabilities: ImageModelCapsOverrideSchema.optional(),
+  defaults: z.record(z.string(), z.unknown()).optional(),
+});
+
+const IpcVideoProviderModelSchema = z.object({
+  id: z.string(),
+  modelId: z.string(),
+  displayName: z.string().optional(),
+  capabilities: VideoModelCapsOverrideSchema.optional(),
+  defaults: z.record(z.string(), z.unknown()).optional(),
+});
+
 const IpcModelCatalogSchema = z.object({
-  version: z.literal(1),
-  image: z.record(z.string(), z.array(ImageModelDefSchema)),
-  video: z.record(z.string(), z.array(VideoModelDefSchema)),
+  version: z.literal(2),
+  models: z.object({
+    image: z.record(z.string(), ImageModelDefSchema),
+    video: z.record(z.string(), VideoModelDefSchema),
+  }),
+  providers: z.record(
+    z.string(),
+    z.object({
+      displayName: z.string().optional(),
+      image: z.array(IpcImageProviderModelSchema).optional(),
+      video: z.array(IpcVideoProviderModelSchema).optional(),
+    }),
+  ),
   comments: z.string().optional(),
 });
 
@@ -112,9 +140,8 @@ export type ProviderTestResult = z.infer<typeof ProviderTestResultSchema>;
 /**
  * Provider preferences block — non-secret per-provider config. After the
  * "users only fill in the minimum required to authenticate" reshape, the
- * catalog is the canonical model list for every well-known provider — Azure
- * deployments must be named after the model id (e.g. deploy `gpt-image-2`
- * under that exact name); the catalog file is the override path.
+ * catalog is the canonical model/provider-offering list for every well-known
+ * provider; Azure deployment names live in the catalog provider offering layer.
  *
  * Each provider keeps an explicit slot (even when empty) so future settings
  * have a stable home. Mirrors `config.providers` in shape.
@@ -156,22 +183,34 @@ export type MaskedSecrets = z.infer<typeof MaskedSecretsSchema>;
 
 /** Plaintext secrets the renderer is allowed to write. */
 export const SecretsWriteSchema = z.object({
-  openai: z.object({ apiKey: z.string().min(1) }).partial().optional(),
+  openai: z
+    .object({ apiKey: z.string().min(1) })
+    .partial()
+    .optional(),
   "azure-openai": z
     .object({
       endpoint: z.string().min(1).optional(),
       apiKey: z.string().min(1).optional(),
     })
     .optional(),
-  google: z.object({ apiKey: z.string().min(1) }).partial().optional(),
-  "flux-bfl": z.object({ apiKey: z.string().min(1) }).partial().optional(),
+  google: z
+    .object({ apiKey: z.string().min(1) })
+    .partial()
+    .optional(),
+  "flux-bfl": z
+    .object({ apiKey: z.string().min(1) })
+    .partial()
+    .optional(),
   bytedance: z
     .object({
       endpoint: z.string().min(1).optional(),
       apiKey: z.string().min(1).optional(),
     })
     .optional(),
-  xai: z.object({ apiKey: z.string().min(1) }).partial().optional(),
+  xai: z
+    .object({ apiKey: z.string().min(1) })
+    .partial()
+    .optional(),
 });
 export type SecretsWrite = z.infer<typeof SecretsWriteSchema>;
 
@@ -345,6 +384,7 @@ export const contract = {
           providers: z.array(
             z.object({
               providerId: ProviderIdSchema,
+              modelId: z.string(),
               displayName: z.string(),
               configured: z.boolean(),
             }),
@@ -358,6 +398,7 @@ export const contract = {
           providers: z.array(
             z.object({
               providerId: ProviderIdSchema,
+              modelId: z.string(),
               displayName: z.string(),
               configured: z.boolean(),
             }),

@@ -40,7 +40,9 @@ function makeFakeIpc(): {
   };
 }
 
-function makeTransport(invoke: (channel: string, input: unknown) => Promise<unknown>): IpcTransport {
+function makeTransport(
+  invoke: (channel: string, input: unknown) => Promise<unknown>,
+): IpcTransport {
   return {
     invoke: (method, input) => invoke(method, input),
     subscribe: () => () => {},
@@ -161,9 +163,11 @@ describe("registerIpcHandlers", () => {
       },
     });
     const client = createIpcClient(makeTransport(invoke));
-    await expect(
-      client["app.preferences.set"]({ theme: "dark" }),
-    ).rejects.toMatchObject({ name: "IpcClientError", code: "internal", message: "disk full" });
+    await expect(client["app.preferences.set"]({ theme: "dark" })).rejects.toMatchObject({
+      name: "IpcClientError",
+      code: "internal",
+      message: "disk full",
+    });
   });
 
   it("app.preferences.set round-trips a partial input", async () => {
@@ -666,10 +670,10 @@ describe("registerIpcHandlers", () => {
       const { ipcMain, invoke } = makeFakeIpc();
       registerIpcHandlers(ipcMain, {
         "catalog.get": async () => ({
-          version: 1 as const,
-          image: {
-            openai: [
-              {
+          version: 2 as const,
+          models: {
+            image: {
+              "gpt-image-2": {
                 id: "gpt-image-2",
                 displayName: "GPT Image 2",
                 capabilities: {
@@ -681,17 +685,20 @@ describe("registerIpcHandlers", () => {
                 },
                 defaults: { size: "1024x1024", count: 1 },
               },
-            ],
+            },
+            video: {},
           },
-          video: {},
+          providers: {
+            openai: { image: [{ id: "gpt-image-2", modelId: "gpt-image-2" }] },
+          },
         }),
       });
       const reply = (await invoke("catalog.get", undefined)) as {
         ok: true;
-        value: { image: { openai: Array<{ id: string }> } };
+        value: { providers: { openai: { image: Array<{ id: string }> } } };
       };
       expect(reply.ok).toBe(true);
-      expect(reply.value.image.openai[0]?.id).toBe("gpt-image-2");
+      expect(reply.value.providers.openai.image[0]?.id).toBe("gpt-image-2");
     });
   });
 });

@@ -2,11 +2,7 @@ import { describe, expect, it } from "vitest";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import {
-  getBundledCatalog,
-  loadCatalog,
-  saveCatalog,
-} from "./loader.js";
+import { getBundledCatalog, loadCatalog, saveCatalog } from "./loader.js";
 import type { ModelCatalog } from "./schema.js";
 
 async function tempDir(): Promise<string> {
@@ -24,23 +20,23 @@ describe("loadCatalog", () => {
     const bundled = getBundledCatalog();
 
     const loaded = await loadCatalog({ path: userPath, logger: silentLogger() });
-    expect(loaded.version).toBe(1);
+    expect(loaded.version).toBe(2);
     // Sanity: the bundled default ships with at least one openai image model.
-    expect(loaded.image.openai?.length).toBeGreaterThan(0);
+    expect(loaded.providers.openai?.image?.length).toBeGreaterThan(0);
 
     const onDisk = JSON.parse(await fs.readFile(userPath, "utf8")) as ModelCatalog;
-    expect(onDisk.version).toBe(1);
-    expect(onDisk.image.openai?.length).toBe(bundled.image.openai?.length);
+    expect(onDisk.version).toBe(2);
+    expect(onDisk.providers.openai?.image?.length).toBe(bundled.providers.openai?.image?.length);
   });
 
   it("normal: reads user file verbatim", async () => {
     const dir = await tempDir();
     const userPath = path.join(dir, "catalog.json");
     const custom: ModelCatalog = {
-      version: 1,
-      image: {
-        openai: [
-          {
+      version: 2,
+      models: {
+        image: {
+          "custom-model": {
             id: "custom-model",
             displayName: "Custom",
             capabilities: {
@@ -52,16 +48,20 @@ describe("loadCatalog", () => {
             },
             defaults: { size: "1024x1024", count: 1 },
           },
-        ],
+        },
+        video: {},
       },
-      video: {},
+      providers: {
+        openai: { image: [{ id: "custom-route", modelId: "custom-model" }] },
+      },
     };
     await fs.writeFile(userPath, JSON.stringify(custom, null, 2));
 
     const loaded = await loadCatalog({ path: userPath, logger: silentLogger() });
-    expect(loaded.image.openai).toHaveLength(1);
-    expect(loaded.image.openai?.[0]?.id).toBe("custom-model");
-    expect(loaded.video).toEqual({});
+    expect(loaded.providers.openai?.image).toHaveLength(1);
+    expect(loaded.providers.openai?.image?.[0]?.id).toBe("custom-route");
+    expect(loaded.models.image["custom-model"]?.displayName).toBe("Custom");
+    expect(loaded.models.video).toEqual({});
   });
 
   it("invalid JSON: falls back to bundled in-memory and does NOT touch user file", async () => {
@@ -73,7 +73,7 @@ describe("loadCatalog", () => {
     const logger = { info: () => {}, warn: (m: string) => warnings.push(m) };
     const loaded = await loadCatalog({ path: userPath, logger });
     // Bundled default is returned in-memory.
-    expect(loaded.image.openai?.length).toBeGreaterThan(0);
+    expect(loaded.providers.openai?.image?.length).toBeGreaterThan(0);
     // User file was preserved verbatim.
     const onDisk = await fs.readFile(userPath, "utf8");
     expect(onDisk).toBe("this is not json {{{");
@@ -83,13 +83,13 @@ describe("loadCatalog", () => {
   it("schema mismatch: falls back to bundled in-memory + warn", async () => {
     const dir = await tempDir();
     const userPath = path.join(dir, "catalog.json");
-    // Wrong shape: top-level `image` should be a record of arrays.
-    await fs.writeFile(userPath, JSON.stringify({ version: 1, image: "nope", video: {} }));
+    // Wrong shape: v2 requires `models` and `providers`.
+    await fs.writeFile(userPath, JSON.stringify({ version: 2, image: "nope", video: {} }));
 
     const warnings: string[] = [];
     const logger = { info: () => {}, warn: (m: string) => warnings.push(m) };
     const loaded = await loadCatalog({ path: userPath, logger });
-    expect(loaded.image.openai?.length).toBeGreaterThan(0);
+    expect(loaded.providers.openai?.image?.length).toBeGreaterThan(0);
     expect(warnings.length).toBeGreaterThan(0);
   });
 });
@@ -101,7 +101,7 @@ describe("saveCatalog", () => {
     const bundled = getBundledCatalog();
     await saveCatalog(bundled, { path: userPath });
     const onDisk = JSON.parse(await fs.readFile(userPath, "utf8")) as ModelCatalog;
-    expect(onDisk.version).toBe(1);
+    expect(onDisk.version).toBe(2);
 
     // No `.catalog.json.*.tmp` siblings should remain after a successful write.
     const entries = await fs.readdir(dir);

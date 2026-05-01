@@ -1,9 +1,4 @@
-import {
-  getBundledCatalog,
-  loadCatalog,
-  saveCatalog,
-  type ModelCatalog,
-} from "@imagine/providers";
+import { getBundledCatalog, loadCatalog, saveCatalog, type ModelCatalog } from "@imagine/providers";
 import { createPathResolver, ensureDataDir } from "@imagine/persistence";
 import chalk from "chalk";
 import type { Command } from "commander";
@@ -58,10 +53,7 @@ export function registerCatalogCommands(program: Command): void {
     });
 }
 
-async function runShow(options: {
-  provider?: string;
-  kind?: string;
-}): Promise<void> {
+async function runShow(options: { provider?: string; kind?: string }): Promise<void> {
   const resolver = createPathResolver();
   await ensureDataDir(resolver);
   const catalog = await loadCatalog({ path: resolver.catalogFile() });
@@ -78,18 +70,39 @@ function filterCatalog(
   kind: "image" | "video" | undefined,
   provider: string | undefined,
 ): ModelCatalog {
-  const out: ModelCatalog = { version: 1, image: {}, video: {} };
+  if (!provider && !kind) return catalog;
+  const out: ModelCatalog = {
+    version: 2,
+    models: { image: {}, video: {} },
+    providers: {},
+  };
   if (catalog.comments) out.comments = catalog.comments;
-  if (!kind || kind === "image") {
-    for (const [pid, models] of Object.entries(catalog.image)) {
-      if (provider && pid !== provider) continue;
-      out.image[pid] = models;
+
+  const includeImage = !kind || kind === "image";
+  const includeVideo = !kind || kind === "video";
+
+  for (const [providerId, providerCatalog] of Object.entries(catalog.providers)) {
+    if (provider && providerId !== provider) continue;
+    const nextProvider: NonNullable<ModelCatalog["providers"][string]> = {};
+    if (providerCatalog.displayName) nextProvider.displayName = providerCatalog.displayName;
+
+    if (includeImage && providerCatalog.image) {
+      nextProvider.image = providerCatalog.image;
+      for (const offering of providerCatalog.image) {
+        const model = catalog.models.image[offering.modelId];
+        if (model) out.models.image[offering.modelId] = model;
+      }
     }
-  }
-  if (!kind || kind === "video") {
-    for (const [pid, models] of Object.entries(catalog.video)) {
-      if (provider && pid !== provider) continue;
-      out.video[pid] = models;
+    if (includeVideo && providerCatalog.video) {
+      nextProvider.video = providerCatalog.video;
+      for (const offering of providerCatalog.video) {
+        const model = catalog.models.video[offering.modelId];
+        if (model) out.models.video[offering.modelId] = model;
+      }
+    }
+
+    if (nextProvider.image || nextProvider.video || nextProvider.displayName) {
+      out.providers[providerId] = nextProvider;
     }
   }
   return out;

@@ -29,7 +29,7 @@ function validatedBundled(override?: ModelCatalog): ModelCatalog {
 }
 
 /**
- * Load the runtime catalog. v1 semantics: USER FILE IS AUTHORITATIVE — no
+ * Load the runtime catalog. v2 semantics: USER FILE IS AUTHORITATIVE — no
  * merge with bundled. On first run (file missing), the bundled default is
  * written to the user path and returned. On parse failure (corrupt JSON or
  * schema mismatch), warn + fall back to bundled IN-MEMORY without
@@ -59,15 +59,11 @@ export async function loadCatalog(opts: CatalogLoaderOptions = {}): Promise<Mode
         await writeAtomic(userPath, JSON.stringify(bundled, null, 2));
         logger?.info(`[catalog] seeded default to ${userPath}`);
       } catch (writeErr) {
-        logger?.warn(
-          `[catalog] failed to seed default to ${userPath}: ${String(writeErr)}`,
-        );
+        logger?.warn(`[catalog] failed to seed default to ${userPath}: ${String(writeErr)}`);
       }
       return bundled;
     }
-    logger?.warn(
-      `[catalog] could not read ${userPath}: ${String(err)} — using bundled in memory`,
-    );
+    logger?.warn(`[catalog] could not read ${userPath}: ${String(err)} — using bundled in memory`);
     return bundled;
   }
 
@@ -86,10 +82,7 @@ export async function loadCatalog(opts: CatalogLoaderOptions = {}): Promise<Mode
  * Write the catalog atomically: write to a sibling tempfile then rename.
  * Avoids the renderer / CLI ever observing a half-written file.
  */
-export async function saveCatalog(
-  catalog: ModelCatalog,
-  opts: CatalogSaveOptions,
-): Promise<void> {
+export async function saveCatalog(catalog: ModelCatalog, opts: CatalogSaveOptions): Promise<void> {
   // Validate before persisting — better to fail loud than write garbage.
   const validated = ModelCatalogSchema.parse(catalog);
   await fs.mkdir(path.dirname(opts.path), { recursive: true });

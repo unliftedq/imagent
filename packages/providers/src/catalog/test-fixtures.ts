@@ -41,18 +41,20 @@ export const OPENAI_IMAGE_MODELS: Record<string, ImageModelDef> = {
 };
 
 export const AZURE_OPENAI_IMAGE_MODELS: Record<string, ImageModelDef> = {
-  "image-default": {
-    id: "image-default",
-    displayName: "Azure OpenAI image deployment",
+  "azure-prod-gpt-image-2": {
+    id: "azure-prod-gpt-image-2",
+    baseModelId: "gpt-image-2",
+    displayName: "azure-prod-gpt-image-2 (GPT Image 2)",
     capabilities: {
-      sizes: ["1024x1024", "1024x1536", "1536x1024"],
+      sizes: ["1024x1024", "1024x1536", "1536x1024", "2048x2048", "2160x3840", "3840x2160"],
+      qualities: ["low", "medium", "high", "auto"],
       maxReferences: 16,
-      maxOutputs: 4,
+      maxOutputs: 10,
       supportsNegativePrompt: false,
       supportsSeed: false,
       supportsStyleRef: true,
     },
-    defaults: { size: "1024x1024", count: 1 },
+    defaults: { size: "1024x1024", quality: "auto", count: 1 },
   },
 };
 
@@ -187,19 +189,49 @@ export const XAI_IMAGE_MODELS: Record<string, ImageModelDef> = {
 /** Build a small in-memory ModelCatalog from the fixtures above. */
 export function buildTestCatalog(): ModelCatalog {
   return {
-    version: 1,
-    image: {
-      openai: Object.values(OPENAI_IMAGE_MODELS),
-      "azure-openai": Object.values(AZURE_OPENAI_IMAGE_MODELS),
-      google: Object.values(GOOGLE_IMAGE_MODELS),
-      "flux-bfl": Object.values(FLUX_IMAGE_MODELS),
-      bytedance: Object.values(BYTEDANCE_IMAGE_MODELS),
-      xai: Object.values(XAI_IMAGE_MODELS),
+    version: 2,
+    models: {
+      image: {
+        ...OPENAI_IMAGE_MODELS,
+        ...GOOGLE_IMAGE_MODELS,
+        ...FLUX_IMAGE_MODELS,
+        ...BYTEDANCE_IMAGE_MODELS,
+        ...XAI_IMAGE_MODELS,
+      },
+      video: {
+        ...BYTEDANCE_VIDEO_MODELS,
+        ...GOOGLE_VIDEO_MODELS,
+        ...XAI_VIDEO_MODELS,
+      },
     },
-    video: {
-      bytedance: Object.values(BYTEDANCE_VIDEO_MODELS),
-      google: Object.values(GOOGLE_VIDEO_MODELS),
-      xai: Object.values(XAI_VIDEO_MODELS),
+    providers: {
+      openai: {
+        displayName: "OpenAI",
+        image: Object.keys(OPENAI_IMAGE_MODELS).map((id) => ({ id, modelId: id })),
+      },
+      "azure-openai": {
+        displayName: "Azure",
+        image: [{ id: "azure-prod-gpt-image-2", modelId: "gpt-image-2" }],
+      },
+      google: {
+        displayName: "Google AI Studio",
+        image: Object.keys(GOOGLE_IMAGE_MODELS).map((id) => ({ id, modelId: id })),
+        video: Object.keys(GOOGLE_VIDEO_MODELS).map((id) => ({ id, modelId: id })),
+      },
+      "flux-bfl": {
+        displayName: "Flux",
+        image: Object.keys(FLUX_IMAGE_MODELS).map((id) => ({ id, modelId: id })),
+      },
+      bytedance: {
+        displayName: "ByteDance",
+        image: Object.keys(BYTEDANCE_IMAGE_MODELS).map((id) => ({ id, modelId: id })),
+        video: Object.keys(BYTEDANCE_VIDEO_MODELS).map((id) => ({ id, modelId: id })),
+      },
+      xai: {
+        displayName: "xAI",
+        image: Object.keys(XAI_IMAGE_MODELS).map((id) => ({ id, modelId: id })),
+        video: Object.keys(XAI_VIDEO_MODELS).map((id) => ({ id, modelId: id })),
+      },
     },
   };
 }

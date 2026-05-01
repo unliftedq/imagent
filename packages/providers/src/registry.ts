@@ -1,12 +1,8 @@
-import type {
-  ImageModelDef,
-  ImageProvider,
-  VideoModelDef,
-  VideoProvider,
-} from "@imagine/core";
+import type { ImageModelDef, ImageProvider, VideoModelDef, VideoProvider } from "@imagine/core";
 import type { ProviderPreferences, ProviderSecrets } from "@imagine/config";
 
 import type { ModelCatalog } from "./catalog/schema.js";
+import { resolveImageProviderModels, resolveVideoProviderModels } from "./catalog/resolve.js";
 import { OpenAIImageProvider } from "./openai/image.js";
 import { AzureOpenAIImageProvider } from "./azure/image.js";
 import { GoogleImageProvider } from "./google/image.js";
@@ -21,12 +17,9 @@ export type ImageRegistry = ReadonlyMap<string, ImageProvider>;
 export type VideoRegistry = ReadonlyMap<string, VideoProvider>;
 
 /**
- * Build the image-provider registry. The **catalog is the source of truth**
- * for the model list of every well-known provider — users only configure
- * authentication. Azure OpenAI is deployment-based; the user supplies the
- * deployment name, which we map to a baseline image capability shape
- * (typically `image-default` from the catalog, which mirrors gpt-image-2
- * capabilities).
+ * Build the image-provider registry. The catalog separates canonical model
+ * definitions from provider-facing offerings; the registry resolves each
+ * provider's offerings into the concrete model map its implementation needs.
  *
  * Each provider is **its own class** with its own SDK client (Phase 3b):
  *   - OpenAI / Azure / xAI / ByteDance image → `openai` SDK.
@@ -40,7 +33,7 @@ export type VideoRegistry = ReadonlyMap<string, VideoProvider>;
  */
 export function createImageRegistry(
   secrets: ProviderSecrets,
-  prefs: ProviderPreferences,
+  _prefs: ProviderPreferences,
   catalog: ModelCatalog,
 ): ImageRegistry {
   const out = new Map<string, ImageProvider>();
@@ -48,7 +41,7 @@ export function createImageRegistry(
   if (secrets.openai) {
     const openaiOpts: ConstructorParameters<typeof OpenAIImageProvider>[0] = {
       apiKey: secrets.openai.apiKey,
-      models: mapFromList(catalog.image.openai ?? []),
+      models: mapFromList(resolveImageProviderModels(catalog, "openai")),
     };
     if (secrets.openai.baseUrl) openaiOpts.baseUrl = secrets.openai.baseUrl;
     out.set("openai", new OpenAIImageProvider(openaiOpts));
@@ -60,7 +53,7 @@ export function createImageRegistry(
       new AzureOpenAIImageProvider({
         endpoint: secrets["azure-openai"].endpoint,
         apiKey: secrets["azure-openai"].apiKey,
-        models: mapFromList(catalog.image["azure-openai"] ?? []),
+        models: mapFromList(resolveImageProviderModels(catalog, "azure-openai")),
       }),
     );
   }
@@ -68,7 +61,7 @@ export function createImageRegistry(
   if (secrets.google) {
     const googleOpts: ConstructorParameters<typeof GoogleImageProvider>[0] = {
       apiKey: secrets.google.apiKey,
-      models: mapFromList(catalog.image.google ?? []),
+      models: mapFromList(resolveImageProviderModels(catalog, "google")),
     };
     if (secrets.google.baseUrl) googleOpts.baseUrl = secrets.google.baseUrl;
     out.set("google", new GoogleImageProvider(googleOpts));
@@ -77,7 +70,7 @@ export function createImageRegistry(
   if (secrets["flux-bfl"]) {
     const fluxOpts: ConstructorParameters<typeof FluxImageProvider>[0] = {
       apiKey: secrets["flux-bfl"].apiKey,
-      models: mapFromList(catalog.image["flux-bfl"] ?? []),
+      models: mapFromList(resolveImageProviderModels(catalog, "flux-bfl")),
     };
     if (secrets["flux-bfl"].baseUrl) fluxOpts.baseUrl = secrets["flux-bfl"].baseUrl;
     out.set("flux-bfl", new FluxImageProvider(fluxOpts));
@@ -87,7 +80,7 @@ export function createImageRegistry(
     const bdOpts: ConstructorParameters<typeof ByteDanceImageProvider>[0] = {
       apiKey: secrets.bytedance.apiKey,
       endpoint: secrets.bytedance.endpoint,
-      models: mapFromList(catalog.image.bytedance ?? []),
+      models: mapFromList(resolveImageProviderModels(catalog, "bytedance")),
     };
     out.set("bytedance", new ByteDanceImageProvider(bdOpts));
   }
@@ -95,7 +88,7 @@ export function createImageRegistry(
   if (secrets.xai) {
     const xaiOpts: ConstructorParameters<typeof XaiImageProvider>[0] = {
       apiKey: secrets.xai.apiKey,
-      models: mapFromList(catalog.image.xai ?? []),
+      models: mapFromList(resolveImageProviderModels(catalog, "xai")),
     };
     if (secrets.xai.baseUrl) xaiOpts.baseUrl = secrets.xai.baseUrl;
     out.set("xai", new XaiImageProvider(xaiOpts));
@@ -124,7 +117,7 @@ export function createVideoRegistry(
     const opts: ConstructorParameters<typeof ByteDanceVideoProvider>[0] = {
       apiKey: secrets.bytedance.apiKey,
       endpoint: secrets.bytedance.endpoint,
-      models: mapFromList(catalog.video.bytedance ?? []),
+      models: mapFromList(resolveVideoProviderModels(catalog, "bytedance")),
     };
     out.set("bytedance", new ByteDanceVideoProvider(opts));
   }
@@ -132,7 +125,7 @@ export function createVideoRegistry(
   if (secrets.google) {
     const googleOpts: ConstructorParameters<typeof GoogleVideoProvider>[0] = {
       apiKey: secrets.google.apiKey,
-      models: mapFromList(catalog.video.google ?? []),
+      models: mapFromList(resolveVideoProviderModels(catalog, "google")),
     };
     if (secrets.google.baseUrl) googleOpts.baseUrl = secrets.google.baseUrl;
     out.set("google", new GoogleVideoProvider(googleOpts));
@@ -141,7 +134,7 @@ export function createVideoRegistry(
   if (secrets.xai) {
     const xaiOpts: ConstructorParameters<typeof XaiVideoProvider>[0] = {
       apiKey: secrets.xai.apiKey,
-      models: mapFromList(catalog.video.xai ?? []),
+      models: mapFromList(resolveVideoProviderModels(catalog, "xai")),
     };
     if (secrets.xai.baseUrl) xaiOpts.baseUrl = secrets.xai.baseUrl;
     out.set("xai", new XaiVideoProvider(xaiOpts));
@@ -171,15 +164,24 @@ export const TOTAL_PROVIDER_COUNT = 6;
 
 // --- internal helpers ---------------------------------------------------
 
-function mapFromList<T extends { id: string }>(
-  list: readonly T[],
-): ReadonlyMap<string, T> {
+function mapFromList<T extends { id: string }>(list: readonly T[]): ReadonlyMap<string, T> {
   return new Map(list.map((item) => [item.id, item]));
 }
 
 // Re-export the catalog types so consumers can import them via @imagine/providers.
 export type { ModelCatalog } from "./catalog/schema.js";
-export { ModelCatalogSchema } from "./catalog/schema.js";
+export {
+  ModelCatalogSchema,
+  type ImageProviderModel,
+  type ProviderCatalog,
+  type VideoProviderModel,
+} from "./catalog/schema.js";
+export {
+  resolveImageProviderModel,
+  resolveImageProviderModels,
+  resolveVideoProviderModel,
+  resolveVideoProviderModels,
+} from "./catalog/resolve.js";
 export {
   loadCatalog,
   saveCatalog,

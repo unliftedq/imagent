@@ -6,6 +6,7 @@ import { useUIStore } from "../state/useUIStore.js";
 
 interface ProviderEntry {
   providerId: ProviderId;
+  modelId: string;
   displayName: string;
   configured: boolean;
 }
@@ -68,10 +69,9 @@ export function ModelsPage() {
             Models
           </h1>
           <p className="mt-2 text-(length:--text-body-md) text-(--text)">
-            Catalog of every model the studio knows about, grouped by id.
-            Green badges mark providers whose auth is saved; gray badges
-            mark providers where the same model would work once you
-            configure them.
+            Catalog of every model the studio knows about, grouped by id. Green badges mark
+            providers whose auth is saved; gray badges mark providers where the same model would
+            work once you configure them.
           </p>
         </div>
       </header>
@@ -86,15 +86,10 @@ export function ModelsPage() {
       </div>
 
       {!list ? (
-        <p className="text-(length:--text-body-sm) text-(--text-muted)">
-          Loading…
-        </p>
+        <p className="text-(length:--text-body-sm) text-(--text-muted)">Loading…</p>
       ) : rows.length === 0 ? (
         <div className="rounded-(--radius-md) border border-dashed border-(--border) p-8 text-center">
-          <Icons.Brain
-            weight="duotone"
-            className="mx-auto size-8 text-(--text-muted)"
-          />
+          <Icons.Brain weight="duotone" className="mx-auto size-8 text-(--text-muted)" />
           <p className="mt-2 text-(length:--text-body-sm) text-(--text-muted)">
             No {tab} models in the catalog.
           </p>
@@ -152,14 +147,18 @@ function ModelRowView({
 
       <div className="flex flex-wrap gap-2">
         {row.providers.map((p) => (
-          <ProviderBadge key={p.providerId} provider={p} />
+          <ProviderBadge key={`${p.providerId}:${p.modelId}`} provider={p} rowId={row.id} />
         ))}
       </div>
     </li>
   );
 }
 
-function ProviderBadge({ provider }: { provider: ProviderEntry }) {
+function ProviderBadge({ provider, rowId }: { provider: ProviderEntry; rowId: string }) {
+  const label =
+    provider.modelId === rowId
+      ? provider.displayName
+      : `${provider.displayName}: ${provider.modelId}`;
   if (provider.configured) {
     return (
       <span
@@ -170,7 +169,7 @@ function ProviderBadge({ provider }: { provider: ProviderEntry }) {
         }
       >
         <span className="size-1.5 rounded-(--radius-full) bg-(--success)" />
-        {provider.displayName}
+        {label}
       </span>
     );
   }
@@ -183,7 +182,7 @@ function ProviderBadge({ provider }: { provider: ProviderEntry }) {
       }
     >
       <span className="size-1.5 rounded-(--radius-full) bg-(--text-faint)" />
-      {provider.displayName}
+      {label}
     </span>
   );
 }

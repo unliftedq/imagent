@@ -3,10 +3,9 @@ import { CaretDown, CaretUp, Check } from "@phosphor-icons/react";
 import { cn } from "../lib/cn.js";
 
 /**
- * Compact representation of a model the parent has already resolved against
- * the catalog (`@imagine/core` `resolveImageModel`). Each entry carries
- * its capabilities so the dropdown can render them inline as a 3-5 line
- * mono-spaced summary table.
+ * Compact representation of a provider-facing model the parent has already
+ * resolved from the catalog. Each entry carries its capabilities so the
+ * dropdown can render them inline as a 3-5 line mono-spaced summary table.
  */
 export interface ResolvedModelOption {
   id: string;
@@ -37,9 +36,8 @@ export interface ModelSelectProps {
 /**
  * Studio-page model picker. Both the trigger and each item show only the
  * model's displayName (or its id when displayName is absent). For
- * Azure-style deployment-based providers the registry sets `displayName` to
- * the deployment name, so what the user typed in the Providers form is
- * what they see here.
+ * Azure-style deployment-based providers may use a deployment name as `id`
+ * while inheriting capabilities from a canonical `baseModelId`.
  */
 export function ModelSelect({
   models,
@@ -69,9 +67,7 @@ export function ModelSelect({
           className,
         )}
       >
-        <span className="truncate font-semibold">
-          {current?.displayName ?? current?.id ?? "—"}
-        </span>
+        <span className="truncate font-semibold">{current?.displayName ?? current?.id ?? "—"}</span>
         <SelectPrimitive.Icon asChild>
           <CaretDown weight="bold" className="size-4 text-(--text-muted)" />
         </SelectPrimitive.Icon>

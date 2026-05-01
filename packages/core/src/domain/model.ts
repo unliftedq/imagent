@@ -27,6 +27,19 @@ export const ImageModelCapsSchema = z.object({
 });
 export type ImageModelCaps = z.infer<typeof ImageModelCapsSchema>;
 
+export const ImageModelCapsOverrideSchema = z.object({
+  sizes: z.array(z.string()).optional(),
+  aspectRatios: z.array(z.string()).optional(),
+  qualities: z.array(z.string()).optional(),
+  outputFormats: z.array(z.string()).optional(),
+  maxReferences: z.number().int().nonnegative().optional(),
+  maxOutputs: z.number().int().min(1).optional(),
+  supportsNegativePrompt: z.boolean().optional(),
+  supportsSeed: z.boolean().optional(),
+  supportsStyleRef: z.boolean().optional(),
+});
+export type ImageModelCapsOverride = z.infer<typeof ImageModelCapsOverrideSchema>;
+
 export const VideoModelCapsSchema = z.object({
   durationsSec: z.array(z.number()).optional(),
   maxDurationSec: z.number().optional(),
@@ -38,8 +51,26 @@ export const VideoModelCapsSchema = z.object({
 });
 export type VideoModelCaps = z.infer<typeof VideoModelCapsSchema>;
 
+export const VideoModelCapsOverrideSchema = z.object({
+  durationsSec: z.array(z.number()).optional(),
+  maxDurationSec: z.number().optional(),
+  fpsOptions: z.array(z.number()).optional(),
+  resolutions: z.array(z.string()).optional(),
+  supportsFirstFrame: z.boolean().optional(),
+  supportsLastFrame: z.boolean().optional(),
+  supportsRefImages: z.boolean().optional(),
+});
+export type VideoModelCapsOverride = z.infer<typeof VideoModelCapsOverrideSchema>;
+
 export const ImageModelDefSchema = z.object({
   id: z.string(),
+  /**
+   * Canonical model this provider-facing id is backed by. For most providers
+   * this equals `id`; for deployment-based providers such as Azure OpenAI,
+   * `id` is the deployment name and `baseModelId` is the underlying model
+   * whose capabilities/defaults should be inherited.
+   */
+  baseModelId: z.string().optional(),
   displayName: z.string().optional(),
   capabilities: ImageModelCapsSchema.optional(),
   defaults: z.record(z.string(), z.unknown()).optional(),
@@ -48,84 +79,10 @@ export type ImageModelDef = z.infer<typeof ImageModelDefSchema>;
 
 export const VideoModelDefSchema = z.object({
   id: z.string(),
+  /** See ImageModelDefSchema.baseModelId. */
+  baseModelId: z.string().optional(),
   displayName: z.string().optional(),
   capabilities: VideoModelCapsSchema.optional(),
   defaults: z.record(z.string(), z.unknown()).optional(),
 });
 export type VideoModelDef = z.infer<typeof VideoModelDefSchema>;
-
-export const ImageModelEntrySchema = z.union([z.string(), ImageModelDefSchema]);
-export type ImageModelEntry = z.infer<typeof ImageModelEntrySchema>;
-
-export const VideoModelEntrySchema = z.union([z.string(), VideoModelDefSchema]);
-export type VideoModelEntry = z.infer<typeof VideoModelEntrySchema>;
-
-/**
- * Built-in catalog shape: providerId → modelId → ImageModelDef/VideoModelDef.
- * Concrete catalogs live in @imagine/providers.
- */
-export type ImageCatalog = Record<string, Record<string, ImageModelDef>>;
-export type VideoCatalog = Record<string, Record<string, VideoModelDef>>;
-
-/**
- * Resolves a user-supplied entry against a built-in catalog. Strict mode:
- * an unknown short-form id throws — no silent fallback.
- *
- * Deep-merge order: built-in (base) ← user override (top), with capabilities
- * and defaults merged a level deeper.
- */
-export function resolveImageModel(
-  providerId: string,
-  entry: ImageModelEntry,
-  catalog: ImageCatalog,
-): ImageModelDef {
-  const id = typeof entry === "string" ? entry : entry.id;
-  const builtin = catalog[providerId]?.[id];
-  const override: Partial<ImageModelDef> = typeof entry === "string" ? {} : entry;
-  if (!builtin && typeof entry === "string") {
-    throw new Error(
-      `Unknown model '${id}' for provider '${providerId}'. ` +
-        "Supply capabilities inline or use a catalog id.",
-    );
-  }
-  return ImageModelDefSchema.parse({
-    id,
-    displayName: override.displayName ?? builtin?.displayName,
-    capabilities: {
-      ...(builtin?.capabilities ?? {}),
-      ...(override.capabilities ?? {}),
-    },
-    defaults: {
-      ...(builtin?.defaults ?? {}),
-      ...(override.defaults ?? {}),
-    },
-  });
-}
-
-export function resolveVideoModel(
-  providerId: string,
-  entry: VideoModelEntry,
-  catalog: VideoCatalog,
-): VideoModelDef {
-  const id = typeof entry === "string" ? entry : entry.id;
-  const builtin = catalog[providerId]?.[id];
-  const override: Partial<VideoModelDef> = typeof entry === "string" ? {} : entry;
-  if (!builtin && typeof entry === "string") {
-    throw new Error(
-      `Unknown video model '${id}' for provider '${providerId}'. ` +
-        "Supply capabilities inline or use a catalog id.",
-    );
-  }
-  return VideoModelDefSchema.parse({
-    id,
-    displayName: override.displayName ?? builtin?.displayName,
-    capabilities: {
-      ...(builtin?.capabilities ?? {}),
-      ...(override.capabilities ?? {}),
-    },
-    defaults: {
-      ...(builtin?.defaults ?? {}),
-      ...(override.defaults ?? {}),
-    },
-  });
-}

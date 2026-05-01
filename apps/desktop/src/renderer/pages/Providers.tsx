@@ -1,11 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  Button,
-  Icons,
-  Input,
-  ProviderRow,
-  type ProviderTestStatus,
-} from "@imagine/ui";
+import { Button, Icons, Input, ProviderRow, type ProviderTestStatus } from "@imagine/ui";
 import {
   IpcClientError,
   type MaskedSecrets,
@@ -169,9 +163,7 @@ export function ProvidersPage() {
       });
     } catch (err) {
       const msg =
-        err instanceof IpcClientError
-          ? err.message
-          : (err as Error)?.message ?? String(err);
+        err instanceof IpcClientError ? err.message : ((err as Error)?.message ?? String(err));
       pushToast({
         title: "Failed to save provider settings",
         description: msg,
@@ -191,8 +183,8 @@ export function ProvidersPage() {
           Providers
         </h1>
         <p className="mt-2 text-(length:--text-body-md) text-(--text)">
-          Configure API access for image and video generation. Models come from
-          the built-in catalog — only authentication is needed.
+          Configure API access for image and video generation. Models come from the built-in catalog
+          — only authentication is needed.
         </p>
       </header>
 
@@ -206,9 +198,7 @@ export function ProvidersPage() {
           // spans both image and video (Google AI Studio, ByteDance, xAI) gets
           // it without a per-id hardcoded check.
           const kindsBadge =
-            summary && summary.kinds.length > 1 ? (
-              <KindsBadge text="Image + Video" />
-            ) : null;
+            summary && summary.kinds.length > 1 ? <KindsBadge text="Image + Video" /> : null;
           const catalogModelIds = summary?.modelIds ?? [];
           return (
             <ProviderRow
@@ -226,7 +216,7 @@ export function ProvidersPage() {
                   <>
                     <Field
                       label="Endpoint"
-                      helperText="Foundry/AOAI base URL — name your Azure deployments after the model id (e.g. `gpt-image-2`)."
+                      helperText="Foundry/AOAI base URL. Azure deployment names are configured in the model catalog."
                     >
                       <Input
                         placeholder="https://my-resource.services.ai.azure.com"
@@ -287,7 +277,10 @@ export function ProvidersPage() {
   );
 }
 
-function secretMaskFor(id: ProviderId, masked: ReturnType<typeof useConfigStore.getState>["secrets"]) {
+function secretMaskFor(
+  id: ProviderId,
+  masked: ReturnType<typeof useConfigStore.getState>["secrets"],
+) {
   switch (id) {
     case "openai":
       return masked.openai?.apiKey ?? null;
@@ -370,7 +363,11 @@ function SecretField({
           className="absolute right-1.5 size-8 p-0"
           onClick={() => setShow((v) => !v)}
         >
-          {show ? <Icons.EyeSlash weight="bold" className="size-4" /> : <Icons.Eye weight="bold" className="size-4" />}
+          {show ? (
+            <Icons.EyeSlash weight="bold" className="size-4" />
+          ) : (
+            <Icons.Eye weight="bold" className="size-4" />
+          )}
         </Button>
       </div>
     </Field>

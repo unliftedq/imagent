@@ -102,9 +102,31 @@ createVideoRegistry(secrets, settings) -> { bytedance }                         
 
 A model is more than a string id — different models within one provider expose different sizes, max-reference counts, durations, fps.
 
-The **built-in default catalog** ships as `packages/providers/src/catalog.default.json`; the **runtime** catalog lives at `~/.imagine/catalog.json` (user-editable JSON, validated against `ModelCatalogSchema` on load). On first run the bundled default is written to that path; on subsequent runs the user file is **authoritative** (no merge with bundled). On parse failure the loader logs a warning and falls back to bundled in-memory without overwriting the broken file. Users never maintain `models[]` in `config.json` — they only configure authentication, and the registry pulls the catalog slice per vendor (`catalog.image.openai`, `catalog.video.bytedance`, etc.). New vendor releases are absorbed by editing `catalog.default.json` and republishing, or by hand-editing the runtime file.
+The **built-in default catalog** ships as `packages/providers/src/catalog.default.json`; the **runtime** catalog lives at `~/.imagine/catalog.json` (user-editable JSON, validated against `ModelCatalogSchema` on load). On first run the bundled default is written to that path; on subsequent runs the user file is **authoritative** (no merge with bundled). On parse failure the loader logs a warning and falls back to bundled in-memory without overwriting the broken file. Users never maintain `models[]` in `config.json` — they only configure authentication.
 
-Azure OpenAI is a **deployment-based exception**. The deployment name is user-defined in the Azure portal (where the user also chooses the underlying base model), so the user supplies the deployment name in `config.providers["azure-openai"].deployments.image|video`. We assume `gpt-image-1`-class capabilities for those deployments by default; a per-deployment underlying-model picker is a deferred enhancement.
+Catalog v2 separates model identity from provider routing:
+
+```json
+{
+  "version": 2,
+  "models": {
+    "image": {
+      "gpt-image-2": { "id": "gpt-image-2", "displayName": "GPT Image 2", "capabilities": {}, "defaults": {} }
+    },
+    "video": {}
+  },
+  "providers": {
+    "openai": {
+      "image": [{ "id": "gpt-image-2", "modelId": "gpt-image-2" }]
+    },
+    "azure-openai": {
+      "image": [{ "id": "my-prod-deployment", "modelId": "gpt-image-2" }]
+    }
+  }
+}
+```
+
+`models.image/video` are canonical capability records. `providers.<id>.image/video` are provider-facing offerings: `id` is the string sent to the vendor API (or Azure deployment name), while `modelId` points at the canonical model whose capabilities/defaults are inherited. Provider offerings may override capabilities/defaults for provider-specific quirks. This same shape supports Azure deployments, OpenRouter-style route ids, Cloudflare Workers AI aliases, and future providers without duplicating model definitions.
 
 ```ts
 // packages/core/src/domain/model.ts
@@ -131,38 +153,31 @@ export const VideoModelCapsSchema = z.object({
 
 export const ImageModelDefSchema = z.object({
   id:           z.string(),
+  baseModelId:  z.string().optional(),  // present after provider offering resolution
   displayName:  z.string().optional(),
   capabilities: ImageModelCapsSchema.optional(),
   defaults:     z.record(z.unknown()).optional(),  // default size / aspect / count etc.
 });
 export const VideoModelDefSchema = z.object({
   id:           z.string(),
+  baseModelId:  z.string().optional(),  // present after provider offering resolution
   displayName:  z.string().optional(),
   capabilities: VideoModelCapsSchema.optional(),
   defaults:     z.record(z.unknown()).optional(),  // default durationSec / fps etc.
 });
-
-// config.json `providers.<id>.models[]` accepts either short or long form
-export const ImageModelEntrySchema = z.union([z.string(), ImageModelDefSchema]);
-export const VideoModelEntrySchema = z.union([z.string(), VideoModelDefSchema]);
 ```
 
-**Resolution at startup** deep-merges catalog ← user override into a `ResolvedModel` cached for the session:
+**Resolution at startup** deep-merges canonical model ← provider offering into the provider's concrete `models` map:
 
 ```ts
-function resolveModel(providerId, entry) {
-  const id       = typeof entry === "string" ? entry : entry.id;
-  const builtin  = BUILTIN_CATALOG[providerId]?.[id];
-  const override = typeof entry === "string" ? {} : entry;
-  if (!builtin && typeof entry === "string") {
-    throw new Error(`Unknown model '${id}' for provider '${providerId}'. ` +
-                    `Supply capabilities inline or use a catalog id.`);    // strict: no silent fallback
-  }
+function resolveProviderModel(catalog, offering) {
+  const base = catalog.models.image[offering.modelId];
   return ImageModelDefSchema.parse({
-    ...(builtin ?? {}),
-    ...override,
-    capabilities: { ...builtin?.capabilities, ...override.capabilities },
-    defaults:     { ...builtin?.defaults,     ...override.defaults     },
+    id: offering.id,
+    baseModelId: offering.modelId,
+    displayName: offering.displayName ?? base.displayName,
+    capabilities: { ...base.capabilities, ...offering.capabilities },
+    defaults:     { ...base.defaults,     ...offering.defaults     },
   });
 }
 ```
@@ -315,7 +330,7 @@ User-facing configuration splits into **three categories** by sensitivity and wr
 | Category | Examples | Storage | Writers |
 |---|---|---|---|
 | **Secrets** | API keys; ByteDance `endpoint+apiKey`; Azure `endpoint+apiKey` | `secrets.bin` (safeStorage, desktop) / `secrets.json` (CLI, chmod 600) / env vars (CLI, highest priority) | Main process / CLI |
-| **Preferences** | Default provider/model, model lists per provider, theme, output dir, concurrency, generation defaults | `config.json` (plaintext, hand-edit friendly, zod-validated) | Main + UI |
+| **Preferences** | Default provider, theme, output dir, concurrency, generation defaults | `config.json` (plaintext, hand-edit friendly, zod-validated) | Main + UI |
 | **Workspace state** | Recent boards, prompt drafts, sidebar collapsed, last-used assets, window bounds | SQLite `kv` table | Renderer (frequent writes) |
 
 Workspace state is deliberately **not** in `config.json` — prompt drafts churn at typing speed and would pollute every backup diff; they're "app internal state", not "user configuration".
@@ -340,14 +355,12 @@ export const ProviderSecretsSchema = z.object({
                              baseUrl: z.string().optional() }).optional(),
 });
 
-// Preferences: the catalog is the source of truth for well-known providers
-// (so their slot is empty by design). Azure OpenAI is deployment-based: the
-// user supplies the deployment name in the URL path.
+// Preferences: the catalog is the source of truth for provider model/deployment
+// bindings, so provider preference slots are empty by design until a provider
+// needs non-secret runtime knobs.
 export const ProviderPreferencesSchema = z.object({
   openai:         z.object({}).default({}),
-  "azure-openai": z.object({ deployments: z.object({ image: z.string(),
-                                                     video: z.string().nullable().default(null) }),
-                             defaultDeployment: z.enum(["image","video"]).default("image") }),
+  "azure-openai": z.object({}).default({}),
   google:         z.object({}).default({}),
   "flux-bfl":     z.object({}).default({}),
   bytedance:      z.object({}).default({}),

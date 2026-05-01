@@ -1,11 +1,6 @@
 import path from "node:path";
 
-import type {
-  GenerationIntent,
-  Job,
-  JobProgressEvent,
-  VideoRequest,
-} from "@imagine/core";
+import type { GenerationIntent, Job, JobProgressEvent, VideoRequest } from "@imagine/core";
 import chalk from "chalk";
 import type { Command } from "commander";
 
@@ -67,7 +62,7 @@ async function runVideo(prompt: string, options: VideoOptions): Promise<void> {
       `video provider '${providerId}' is not configured. Run \`imagine config set bytedance.apiKey ...\` first.`,
     );
   }
-  const model = pickVideoModel(providerId, options.model, runtime.config, provider.models);
+  const model = pickVideoModel(providerId, options.model, provider.models);
   const resolved = provider.models.get(model);
   const supportsRefs = resolved?.capabilities?.supportsRefImages !== false;
   const maxRefs = supportsRefs ? undefined : 0;
@@ -168,18 +163,11 @@ async function runVideo(prompt: string, options: VideoOptions): Promise<void> {
 function pickVideoModel(
   providerId: string,
   modelOverride: string | undefined,
-  config: { providers: Record<string, unknown> },
   providerModels: ReadonlyMap<string, unknown>,
 ): string {
   if (modelOverride) return modelOverride;
-  // Azure: its video deployment when set; otherwise catalog default.
-  if (providerId === "azure-openai") {
-    const block = config.providers[providerId] as
-      | { deployments?: { video?: string | null } }
-      | undefined;
-    const deploy = block?.deployments?.video ?? null;
-    if (deploy && providerModels.has(deploy)) return deploy;
-  }
+  // Provider models are resolved from catalog provider offerings. Deployment
+  // names and provider aliases are already represented as map keys here.
   const first = providerModels.keys().next().value;
   if (typeof first === "string") return first;
   throw new Error(`no model configured for video provider '${providerId}'`);

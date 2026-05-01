@@ -32,7 +32,7 @@ function makeProvider(client: FakeClient): AzureOpenAIImageProvider {
 const baseRequest: ImageRequest = {
   prompt: "a windmill at golden hour",
   providerId: "azure-openai",
-  model: "image-default",
+  model: "azure-prod-gpt-image-2",
   count: 1,
   size: "1024x1024",
   references: [],
@@ -49,7 +49,7 @@ describe("AzureOpenAIImageProvider", () => {
     expect(client.images.generate).toHaveBeenCalledTimes(1);
     const [body] = client.images.generate.mock.calls[0]!;
     expect(body).toMatchObject({
-      model: "image-default",
+      model: "azure-prod-gpt-image-2",
       prompt: baseRequest.prompt,
       n: 1,
       size: "1024x1024",

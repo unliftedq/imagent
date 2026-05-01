@@ -58,14 +58,15 @@ export type ProviderSecrets = z.infer<typeof ProviderSecretsSchema>;
 
 /**
  * Preferences are keyed by **provider id** (= vendor). The catalog (in
- * `@imagine/providers`) is the canonical source of model lists for every
- * well-known provider — users no longer maintain `models[]` in config.json.
+ * `@imagine/providers`) is the canonical source of model definitions and
+ * provider-facing model/deployment bindings — users no longer maintain
+ * `models[]` in config.json.
  *
  * Each provider's slot is kept (as `z.object({}).default({})`) so future
  * provider-scoped knobs (e.g. concurrency overrides) have a stable home.
- * Azure OpenAI used to carry deployment-name overrides, but the convention
- * is now "deployment name == model id" — power users override per-resource
- * names by editing `~/.imagine/catalog.json`.
+ * Azure OpenAI deployment names live in `~/.imagine/catalog.json` under
+ * `providers.azure-openai.image[].id`, with `modelId` pointing at the
+ * canonical model whose capabilities should be inherited.
  */
 export const ProviderPreferencesSchema = z.object({
   openai: z.object({}).default({}),
@@ -96,8 +97,8 @@ export type ConfigFile = z.infer<typeof ConfigFileSchema>;
 
 /**
  * Defaults applied when config.json is missing or partial. Well-known
- * providers carry empty slots (catalog is consulted at runtime); only Azure
- * OpenAI needs user-supplied deployment names.
+ * providers carry empty slots because catalog provider offerings are
+ * consulted at runtime.
  */
 export const DEFAULT_CONFIG: ConfigFile = {
   version: 1,

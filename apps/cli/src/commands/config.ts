@@ -14,8 +14,8 @@ import type { Command } from "commander";
  *
  * Walks the dotted path against the secrets schema. After the
  * "minimum-auth" reshape, only **secrets** paths are accepted: the catalog
- * is the source of truth for model lists, and Azure deployment names live
- * in `config.json` (edit by hand or via the desktop UI).
+ * is the source of truth for model/provider bindings, including Azure
+ * deployment names.
  *
  * Recognised paths:
  *   - `<vendor>.apiKey`
@@ -33,9 +33,7 @@ export function registerConfigCommand(program: Command): void {
 
   config
     .command("set <key> <value>")
-    .description(
-      "Set a secret (e.g. openai.apiKey, bytedance.endpoint, azure-openai.endpoint)",
-    )
+    .description("Set a secret (e.g. openai.apiKey, bytedance.endpoint, azure-openai.endpoint)")
     .action(async (key: string, value: string) => {
       try {
         await runSet(key, value);
@@ -66,7 +64,7 @@ export function registerConfigCommand(program: Command): void {
       process.stdout.write(`secrets: ${resolver.secretsFile()}\n`);
       process.stdout.write(
         `${chalk.dim(
-          "note: model lists come from the built-in catalog; Azure deployment names live in config.json — edit by hand or use the desktop Providers page.",
+          "note: model lists and Azure deployment names come from the model catalog; use `imagine catalog path` to find it.",
         )}\n`,
       );
     });
@@ -151,9 +149,7 @@ function parseKey(dottedKey: string): { vendor: VendorId; field: string } {
   const vendor = dottedKey.slice(0, idx);
   const field = dottedKey.slice(idx + 1);
   if (!isVendorKey(vendor)) {
-    throw new Error(
-      `unknown vendor '${vendor}'. Expected one of: ${VENDOR_KEYS.join(", ")}`,
-    );
+    throw new Error(`unknown vendor '${vendor}'. Expected one of: ${VENDOR_KEYS.join(", ")}`);
   }
   if (!field) {
     throw new Error(`missing field name (got '${dottedKey}')`);

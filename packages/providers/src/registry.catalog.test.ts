@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ProviderPreferences, ProviderSecrets } from "@imagine/config";
 import { createImageRegistry, createVideoRegistry } from "./registry.js";
+import { ModelCatalogSchema } from "./catalog/schema.js";
 import { buildTestCatalog } from "./catalog/test-fixtures.js";
 
 function emptyPrefs(): ProviderPreferences {
@@ -15,7 +16,7 @@ function emptyPrefs(): ProviderPreferences {
 }
 
 describe("createImageRegistry (catalog-driven)", () => {
-  it("populates each configured provider with the slice from catalog.image[providerId]", () => {
+  it("populates each configured provider from catalog provider offerings", () => {
     const secrets: ProviderSecrets = {
       openai: { apiKey: "sk" },
       google: { apiKey: "g" },
@@ -36,7 +37,7 @@ describe("createImageRegistry (catalog-driven)", () => {
     // OpenAI provider sees both fixture models.
     const openai = reg.get("openai")!;
     expect([...openai.models.keys()].sort()).toEqual(
-      catalog.image.openai!.map((m) => m.id).sort(),
+      catalog.providers.openai!.image!.map((m) => m.id).sort(),
     );
 
     // ByteDance provider sees Seedream entries (image side only).
@@ -44,7 +45,7 @@ describe("createImageRegistry (catalog-driven)", () => {
     expect([...bd.models.keys()]).toContain("doubao-seedream-3-0-t2i-250415");
   });
 
-  it("Azure: catalog slice drives the model map (deployment names match model ids)", () => {
+  it("Azure: deployment names resolve against canonical model capabilities", () => {
     const secrets: ProviderSecrets = {
       "azure-openai": {
         endpoint: "https://r.openai.azure.com",
@@ -55,9 +56,38 @@ describe("createImageRegistry (catalog-driven)", () => {
     const reg = createImageRegistry(secrets, emptyPrefs(), catalog);
 
     const azure = reg.get("azure-openai")!;
-    expect([...azure.models.keys()].sort()).toEqual(
-      catalog.image["azure-openai"]!.map((m) => m.id).sort(),
+    expect([...azure.models.keys()]).toEqual(["azure-prod-gpt-image-2"]);
+    const deployment = azure.models.get("azure-prod-gpt-image-2")!;
+    expect(deployment.baseModelId).toBe("gpt-image-2");
+    expect(deployment.capabilities?.maxOutputs).toBe(
+      catalog.models.image["gpt-image-2"]!.capabilities?.maxOutputs,
     );
+  });
+
+  it("provider image offerings can override capabilities and defaults", () => {
+    const secrets: ProviderSecrets = {
+      "azure-openai": {
+        endpoint: "https://r.openai.azure.com",
+        apiKey: "k",
+      },
+    };
+    const catalog = buildTestCatalog();
+    catalog.providers["azure-openai"]!.image = [
+      {
+        id: "azure-low-output",
+        modelId: "gpt-image-2",
+        capabilities: { maxOutputs: 1 },
+        defaults: { quality: "low" },
+      },
+    ];
+    const parsed = ModelCatalogSchema.parse(catalog);
+    const reg = createImageRegistry(secrets, emptyPrefs(), parsed);
+
+    const model = reg.get("azure-openai")!.models.get("azure-low-output")!;
+    expect(model.capabilities?.maxOutputs).toBe(1);
+    expect(model.capabilities?.supportsStyleRef).toBe(true);
+    expect(model.defaults?.quality).toBe("low");
+    expect(model.defaults?.size).toBe("1024x1024");
   });
 
   it("ignores secrets that are absent (no provider entry created)", () => {
@@ -66,9 +96,9 @@ describe("createImageRegistry (catalog-driven)", () => {
     expect([...reg.keys()]).toEqual(["openai"]);
   });
 
-  it("empty catalog slice → provider has zero models but is still registered", () => {
+  it("empty provider offerings → provider has zero models but is still registered", () => {
     const catalog = buildTestCatalog();
-    catalog.image.openai = [];
+    catalog.providers.openai!.image = [];
     const secrets: ProviderSecrets = { openai: { apiKey: "sk" } };
     const reg = createImageRegistry(secrets, emptyPrefs(), catalog);
     expect(reg.get("openai")!.models.size).toBe(0);
@@ -93,7 +123,7 @@ describe("createVideoRegistry (catalog-driven)", () => {
     // Phase 3a wires real raw-HTTP implementations. The registry should hand
     // out provider instances whose methods are not the old "Phase 3" stub
     // throwers — submit/poll/fetch/test all exist as functions, and the
-    // capabilities aggregate from the catalog slice.
+    // capabilities aggregate from resolved catalog offerings.
     const secrets: ProviderSecrets = {
       google: { apiKey: "g" },
       xai: { apiKey: "x" },
@@ -116,5 +146,26 @@ describe("createVideoRegistry (catalog-driven)", () => {
     expect(typeof xai.fetch).toBe("function");
     expect(typeof xai.test).toBe("function");
     expect(xai.models.size).toBeGreaterThan(0);
+  });
+
+  it("provider video offerings can override capabilities and defaults", () => {
+    const catalog = buildTestCatalog();
+    catalog.providers.google!.video = [
+      {
+        id: "veo-short-720p",
+        modelId: "veo-3.0-generate-001",
+        capabilities: { resolutions: ["720p"], supportsLastFrame: false },
+        defaults: { durationSec: 4, resolution: "720p" },
+      },
+    ];
+    const parsed = ModelCatalogSchema.parse(catalog);
+    const reg = createVideoRegistry({ google: { apiKey: "g" } }, emptyPrefs(), parsed);
+
+    const model = reg.get("google")!.models.get("veo-short-720p")!;
+    expect(model.capabilities?.resolutions).toEqual(["720p"]);
+    expect(model.capabilities?.supportsFirstFrame).toBe(true);
+    expect(model.capabilities?.supportsLastFrame).toBe(false);
+    expect(model.defaults?.durationSec).toBe(4);
+    expect(model.defaults?.fps).toBe(24);
   });
 });

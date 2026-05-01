@@ -10,8 +10,8 @@
  * returns the same data.
  *
  * After the "minimum-auth" reshape, well-known providers carry empty prefs
- * blocks (catalog is the source of truth for model lists); only Azure
- * OpenAI round-trips deployment names.
+ * blocks; the catalog is the source of truth for model/provider bindings,
+ * including Azure deployment names.
  */
 import { promises as fs } from "node:fs";
 import os from "node:os";
@@ -27,16 +27,8 @@ import {
   type SecretsStore,
 } from "@imagine/config";
 import { createIpcClient, type IpcTransport } from "./client.js";
-import {
-  registerIpcHandlers,
-  type ContractHandlers,
-  type IpcMainLike,
-} from "./server.js";
-import type {
-  MaskedSecrets,
-  ProviderPreferencesPayload,
-  SecretsWrite,
-} from "./contract.js";
+import { registerIpcHandlers, type ContractHandlers, type IpcMainLike } from "./server.js";
+import type { MaskedSecrets, ProviderPreferencesPayload, SecretsWrite } from "./contract.js";
 
 // ----- fake ipc + transport (same shape as server.test.ts) ------------------
 function makeFakeIpc(): {
@@ -65,7 +57,9 @@ function makeFakeIpc(): {
   };
 }
 
-function makeTransport(invoke: (channel: string, input: unknown) => Promise<unknown>): IpcTransport {
+function makeTransport(
+  invoke: (channel: string, input: unknown) => Promise<unknown>,
+): IpcTransport {
   return {
     invoke: (method, input) => invoke(method, input),
     subscribe: () => () => {},
@@ -122,10 +116,7 @@ function maskSecrets(s: ProviderSecrets): MaskedSecrets {
   return out;
 }
 
-async function applySecretsWrite(
-  store: SecretsStore,
-  input: SecretsWrite,
-): Promise<void> {
+async function applySecretsWrite(store: SecretsStore, input: SecretsWrite): Promise<void> {
   const patch: Partial<ProviderSecrets> = {};
   if (input.openai?.apiKey) patch.openai = { apiKey: input.openai.apiKey };
   if (input["azure-openai"]) {

@@ -74,7 +74,7 @@ async function runGenerate(prompt: string, options: GenerateOptions): Promise<vo
       `provider '${providerId}' is not configured. Run \`imagine config set ${providerId.split("-")[0]}.apiKey ...\` first.`,
     );
   }
-  const model = pickModel(providerId, options.model, runtime.config, provider.models);
+  const model = pickModel(providerId, options.model, provider.models);
   const resolved = provider.models.get(model);
   const maxRefs = resolved?.capabilities?.maxReferences;
 
@@ -157,20 +157,11 @@ async function runGenerate(prompt: string, options: GenerateOptions): Promise<vo
 function pickModel(
   providerId: string,
   modelOverride: string | undefined,
-  config: { providers: Record<string, unknown> },
   providerModels: ReadonlyMap<string, unknown>,
 ): string {
   if (modelOverride) return modelOverride;
-  // Azure OpenAI: the user-named deployment is the model id we expose in
-  // the registry. Other providers: the catalog is the source of truth —
-  // pick the first model.
-  if (providerId === "azure-openai") {
-    const block = config.providers[providerId] as
-      | { deployments?: { image?: string } }
-      | undefined;
-    const deploy = block?.deployments?.image;
-    if (deploy && providerModels.has(deploy)) return deploy;
-  }
+  // Provider models are resolved from catalog provider offerings. For Azure,
+  // these keys are deployment names; for other providers they are model ids.
   const first = providerModels.keys().next().value;
   if (typeof first === "string") return first;
   throw new Error(`no model configured for provider '${providerId}'`);

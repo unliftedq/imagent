@@ -43,11 +43,7 @@ import type {
   Logger,
   VideoRequest,
 } from "@imagine/core";
-import {
-  appendStylePromptSnippets,
-  capReferencePaths,
-  resolveAssetSlots,
-} from "@imagine/core";
+import { appendStylePromptSnippets, capReferencePaths, resolveAssetSlots } from "@imagine/core";
 import sharp from "sharp";
 import type { RuntimeServices } from "./job-runner-bootstrap.js";
 
@@ -160,8 +156,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
     },
 
     "providers.test": async ({ id }) => {
-      const provider =
-        runtime.imageRegistry.get(id) ?? runtime.videoRegistry.get(id);
+      const provider = runtime.imageRegistry.get(id) ?? runtime.videoRegistry.get(id);
       if (!provider) {
         return { ok: false, reason: `provider '${id}' is not configured` };
       }
@@ -241,9 +236,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
         properties: ["openDirectory", "createDirectory"],
       };
       if (input?.defaultPath) opts.defaultPath = input.defaultPath;
-      const res = win
-        ? await dialog.showOpenDialog(win, opts)
-        : await dialog.showOpenDialog(opts);
+      const res = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts);
       if (res.canceled || res.filePaths.length === 0) return { path: null };
       return { path: res.filePaths[0] ?? null };
     },
@@ -293,15 +286,11 @@ export function setupIpc(deps: IpcDeps): IpcServer {
         resolution = resolveAssetSlots(
           slotInputs,
           (id) => assetRepo.get(id),
-          (rel) =>
-            path.isAbsolute(rel) ? rel : path.join(paths.dataDir, rel),
+          (rel) => (path.isAbsolute(rel) ? rel : path.join(paths.dataDir, rel)),
           { supportsReferences: supportsRefs },
         );
       } catch (err) {
-        throw new IpcHandlerError(
-          "validation_failed",
-          (err as Error)?.message ?? String(err),
-        );
+        throw new IpcHandlerError("validation_failed", (err as Error)?.message ?? String(err));
       }
 
       // Combine freeform refs with slot-derived refs (slot order: char→obj→bg→style).
@@ -309,10 +298,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
         ...(r.references ?? []).map((ref) => ref.path),
         ...resolution.referencePaths,
       ];
-      const { references: cappedRefs, capped } = capReferencePaths(
-        allRefPaths,
-        maxRefs,
-      );
+      const { references: cappedRefs, capped } = capReferencePaths(allRefPaths, maxRefs);
       if (capped !== undefined) {
         logger.warn("image.generate: cap-at-max references", {
           providerId: r.providerId,
@@ -323,10 +309,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       }
 
       // Build the augmented prompt + final ImageRequest the JobRunner sees.
-      const augmentedPrompt = appendStylePromptSnippets(
-        r.prompt,
-        resolution.stylePromptSnippets,
-      );
+      const augmentedPrompt = appendStylePromptSnippets(r.prompt, resolution.stylePromptSnippets);
       const finalReq: ImageRequest = {
         ...r,
         prompt: augmentedPrompt,
@@ -394,10 +377,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
         throw err;
       }
       if (!job.resultItemId) {
-        throw new IpcHandlerError(
-          "internal",
-          "image.generate: job completed without resultItemId",
-        );
+        throw new IpcHandlerError("internal", "image.generate: job completed without resultItemId");
       }
       const item = galleryRepo.get(job.resultItemId);
       if (!item) {
@@ -457,12 +437,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
           assetId: l.assetId,
           role: l.role,
           name: a?.name ?? null,
-          kind: (a?.kind ?? null) as
-            | "character"
-            | "object"
-            | "background"
-            | "style"
-            | null,
+          kind: (a?.kind ?? null) as "character" | "object" | "background" | "style" | null,
         };
       });
       return { item, parent, children, siblings, assets };
@@ -480,16 +455,10 @@ export function setupIpc(deps: IpcDeps): IpcServer {
           ...(parent.negativePrompt ? { negativePrompt: parent.negativePrompt } : {}),
           providerId: parent.providerId,
           model: parent.model,
-          ...(typeof params.durationSec === "number"
-            ? { durationSec: params.durationSec }
-            : {}),
+          ...(typeof params.durationSec === "number" ? { durationSec: params.durationSec } : {}),
           ...(typeof params.fps === "number" ? { fps: params.fps } : {}),
-          ...(typeof params.resolution === "string"
-            ? { resolution: params.resolution }
-            : {}),
-          ...(typeof params.aspectRatio === "string"
-            ? { aspectRatio: params.aspectRatio }
-            : {}),
+          ...(typeof params.resolution === "string" ? { resolution: params.resolution } : {}),
+          ...(typeof params.aspectRatio === "string" ? { aspectRatio: params.aspectRatio } : {}),
           references: [],
           assetIds: [],
         };
@@ -501,9 +470,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
         providerId: parent.providerId,
         model: parent.model,
         ...(typeof params.size === "string" ? { size: params.size } : {}),
-        ...(typeof params.aspectRatio === "string"
-          ? { aspectRatio: params.aspectRatio }
-          : {}),
+        ...(typeof params.aspectRatio === "string" ? { aspectRatio: params.aspectRatio } : {}),
         count: typeof params.count === "number" ? params.count : 1,
         ...(typeof params.seed === "number" ? { seed: params.seed } : {}),
         references: [],
@@ -572,10 +539,8 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       }
       const merged: Partial<Board> = {};
       if (patch.name !== undefined) merged.name = patch.name;
-      if (patch.description !== undefined)
-        merged.description = patch.description ?? null;
-      if (patch.coverItemId !== undefined)
-        merged.coverItemId = patch.coverItemId ?? null;
+      if (patch.description !== undefined) merged.description = patch.description ?? null;
+      if (patch.coverItemId !== undefined) merged.coverItemId = patch.coverItemId ?? null;
       if (patch.position !== undefined) merged.position = patch.position;
       return boardRepo.update(id, merged);
     },
@@ -630,11 +595,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       const config = await configStore.loadConfig();
       const provider = runtime.imageRegistry.get(providerId);
       const models = provider ? [...provider.models.values()] : [];
-      const defaultModel = readDefaultModel(
-        config.providers,
-        providerId,
-        runtime.imageRegistry,
-      );
+      const defaultModel = readDefaultModel(config.providers, providerId, runtime.imageRegistry);
       return { providerId, defaultModel, models };
     },
 
@@ -660,12 +621,8 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       const opts = input ?? {};
       const page = assetRepo.listWithFiles({
         ...(opts.kind !== undefined ? { kind: opts.kind } : {}),
-        ...(opts.includeArchived !== undefined
-          ? { includeArchived: opts.includeArchived }
-          : {}),
-        ...(opts.archivedOnly !== undefined
-          ? { archivedOnly: opts.archivedOnly }
-          : {}),
+        ...(opts.includeArchived !== undefined ? { includeArchived: opts.includeArchived } : {}),
+        ...(opts.archivedOnly !== undefined ? { archivedOnly: opts.archivedOnly } : {}),
         ...(opts.search !== undefined ? { search: opts.search } : {}),
         ...(opts.limit !== undefined ? { limit: opts.limit } : {}),
         ...(opts.offset !== undefined ? { offset: opts.offset } : {}),
@@ -739,9 +696,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
         const buf = Buffer.from(u.bytes);
         const ext = pickExt(u.originalName, u.mimeType);
         const padded = String(i + 1).padStart(3, "0");
-        const destRel = path
-          .join("assets", assetId, `ref-${padded}${ext}`)
-          .replace(/\\/g, "/");
+        const destRel = path.join("assets", assetId, `ref-${padded}${ext}`).replace(/\\/g, "/");
         const destAbs = path.join(paths.dataDir, destRel);
         await fs.writeFile(destAbs, buf);
 
@@ -776,16 +731,12 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       // Generate a thumbnail from the first upload (best-effort).
       if (uploads.length > 0) {
         const first = uploads[0]!;
-        const thumbRel = path
-          .join("assets", assetId, "thumb.webp")
-          .replace(/\\/g, "/");
+        const thumbRel = path.join("assets", assetId, "thumb.webp").replace(/\\/g, "/");
         const thumbAbs = path.join(paths.dataDir, thumbRel);
         try {
-          const t = await generateImageThumbnailFromBuffer(
-            Buffer.from(first.bytes),
-            thumbAbs,
-            { maxSide: 256 },
-          );
+          const t = await generateImageThumbnailFromBuffer(Buffer.from(first.bytes), thumbAbs, {
+            maxSide: 256,
+          });
           const thumbBuf = await fs.readFile(thumbAbs);
           fileRows.push({
             id: randomUUID(),
@@ -840,8 +791,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       const merged: Partial<Asset> = {};
       if (patch.name !== undefined) merged.name = patch.name;
       if (patch.description !== undefined) merged.description = patch.description ?? null;
-      if (patch.promptSnippet !== undefined)
-        merged.promptSnippet = patch.promptSnippet ?? null;
+      if (patch.promptSnippet !== undefined) merged.promptSnippet = patch.promptSnippet ?? null;
       const next = assetRepo.update(id, merged);
       try {
         server.emit("assets.changed", { id, op: "updated" });
@@ -897,9 +847,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       const destRel =
         role === "thumbnail"
           ? path.join("assets", assetId, "thumb.webp").replace(/\\/g, "/")
-          : path
-              .join("assets", assetId, `ref-${padded}${ext}`)
-              .replace(/\\/g, "/");
+          : path.join("assets", assetId, `ref-${padded}${ext}`).replace(/\\/g, "/");
       const destAbs = path.join(paths.dataDir, destRel);
       await fs.mkdir(path.dirname(destAbs), { recursive: true });
       await fs.writeFile(destAbs, buf);
@@ -996,25 +944,18 @@ export function setupIpc(deps: IpcDeps): IpcServer {
         resolution = resolveAssetSlots(
           slotInputs,
           (id) => assetRepo.get(id),
-          (rel) =>
-            path.isAbsolute(rel) ? rel : path.join(paths.dataDir, rel),
+          (rel) => (path.isAbsolute(rel) ? rel : path.join(paths.dataDir, rel)),
           { supportsReferences: supportsRefs },
         );
       } catch (err) {
-        throw new IpcHandlerError(
-          "validation_failed",
-          (err as Error)?.message ?? String(err),
-        );
+        throw new IpcHandlerError("validation_failed", (err as Error)?.message ?? String(err));
       }
 
       const allRefPaths = [
         ...(r.references ?? []).map((ref) => ref.path),
         ...resolution.referencePaths,
       ];
-      const { references: cappedRefs, capped } = capReferencePaths(
-        allRefPaths,
-        maxRefs,
-      );
+      const { references: cappedRefs, capped } = capReferencePaths(allRefPaths, maxRefs);
       if (capped !== undefined) {
         logger.warn("video.submit: cap-at-max references", {
           providerId: r.providerId,
@@ -1024,10 +965,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
         });
       }
 
-      const augmentedPrompt = appendStylePromptSnippets(
-        r.prompt,
-        resolution.stylePromptSnippets,
-      );
+      const augmentedPrompt = appendStylePromptSnippets(r.prompt, resolution.stylePromptSnippets);
       const finalReq: VideoRequest = {
         ...r,
         prompt: augmentedPrompt,
@@ -1049,10 +987,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       try {
         jobId = await runtime.jobRunner.start(intent);
       } catch (err) {
-        throw new IpcHandlerError(
-          "provider_error",
-          (err as Error)?.message ?? String(err),
-        );
+        throw new IpcHandlerError("provider_error", (err as Error)?.message ?? String(err));
       }
 
       // Best-effort: write gallery_item_assets rows when the job completes.
@@ -1217,13 +1152,7 @@ function readDefaultVideoModel(
   return typeof first === "string" ? first : null;
 }
 
-type ProviderId =
-  | "openai"
-  | "azure-openai"
-  | "google"
-  | "flux-bfl"
-  | "bytedance"
-  | "xai";
+type ProviderId = "openai" | "azure-openai" | "google" | "flux-bfl" | "bytedance" | "xai";
 
 const PROVIDER_DISPLAY_NAMES: Record<ProviderId, string> = {
   openai: "OpenAI",
@@ -1329,12 +1258,22 @@ function buildUnifiedModelList(
   image: Array<{
     id: string;
     displayName: string | null;
-    providers: Array<{ providerId: ProviderId; displayName: string; configured: boolean }>;
+    providers: Array<{
+      providerId: ProviderId;
+      modelId: string;
+      displayName: string;
+      configured: boolean;
+    }>;
   }>;
   video: Array<{
     id: string;
     displayName: string | null;
-    providers: Array<{ providerId: ProviderId; displayName: string; configured: boolean }>;
+    providers: Array<{
+      providerId: ProviderId;
+      modelId: string;
+      displayName: string;
+      configured: boolean;
+    }>;
   }>;
 } {
   const isProviderConfigured = (id: ProviderId): boolean => {
@@ -1350,18 +1289,29 @@ function buildUnifiedModelList(
     return !!(b && b.apiKey);
   };
   const groupKind = <T extends { id: string; displayName?: string }>(
-    perProvider: Record<string, T[]>,
+    kind: "image" | "video",
+    canonicalModels: Record<string, T>,
   ): Array<{
     id: string;
     displayName: string | null;
-    providers: Array<{ providerId: ProviderId; displayName: string; configured: boolean }>;
+    providers: Array<{
+      providerId: ProviderId;
+      modelId: string;
+      displayName: string;
+      configured: boolean;
+    }>;
   }> => {
     const grouped = new Map<
       string,
       {
         id: string;
         displayName: string | null;
-        providers: Array<{ providerId: ProviderId; displayName: string; configured: boolean }>;
+        providers: Array<{
+          providerId: ProviderId;
+          modelId: string;
+          displayName: string;
+          configured: boolean;
+        }>;
       }
     >();
     // Stable provider iteration matches the provider summary order.
@@ -1374,12 +1324,16 @@ function buildUnifiedModelList(
       "xai",
     ];
     for (const providerId of providerOrder) {
-      const list = perProvider[providerId] ?? [];
-      for (const model of list) {
-        const existing = grouped.get(model.id);
+      const providerCatalog = catalog.providers[providerId];
+      const offerings = providerCatalog?.[kind] ?? [];
+      for (const offering of offerings) {
+        const model = canonicalModels[offering.modelId];
+        if (!model) continue;
+        const existing = grouped.get(offering.modelId);
         const providerEntry = {
           providerId,
-          displayName: PROVIDER_DISPLAY_NAMES[providerId],
+          modelId: offering.id,
+          displayName: providerCatalog?.displayName ?? PROVIDER_DISPLAY_NAMES[providerId],
           configured: isProviderConfigured(providerId),
         };
         if (existing) {
@@ -1389,8 +1343,8 @@ function buildUnifiedModelList(
             existing.displayName = model.displayName;
           }
         } else {
-          grouped.set(model.id, {
-            id: model.id,
+          grouped.set(offering.modelId, {
+            id: offering.modelId,
             displayName: model.displayName ?? null,
             providers: [providerEntry],
           });
@@ -1400,8 +1354,8 @@ function buildUnifiedModelList(
     return [...grouped.values()];
   };
   return {
-    image: groupKind(catalog.image),
-    video: groupKind(catalog.video),
+    image: groupKind("image", catalog.models.image),
+    video: groupKind("video", catalog.models.video),
   };
 }
 
@@ -1478,4 +1432,3 @@ function prefsConfigFromPayload(
     xai: {},
   };
 }
-
