@@ -1,15 +1,14 @@
-import type { ImageModelDef, ImageProvider, VideoModelDef, VideoProvider } from "@imagine/core";
 import type { ProviderPreferences, ProviderSecrets } from "@imagine/config";
-
-import type { ModelCatalog } from "./catalog/schema.js";
-import { resolveImageProviderModels, resolveVideoProviderModels } from "./catalog/resolve.js";
-import { OpenAIImageProvider } from "./openai/image.js";
+import type { ImageProvider, VideoModelDef, VideoProvider } from "@imagine/core";
 import { AzureOpenAIImageProvider } from "./azure/image.js";
-import { GoogleImageProvider } from "./google/image.js";
-import { GoogleVideoProvider } from "./google/video.js";
-import { FluxImageProvider } from "./flux/image.js";
 import { ByteDanceImageProvider } from "./bytedance/image.js";
 import { ByteDanceVideoProvider } from "./bytedance/video.js";
+import { resolveImageProviderModels, resolveVideoProviderModels } from "./catalog/resolve.js";
+import type { ModelCatalog } from "./catalog/schema.js";
+import { FluxImageProvider } from "./flux/image.js";
+import { GoogleImageProvider } from "./google/image.js";
+import { GoogleVideoProvider } from "./google/video.js";
+import { OpenAIImageProvider } from "./openai/image.js";
 import { XaiImageProvider } from "./xai/image.js";
 import { XaiVideoProvider } from "./xai/video.js";
 
@@ -94,6 +93,22 @@ export function createImageRegistry(
     out.set("xai", new XaiImageProvider(xaiOpts));
   }
 
+  for (const [providerId, customSecrets] of Object.entries(secrets.customOpenAI ?? {})) {
+    if (out.has(providerId)) continue;
+    const models = resolveImageProviderModels(catalog, providerId);
+    if (models.length === 0) continue;
+    out.set(
+      providerId,
+      new OpenAIImageProvider({
+        providerId,
+        displayName: catalog.providers[providerId]?.displayName ?? providerId,
+        apiKey: customSecrets.apiKey ?? "imagine-no-api-key",
+        baseUrl: customSecrets.baseUrl,
+        models: mapFromList(models),
+      }),
+    );
+  }
+
   return out;
 }
 
@@ -156,6 +171,7 @@ export function configuredProviderCount(secrets: ProviderSecrets): number {
   if (secrets["flux-bfl"]) n += 1;
   if (secrets.bytedance) n += 1;
   if (secrets.xai) n += 1;
+  n += Object.keys(secrets.customOpenAI ?? {}).length;
   return n;
 }
 
@@ -168,27 +184,27 @@ function mapFromList<T extends { id: string }>(list: readonly T[]): ReadonlyMap<
   return new Map(list.map((item) => [item.id, item]));
 }
 
-// Re-export the catalog types so consumers can import them via @imagine/providers.
-export type { ModelCatalog } from "./catalog/schema.js";
 export {
-  ModelCatalogSchema,
-  type ImageProviderModel,
-  type ProviderCatalog,
-  type VideoProviderModel,
-} from "./catalog/schema.js";
+  type CatalogLoaderOptions,
+  type CatalogSaveOptions,
+  getBundledCatalog,
+  loadCatalog,
+  saveCatalog,
+} from "./catalog/loader.js";
 export {
   resolveImageProviderModel,
   resolveImageProviderModels,
   resolveVideoProviderModel,
   resolveVideoProviderModels,
 } from "./catalog/resolve.js";
+// Re-export the catalog types so consumers can import them via @imagine/providers.
+export type { ModelCatalog } from "./catalog/schema.js";
 export {
-  loadCatalog,
-  saveCatalog,
-  getBundledCatalog,
-  type CatalogLoaderOptions,
-  type CatalogSaveOptions,
-} from "./catalog/loader.js";
+  type ImageProviderModel,
+  ModelCatalogSchema,
+  type ProviderCatalog,
+  type VideoProviderModel,
+} from "./catalog/schema.js";
 
 // Re-export VideoModelDef helpers so other internal code can resolve types.
 export type { VideoModelDef };

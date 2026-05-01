@@ -1,8 +1,4 @@
 import {
-  ProviderError,
-  ProviderHttpError,
-  ProviderRequestError,
-  ProviderResponseError,
   applyImageDefaults,
   type ImageCapabilities,
   type ImageGenerationResult,
@@ -11,6 +7,10 @@ import {
   type ImageProvider,
   type ImageRequest,
   type Logger,
+  ProviderError,
+  ProviderHttpError,
+  ProviderRequestError,
+  ProviderResponseError,
   type ProviderTestResult,
   validateImageRequestAgainstModel,
 } from "@imagine/core";
@@ -36,9 +36,9 @@ export interface OpenAIClientLike {
     ) => Promise<{ data?: Array<{ b64_json?: string; url?: string; revised_prompt?: string }> }>;
   };
   models: {
-    list: (
-      options?: { signal?: AbortSignal },
-    ) => Promise<{ data?: Array<{ id?: string }> }> | AsyncIterable<{ id?: string }>;
+    list: (options?: {
+      signal?: AbortSignal;
+    }) => Promise<{ data?: Array<{ id?: string }> }> | AsyncIterable<{ id?: string }>;
   };
 }
 
@@ -46,20 +46,24 @@ export interface OpenAIImageProviderOptions {
   apiKey: string;
   baseUrl?: string | null;
   models: ReadonlyMap<string, ImageModelDef>;
+  providerId?: string;
+  displayName?: string;
   /** Inject a SDK client (tests). In production we construct one. */
   client?: OpenAIClientLike;
   logger?: Logger;
 }
 
 export class OpenAIImageProvider implements ImageProvider {
-  readonly id = "openai";
-  readonly displayName = "OpenAI";
+  readonly id: string;
+  readonly displayName: string;
   readonly capabilities: ImageCapabilities;
   readonly models: ReadonlyMap<string, ImageModelDef>;
   protected readonly client: OpenAIClientLike;
   protected readonly logger?: Logger;
 
   constructor(options: OpenAIImageProviderOptions) {
+    this.id = options.providerId ?? "openai";
+    this.displayName = options.displayName ?? "OpenAI";
     this.models = options.models;
     this.capabilities = aggregateCapabilities(options.models);
     if (options.logger) this.logger = options.logger;
@@ -157,8 +161,7 @@ export function buildOpenAIImageBody(
   model: ImageModelDef,
 ): Record<string, unknown> {
   const caps = model.capabilities;
-  const supportsOutputFormat =
-    caps?.outputFormats !== undefined && caps.outputFormats.length > 0;
+  const supportsOutputFormat = caps?.outputFormats !== undefined && caps.outputFormats.length > 0;
   // Backstop for catalogs that pre-date the `outputFormats` capability:
   // any deployment whose id matches the gpt-image family also gets routed
   // through the new `output_format` knob and must NOT receive
@@ -348,9 +351,10 @@ export function testFailureFromError(err: unknown): ProviderTestResult {
     return { ok: false, reason: err.message, status: err.status ?? 0 };
   }
   if (err instanceof ProviderError) {
-    const out: ProviderTestResult = err.status !== undefined
-      ? { ok: false, reason: err.message, status: err.status }
-      : { ok: false, reason: err.message };
+    const out: ProviderTestResult =
+      err.status !== undefined
+        ? { ok: false, reason: err.message, status: err.status }
+        : { ok: false, reason: err.message };
     return out;
   }
   if (err instanceof Error) {

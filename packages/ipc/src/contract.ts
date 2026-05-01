@@ -54,6 +54,7 @@ const IpcModelCatalogSchema = z.object({
   ),
   comments: z.string().optional(),
 });
+export type ModelCatalogPayload = z.infer<typeof IpcModelCatalogSchema>;
 
 /**
  * Structured error envelope returned across the IPC boundary. The renderer
@@ -93,14 +94,7 @@ export const IpcResponseSchema = <T extends z.ZodTypeAny>(out: T) =>
 
 // ---- shared payloads ---------------------------------------------------
 
-export const ProviderIdSchema = z.enum([
-  "openai",
-  "azure-openai",
-  "google",
-  "flux-bfl",
-  "bytedance",
-  "xai",
-]);
+export const ProviderIdSchema = z.string().regex(/^[a-z0-9][a-z0-9_-]*$/);
 export type ProviderId = z.infer<typeof ProviderIdSchema>;
 
 /**
@@ -178,6 +172,15 @@ export const MaskedSecretsSchema = z.object({
     })
     .optional(),
   xai: z.object({ apiKey: z.string().nullable() }).optional(),
+  customOpenAI: z
+    .record(
+      ProviderIdSchema,
+      z.object({
+        baseUrl: z.string().nullable(),
+        apiKey: z.string().nullable(),
+      }),
+    )
+    .optional(),
 });
 export type MaskedSecrets = z.infer<typeof MaskedSecretsSchema>;
 
@@ -210,6 +213,15 @@ export const SecretsWriteSchema = z.object({
   xai: z
     .object({ apiKey: z.string().min(1) })
     .partial()
+    .optional(),
+  customOpenAI: z
+    .record(
+      ProviderIdSchema,
+      z.object({
+        baseUrl: z.string().min(1),
+        apiKey: z.string().min(1).optional(),
+      }),
+    )
     .optional(),
 });
 export type SecretsWrite = z.infer<typeof SecretsWriteSchema>;
@@ -293,6 +305,7 @@ export const contract = {
   // `catalog.path` returns its absolute path so the UI / CLI can offer an
   // "open in editor" affordance.
   "catalog.get": { input: z.void(), output: IpcModelCatalogSchema },
+  "catalog.set": { input: IpcModelCatalogSchema, output: IpcModelCatalogSchema },
   "catalog.path": { input: z.void(), output: z.object({ path: z.string() }) },
 
   // System (shell + dialogs)

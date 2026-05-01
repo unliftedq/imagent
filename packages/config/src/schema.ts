@@ -53,6 +53,15 @@ export const ProviderSecretsSchema = z.object({
       baseUrl: z.string().optional(),
     })
     .optional(),
+  customOpenAI: z
+    .record(
+      z.string().regex(/^[a-z0-9][a-z0-9_-]*$/),
+      z.object({
+        baseUrl: z.string(),
+        apiKey: z.string().optional(),
+      }),
+    )
+    .optional(),
 });
 export type ProviderSecrets = z.infer<typeof ProviderSecretsSchema>;
 

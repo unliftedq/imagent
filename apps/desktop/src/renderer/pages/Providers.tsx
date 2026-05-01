@@ -1,179 +1,199 @@
-import { useEffect, useMemo, useState } from "react";
-import { Button, Icons, Input, ProviderRow, type ProviderTestStatus } from "@imagine/ui";
 import {
   IpcClientError,
   type MaskedSecrets,
-  type ProviderId,
-  type ProviderPreferencesPayload,
+  type ModelCatalogPayload,
+  type ProviderSummary,
   type SecretsWrite,
 } from "@imagine/ipc";
+import {
+  Button,
+  Dialog,
+  Icons,
+  Input,
+  type ProviderTestStatus,
+  Select,
+  Tooltip,
+} from "@imagine/ui";
+import { useEffect, useMemo, useState } from "react";
+import { api } from "../lib/api.js";
 import { useConfigStore } from "../state/useConfigStore.js";
 import { useUIStore } from "../state/useUIStore.js";
 
-interface RowState {
-  apiKey: string;
-  // Shared `endpoint` field — used by Azure and ByteDance (both require an
-  // endpoint URL alongside the apiKey).
+type ProviderIconComponent = React.ComponentType<{
+  className?: string;
+  weight?: "regular" | "bold" | "fill";
+}>;
+
+interface BuiltInProvider {
+  id: string;
+  name: string;
+  description: string;
+  icon: ProviderIconComponent;
+  endpointLabel?: string;
+  endpointPlaceholder?: string;
+  mappingLabel?: string;
+}
+
+const BUILT_IN_PROVIDERS: readonly BuiltInProvider[] = [
+  {
+    id: "openai",
+    name: "OpenAI",
+    description: "GPT Image models through the OpenAI API.",
+    icon: Icons.Brain,
+  },
+  {
+    id: "azure-openai",
+    name: "Azure OpenAI",
+    description: "Azure deployments mapped to canonical image models.",
+    icon: Icons.Cube,
+    endpointLabel: "Endpoint",
+    endpointPlaceholder: "https://my-resource.services.ai.azure.com",
+    mappingLabel: "Deployment",
+  },
+  {
+    id: "google",
+    name: "Google AI Studio",
+    description: "Imagen, Nano Banana, and Veo with a shared Google API key.",
+    icon: Icons.Image,
+  },
+  {
+    id: "flux-bfl",
+    name: "Flux",
+    description: "Black Forest Labs image generation models.",
+    icon: Icons.SquaresFour,
+  },
+  {
+    id: "bytedance",
+    name: "ByteDance",
+    description: "Seedream and Seedance through Ark regional endpoints.",
+    icon: Icons.FilmStrip,
+    endpointLabel: "Endpoint",
+    endpointPlaceholder: "https://ark.cn-beijing.volces.com/api/v3",
+  },
+  {
+    id: "xai",
+    name: "xAI",
+    description: "Grok image and video generation APIs.",
+    icon: Icons.VideoCamera,
+  },
+] as const;
+
+const BUILT_IN_IDS: ReadonlySet<string> = new Set(BUILT_IN_PROVIDERS.map((p) => p.id));
+const PROVIDER_ID_RE = /^[a-z0-9][a-z0-9_-]*$/;
+
+interface MappingRowState {
+  clientId: string;
+  id: string;
+  modelId: string;
+  displayName: string;
+}
+
+interface ModalState {
+  providerId: string;
+  displayName: string;
   endpoint: string;
+  baseUrl: string;
+  apiKey: string;
+  mappings: MappingRowState[];
 }
 
-function emptyRowState(): RowState {
-  return {
-    apiKey: "",
-    endpoint: "",
-  };
-}
-
-/**
- * Initial form values come from the loaded prefs/secrets snapshot — note we
- * never see the plaintext key (`apiKey` is masked from the server side), so
- * the input is a *write-through* field: empty means "leave alone", any text
- * means "replace".
- */
-function rowStateFromConfig(
-  id: ProviderId,
-  _prefs: ProviderPreferencesPayload | null,
-  secrets: MaskedSecrets,
-): RowState {
-  const r = emptyRowState();
-  switch (id) {
-    case "azure-openai":
-      // Endpoint is stored under secrets but isn't actually secret — the
-      // masked payload returns it in plaintext so the form can show what's
-      // saved instead of falling back to empty.
-      r.endpoint = secrets["azure-openai"]?.endpoint ?? "";
-      break;
-    case "bytedance":
-      r.endpoint = secrets.bytedance?.endpoint ?? "";
-      break;
-    default:
-      // OpenAI / Google / Flux / xAI carry no per-provider prefs — the catalog
-      // is the source of truth and base URLs are hardcoded canonical values
-      // (with a power-user override available via secrets.json).
-      break;
-  }
-  return r;
-}
+type ActiveModal = { kind: "built-in"; id: string } | { kind: "custom"; id: string | null };
 
 export function ProvidersPage() {
-  const {
-    summaries,
-    providerPrefs,
-    secrets,
-    testResults,
-    testing,
-    refresh,
-    saveProviderPrefs,
-    saveSecrets,
-    testProvider,
-  } = useConfigStore();
-
+  const { summaries, secrets, testResults, testing, refresh, saveSecrets, testProvider } =
+    useConfigStore();
   const pushToast = useUIStore((s) => s.pushToast);
 
-  const [rows, setRows] = useState<Record<ProviderId, RowState>>(() => {
-    return {
-      openai: emptyRowState(),
-      "azure-openai": emptyRowState(),
-      google: emptyRowState(),
-      "flux-bfl": emptyRowState(),
-      bytedance: emptyRowState(),
-      xai: emptyRowState(),
-    };
-  });
+  const [catalog, setCatalog] = useState<ModelCatalogPayload | null>(null);
+  const [activeModal, setActiveModal] = useState<ActiveModal | null>(null);
+  const [form, setForm] = useState<ModalState>(() => emptyModalState());
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     void refresh();
+    void api["catalog.get"]().then(setCatalog);
   }, [refresh]);
 
-  // Reset form rows when prefs or secrets change (e.g. after refresh/save).
-  useEffect(() => {
-    if (!providerPrefs) return;
-    setRows({
-      openai: rowStateFromConfig("openai", providerPrefs, secrets),
-      "azure-openai": rowStateFromConfig("azure-openai", providerPrefs, secrets),
-      google: rowStateFromConfig("google", providerPrefs, secrets),
-      "flux-bfl": rowStateFromConfig("flux-bfl", providerPrefs, secrets),
-      bytedance: rowStateFromConfig("bytedance", providerPrefs, secrets),
-      xai: rowStateFromConfig("xai", providerPrefs, secrets),
-    });
-  }, [providerPrefs, secrets]);
+  const summariesById = useMemo(() => new Map(summaries.map((s) => [s.id, s])), [summaries]);
+  const imageModelOptions = useMemo(() => imageModelsForSelect(catalog), [catalog]);
+  const customProviderIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const id of Object.keys(catalog?.providers ?? {})) {
+      if (!BUILT_IN_IDS.has(id)) ids.add(id);
+    }
+    for (const id of Object.keys(secrets.customOpenAI ?? {})) ids.add(id);
+    return [...ids].sort();
+  }, [catalog, secrets.customOpenAI]);
 
-  const order: ProviderId[] = useMemo(
-    () => ["openai", "azure-openai", "google", "flux-bfl", "bytedance", "xai"],
-    [],
-  );
+  function openBuiltIn(id: string) {
+    const provider = BUILT_IN_PROVIDERS.find((p) => p.id === id);
+    setForm(formFromProvider(id, provider?.name ?? id, catalog, secrets));
+    setActiveModal({ kind: "built-in", id });
+  }
 
-  function statusFor(id: ProviderId): ProviderTestStatus {
+  function openCustom(id: string | null) {
+    setForm(formFromCustom(id, catalog, secrets));
+    setActiveModal({ kind: "custom", id });
+  }
+
+  async function saveActiveModal() {
+    if (!activeModal || !catalog) return;
+    const validation = validateModal(activeModal, form, secrets);
+    if (validation) {
+      pushToast({
+        title: "Provider config needs attention",
+        description: validation,
+        variant: "error",
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const secretsPatch = buildSecretsPatch(activeModal, form);
+      if (Object.keys(secretsPatch).length > 0) {
+        await saveSecrets(secretsPatch);
+      }
+
+      if (activeModal.id === "azure-openai" || activeModal.kind === "custom") {
+        const nextCatalog = catalogWithMappings(catalog, activeModal, form);
+        const saved = await api["catalog.set"](nextCatalog);
+        setCatalog(saved);
+        await refresh();
+      }
+
+      pushToast({
+        title: activeModal.kind === "custom" ? "Custom provider saved" : "Provider saved",
+        description: form.displayName || form.providerId,
+        variant: "success",
+      });
+      setActiveModal(null);
+      setForm(emptyModalState());
+    } catch (err) {
+      const msg =
+        err instanceof IpcClientError ? err.message : ((err as Error)?.message ?? String(err));
+      pushToast({ title: "Failed to save provider", description: msg, variant: "error" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function statusFor(id: string): ProviderTestStatus {
     if (testing[id]) return { kind: "testing" };
     const last = testResults[id]?.result;
     if (!last) return { kind: "idle" };
     if (last.ok) {
-      const out: ProviderTestStatus = {
+      return {
         kind: "ok",
         latencyMs: last.latencyMs,
+        ...(last.sampleModelId ? { sampleModelId: last.sampleModelId } : {}),
       };
-      if (last.sampleModelId) out.sampleModelId = last.sampleModelId;
-      return out;
     }
-    const out: ProviderTestStatus = { kind: "error", reason: last.reason };
-    if (last.status !== undefined) out.status = last.status;
-    return out;
-  }
-
-  async function saveRow(id: ProviderId) {
-    if (!providerPrefs) return;
-    const r = rows[id];
-
-    // Provider prefs no longer carry deployment-name overrides — every
-    // provider's slot is empty so we just round-trip the loaded snapshot.
-    const nextPrefs: ProviderPreferencesPayload = JSON.parse(
-      JSON.stringify(providerPrefs),
-    ) as ProviderPreferencesPayload;
-
-    // Secrets patch — only fields the user actually populated this session.
-    const secretsPatch: SecretsWrite = {};
-    if (id === "openai" && r.apiKey) secretsPatch.openai = { apiKey: r.apiKey };
-    if (id === "azure-openai") {
-      const block: NonNullable<SecretsWrite["azure-openai"]> = {};
-      if (r.apiKey) block.apiKey = r.apiKey;
-      if (r.endpoint) block.endpoint = r.endpoint;
-      if (Object.keys(block).length > 0) secretsPatch["azure-openai"] = block;
-    }
-    if (id === "google" && r.apiKey) secretsPatch.google = { apiKey: r.apiKey };
-    if (id === "flux-bfl" && r.apiKey) secretsPatch["flux-bfl"] = { apiKey: r.apiKey };
-    if (id === "bytedance") {
-      const block: NonNullable<SecretsWrite["bytedance"]> = {};
-      if (r.apiKey) block.apiKey = r.apiKey;
-      if (r.endpoint) block.endpoint = r.endpoint;
-      if (Object.keys(block).length > 0) secretsPatch.bytedance = block;
-    }
-    if (id === "xai" && r.apiKey) secretsPatch.xai = { apiKey: r.apiKey };
-
-    try {
-      await saveProviderPrefs(nextPrefs);
-      if (Object.keys(secretsPatch).length > 0) {
-        await saveSecrets(secretsPatch);
-        // Clear the local apiKey input so it shows the masked value next time.
-        setRows((s) => ({ ...s, [id]: { ...s[id], apiKey: "" } }));
-      }
-      pushToast({
-        title: "Saved provider settings",
-        description: summaries.find((s) => s.id === id)?.displayName ?? id,
-        variant: "success",
-      });
-    } catch (err) {
-      const msg =
-        err instanceof IpcClientError ? err.message : ((err as Error)?.message ?? String(err));
-      pushToast({
-        title: "Failed to save provider settings",
-        description: msg,
-        variant: "error",
-      });
-    }
-  }
-
-  function update<K extends keyof RowState>(id: ProviderId, field: K, value: RowState[K]) {
-    setRows((s) => ({ ...s, [id]: { ...s[id], [field]: value } }));
+    return {
+      kind: "error",
+      reason: last.reason,
+      ...(last.status !== undefined ? { status: last.status } : {}),
+    };
   }
 
   return (
@@ -182,128 +202,378 @@ export function ProvidersPage() {
         <h1 className="text-(length:--text-display-sm) font-display font-medium tracking-(--text-display-sm--letter-spacing) text-(--text)">
           Providers
         </h1>
-        <p className="mt-2 text-(length:--text-body-md) text-(--text)">
-          Configure API access for image and video generation. Models come from the built-in catalog
-          — only authentication is needed.
+        <p className="mt-2 max-w-2xl text-(length:--text-body-md) text-(--text-muted)">
+          Connect generation providers, then map provider-facing model ids or deployments to the
+          canonical catalog models they implement.
         </p>
       </header>
 
-      <div className="flex flex-col gap-3">
-        {order.map((id) => {
-          const summary = summaries.find((s) => s.id === id);
-          const r = rows[id];
-          const status = statusFor(id);
-          const maskedKey = secretMaskFor(id, secrets);
-          // Drive the badge off the IPC `summary.kinds` so any provider that
-          // spans both image and video (Google AI Studio, ByteDance, xAI) gets
-          // it without a per-id hardcoded check.
-          const kindsBadge =
-            summary && summary.kinds.length > 1 ? <KindsBadge text="Image + Video" /> : null;
-          const catalogModelIds = summary?.modelIds ?? [];
-          return (
-            <ProviderRow
-              key={id}
-              name={summary?.displayName ?? id}
-              configured={summary?.configured ?? false}
-              status={status}
-              onTest={() => void testProvider(id)}
-              onSave={() => void saveRow(id)}
-              badge={kindsBadge}
-              defaultOpen={!summary?.configured}
-            >
-              <div className="flex flex-col gap-4">
-                {id === "azure-openai" ? (
-                  <>
-                    <Field
-                      label="Endpoint"
-                      helperText="Foundry/AOAI base URL. Azure deployment names are configured in the model catalog."
-                    >
-                      <Input
-                        placeholder="https://my-resource.services.ai.azure.com"
-                        value={r.endpoint}
-                        onChange={(e) => update(id, "endpoint", e.target.value)}
-                      />
-                    </Field>
-                    <SecretField
-                      label="API key"
-                      placeholder={maskedKey ?? "paste your key here"}
-                      value={r.apiKey}
-                      onChange={(v) => update(id, "apiKey", v)}
-                      helperText={
-                        maskedKey
-                          ? `Stored: ${maskedKey} — leave empty to keep it.`
-                          : "Required for Test + Save to work."
-                      }
-                    />
-                  </>
-                ) : (
-                  <>
-                    {id === "bytedance" ? (
-                      <Field
-                        label="Endpoint"
-                        helperText="Ark base URL. Regional info is encoded here."
-                      >
-                        <Input
-                          placeholder="https://ark.cn-beijing.volces.com/api/v3"
-                          value={r.endpoint}
-                          onChange={(e) => update(id, "endpoint", e.target.value)}
-                        />
-                      </Field>
-                    ) : null}
-                    <SecretField
-                      label="API key"
-                      placeholder={maskedKey ?? "paste your key here"}
-                      value={r.apiKey}
-                      onChange={(v) => update(id, "apiKey", v)}
-                      helperText={
-                        maskedKey
-                          ? `Stored: ${maskedKey} — leave empty to keep it.`
-                          : "Required for Test + Save to work."
-                      }
-                    />
-                    {catalogModelIds.length > 0 ? (
-                      <p className="text-(length:--text-caption) text-(--text-muted)">
-                        Models from catalog: {catalogModelIds.join(", ")}
-                      </p>
-                    ) : null}
-                  </>
-                )}
-              </div>
-            </ProviderRow>
-          );
-        })}
+      <div className="flex flex-col overflow-hidden rounded-(--radius-lg) border border-(--border) bg-(--bg)">
+        {BUILT_IN_PROVIDERS.map((provider) => (
+          <ProviderListRow
+            key={provider.id}
+            icon={provider.icon}
+            name={summariesById.get(provider.id)?.displayName ?? provider.name}
+            description={provider.description}
+            summary={summariesById.get(provider.id)}
+            status={statusFor(provider.id)}
+            onConfigure={() => openBuiltIn(provider.id)}
+            onTest={() => void testProvider(provider.id)}
+          />
+        ))}
+
+        {customProviderIds.map((id) => (
+          <ProviderListRow
+            key={id}
+            icon={Icons.Plug}
+            name={catalog?.providers[id]?.displayName ?? summariesById.get(id)?.displayName ?? id}
+            description="OpenAI Images API-compatible custom endpoint."
+            summary={summariesById.get(id)}
+            status={statusFor(id)}
+            onConfigure={() => openCustom(id)}
+            onTest={() => void testProvider(id)}
+          />
+        ))}
+
+        <div className="flex items-center gap-4 border-t border-(--border-faint) px-5 py-4 text-left transition-colors duration-(--duration-fast) hover:bg-(--surface)">
+          <ProviderIcon icon={Icons.Plus} />
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className="text-(length:--text-title-sm) font-semibold text-(--text)">
+              OpenAI compatible
+            </span>
+            <span className="text-(length:--text-body-sm) text-(--text-muted)">
+              Add a custom provider with its own base URL and model mappings.
+            </span>
+          </span>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            leadingIcon={<Icons.Plus weight="bold" className="size-4" />}
+            onClick={() => openCustom(null)}
+          >
+            Add
+          </Button>
+        </div>
+      </div>
+
+      <ProviderConfigModal
+        activeModal={activeModal}
+        form={form}
+        setForm={setForm}
+        catalogReady={catalog !== null}
+        imageModelOptions={imageModelOptions}
+        saving={saving}
+        maskedApiKey={activeModal ? maskForModal(activeModal, form.providerId, secrets) : null}
+        onClose={() => setActiveModal(null)}
+        onSave={() => void saveActiveModal()}
+      />
+    </div>
+  );
+}
+
+function ProviderListRow({
+  icon,
+  name,
+  description,
+  summary,
+  status,
+  onConfigure,
+  onTest,
+}: {
+  icon: React.ComponentType<{ className?: string; weight?: "regular" | "bold" | "fill" }>;
+  name: string;
+  description: string;
+  summary?: ProviderSummary;
+  status: ProviderTestStatus;
+  onConfigure: () => void;
+  onTest: () => void;
+}) {
+  const configured = summary?.configured ?? false;
+  return (
+    <div className="flex items-center gap-4 border-t border-(--border-faint) px-5 py-4 first:border-t-0">
+      <ProviderIcon icon={icon} />
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-(length:--text-title-sm) font-semibold text-(--text)">{name}</h2>
+          {summary && summary.kinds.length > 1 ? <KindsBadge text="Image + Video" /> : null}
+          {configured ? <ConnectedPill /> : null}
+        </div>
+        <p className="mt-0.5 text-(length:--text-body-sm) text-(--text-muted)">{description}</p>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        {configured ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onTest}
+            disabled={status.kind === "testing"}
+            leadingIcon={statusIcon(status)}
+          >
+            Test
+          </Button>
+        ) : null}
+        <Button
+          type="button"
+          variant={configured ? "secondary" : "primary"}
+          size="sm"
+          onClick={onConfigure}
+        >
+          {configured ? "Update" : "Connect"}
+        </Button>
       </div>
     </div>
   );
 }
 
-function secretMaskFor(
-  id: ProviderId,
-  masked: ReturnType<typeof useConfigStore.getState>["secrets"],
-) {
-  switch (id) {
-    case "openai":
-      return masked.openai?.apiKey ?? null;
-    case "azure-openai":
-      return masked["azure-openai"]?.apiKey ?? null;
-    case "google":
-      return masked.google?.apiKey ?? null;
-    case "flux-bfl":
-      return masked["flux-bfl"]?.apiKey ?? null;
-    case "bytedance":
-      return masked.bytedance?.apiKey ?? null;
-    case "xai":
-      return masked.xai?.apiKey ?? null;
-    default:
-      return null;
-  }
+function ProviderConfigModal({
+  activeModal,
+  form,
+  setForm,
+  catalogReady,
+  imageModelOptions,
+  saving,
+  maskedApiKey,
+  onClose,
+  onSave,
+}: {
+  activeModal: ActiveModal | null;
+  form: ModalState;
+  setForm: React.Dispatch<React.SetStateAction<ModalState>>;
+  catalogReady: boolean;
+  imageModelOptions: Array<{ id: string; label: string }>;
+  saving: boolean;
+  maskedApiKey: string | null;
+  onClose: () => void;
+  onSave: () => void;
+}) {
+  const builtIn = activeModal?.kind === "built-in" ? providerDef(activeModal.id) : null;
+  const customId = activeModal?.kind === "custom" ? activeModal.id : null;
+  const isCustom = activeModal?.kind === "custom";
+  const canEditProviderId = activeModal?.kind === "custom" && activeModal.id === null;
+  const usesEndpoint = builtIn?.endpointLabel !== undefined;
+  const usesMappings = activeModal?.id === "azure-openai" || isCustom;
+  const title = isCustom
+    ? customId
+      ? "Update Custom Provider"
+      : "Connect Custom Provider"
+    : `Connect ${builtIn?.name ?? "Provider"}`;
+  const description = isCustom
+    ? "Use an OpenAI Images API-compatible endpoint and map its model ids to canonical catalog models."
+    : (builtIn?.description ?? "Configure provider access.");
+
+  return (
+    <Dialog.Root open={activeModal !== null} onOpenChange={(open) => (!open ? onClose() : null)}>
+      <Dialog.Content showClose className="max-h-[88vh] max-w-2xl overflow-y-auto p-0">
+        <div className="border-b border-(--border-faint) px-6 py-5">
+          <div className="mb-5 flex items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="size-8 p-0"
+              aria-label="Back"
+              onClick={onClose}
+            >
+              <Icons.CaretRight weight="bold" className="size-4 rotate-180" />
+            </Button>
+            <span className="text-(length:--text-caption-uppercase) tracking-[1.5px] text-(--text-muted)">
+              Provider
+            </span>
+          </div>
+          <div className="flex items-start gap-4 pr-10">
+            <ProviderIcon icon={isCustom ? Icons.Plug : (builtIn?.icon ?? Icons.Plug)} />
+            <div>
+              <Dialog.Title className="text-(length:--text-title-lg) font-semibold text-(--text)">
+                {title}
+              </Dialog.Title>
+              <Dialog.Description className="mt-1 text-(length:--text-body-sm) text-(--text-muted)">
+                {description}
+              </Dialog.Description>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-5 px-6 py-5">
+          {isCustom ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field
+                label="Provider ID"
+                helperText="Lowercase letters, numbers, hyphens, and underscores."
+              >
+                <Input
+                  value={form.providerId}
+                  disabled={!canEditProviderId}
+                  placeholder="my-provider"
+                  onChange={(e) => setForm((s) => ({ ...s, providerId: e.target.value.trim() }))}
+                />
+              </Field>
+              <Field label="Display name">
+                <Input
+                  value={form.displayName}
+                  placeholder="My Provider"
+                  onChange={(e) => setForm((s) => ({ ...s, displayName: e.target.value }))}
+                />
+              </Field>
+            </div>
+          ) : null}
+
+          {usesEndpoint ? (
+            <Field label={builtIn?.endpointLabel ?? "Endpoint"}>
+              <Input
+                value={form.endpoint}
+                placeholder={builtIn?.endpointPlaceholder}
+                onChange={(e) => setForm((s) => ({ ...s, endpoint: e.target.value.trim() }))}
+              />
+            </Field>
+          ) : null}
+
+          {isCustom ? (
+            <Field
+              label="Base URL"
+              helperText="Include the OpenAI-compatible /v1 path when your provider requires it."
+            >
+              <Input
+                value={form.baseUrl}
+                placeholder="https://api.example.com/v1"
+                onChange={(e) => setForm((s) => ({ ...s, baseUrl: e.target.value.trim() }))}
+              />
+            </Field>
+          ) : null}
+
+          <SecretField
+            label="API key"
+            placeholder={maskedApiKey ?? (isCustom ? "optional" : "paste your key here")}
+            value={form.apiKey}
+            onChange={(apiKey) => setForm((s) => ({ ...s, apiKey }))}
+            helperText={
+              maskedApiKey
+                ? `Stored: ${maskedApiKey}. Leave empty to keep it.`
+                : isCustom
+                  ? "Optional for endpoints that inject authentication upstream."
+                  : "Required before this provider can be tested."
+            }
+          />
+
+          {usesMappings ? (
+            <MappingEditor
+              label={activeModal?.id === "azure-openai" ? "Deployment mappings" : "Model mappings"}
+              mappingLabel={builtIn?.mappingLabel ?? "Provider model"}
+              rows={form.mappings}
+              modelOptions={imageModelOptions}
+              disabled={!catalogReady || imageModelOptions.length === 0}
+              onChange={(mappings) => setForm((s) => ({ ...s, mappings }))}
+            />
+          ) : null}
+        </div>
+
+        <div className="flex items-center justify-end gap-2 border-t border-(--border-faint) px-6 py-4">
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            onClick={onSave}
+            disabled={saving}
+            leadingIcon={
+              saving ? <Icons.CircleNotch weight="bold" className="size-4 animate-spin" /> : null
+            }
+          >
+            Continue
+          </Button>
+        </div>
+      </Dialog.Content>
+    </Dialog.Root>
+  );
 }
 
-function KindsBadge({ text }: { text: string }) {
+function MappingEditor({
+  label,
+  mappingLabel,
+  rows,
+  modelOptions,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  mappingLabel: string;
+  rows: MappingRowState[];
+  modelOptions: Array<{ id: string; label: string }>;
+  disabled: boolean;
+  onChange: (rows: MappingRowState[]) => void;
+}) {
+  const defaultModelId = modelOptions[0]?.id ?? "";
   return (
-    <span className="rounded-(--radius-pill) bg-(--accent-soft)/30 px-2 py-0.5 text-(length:--text-caption) text-(--text)">
-      {text}
-    </span>
+    <section className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-(length:--text-title-sm) font-semibold text-(--text)">{label}</h3>
+          <p className="mt-0.5 text-(length:--text-caption) text-(--text-muted)">
+            Each provider-facing id inherits capabilities and defaults from the selected model.
+          </p>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          disabled={disabled}
+          leadingIcon={<Icons.Plus weight="bold" className="size-4" />}
+          onClick={() => onChange([...rows, mappingRow("", defaultModelId)])}
+        >
+          Add
+        </Button>
+      </div>
+      <div className="flex flex-col gap-2">
+        {rows.map((row, index) => (
+          <div
+            key={row.clientId}
+            className="grid gap-2 rounded-(--radius-md) border border-(--border-faint) bg-(--surface) p-3 sm:grid-cols-[1fr_1fr_auto]"
+          >
+            <Field label={mappingLabel}>
+              <Input
+                value={row.id}
+                placeholder={mappingLabel === "Deployment" ? "deployment-name" : "model-id"}
+                onChange={(e) =>
+                  updateMapping(rows, onChange, index, { id: e.target.value.trim() })
+                }
+              />
+            </Field>
+            <Field label="Canonical model">
+              <Select.Root
+                value={row.modelId}
+                onValueChange={(modelId) => updateMapping(rows, onChange, index, { modelId })}
+                disabled={disabled}
+              >
+                <Select.Trigger>
+                  <Select.Value placeholder="Choose model" />
+                </Select.Trigger>
+                <Select.Content>
+                  {modelOptions.map((model) => (
+                    <Select.Item key={model.id} value={model.id}>
+                      {model.label}
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Root>
+            </Field>
+            <div className="flex items-end">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="size-11 p-0"
+                aria-label="Remove mapping"
+                onClick={() => onChange(rows.filter((_, i) => i !== index))}
+              >
+                <Icons.X weight="bold" className="size-4" />
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -317,7 +587,7 @@ function Field({
   helperText?: string;
 }) {
   return (
-    <label className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5">
       <span className="text-(length:--text-caption-uppercase) tracking-[1.5px] text-(--text-muted)">
         {label}
       </span>
@@ -325,7 +595,7 @@ function Field({
       {helperText ? (
         <span className="text-(length:--text-caption) text-(--text-muted)">{helperText}</span>
       ) : null}
-    </label>
+    </div>
   );
 }
 
@@ -372,4 +642,262 @@ function SecretField({
       </div>
     </Field>
   );
+}
+
+function ProviderIcon({
+  icon: Icon,
+}: {
+  icon: React.ComponentType<{ className?: string; weight?: "regular" | "bold" | "fill" }>;
+}) {
+  return (
+    <span className="flex size-10 shrink-0 items-center justify-center rounded-(--radius-md) bg-(--surface-raised) text-(--text)">
+      <Icon weight="bold" className="size-5" />
+    </span>
+  );
+}
+
+function ConnectedPill() {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-(--radius-pill) bg-(--accent-soft)/25 px-2 py-0.5 text-(length:--text-caption) text-(--text)">
+      <Icons.CheckCircle weight="fill" className="size-3.5 text-(--accent-soft)" />
+      Connected
+    </span>
+  );
+}
+
+function KindsBadge({ text }: { text: string }) {
+  return (
+    <span className="rounded-(--radius-pill) bg-(--surface-raised) px-2 py-0.5 text-(length:--text-caption) text-(--text-muted)">
+      {text}
+    </span>
+  );
+}
+
+function statusIcon(status: ProviderTestStatus) {
+  if (status.kind === "testing") {
+    return <Icons.CircleNotch weight="bold" className="size-4 animate-spin" />;
+  }
+  if (status.kind === "ok") {
+    return (
+      <Tooltip
+        content={status.sampleModelId ? `Connected with ${status.sampleModelId}` : "Connected"}
+      >
+        <Icons.CheckCircle weight="fill" className="size-4 text-(--accent-soft)" />
+      </Tooltip>
+    );
+  }
+  if (status.kind === "error") {
+    return (
+      <Tooltip content={status.status ? `${status.reason} (HTTP ${status.status})` : status.reason}>
+        <Icons.XCircle weight="fill" className="size-4 text-(--danger)" />
+      </Tooltip>
+    );
+  }
+  return <Icons.Plug weight="bold" className="size-4" />;
+}
+
+function providerDef(id: string): BuiltInProvider | undefined {
+  return BUILT_IN_PROVIDERS.find((p) => p.id === id);
+}
+
+function emptyModalState(): ModalState {
+  return { providerId: "", displayName: "", endpoint: "", baseUrl: "", apiKey: "", mappings: [] };
+}
+
+function formFromProvider(
+  id: string,
+  displayName: string,
+  catalog: ModelCatalogPayload | null,
+  secrets: MaskedSecrets,
+): ModalState {
+  return {
+    providerId: id,
+    displayName,
+    endpoint:
+      id === "azure-openai"
+        ? (secrets["azure-openai"]?.endpoint ?? "")
+        : id === "bytedance"
+          ? (secrets.bytedance?.endpoint ?? "")
+          : "",
+    baseUrl: "",
+    apiKey: "",
+    mappings: id === "azure-openai" ? mappingsFromCatalog(catalog, id) : [],
+  };
+}
+
+function formFromCustom(
+  id: string | null,
+  catalog: ModelCatalogPayload | null,
+  secrets: MaskedSecrets,
+): ModalState {
+  if (!id) {
+    return {
+      providerId: "",
+      displayName: "",
+      endpoint: "",
+      baseUrl: "",
+      apiKey: "",
+      mappings: [mappingRow("", firstImageModelId(catalog))],
+    };
+  }
+  return {
+    providerId: id,
+    displayName: catalog?.providers[id]?.displayName ?? id,
+    endpoint: "",
+    baseUrl: secrets.customOpenAI?.[id]?.baseUrl ?? "",
+    apiKey: "",
+    mappings: mappingsFromCatalog(catalog, id),
+  };
+}
+
+function mappingsFromCatalog(
+  catalog: ModelCatalogPayload | null,
+  providerId: string,
+): MappingRowState[] {
+  const rows = catalog?.providers[providerId]?.image ?? [];
+  if (rows.length === 0) return [mappingRow("", firstImageModelId(catalog))];
+  return rows.map((row) => ({
+    clientId: mappingClientId(),
+    id: row.id,
+    modelId: row.modelId,
+    displayName: row.displayName ?? "",
+  }));
+}
+
+function mappingRow(id: string, modelId: string, displayName = ""): MappingRowState {
+  return { clientId: mappingClientId(), id, modelId, displayName };
+}
+
+function mappingClientId(): string {
+  return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
+}
+
+function firstImageModelId(catalog: ModelCatalogPayload | null): string {
+  return Object.keys(catalog?.models.image ?? {})[0] ?? "";
+}
+
+function imageModelsForSelect(catalog: ModelCatalogPayload | null) {
+  return Object.entries(catalog?.models.image ?? {})
+    .map(([id, model]) => ({ id, label: model.displayName ? `${model.displayName} (${id})` : id }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+function validateModal(
+  activeModal: ActiveModal,
+  form: ModalState,
+  secrets: MaskedSecrets,
+): string | null {
+  if (activeModal.kind === "custom") {
+    if (!PROVIDER_ID_RE.test(form.providerId)) {
+      return "Provider ID must be lowercase letters, numbers, hyphens, or underscores.";
+    }
+    if (BUILT_IN_IDS.has(form.providerId))
+      return "Custom provider ID cannot reuse a built-in provider.";
+    if (!form.displayName.trim()) return "Display name is required.";
+    if (!form.baseUrl.trim()) return "Base URL is required.";
+  }
+
+  if (activeModal.id === "azure-openai" && !form.endpoint.trim())
+    return "Azure endpoint is required.";
+  if (activeModal.id === "bytedance" && !form.endpoint.trim())
+    return "ByteDance endpoint is required.";
+
+  const masked = maskForModal(activeModal, form.providerId, secrets);
+  const keyRequired = activeModal.kind !== "custom";
+  if (keyRequired && !masked && !form.apiKey.trim()) return "API key is required.";
+
+  if (activeModal.id === "azure-openai" || activeModal.kind === "custom") {
+    const usable = form.mappings.filter((row) => row.id.trim() && row.modelId.trim());
+    if (usable.length === 0) return "Add at least one model mapping.";
+  }
+  return null;
+}
+
+function buildSecretsPatch(activeModal: ActiveModal, form: ModalState): SecretsWrite {
+  const patch: SecretsWrite = {};
+  if (activeModal.kind === "custom") {
+    patch.customOpenAI = {
+      [form.providerId]: {
+        baseUrl: form.baseUrl,
+        ...(form.apiKey.trim() ? { apiKey: form.apiKey.trim() } : {}),
+      },
+    };
+    return patch;
+  }
+  if (activeModal.id === "openai" && form.apiKey.trim())
+    patch.openai = { apiKey: form.apiKey.trim() };
+  if (activeModal.id === "google" && form.apiKey.trim())
+    patch.google = { apiKey: form.apiKey.trim() };
+  if (activeModal.id === "flux-bfl" && form.apiKey.trim()) {
+    patch["flux-bfl"] = { apiKey: form.apiKey.trim() };
+  }
+  if (activeModal.id === "xai" && form.apiKey.trim()) patch.xai = { apiKey: form.apiKey.trim() };
+  if (activeModal.id === "azure-openai") {
+    patch["azure-openai"] = {
+      endpoint: form.endpoint,
+      ...(form.apiKey.trim() ? { apiKey: form.apiKey.trim() } : {}),
+    };
+  }
+  if (activeModal.id === "bytedance") {
+    patch.bytedance = {
+      endpoint: form.endpoint,
+      ...(form.apiKey.trim() ? { apiKey: form.apiKey.trim() } : {}),
+    };
+  }
+  return patch;
+}
+
+function catalogWithMappings(
+  catalog: ModelCatalogPayload,
+  activeModal: ActiveModal,
+  form: ModalState,
+): ModelCatalogPayload {
+  const next = JSON.parse(JSON.stringify(catalog)) as ModelCatalogPayload;
+  const providerId = activeModal.kind === "custom" ? form.providerId : activeModal.id;
+  const image = form.mappings
+    .filter((row) => row.id.trim() && row.modelId.trim())
+    .map((row) => ({
+      id: row.id.trim(),
+      modelId: row.modelId,
+      ...(row.displayName.trim() ? { displayName: row.displayName.trim() } : {}),
+    }));
+  next.providers[providerId] = {
+    ...(next.providers[providerId] ?? {}),
+    ...(activeModal.kind === "custom" ? { displayName: form.displayName.trim() } : {}),
+    image,
+  };
+  return next;
+}
+
+function updateMapping(
+  rows: MappingRowState[],
+  onChange: (rows: MappingRowState[]) => void,
+  index: number,
+  patch: Partial<MappingRowState>,
+) {
+  onChange(rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+}
+
+function maskForModal(
+  activeModal: ActiveModal,
+  providerId: string,
+  secrets: MaskedSecrets,
+): string | null {
+  if (activeModal.kind === "custom") return secrets.customOpenAI?.[providerId]?.apiKey ?? null;
+  switch (activeModal.id) {
+    case "openai":
+      return secrets.openai?.apiKey ?? null;
+    case "azure-openai":
+      return secrets["azure-openai"]?.apiKey ?? null;
+    case "google":
+      return secrets.google?.apiKey ?? null;
+    case "flux-bfl":
+      return secrets["flux-bfl"]?.apiKey ?? null;
+    case "bytedance":
+      return secrets.bytedance?.apiKey ?? null;
+    case "xai":
+      return secrets.xai?.apiKey ?? null;
+    default:
+      return null;
+  }
 }

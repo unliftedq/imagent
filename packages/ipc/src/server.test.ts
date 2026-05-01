@@ -3,11 +3,11 @@ import { createIpcClient, type IpcTransport } from "./client.js";
 import { contract } from "./contract.js";
 import { events } from "./events.js";
 import {
+  type ContractHandlers,
   IpcHandlerError,
+  type IpcMainLike,
   notImplemented,
   registerIpcHandlers,
-  type ContractHandlers,
-  type IpcMainLike,
   type WebContentsLike,
 } from "./server.js";
 
@@ -81,7 +81,7 @@ describe("registerIpcHandlers", () => {
     registerIpcHandlers(ipcMain, {
       "providers.test": async () => ({ ok: true as const, latencyMs: 5 }),
     });
-    const reply = (await invoke("providers.test", { id: "not-a-provider" })) as {
+    const reply = (await invoke("providers.test", { id: "Not A Provider" })) as {
       ok: false;
       error: { code: string };
     };
@@ -699,6 +699,45 @@ describe("registerIpcHandlers", () => {
       };
       expect(reply.ok).toBe(true);
       expect(reply.value.providers.openai.image[0]?.id).toBe("gpt-image-2");
+    });
+
+    it("catalog.set: round-trips a valid catalog snapshot", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      const catalog = {
+        version: 2 as const,
+        models: {
+          image: {
+            "gpt-image-2": {
+              id: "gpt-image-2",
+              displayName: "GPT Image 2",
+              capabilities: {
+                sizes: ["1024x1024"],
+                maxOutputs: 10,
+                supportsNegativePrompt: false,
+                supportsSeed: false,
+                supportsStyleRef: true,
+              },
+              defaults: { size: "1024x1024", count: 1 },
+            },
+          },
+          video: {},
+        },
+        providers: {
+          "custom-openai": {
+            displayName: "Custom OpenAI",
+            image: [{ id: "custom-gpt-image", modelId: "gpt-image-2" }],
+          },
+        },
+      };
+      registerIpcHandlers(ipcMain, {
+        "catalog.set": async (input) => input,
+      });
+      const reply = (await invoke("catalog.set", catalog)) as {
+        ok: true;
+        value: { providers: { "custom-openai": { image: Array<{ id: string }> } } };
+      };
+      expect(reply.ok).toBe(true);
+      expect(reply.value.providers["custom-openai"].image[0]?.id).toBe("custom-gpt-image");
     });
   });
 });

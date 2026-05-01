@@ -1,37 +1,13 @@
-import { app, dialog, shell, type BrowserWindow, type IpcMain } from "electron";
 import { createHash, randomUUID } from "node:crypto";
-import path from "node:path";
 import { promises as fs } from "node:fs";
+import path from "node:path";
 import {
   type ConfigStore,
+  DEFAULT_CONFIG,
   type ProviderPreferences,
   type ProviderSecrets,
   type SecretsStore,
-  DEFAULT_CONFIG,
 } from "@imagine/config";
-import {
-  configuredProviderCount as _unused,
-  type ImageRegistry,
-  type ModelCatalog,
-  type VideoRegistry,
-} from "@imagine/providers";
-import {
-  AssetRepository,
-  BoardRepository,
-  GalleryRepository,
-  JobRepository,
-  KvRepository,
-  generateImageThumbnailFromBuffer,
-  type DatabaseType,
-  type PathResolver,
-} from "@imagine/persistence";
-import {
-  IpcHandlerError,
-  notImplemented,
-  registerIpcHandlers,
-  type ContractHandlers,
-  type IpcServer,
-} from "@imagine/ipc";
 import type {
   Asset,
   AssetFile,
@@ -44,6 +20,31 @@ import type {
   VideoRequest,
 } from "@imagine/core";
 import { appendStylePromptSnippets, capReferencePaths, resolveAssetSlots } from "@imagine/core";
+import {
+  type ContractHandlers,
+  IpcHandlerError,
+  type IpcServer,
+  notImplemented,
+  registerIpcHandlers,
+} from "@imagine/ipc";
+import {
+  AssetRepository,
+  BoardRepository,
+  type DatabaseType,
+  GalleryRepository,
+  generateImageThumbnailFromBuffer,
+  JobRepository,
+  KvRepository,
+  type PathResolver,
+} from "@imagine/persistence";
+import {
+  configuredProviderCount as _unused,
+  type ImageRegistry,
+  type ModelCatalog,
+  saveCatalog,
+  type VideoRegistry,
+} from "@imagine/providers";
+import { app, type BrowserWindow, dialog, type IpcMain, shell } from "electron";
 import sharp from "sharp";
 import type { RuntimeServices } from "./job-runner-bootstrap.js";
 
@@ -108,6 +109,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
         secrets,
         runtime.imageRegistry,
         runtime.videoRegistry,
+        runtime.catalog,
       );
     },
 
@@ -129,9 +131,10 @@ export function setupIpc(deps: IpcDeps): IpcServer {
     "providers.secrets.set": async (input) => {
       // Map the renderer's plaintext payload into the internal patch shape.
       const patch: Partial<ProviderSecrets> = {};
+      const currentSecrets = await secretsStore.loadSecrets();
       if (input.openai?.apiKey) patch.openai = { apiKey: input.openai.apiKey };
       if (input["azure-openai"]) {
-        const cur = (await secretsStore.loadSecrets())["azure-openai"];
+        const cur = currentSecrets["azure-openai"];
         const merged = {
           endpoint: input["azure-openai"].endpoint ?? cur?.endpoint ?? "",
           apiKey: input["azure-openai"].apiKey ?? cur?.apiKey ?? "",
@@ -141,7 +144,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       if (input.google?.apiKey) patch.google = { apiKey: input.google.apiKey };
       if (input["flux-bfl"]?.apiKey) patch["flux-bfl"] = { apiKey: input["flux-bfl"].apiKey };
       if (input.bytedance) {
-        const cur = (await secretsStore.loadSecrets()).bytedance;
+        const cur = currentSecrets.bytedance;
         const merged = {
           endpoint: input.bytedance.endpoint ?? cur?.endpoint ?? "",
           apiKey: input.bytedance.apiKey ?? cur?.apiKey ?? "",
@@ -149,6 +152,19 @@ export function setupIpc(deps: IpcDeps): IpcServer {
         if (merged.endpoint && merged.apiKey) patch.bytedance = merged;
       }
       if (input.xai?.apiKey) patch.xai = { apiKey: input.xai.apiKey };
+      if (input.customOpenAI) {
+        const nextCustom = { ...(currentSecrets.customOpenAI ?? {}) };
+        for (const [providerId, block] of Object.entries(input.customOpenAI)) {
+          const current = nextCustom[providerId];
+          nextCustom[providerId] = {
+            baseUrl: block.baseUrl,
+            ...((block.apiKey ?? current?.apiKey)
+              ? { apiKey: block.apiKey ?? current?.apiKey }
+              : {}),
+          };
+        }
+        patch.customOpenAI = nextCustom;
+      }
       await secretsStore.saveSecrets(patch);
       // Rebuild registries so subsequent providers.test() picks up the new keys.
       await runtime.refresh();
@@ -205,6 +221,11 @@ export function setupIpc(deps: IpcDeps): IpcServer {
     }),
 
     "catalog.get": async () => runtime.catalog,
+    "catalog.set": async (input) => {
+      await saveCatalog(input, { path: runtime.catalogPath });
+      await runtime.refresh();
+      return runtime.catalog;
+    },
     "catalog.path": async () => ({ path: runtime.catalogPath }),
 
     "system.openExternal": async ({ url }) => {
@@ -1152,9 +1173,18 @@ function readDefaultVideoModel(
   return typeof first === "string" ? first : null;
 }
 
-type ProviderId = "openai" | "azure-openai" | "google" | "flux-bfl" | "bytedance" | "xai";
+type ProviderId = string;
 
-const PROVIDER_DISPLAY_NAMES: Record<ProviderId, string> = {
+const WELL_KNOWN_PROVIDER_IDS = [
+  "openai",
+  "azure-openai",
+  "google",
+  "flux-bfl",
+  "bytedance",
+  "xai",
+] as const;
+
+const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   openai: "OpenAI",
   "azure-openai": "Azure",
   google: "Google AI Studio",
@@ -1168,6 +1198,7 @@ function providerSummaryList(
   secrets: ProviderSecrets,
   imageRegistry: ImageRegistry,
   videoRegistry: VideoRegistry,
+  catalog: ModelCatalog,
 ): Array<{
   id: ProviderId;
   displayName: string;
@@ -1191,7 +1222,14 @@ function providerSummaryList(
     const ids = imageIds(id);
     return ids[0] ?? null;
   };
-  return [
+  const wellKnown: Array<{
+    id: ProviderId;
+    displayName: string;
+    configured: boolean;
+    kinds: ("image" | "video")[];
+    defaultModel: string | null;
+    modelIds: string[];
+  }> = [
     {
       id: "openai",
       displayName: "OpenAI",
@@ -1244,6 +1282,20 @@ function providerSummaryList(
       modelIds: [...imageIds("xai"), ...videoIds("xai")],
     },
   ];
+  const customIds = new Set<string>([
+    ...Object.keys(catalog.providers),
+    ...Object.keys(secrets.customOpenAI ?? {}),
+  ]);
+  for (const id of WELL_KNOWN_PROVIDER_IDS) customIds.delete(id);
+  const custom = [...customIds].sort().map((id) => ({
+    id,
+    displayName: catalog.providers[id]?.displayName ?? id,
+    configured: !!secrets.customOpenAI?.[id]?.baseUrl,
+    kinds: ["image"] as ("image" | "video")[],
+    defaultModel: firstImage(id),
+    modelIds: imageIds(id),
+  }));
+  return [...wellKnown, ...custom];
 }
 
 /**
@@ -1285,7 +1337,9 @@ function buildUnifiedModelList(
       const b = secrets.bytedance;
       return !!(b && b.endpoint && b.apiKey);
     }
-    const b = secrets[id] as { apiKey?: string } | undefined;
+    const custom = secrets.customOpenAI?.[id];
+    if (custom) return !!custom.baseUrl;
+    const b = (secrets as Record<string, { apiKey?: string } | undefined>)[id];
     return !!(b && b.apiKey);
   };
   const groupKind = <T extends { id: string; displayName?: string }>(
@@ -1316,12 +1370,12 @@ function buildUnifiedModelList(
     >();
     // Stable provider iteration matches the provider summary order.
     const providerOrder: ProviderId[] = [
-      "openai",
-      "azure-openai",
-      "google",
-      "flux-bfl",
-      "bytedance",
-      "xai",
+      ...WELL_KNOWN_PROVIDER_IDS,
+      ...Object.keys(catalog.providers)
+        .filter(
+          (id) => !WELL_KNOWN_PROVIDER_IDS.includes(id as (typeof WELL_KNOWN_PROVIDER_IDS)[number]),
+        )
+        .sort(),
     ];
     for (const providerId of providerOrder) {
       const providerCatalog = catalog.providers[providerId];
@@ -1333,7 +1387,8 @@ function buildUnifiedModelList(
         const providerEntry = {
           providerId,
           modelId: offering.id,
-          displayName: providerCatalog?.displayName ?? PROVIDER_DISPLAY_NAMES[providerId],
+          displayName:
+            providerCatalog?.displayName ?? PROVIDER_DISPLAY_NAMES[providerId] ?? providerId,
           configured: isProviderConfigured(providerId),
         };
         if (existing) {
@@ -1373,6 +1428,7 @@ function maskSecrets(s: ProviderSecrets): {
   "flux-bfl"?: { apiKey: string | null };
   bytedance?: { endpoint: string | null; apiKey: string | null };
   xai?: { apiKey: string | null };
+  customOpenAI?: Record<string, { baseUrl: string | null; apiKey: string | null }>;
 } {
   const out: Record<string, unknown> = {};
   if (s.openai) out.openai = { apiKey: maskValue(s.openai.apiKey) };
@@ -1393,6 +1449,14 @@ function maskSecrets(s: ProviderSecrets): {
     };
   }
   if (s.xai) out.xai = { apiKey: maskValue(s.xai.apiKey) };
+  if (s.customOpenAI) {
+    out.customOpenAI = Object.fromEntries(
+      Object.entries(s.customOpenAI).map(([id, block]) => [
+        id,
+        { baseUrl: block.baseUrl || null, apiKey: maskValue(block.apiKey) },
+      ]),
+    );
+  }
   return out as ReturnType<typeof maskSecrets>;
 }
 

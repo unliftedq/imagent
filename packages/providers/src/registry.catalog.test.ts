@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
 import type { ProviderPreferences, ProviderSecrets } from "@imagine/config";
-import { createImageRegistry, createVideoRegistry } from "./registry.js";
+import { describe, expect, it } from "vitest";
 import { ModelCatalogSchema } from "./catalog/schema.js";
 import { buildTestCatalog } from "./catalog/test-fixtures.js";
+import { createImageRegistry, createVideoRegistry } from "./registry.js";
 
 function emptyPrefs(): ProviderPreferences {
   return {
@@ -94,6 +94,30 @@ describe("createImageRegistry (catalog-driven)", () => {
     const secrets: ProviderSecrets = { openai: { apiKey: "sk" } };
     const reg = createImageRegistry(secrets, emptyPrefs(), buildTestCatalog());
     expect([...reg.keys()]).toEqual(["openai"]);
+  });
+
+  it("registers OpenAI-compatible custom providers from secrets and catalog mappings", () => {
+    const catalog = buildTestCatalog();
+    catalog.providers["custom-openai"] = {
+      displayName: "Custom OpenAI",
+      image: [{ id: "custom-gpt-image", modelId: "gpt-image-2" }],
+    };
+    const parsed = ModelCatalogSchema.parse(catalog);
+    const secrets: ProviderSecrets = {
+      customOpenAI: {
+        "custom-openai": { baseUrl: "https://example.test/v1" },
+      },
+    };
+
+    const reg = createImageRegistry(secrets, emptyPrefs(), parsed);
+    const provider = reg.get("custom-openai");
+
+    expect(provider).toBeDefined();
+    if (!provider) throw new Error("custom-openai provider was not registered");
+    expect(provider.id).toBe("custom-openai");
+    expect(provider.displayName).toBe("Custom OpenAI");
+    expect([...provider.models.keys()]).toEqual(["custom-gpt-image"]);
+    expect(provider.models.get("custom-gpt-image")?.baseModelId).toBe("gpt-image-2");
   });
 
   it("empty provider offerings → provider has zero models but is still registered", () => {
