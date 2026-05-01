@@ -29,6 +29,7 @@ interface BuiltInProvider {
   name: string;
   description: string;
   icon: ProviderIconComponent;
+  iconClassName?: string;
   endpointLabel?: string;
   endpointPlaceholder?: string;
   mappingLabel?: string;
@@ -39,13 +40,14 @@ const BUILT_IN_PROVIDERS: readonly BuiltInProvider[] = [
     id: "openai",
     name: "OpenAI",
     description: "GPT Image models through the OpenAI API.",
-    icon: Icons.Brain,
+    icon: Icons.OpenAiLogo,
   },
   {
     id: "azure-openai",
     name: "Azure OpenAI",
     description: "Azure deployments mapped to canonical image models.",
-    icon: Icons.Cube,
+    icon: AzureBrandIcon,
+    iconClassName: "text-[#0078D4]",
     endpointLabel: "Endpoint",
     endpointPlaceholder: "https://my-resource.services.ai.azure.com",
     mappingLabel: "Deployment",
@@ -54,19 +56,20 @@ const BUILT_IN_PROVIDERS: readonly BuiltInProvider[] = [
     id: "google",
     name: "Google AI Studio",
     description: "Imagen, Nano Banana, and Veo with a shared Google API key.",
-    icon: Icons.Image,
+    icon: Icons.GoogleLogo,
+    iconClassName: "text-[#4285F4]",
   },
   {
     id: "flux-bfl",
-    name: "Flux",
+    name: "Black Forest Labs",
     description: "Black Forest Labs image generation models.",
-    icon: Icons.SquaresFour,
+    icon: FluxBrandIcon,
   },
   {
     id: "bytedance",
     name: "ByteDance",
-    description: "Seedream and Seedance through Ark regional endpoints.",
-    icon: Icons.FilmStrip,
+    description: "Seedream and Seedance through BytePlus ModelArk endpoints.",
+    icon: ByteDanceBrandIcon,
     endpointLabel: "Endpoint",
     endpointPlaceholder: "https://ark.cn-beijing.volces.com/api/v3",
   },
@@ -74,7 +77,7 @@ const BUILT_IN_PROVIDERS: readonly BuiltInProvider[] = [
     id: "xai",
     name: "xAI",
     description: "Grok image and video generation APIs.",
-    icon: Icons.VideoCamera,
+    icon: Icons.XLogo,
   },
 ] as const;
 
@@ -213,6 +216,7 @@ export function ProvidersPage() {
           <ProviderListRow
             key={provider.id}
             icon={provider.icon}
+            iconClassName={provider.iconClassName}
             name={summariesById.get(provider.id)?.displayName ?? provider.name}
             description={provider.description}
             summary={summariesById.get(provider.id)}
@@ -274,6 +278,7 @@ export function ProvidersPage() {
 
 function ProviderListRow({
   icon,
+  iconClassName,
   name,
   description,
   summary,
@@ -282,6 +287,7 @@ function ProviderListRow({
   onTest,
 }: {
   icon: React.ComponentType<{ className?: string; weight?: "regular" | "bold" | "fill" }>;
+  iconClassName?: string;
   name: string;
   description: string;
   summary?: ProviderSummary;
@@ -292,7 +298,7 @@ function ProviderListRow({
   const configured = summary?.configured ?? false;
   return (
     <div className="flex items-center gap-4 border-t border-(--border-faint) px-5 py-4 first:border-t-0">
-      <ProviderIcon icon={icon} />
+      <ProviderIcon icon={icon} iconClassName={iconClassName} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-(length:--text-title-sm) font-semibold text-(--text)">{name}</h2>
@@ -383,7 +389,10 @@ function ProviderConfigModal({
             </span>
           </div>
           <div className="flex items-start gap-4 pr-10">
-            <ProviderIcon icon={isCustom ? Icons.Plug : (builtIn?.icon ?? Icons.Plug)} />
+            <ProviderIcon
+              icon={isCustom ? Icons.Plug : (builtIn?.icon ?? Icons.Plug)}
+              iconClassName={builtIn?.iconClassName}
+            />
             <div>
               <Dialog.Title className="text-(length:--text-title-lg) font-semibold text-(--text)">
                 {title}
@@ -646,20 +655,22 @@ function SecretField({
 
 function ProviderIcon({
   icon: Icon,
+  iconClassName,
 }: {
   icon: React.ComponentType<{ className?: string; weight?: "regular" | "bold" | "fill" }>;
+  iconClassName?: string;
 }) {
   return (
     <span className="flex size-10 shrink-0 items-center justify-center rounded-(--radius-md) bg-(--surface-raised) text-(--text)">
-      <Icon weight="bold" className="size-5" />
+      <Icon weight="bold" className={iconClassName ? `size-5 ${iconClassName}` : "size-5"} />
     </span>
   );
 }
 
 function ConnectedPill() {
   return (
-    <span className="inline-flex items-center gap-1 rounded-(--radius-pill) bg-(--accent-soft)/25 px-2 py-0.5 text-(length:--text-caption) text-(--text)">
-      <Icons.CheckCircle weight="fill" className="size-3.5 text-(--accent-soft)" />
+    <span className="inline-flex items-center gap-1 rounded-(--radius-pill) border border-(--success)/30 bg-(--success-soft)/60 px-2 py-0.5 text-(length:--text-caption) text-(--success)">
+      <Icons.CheckCircle weight="fill" className="size-3.5 text-(--success)" />
       Connected
     </span>
   );
@@ -682,7 +693,7 @@ function statusIcon(status: ProviderTestStatus) {
       <Tooltip
         content={status.sampleModelId ? `Connected with ${status.sampleModelId}` : "Connected"}
       >
-        <Icons.CheckCircle weight="fill" className="size-4 text-(--accent-soft)" />
+        <Icons.CheckCircle weight="fill" className="size-4 text-(--success)" />
       </Tooltip>
     );
   }
@@ -694,6 +705,54 @@ function statusIcon(status: ProviderTestStatus) {
     );
   }
   return <Icons.Plug weight="bold" className="size-4" />;
+}
+
+function AzureBrandIcon({
+  className,
+}: {
+  className?: string;
+  weight?: "regular" | "bold" | "fill";
+}) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="none">
+      <path d="M9.7 3.2 3.2 18.8h5.5L19.2 3.2H9.7Z" fill="currentColor" opacity="0.88" />
+      <path d="M13.1 9.5 8.8 18.8h11.9L16 12.3l-2.9-2.8Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function FluxBrandIcon({
+  className,
+}: {
+  className?: string;
+  weight?: "regular" | "bold" | "fill";
+}) {
+  return (
+    <svg viewBox="0 0 196 140" aria-hidden="true" className={className} fill="none">
+      <path
+        d="M139.8 59.8h-20.9L98.1 30.5 33 122h20.9l44.2-62.2h20.8L74.8 122h20.9l44.1-62.2 56.2 79.2h-15.7v.1h-17.2v-17l-23.3-32.9-23.2 32.8v17.1H62.7v.1H41.8v-.1H0L98.1 1l41.7 58.8Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function ByteDanceBrandIcon({
+  className,
+}: {
+  className?: string;
+  weight?: "regular" | "bold" | "fill";
+}) {
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true" className={className} fill="none">
+      <image
+        href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAB8UlEQVR4Ae3BMYiWdRwA4Of3fn/1AiEbrNlukihqCcK1hCIMB0Hv0vv0IDKHCGoJShAnW6LpwE7vLowMPm64hqhoaAoigjbBMZukqDRR+d5fd7TY+fm+75cHLvc8Nm3aEP1kOid1dTQ5lNZU7td0hnDKVp/o4ljuwFe2mbSquB/9fAjncBDfazObjxv6Qtgt9Kwq1hzOFxUL1ht601J8ZpRX8zFhGc/pYib3qC0LO92hWFNsx6PW63nYKP18QljBLm1mk5umVOYxYZ1iXEdyr3ARO7R5OkPtfVucRBihGMfRfB0fYYs2Mzmh8jGmNSi66GfPbR/gLV30cyeWsUeLos1Mbhcu2GqfZmnNbO5WW8GkDopmTwrf4RntwrF8Xu1zPKKjotkJoatnpS/RM4Zi41T+h8oDVhnfFaQNUhlH+gZP4YZ2qXYaCxpUujur8pL0u3Y3pb7iPdzQoNKuVntHeM25uK1NumroBQuxZD60KZqk68Jhi7Gsm0vCy5biso6Ke7uCV5yPH3XzrT8dMIjfjKEYJf3kL/sM4hddDM0LbxjELWMq7rbilimDuKZdLb2rcsZCpFFqP6t87b/SNX9YVdwpfaj2tk9jqN3fakcsxkCTxZjDnHso/nUVxzFnKTTqofarNGUxfvBA7M8JmzZtkH8ASdiM3y2FE6YAAAAASUVORK5CYII="
+        width="32"
+        height="32"
+        preserveAspectRatio="xMidYMid meet"
+      />
+    </svg>
+  );
 }
 
 function providerDef(id: string): BuiltInProvider | undefined {

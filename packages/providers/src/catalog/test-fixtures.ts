@@ -219,7 +219,7 @@ export function buildTestCatalog(): ModelCatalog {
         video: Object.keys(GOOGLE_VIDEO_MODELS).map((id) => ({ id, modelId: id })),
       },
       "flux-bfl": {
-        displayName: "Flux",
+        displayName: "Black Forest Labs",
         image: Object.keys(FLUX_IMAGE_MODELS).map((id) => ({ id, modelId: id })),
       },
       bytedance: {

@@ -1188,7 +1188,7 @@ const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   openai: "OpenAI",
   "azure-openai": "Azure",
   google: "Google AI Studio",
-  "flux-bfl": "Flux",
+  "flux-bfl": "Black Forest Labs",
   bytedance: "ByteDance",
   xai: "xAI",
 };
@@ -1257,7 +1257,7 @@ function providerSummaryList(
     },
     {
       id: "flux-bfl",
-      displayName: "Flux",
+      displayName: "Black Forest Labs",
       configured: !!secrets["flux-bfl"],
       kinds: ["image"],
       defaultModel: firstImage("flux-bfl"),

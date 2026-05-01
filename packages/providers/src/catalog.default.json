@@ -391,7 +391,7 @@
       ]
     },
     "flux-bfl": {
-      "displayName": "Flux",
+      "displayName": "Black Forest Labs",
       "image": [
         { "id": "flux-2-pro", "modelId": "flux-2-pro" },
         { "id": "flux-2-max", "modelId": "flux-2-max" },

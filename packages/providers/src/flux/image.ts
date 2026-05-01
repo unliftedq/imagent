@@ -1,24 +1,24 @@
 import {
-  ProviderError,
-  ProviderHttpError,
-  ProviderRequestError,
-  ProviderTimeoutError,
-  ProviderAbortError,
   applyImageDefaults,
-  isAbortError,
   type ImageCapabilities,
   type ImageGenerationResult,
   type ImageModelDef,
   type ImageOutput,
   type ImageProvider,
   type ImageRequest,
+  isAbortError,
   type Logger,
+  ProviderAbortError,
+  ProviderError,
+  ProviderHttpError,
+  ProviderRequestError,
   type ProviderTestResult,
+  ProviderTimeoutError,
   validateImageRequestAgainstModel,
 } from "@imagine/core";
 import { z } from "zod";
-import { aggregateCapabilities, testFailureFromError } from "../openai/image.js";
 import { createHttpClient, type HttpClient } from "../http/index.js";
+import { aggregateCapabilities, testFailureFromError } from "../openai/image.js";
 
 /** Canonical BFL base URL. */
 export const DEFAULT_FLUX_BASE_URL = "https://api.bfl.ai";
@@ -62,7 +62,7 @@ const FluxPollResponseSchema = z.object({
 
 export class FluxImageProvider implements ImageProvider {
   readonly id = "flux-bfl";
-  readonly displayName = "Flux";
+  readonly displayName = "Black Forest Labs";
   readonly models: ReadonlyMap<string, ImageModelDef>;
   readonly capabilities: ImageCapabilities;
   private readonly http: HttpClient;
@@ -103,7 +103,11 @@ export class FluxImageProvider implements ImageProvider {
       schema: FluxSubmitResponseSchema,
     };
     if (signal) submitOpts.signal = signal;
-    const submit = await this.http.post<z.infer<typeof FluxSubmitResponseSchema>>(url, body, submitOpts);
+    const submit = await this.http.post<z.infer<typeof FluxSubmitResponseSchema>>(
+      url,
+      body,
+      submitOpts,
+    );
 
     // Poll until terminal.
     const pollUrl = submit.polling_url;
@@ -114,9 +118,12 @@ export class FluxImageProvider implements ImageProvider {
         throw new ProviderAbortError(this.id, signal.reason);
       }
       if (Date.now() - start > this.pollTimeoutMs) {
-        throw new ProviderTimeoutError(`flux job ${submit.id} did not complete within ${this.pollTimeoutMs}ms`, {
-          vendorId: this.id,
-        });
+        throw new ProviderTimeoutError(
+          `flux job ${submit.id} did not complete within ${this.pollTimeoutMs}ms`,
+          {
+            vendorId: this.id,
+          },
+        );
       }
       await this.sleep(interval, signal);
       const pollOpts: { signal?: AbortSignal; schema: typeof FluxPollResponseSchema } = {
