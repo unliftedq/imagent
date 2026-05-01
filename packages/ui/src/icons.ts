@@ -31,6 +31,7 @@ export {
   Plug,
   Plus,
   SquaresFour,
+  Star,
   Sun,
   TiktokLogo,
   Trash,

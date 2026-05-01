@@ -262,6 +262,20 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       return { path: res.filePaths[0] ?? null };
     },
 
+    "system.chooseFiles": async (input) => {
+      const win = getMainWindow();
+      const opts: Electron.OpenDialogOptions = {
+        properties: input?.multiple ? ["openFile", "multiSelections"] : ["openFile"],
+        filters: input?.filters ?? [
+          { name: "Images", extensions: ["png", "jpg", "jpeg", "webp", "gif"] },
+        ],
+      };
+      if (input?.defaultPath) opts.defaultPath = input.defaultPath;
+      const res = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts);
+      if (res.canceled) return { paths: [] };
+      return { paths: res.filePaths };
+    },
+
     "system.resetConfig": async () => {
       await configStore.saveConfig(DEFAULT_CONFIG);
       await runtime.refresh();

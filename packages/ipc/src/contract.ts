@@ -315,6 +315,23 @@ export const contract = {
     input: z.object({ defaultPath: z.string().optional() }).optional(),
     output: z.object({ path: z.string().nullable() }),
   },
+  "system.chooseFiles": {
+    input: z
+      .object({
+        defaultPath: z.string().optional(),
+        multiple: z.boolean().optional(),
+        filters: z
+          .array(
+            z.object({
+              name: z.string(),
+              extensions: z.array(z.string()),
+            }),
+          )
+          .optional(),
+      })
+      .optional(),
+    output: z.object({ paths: z.array(z.string()) }),
+  },
   "system.resetConfig": { input: z.void(), output: z.void() },
 
   // Image / Video
