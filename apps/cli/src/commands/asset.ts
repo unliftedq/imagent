@@ -248,7 +248,9 @@ async function runAssetAdd(kind: string, options: AssetAddOptions): Promise<void
     db.close();
   }
 
-  process.stdout.write(`${chalk.green("ok:")} ${describeAssetSlug({ name: options.name })}\n`);
+  process.stdout.write(
+    `${chalk.green("ok:")} ${describeAssetSlug({ id: assetId, name: options.name })}\n`,
+  );
   process.stdout.write(`  ${chalk.dim("id:")} ${assetId}\n`);
   for (const p of writtenRelPaths) {
     process.stdout.write(`  ${chalk.dim("•")} ${p}\n`);

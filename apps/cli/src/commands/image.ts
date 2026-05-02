@@ -25,14 +25,14 @@ interface GenerateOptions {
 }
 
 /**
- * `imagine image <prompt>` — image generation with asset slots (M3).
+ * `imagine image <prompt>` — image generation with asset slots.
  *
  * Wires:
  *   secrets + config → registry → JobRunner → start image intent.
  *
  * Awaits `job.completed` or `job.failed`, prints absolute path on success.
  * `--character/--object/--background/--style` (each repeatable) pull
- * reference images from the slugged asset and (for style) optionally append
+ * reference images from the slug-based asset and (for style) optionally append
  * the asset's prompt_snippet. References are silently capped at the resolved
  * model's maxReferences with a stderr warning.
  */

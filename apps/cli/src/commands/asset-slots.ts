@@ -67,17 +67,17 @@ export async function buildAssetSlots(
   );
 }
 
-export function assetSlug(name: string): string {
+export function assetSlug(name: string, id?: string): string {
   const slug = name
     .normalize("NFKD")
     .toLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, "-")
     .replace(/^-+|-+$/g, "");
-  return slug || "asset";
+  return slug || `asset-${id?.slice(0, 8) ?? "unnamed"}`;
 }
 
-export function describeAssetSlug(asset: Pick<Asset, "name">): string {
-  return assetSlug(asset.name);
+export function describeAssetSlug(asset: Pick<Asset, "id" | "name">): string {
+  return assetSlug(asset.name, asset.id);
 }
 
 function resolveAssetSlugs(repo: AssetRepository, kind: AssetKind, slugs: string[]): string[] {
@@ -85,7 +85,7 @@ function resolveAssetSlugs(repo: AssetRepository, kind: AssetKind, slugs: string
 }
 
 function resolveAssetSlug(repo: AssetRepository, kind: AssetKind, slug: string): string {
-  const matches = repo.list({ kind }).filter((asset) => assetSlug(asset.name) === slug);
+  const matches = repo.list({ kind }).filter((asset) => assetSlug(asset.name, asset.id) === slug);
   if (matches.length === 1) {
     const [match] = matches;
     if (match) return match.id;
