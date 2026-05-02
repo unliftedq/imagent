@@ -1,10 +1,9 @@
-import { useEffect, useRef } from "react";
 import { NavRail, TooltipProvider, useTheme } from "@imagine/ui";
-import { ROUTES } from "./routes.js";
-import { useUIStore } from "./state/useUIStore.js";
-import { useConfigStore } from "./state/useConfigStore.js";
-import { api } from "./lib/api.js";
+import { useEffect, useRef } from "react";
 import { Toaster } from "./components/Toaster.js";
+import { ROUTES } from "./routes.js";
+import { useConfigStore } from "./state/useConfigStore.js";
+import { useUIStore } from "./state/useUIStore.js";
 
 /**
  * App shell — DESIGN.md §5.4. The window is a 2-column grid: the persistent
@@ -18,6 +17,7 @@ export function App() {
   const summaries = useConfigStore((s) => s.summaries);
   const refresh = useConfigStore((s) => s.refresh);
   const { theme, setTheme } = useTheme();
+  const persistedTheme = appPrefs?.theme;
   // First-run initial route: if any provider is configured, default to /studio,
   // otherwise stay on /providers (where the store default already lands).
   const initialRouteAppliedRef = useRef(false);
@@ -39,13 +39,12 @@ export function App() {
 
   // Keep useTheme in sync with the persisted preference once loaded.
   useEffect(() => {
-    if (appPrefs && appPrefs.theme !== theme) {
-      setTheme(appPrefs.theme);
+    if (persistedTheme && persistedTheme !== theme) {
+      setTheme(persistedTheme);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appPrefs?.theme]);
+  }, [persistedTheme, setTheme, theme]);
 
-  const Active = ROUTES.find((r) => r.id === route)?.Component ?? ROUTES[0]!.Component;
+  const Active = ROUTES.find((r) => r.id === route)?.Component ?? getFallbackRouteComponent();
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -54,11 +53,22 @@ export function App() {
         style={{ gridTemplateColumns: "var(--rail-nav, 220px) minmax(0, 1fr)" }}
       >
         <NavRail activeRoute={route} onNavigate={navigate} />
-        <main className="h-screen overflow-y-auto bg-(--bg)">
+        <main
+          className={
+            "h-screen bg-(--bg) " +
+            (route === "studio" ? "overflow-hidden" : "overflow-y-auto")
+          }
+        >
           <Active />
         </main>
       </div>
       <Toaster />
     </TooltipProvider>
   );
+}
+
+function getFallbackRouteComponent() {
+  const fallback = ROUTES[0];
+  if (!fallback) throw new Error("No routes configured.");
+  return fallback.Component;
 }

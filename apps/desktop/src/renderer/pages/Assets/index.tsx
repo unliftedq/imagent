@@ -238,7 +238,7 @@ export function AssetsPage() {
 
         <Tabs.Content value={TRASH_TAB} className="mt-4 flex flex-col gap-4">
           <div className="flex items-center justify-between gap-2">
-            <SearchInput
+            <AssetSearchInput
               placeholder="Search trash…"
               value={search}
               onChange={setSearchInput}

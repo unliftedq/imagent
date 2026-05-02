@@ -36,6 +36,7 @@ export function ReferencePicker({
   const totalAssets = ASSET_REFERENCE_KINDS.reduce((sum, kind) => sum + assetIds[kind].length, 0);
   const totalReferences = totalAssets + references.length;
   const overHint = typeof maxReferencesHint === "number" && totalReferences > maxReferencesHint;
+  const triggerLabel = totalReferences > 0 ? `References (${totalReferences})` : "Add reference";
 
   const chooseLocalImages = async (): Promise<void> => {
     try {
@@ -73,15 +74,17 @@ export function ReferencePicker({
       <Popover.Trigger asChild>
         <button
           type="button"
+          aria-label={triggerLabel}
+          title={triggerLabel}
           className={
-            "inline-flex h-8 items-center gap-2 rounded-(--radius-pill) border border-(--border) " +
-            "bg-(--bg) px-3 text-[12px] text-(--text) transition-colors duration-(--motion-fast) " +
+            "inline-flex size-8 items-center justify-center rounded-(--radius-pill) border " +
+            "bg-(--bg) text-(--text) transition-colors duration-(--motion-fast) " +
             "hover:border-(--text) focus-visible:outline-none focus-visible:ring-2 " +
-            "focus-visible:ring-(--focus-ring)"
+            "focus-visible:ring-(--focus-ring) " +
+            (totalReferences > 0 ? "border-(--accent) text-(--accent)" : "border-(--border)")
           }
         >
-          <Icons.Plus weight="bold" className="size-3.5 text-(--text-muted)" />
-          <span>{totalReferences > 0 ? `References ${totalReferences}` : "Add reference"}</span>
+          <Icons.Paperclip weight="bold" className="size-3.5" />
         </button>
       </Popover.Trigger>
       <Popover.Content className="w-[420px] p-3">
@@ -361,14 +364,14 @@ function referenceKindIcon(kind: ReferenceKind): ReactNode {
   const className = "size-4 shrink-0 text-(--text-muted)";
   switch (kind) {
     case "character":
-      return <Icons.Plug weight="duotone" className={className} />;
+      return <Icons.UserCircle weight="duotone" className={className} />;
     case "object":
       return <Icons.Cube weight="duotone" className={className} />;
     case "background":
-      return <Icons.Image weight="duotone" className={className} />;
+      return <Icons.Mountains weight="duotone" className={className} />;
     case "style":
-      return <Icons.Gear weight="duotone" className={className} />;
+      return <Icons.Palette weight="duotone" className={className} />;
     case "other":
-      return <Icons.FolderOpen weight="duotone" className={className} />;
+      return <Icons.UploadSimple weight="duotone" className={className} />;
   }
 }

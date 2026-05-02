@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { cn } from "../lib/cn.js";
 
 export type GalleryRailFilter = "all" | "newest";
@@ -63,7 +63,7 @@ export function GalleryRail({
       aria-label="Recent generations"
       className={cn(
         "flex h-full w-[var(--rail-gallery,240px)] shrink-0 flex-col " +
-          "border-l border-(--border) bg-(--bg)",
+          "min-h-0 overflow-hidden border-l border-(--border) bg-(--bg)",
         className,
       )}
     >
@@ -88,7 +88,7 @@ export function GalleryRail({
         </FilterChip>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 pb-3">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
         {items.length === 0 ? (
           emptyState ?? (
             <div className="px-2 py-6 text-center text-[12px] text-(--text-muted)">

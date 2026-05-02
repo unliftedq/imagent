@@ -1,1 +1,141 @@
 @import "@imagine/ui/styles.css";
+
+.studio-generating-placeholder {
+	aspect-ratio: 16 / 9;
+	background:
+		radial-gradient(circle at 50% 48%, color-mix(in oklch, white 42%, transparent), transparent 42%),
+		linear-gradient(180deg, color-mix(in oklch, var(--surface) 94%, white), color-mix(in oklch, var(--surface-sunken) 92%, white));
+	border-radius: 42px;
+	box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--border-faint) 72%, transparent);
+}
+
+.studio-generation-dot-field,
+.studio-generation-vellum {
+	position: absolute;
+	pointer-events: none;
+}
+
+.studio-generation-dot-field {
+	--dot-color: color-mix(in oklch, var(--text-faint) 34%, transparent);
+	inset: 86px 22px 22px;
+	background:
+		radial-gradient(circle, var(--dot-color) 0 1px, transparent 1.18px);
+	background-size: 22px 22px;
+	mask-image:
+		linear-gradient(90deg, transparent, black 7% 93%, transparent),
+		linear-gradient(180deg, transparent, black 6% 92%, transparent);
+	-webkit-mask-image:
+		linear-gradient(90deg, transparent, black 7% 93%, transparent),
+		linear-gradient(180deg, transparent, black 6% 92%, transparent);
+	filter: blur(0.15px);
+	opacity: 0.28;
+	animation: studio-generation-field-breathe 5.8s var(--ease-in-out) infinite;
+}
+
+.studio-generation-dot-field::before,
+.studio-generation-dot-field::after {
+	position: absolute;
+	inset: 0;
+	content: "";
+	background-position: 0 0;
+	pointer-events: none;
+}
+
+.studio-generation-dot-field::before {
+	--dot-color: color-mix(in oklch, var(--text-faint) 48%, transparent);
+	background:
+		radial-gradient(circle, var(--dot-color) 0 1.85px, transparent 2.08px);
+	background-size: 22px 22px;
+	clip-path: circle(30% at 24% 62%);
+	opacity: 0.22;
+	animation: studio-generation-region-breathe 6.2s var(--ease-in-out) infinite;
+}
+
+.studio-generation-dot-field::after {
+	--dot-color: color-mix(in oklch, var(--text-muted) 42%, transparent);
+	background:
+		radial-gradient(circle, var(--dot-color) 0 2.55px, transparent 2.75px);
+	background-size: 22px 22px;
+	clip-path: circle(16% at 24% 62%);
+	filter: blur(0.08px);
+	opacity: 0.12;
+	animation: studio-generation-core-breathe 6.2s var(--ease-in-out) infinite;
+}
+
+.studio-generation-vellum {
+	inset: 0;
+	border-radius: inherit;
+	background:
+		linear-gradient(90deg, color-mix(in oklch, white 28%, transparent), transparent 24% 76%, color-mix(in oklch, white 34%, transparent)),
+		linear-gradient(180deg, transparent 0 62%, color-mix(in oklch, white 28%, transparent));
+	animation: studio-generation-vellum 5.2s var(--ease-in-out) infinite;
+}
+
+@keyframes studio-generation-field-breathe {
+	0% {
+		opacity: 0.16;
+	}
+	45%,
+	62% {
+		opacity: 0.34;
+	}
+	100% {
+		opacity: 0.18;
+	}
+}
+
+@keyframes studio-generation-region-breathe {
+	0% {
+		clip-path: circle(22% at 18% 68%);
+		opacity: 0.02;
+	}
+	22% {
+		clip-path: circle(38% at 30% 60%);
+		opacity: 0.38;
+	}
+	48% {
+		clip-path: circle(36% at 58% 42%);
+		opacity: 0.32;
+	}
+	72% {
+		clip-path: circle(42% at 74% 64%);
+		opacity: 0.36;
+	}
+	100% {
+		clip-path: circle(24% at 48% 52%);
+		opacity: 0.08;
+	}
+}
+
+@keyframes studio-generation-core-breathe {
+	0% {
+		clip-path: circle(10% at 18% 68%);
+		opacity: 0;
+	}
+	22% {
+		clip-path: circle(18% at 30% 60%);
+		opacity: 0.26;
+	}
+	48% {
+		clip-path: circle(17% at 58% 42%);
+		opacity: 0.22;
+	}
+	72% {
+		clip-path: circle(20% at 74% 64%);
+		opacity: 0.24;
+	}
+	100% {
+		clip-path: circle(11% at 48% 52%);
+		opacity: 0.04;
+	}
+}
+
+@keyframes studio-generation-vellum {
+	0%,
+	100% {
+		opacity: 0.68;
+	}
+	50% {
+		opacity: 0.36;
+	}
+}

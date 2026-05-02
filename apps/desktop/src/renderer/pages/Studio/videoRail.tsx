@@ -12,8 +12,8 @@ import { resolveAssetThumbnailUrl } from "../Assets";
 import { ChatComposerShell, ToolbarSelectTrigger } from "./composer.js";
 import { createUnifiedModelOptions, ProviderModelPicker, useModelFavorites } from "./modelPicker.js";
 import { ReferencePicker } from "./referencePicker.js";
-import { FirstFrameToolbarPicker } from "./videoFirstFramePicker.js";
 import { nearestNumber } from "./utils.js";
+import { FirstFrameToolbarPicker } from "./videoFirstFramePicker.js";
 
 export function VideoRail() {
   const draft = useUIStore((state) => state.studioDraft.video);
@@ -224,6 +224,19 @@ export function VideoRail() {
       validationError={validationError}
       {...(draft.parentId ? { remixId: draft.parentId, onClearRemix: resetDraft } : {})}
     >
+      <ReferencePicker
+        assetIds={draft.assetIds}
+        assetsByKind={assetsByKind}
+        references={draft.references}
+        onAssetIdsChange={(assetIds) => setDraft({ assetIds })}
+        onReferencesChange={(references) => setDraft({ references })}
+        thumbnailUrl={(asset) => resolveAssetThumbnailUrl(asset)}
+        onRequestCreateAsset={() => navigate("assets")}
+        onError={(message) =>
+          pushToast({ title: "Reference failed", description: message, variant: "error" })
+        }
+      />
+
       <ProviderModelPicker
         mode="video"
         options={modelOptions}
@@ -241,7 +254,7 @@ export function VideoRail() {
         >
           <ToolbarSelectTrigger
             ariaLabel="Duration"
-            icon={<Icons.FilmReel weight="duotone" className="size-3.5" />}
+            icon={<Icons.Timer weight="duotone" className="size-3.5" />}
             className="h-8 w-[88px] rounded-(--radius-pill) bg-(--bg) px-3 py-0 text-[12px]"
           />
           <Select.Content>
@@ -261,7 +274,7 @@ export function VideoRail() {
         >
           <ToolbarSelectTrigger
             ariaLabel="FPS"
-            icon={<Icons.FilmStrip weight="duotone" className="size-3.5" />}
+            icon={<Icons.Speedometer weight="duotone" className="size-3.5" />}
             className="h-8 w-[86px] rounded-(--radius-pill) bg-(--bg) px-3 py-0 text-[12px]"
           />
           <Select.Content>
@@ -281,7 +294,7 @@ export function VideoRail() {
         >
           <ToolbarSelectTrigger
             ariaLabel="Resolution"
-            icon={<Icons.VideoCamera weight="duotone" className="size-3.5" />}
+            icon={<Icons.Monitor weight="duotone" className="size-3.5" />}
             className="h-8 w-[116px] rounded-(--radius-pill) bg-(--bg) px-3 py-0 text-[12px]"
           />
           <Select.Content>
@@ -301,19 +314,6 @@ export function VideoRail() {
           recentFrames={items.filter((item) => item.kind === "image").slice(0, 12)}
         />
       ) : null}
-
-      <ReferencePicker
-        assetIds={draft.assetIds}
-        assetsByKind={assetsByKind}
-        references={draft.references}
-        onAssetIdsChange={(assetIds) => setDraft({ assetIds })}
-        onReferencesChange={(references) => setDraft({ references })}
-        thumbnailUrl={(asset) => resolveAssetThumbnailUrl(asset)}
-        onRequestCreateAsset={() => navigate("assets")}
-        onError={(message) =>
-          pushToast({ title: "Reference failed", description: message, variant: "error" })
-        }
-      />
     </ChatComposerShell>
   );
 }

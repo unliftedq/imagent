@@ -1,6 +1,6 @@
-import type { DragEvent } from "react";
 import type { GalleryItem } from "@imagine/core";
 import { Button, Icons, Popover } from "@imagine/ui";
+import type { DragEvent } from "react";
 import { resolveGalleryUrl } from "./utils.js";
 
 export function FirstFrameToolbarPicker({
@@ -34,7 +34,7 @@ export function FirstFrameToolbarPicker({
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring)"
           }
         >
-          <Icons.Image weight="duotone" className="size-3.5 shrink-0" />
+          <Icons.ImageSquare weight="duotone" className="size-3.5 shrink-0" />
           <span className="truncate">{label}</span>
         </button>
       </Popover.Trigger>

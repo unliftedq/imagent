@@ -195,6 +195,11 @@ export function ImageRail() {
     try {
       const item = await api["image.generate"](request);
       upsertOne(item);
+      window.dispatchEvent(
+        new CustomEvent<{ id: string }>("imagine:canvas-pin", {
+          detail: { id: item.id },
+        }),
+      );
       if (draft.parentId) setDraft({ parentId: undefined });
     } catch (err) {
       const message = (err as Error)?.message ?? String(err);
@@ -244,6 +249,20 @@ export function ImageRail() {
       validationError={validationError}
       {...(draft.parentId ? { remixId: draft.parentId, onClearRemix: resetDraft } : {})}
     >
+      <ReferencePicker
+        assetIds={draft.assetIds}
+        assetsByKind={assetsByKind}
+        references={draft.references}
+        onAssetIdsChange={(assetIds) => setDraft({ assetIds })}
+        onReferencesChange={(references) => setDraft({ references })}
+        thumbnailUrl={(asset) => resolveAssetThumbnailUrl(asset)}
+        maxReferencesHint={caps?.maxReferences}
+        onRequestCreateAsset={() => navigate("assets")}
+        onError={(message) =>
+          pushToast({ title: "Reference failed", description: message, variant: "error" })
+        }
+      />
+
       <ProviderModelPicker
         mode="image"
         options={modelOptions}
@@ -258,7 +277,7 @@ export function ImageRail() {
         <Select.Root value={draft.size ?? caps.sizes[0]} onValueChange={(value) => setDraft({ size: value })}>
           <ToolbarSelectTrigger
             ariaLabel="Size"
-            icon={<Icons.SquaresFour weight="duotone" className="size-3.5" />}
+            icon={<Icons.FrameCorners weight="duotone" className="size-3.5" />}
             className="h-8 w-[132px] rounded-(--radius-pill) bg-(--bg) px-3 py-0 text-[12px]"
           />
           <Select.Content>
@@ -278,7 +297,7 @@ export function ImageRail() {
         >
           <ToolbarSelectTrigger
             ariaLabel="Aspect ratio"
-            icon={<Icons.Image weight="duotone" className="size-3.5" />}
+            icon={<Icons.Crop weight="duotone" className="size-3.5" />}
             className="h-8 w-[102px] rounded-(--radius-pill) bg-(--bg) px-3 py-0 text-[12px]"
           />
           <Select.Content>
@@ -298,7 +317,7 @@ export function ImageRail() {
         >
           <ToolbarSelectTrigger
             ariaLabel="Quality"
-            icon={<Icons.Gear weight="duotone" className="size-3.5" />}
+            icon={<Icons.SealCheck weight="duotone" className="size-3.5" />}
             className="h-8 w-[104px] rounded-(--radius-pill) bg-(--bg) px-3 py-0 text-[12px]"
           />
           <Select.Content>
@@ -318,7 +337,7 @@ export function ImageRail() {
         >
           <ToolbarSelectTrigger
             ariaLabel="Format"
-            icon={<Icons.Folder weight="duotone" className="size-3.5" />}
+            icon={<Icons.FileImage weight="duotone" className="size-3.5" />}
             className="h-8 w-[104px] rounded-(--radius-pill) bg-(--bg) px-3 py-0 text-[12px]"
           />
           <Select.Content>
@@ -338,7 +357,7 @@ export function ImageRail() {
         >
           <ToolbarSelectTrigger
             ariaLabel="Output count"
-            icon={<Icons.SquaresFour weight="duotone" className="size-3.5" />}
+            icon={<Icons.StackPlus weight="duotone" className="size-3.5" />}
             className="h-8 w-[86px] rounded-(--radius-pill) bg-(--bg) px-3 py-0 text-[12px]"
           />
           <Select.Content>
@@ -350,20 +369,6 @@ export function ImageRail() {
           </Select.Content>
         </Select.Root>
       ) : null}
-
-      <ReferencePicker
-        assetIds={draft.assetIds}
-        assetsByKind={assetsByKind}
-        references={draft.references}
-        onAssetIdsChange={(assetIds) => setDraft({ assetIds })}
-        onReferencesChange={(references) => setDraft({ references })}
-        thumbnailUrl={(asset) => resolveAssetThumbnailUrl(asset)}
-        maxReferencesHint={caps?.maxReferences}
-        onRequestCreateAsset={() => navigate("assets")}
-        onError={(message) =>
-          pushToast({ title: "Reference failed", description: message, variant: "error" })
-        }
-      />
     </ChatComposerShell>
   );
 }

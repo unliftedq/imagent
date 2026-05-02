@@ -31,6 +31,7 @@ export function ProviderModelPicker({
   const current = options.find((option) => option.providerId === providerId && option.modelId === modelId);
   const favorites = options.filter((option) => favoriteKeys.has(modelFavoriteKey(mode, option)));
   const providers = uniqueProviders(options);
+  const triggerLabel = current?.modelId ?? "Choose model";
 
   const choose = (option: UnifiedModelOption): void => {
     onChange({ providerId: option.providerId, modelId: option.modelId });
@@ -43,21 +44,17 @@ export function ProviderModelPicker({
         <button
           type="button"
           className={
-            "inline-flex h-8 max-w-[280px] items-center gap-2 rounded-(--radius-pill) " +
+            "inline-flex h-8 max-w-[240px] items-center gap-2 rounded-(--radius-pill) " +
             "border border-(--border) bg-(--bg) px-3 text-[12px] text-(--text) " +
             "transition-colors duration-(--motion-fast) hover:border-(--text) " +
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring)"
           }
+          title={triggerLabel}
         >
           <Icons.Brain weight="duotone" className="size-3.5 shrink-0 text-(--text-muted)" />
           <span className="min-w-0 truncate font-semibold">
-            {current?.displayName ?? "Choose model"}
+            {triggerLabel}
           </span>
-          {current ? (
-            <span className="hidden max-w-[92px] truncate text-[11px] text-(--text-faint) sm:inline">
-              {current.providerName}
-            </span>
-          ) : null}
         </button>
       </Popover.Trigger>
       <Popover.Content className="w-[420px] p-2">

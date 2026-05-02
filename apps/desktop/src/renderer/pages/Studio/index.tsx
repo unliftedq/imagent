@@ -13,14 +13,14 @@ export function StudioPage() {
 
   return (
     <div
-      className="grid h-full w-full"
+      className="grid h-full min-h-0 w-full overflow-hidden"
       style={{
         gridTemplateColumns: "minmax(0, 1fr) var(--rail-gallery, 240px)",
       }}
     >
-      <section className="flex h-full min-w-0 flex-col bg-(--bg)">
+      <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-(--bg)">
         <StudioModeSwitch mode={studioMode} onModeChange={setStudioMode} />
-        <div className="min-h-0 flex-1">
+        <div className="min-h-0 flex-1 overflow-hidden">
           <CanvasArea key={studioMode} mode={studioMode} />
         </div>
         <StudioComposerDock mode={studioMode} />
@@ -31,7 +31,7 @@ export function StudioPage() {
 }
 
 function StudioComposerDock({ mode }: { mode: StudioMode }) {
-  return <div className="shrink-0 border-t border-(--border) bg-(--bg)">{mode === "image" ? <ImageRail /> : <VideoRail />}</div>;
+  return <div className="shrink-0 bg-(--bg)">{mode === "image" ? <ImageRail /> : <VideoRail />}</div>;
 }
 
 export { resolveGalleryUrl } from "./utils.js";

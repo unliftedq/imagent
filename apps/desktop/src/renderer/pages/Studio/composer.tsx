@@ -16,7 +16,7 @@ export function StudioModeSwitch({
   onModeChange: (mode: StudioMode) => void;
 }) {
   return (
-    <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-center border-b border-(--border) bg-(--bg)/95 backdrop-blur">
+    <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-center bg-(--bg)/95 backdrop-blur">
       <div className="grid grid-cols-2 gap-1 rounded-(--radius-lg) border border-(--border) bg-(--surface) p-1">
         <ModeSwitchButton
           active={mode === "image"}
