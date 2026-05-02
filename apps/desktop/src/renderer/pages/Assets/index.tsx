@@ -4,6 +4,8 @@ import { AssetCard, Button, EmptyState, Icons, Tabs } from "@imagine/ui";
 import { useEffect, useMemo, useState } from "react";
 import { CreateAssetDialog } from "./CreateAssetDialog.js";
 import { AssetDrawer } from "./AssetDrawer.js";
+import { ArchivedAssetRow } from "./ArchivedAssetRow.js";
+import { AssetSearchInput } from "./AssetSearchInput.js";
 import {
   ACTIVE_TAB_LS_KEY,
   KINDS,
@@ -11,11 +13,10 @@ import {
   TRASH_TAB,
   type AssetsTab,
 } from "./constants.js";
-import { SearchInput, TrashRow } from "./components.js";
-export { resolveAssetThumbnailUrl } from "./utils.js";
 import { useAssetsStore } from "../../state/useAssetsStore.js";
 import { useUIStore } from "../../state/useUIStore.js";
 import { resolveAssetThumbnailUrl } from "./utils.js";
+export { resolveAssetThumbnailUrl } from "./utils.js";
 
 export function AssetsPage() {
   const byKind = useAssetsStore((s) => s.byKind);
@@ -192,7 +193,7 @@ export function AssetsPage() {
         {KINDS.map((k) => (
           <Tabs.Content key={k} value={k} className="mt-4 flex flex-col gap-4">
             <div className="flex items-center gap-2">
-              <SearchInput
+              <AssetSearchInput
                 placeholder={`Search ${KIND_LABEL[k].toLowerCase()}…`}
                 value={search}
                 onChange={setSearchInput}
@@ -261,10 +262,10 @@ export function AssetsPage() {
           ) : (
             <ul className="flex flex-col gap-1">
               {archived.map((a) => (
-                <TrashRow
-                  key={a.id}
-                  asset={a}
-                  onOpen={() => setDrawerId(a.id)}
+                    <ArchivedAssetRow
+                      key={a.id}
+                      asset={a}
+                      onOpen={() => setDrawerId(a.id)}
                   onRestore={() => void onRestore(a.id)}
                   onPermanentlyDelete={() => {
                     if (

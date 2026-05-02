@@ -4,7 +4,7 @@ import { Button, Dialog, Icons, Input, Textarea } from "@imagine/ui";
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api.js";
 import { useUIStore } from "../../state/useUIStore.js";
-import { Field } from "./components.js";
+import { AssetField } from "./AssetField.js";
 import { resolveDataUrl } from "./utils.js";
 
 interface DrawerProps {
@@ -124,14 +124,14 @@ export function AssetDrawer({
               </p>
             ) : null}
 
-            <Field label="Name">
+            <AssetField label="Name">
               <Input value={name} onChange={(e) => setName(e.target.value)} />
-            </Field>
-            <Field label="Description">
+            </AssetField>
+            <AssetField label="Description">
               <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
-            </Field>
+            </AssetField>
             {asset.kind === "style" ? (
-              <Field label="Prompt snippet">
+              <AssetField label="Prompt snippet">
                 <Textarea
                   value={promptSnippet}
                   onChange={(e) => setPromptSnippet(e.target.value)}
@@ -141,7 +141,7 @@ export function AssetDrawer({
                   Reference is preferred when the model supports refs; otherwise this snippet is
                   appended to the prompt.
                 </span>
-              </Field>
+              </AssetField>
             ) : null}
 
             <div className="mt-auto flex flex-col gap-2 border-t border-(--border-faint) pt-4">

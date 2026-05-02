@@ -1,6 +1,6 @@
 import type { ComponentType, ReactElement } from "react";
 import { Icons } from "@imagine/ui";
-import { AssetsPage } from "./pages/Assets.js";
+import { AssetsPage } from "./pages/Assets/index.js";
 import { GalleryPage } from "./pages/Gallery.js";
 import { ModelsPage } from "./pages/Models.js";
 import { ProvidersPage } from "./pages/Providers.js";

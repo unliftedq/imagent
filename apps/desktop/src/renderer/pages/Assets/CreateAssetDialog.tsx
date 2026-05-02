@@ -4,8 +4,8 @@ import { Button, Dialog, Icons, Input, Textarea } from "@imagine/ui";
 import { useEffect, useState } from "react";
 import { useAssetsStore } from "../../state/useAssetsStore.js";
 import { useUIStore } from "../../state/useUIStore.js";
+import { AssetField } from "./AssetField.js";
 import { KINDS, MAX_UPLOADS } from "./constants.js";
-import { Field } from "./components.js";
 
 interface CreateDialogProps {
   open: boolean;
@@ -150,7 +150,7 @@ export function CreateAssetDialog({
         </Dialog.Description>
 
         <div className="mt-4 flex flex-col gap-4">
-          <Field label="Kind">
+          <AssetField label="Kind">
             <div className="flex gap-1 rounded-(--radius-pill) bg-(--surface) p-1">
               {KINDS.map((k) => (
                 <button
@@ -169,28 +169,28 @@ export function CreateAssetDialog({
                 </button>
               ))}
             </div>
-          </Field>
+          </AssetField>
 
-          <Field label="Name">
+          <AssetField label="Name">
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={kind === "character" ? "Alice" : kind === "style" ? "Studio Ghibli" : ""}
               autoFocus
             />
-          </Field>
+          </AssetField>
 
-          <Field label="Description (optional)">
+          <AssetField label="Description (optional)">
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Notes about this asset…"
               rows={2}
             />
-          </Field>
+          </AssetField>
 
           {kind === "style" ? (
-            <Field label="Prompt snippet (style only)">
+            <AssetField label="Prompt snippet (style only)">
               <Textarea
                 value={promptSnippet}
                 onChange={(e) => setPromptSnippet(e.target.value)}
@@ -200,7 +200,7 @@ export function CreateAssetDialog({
               <span className="text-(length:--text-caption) text-(--text-faint)">
                 Used when the model lacks reference support. Reference image takes precedence.
               </span>
-            </Field>
+            </AssetField>
           ) : null}
 
           <div
