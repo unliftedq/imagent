@@ -11,7 +11,7 @@ import { api } from "../../lib/api.js";
 import { useBoardsStore } from "../../state/useBoardsStore.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
 import { useUIStore } from "../../state/useUIStore.js";
-import { resolveGalleryUrl } from "../Studio.js";
+import { resolveGalleryUrl } from "../Studio";
 import { BoardRow, DetailDrawer } from "./components.js";
 import { BOARD_ALL, BOARD_FAVORITES } from "./constants.js";
 

@@ -5,7 +5,7 @@ import { BoardSidebarItem, Button, IconButton, Icons } from "@imagine/ui";
 import type { Board, GalleryItem } from "@imagine/core";
 import { api } from "../../lib/api.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
-import { resolveGalleryUrl } from "../Studio.js";
+import { resolveGalleryUrl } from "../Studio";
 
 export function BoardRow({
   board,

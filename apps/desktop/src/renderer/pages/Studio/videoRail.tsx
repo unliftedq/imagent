@@ -8,7 +8,7 @@ import { useAssetsStore } from "../../state/useAssetsStore.js";
 import { useConfigStore } from "../../state/useConfigStore.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
 import { useUIStore } from "../../state/useUIStore.js";
-import { resolveAssetThumbnailUrl } from "../Assets/index.js";
+import { resolveAssetThumbnailUrl } from "../Assets";
 import { ChatComposerShell, ToolbarSelectTrigger } from "./composer.js";
 import { createUnifiedModelOptions, ProviderModelPicker, useModelFavorites } from "./modelPicker.js";
 import { ReferencePicker } from "./referencePicker.js";
