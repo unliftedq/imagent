@@ -42,7 +42,7 @@ export function pruneReferenceRoles(
 ): StudioReferenceRoles {
   const next: StudioReferenceRoles = {};
   for (const reference of references) {
-    if (roles[reference]) next[reference] = roles[reference];
+    if (roles[reference] !== undefined) next[reference] = roles[reference];
   }
   return next;
 }
