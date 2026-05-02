@@ -1,26 +1,20 @@
-import {
-  Image,
-  SquaresFour,
-  Cube,
-  Plug,
-  Gear,
-  Brain,
-} from "@phosphor-icons/react";
-import type { ComponentType } from "react";
+import { Brain, Cube, Gear, Image, Plug, SquaresFour } from "@phosphor-icons/react";
+import type { ComponentType, ReactNode } from "react";
 import { cn } from "../lib/cn.js";
 
-export type NavRoute =
-  | "studio"
-  | "gallery"
-  | "assets"
-  | "models"
-  | "providers"
-  | "settings";
+export type NavRoute = "studio" | "gallery" | "assets" | "models" | "providers" | "settings";
 
 interface NavRailRow {
   id: NavRoute;
   label: string;
   Icon: ComponentType<{ weight?: "duotone"; className?: string }>;
+  icon?: ReactNode;
+}
+
+export interface NavRailRoute {
+  id: NavRoute;
+  label: string;
+  icon?: ReactNode;
 }
 
 /**
@@ -36,16 +30,10 @@ const NAV_ROWS: ReadonlyArray<NavRailRow> = [
   { id: "settings", label: "Settings", Icon: Gear },
 ] as const;
 
-const TOP_NAV: ReadonlyArray<NavRailRow> = NAV_ROWS.filter(
-  (r) => r.id !== "settings",
-);
-const BOTTOM_NAV: ReadonlyArray<NavRailRow> = NAV_ROWS.filter(
-  (r) => r.id === "settings",
-);
-
 export interface NavRailProps {
   activeRoute: NavRoute;
   onNavigate: (route: NavRoute) => void;
+  routes?: ReadonlyArray<NavRailRoute>;
   /** App version (rendered as a caption under the wordmark). */
   version?: string;
   className?: string;
@@ -64,9 +52,14 @@ export interface NavRailProps {
 export function NavRail({
   activeRoute,
   onNavigate,
+  routes,
   version = "v0.0.1",
   className,
 }: NavRailProps) {
+  const rows = routes ? mergeNavRows(routes) : NAV_ROWS;
+  const topNav = rows.filter((r) => r.id !== "settings");
+  const bottomNav = rows.filter((r) => r.id === "settings");
+
   return (
     <nav
       aria-label="Primary"
@@ -91,9 +84,7 @@ export function NavRail({
           <span className="text-[20px] font-semibold tracking-[-0.01em] text-(--text)">
             Imagine
           </span>
-          <span className="mt-0.5 text-[11px] font-medium text-(--text-faint)">
-            {version}
-          </span>
+          <span className="mt-0.5 text-[11px] font-medium text-(--text-faint)">{version}</span>
         </div>
       </div>
 
@@ -101,26 +92,18 @@ export function NavRail({
 
       {/* Top nav rows (Studio / Gallery / Assets / Providers) */}
       <ul className="flex flex-col gap-1 p-3">
-        {TOP_NAV.map((r) => (
+        {topNav.map((r) => (
           <li key={r.id}>
-            <NavRowButton
-              row={r}
-              active={r.id === activeRoute}
-              onClick={() => onNavigate(r.id)}
-            />
+            <NavRowButton row={r} active={r.id === activeRoute} onClick={() => onNavigate(r.id)} />
           </li>
         ))}
       </ul>
 
       {/* Bottom nav rows (Settings), pushed to the bottom by mt-auto */}
       <ul className="mt-auto flex flex-col gap-1 p-3">
-        {BOTTOM_NAV.map((r) => (
+        {bottomNav.map((r) => (
           <li key={r.id}>
-            <NavRowButton
-              row={r}
-              active={r.id === activeRoute}
-              onClick={() => onNavigate(r.id)}
-            />
+            <NavRowButton row={r} active={r.id === activeRoute} onClick={() => onNavigate(r.id)} />
           </li>
         ))}
       </ul>
@@ -137,7 +120,7 @@ function NavRowButton({
   active: boolean;
   onClick: () => void;
 }) {
-  const { Icon, label } = row;
+  const { Icon, icon, label } = row;
   return (
     <button
       type="button"
@@ -154,13 +137,14 @@ function NavRowButton({
           : "text-(--text-muted) hover:bg-(--surface-sunken) hover:text-(--text)",
       )}
     >
-      <Icon
-        weight="duotone"
+      <span
         className={cn(
-          "size-5 shrink-0",
+          "flex size-5 shrink-0 items-center justify-center",
           active ? "text-(--accent)" : "text-(--text-muted) group-hover:text-(--text)",
         )}
-      />
+      >
+        {icon ?? <Icon weight="duotone" className="size-5" />}
+      </span>
       <span
         className={cn(
           "text-[13px]",
@@ -171,6 +155,18 @@ function NavRowButton({
       </span>
     </button>
   );
+}
+
+function mergeNavRows(routes: ReadonlyArray<NavRailRoute>): NavRailRow[] {
+  return routes.map((route) => {
+    const fallback = NAV_ROWS.find((row) => row.id === route.id);
+    return {
+      id: route.id,
+      label: route.label,
+      Icon: fallback?.Icon ?? Image,
+      icon: route.icon,
+    };
+  });
 }
 
 /** Test seam — re-export for consumers that need to render their own row list. */

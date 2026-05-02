@@ -1,5 +1,5 @@
-import type { ComponentType, ReactElement } from "react";
 import { Icons } from "@imagine/ui";
+import type { ComponentType, ReactElement } from "react";
 import { AssetsPage } from "./pages/Assets";
 import { GalleryPage } from "./pages/Gallery";
 import { ModelsPage } from "./pages/Models";
@@ -26,7 +26,7 @@ export const ROUTES: RouteDef[] = [
     id: "studio",
     label: "Studio",
     Component: StudioPage,
-    icon: <Icons.Image weight="duotone" className="size-5" />,
+    icon: <Icons.MagicWand weight="duotone" className="size-5" />,
     available: true,
   },
   {
@@ -47,7 +47,7 @@ export const ROUTES: RouteDef[] = [
     id: "models",
     label: "Models",
     Component: ModelsPage,
-    icon: <Icons.Brain weight="duotone" className="size-5" />,
+    icon: <Icons.StarFour weight="duotone" className="size-5" />,
     available: true,
   },
   {

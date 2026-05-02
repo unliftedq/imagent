@@ -5,6 +5,12 @@ import { ROUTES } from "./routes.js";
 import { useConfigStore } from "./state/useConfigStore.js";
 import { useUIStore } from "./state/useUIStore.js";
 
+const NAV_ROUTES = ROUTES.filter((route) => route.available).map(({ id, label, icon }) => ({
+  id,
+  label,
+  icon,
+}));
+
 /**
  * App shell — DESIGN.md §5.4. The window is a 2-column grid: the persistent
  * `NavRail` (220px) on the left and the active route's page on the right.
@@ -52,12 +58,9 @@ export function App() {
         className="grid h-screen w-screen overflow-hidden bg-(--bg) text-(--text)"
         style={{ gridTemplateColumns: "var(--rail-nav, 220px) minmax(0, 1fr)" }}
       >
-        <NavRail activeRoute={route} onNavigate={navigate} />
+        <NavRail activeRoute={route} onNavigate={navigate} routes={NAV_ROUTES} />
         <main
-          className={
-            "h-screen bg-(--bg) " +
-            (route === "studio" ? "overflow-hidden" : "overflow-y-auto")
-          }
+          className={`h-screen bg-(--bg) ${route === "studio" ? "overflow-hidden" : "overflow-y-auto"}`}
         >
           <Active />
         </main>

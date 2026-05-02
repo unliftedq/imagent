@@ -17,14 +17,7 @@ import { NavRail, NAV_RAIL_ROWS, type NavRoute } from "./NavRail.js";
 describe("NavRail", () => {
   it("exports the canonical rows in the exact order", () => {
     const ids = NAV_RAIL_ROWS.map((r) => r.id);
-    expect(ids).toEqual([
-      "studio",
-      "gallery",
-      "assets",
-      "models",
-      "providers",
-      "settings",
-    ]);
+    expect(ids).toEqual(["studio", "gallery", "assets", "models", "providers", "settings"]);
     expect(ids).toHaveLength(6);
   });
 
@@ -52,14 +45,7 @@ describe("NavRail", () => {
         onNavigate: vi.fn(),
       }),
     );
-    const labels = [
-      "Studio",
-      "Gallery",
-      "Assets",
-      "Models",
-      "Providers",
-      "Settings",
-    ];
+    const labels = ["Studio", "Gallery", "Assets", "Models", "Providers", "Settings"];
     let lastIdx = -1;
     for (const label of labels) {
       const idx = html.indexOf(`>${label}<`);
@@ -67,6 +53,29 @@ describe("NavRail", () => {
       expect(idx, `${label} should appear after the previous row`).toBeGreaterThan(lastIdx);
       lastIdx = idx;
     }
+  });
+
+  it("renders route-provided icons when supplied", () => {
+    const html = renderToStaticMarkup(
+      createElement(NavRail, {
+        activeRoute: "studio" as NavRoute,
+        onNavigate: vi.fn(),
+        routes: [
+          {
+            id: "studio" as NavRoute,
+            label: "Studio",
+            icon: createElement("span", { "data-route-icon": "studio" }),
+          },
+          {
+            id: "settings" as NavRoute,
+            label: "Settings",
+            icon: createElement("span", { "data-route-icon": "settings" }),
+          },
+        ],
+      }),
+    );
+    expect(html).toContain('data-route-icon="studio"');
+    expect(html).toContain('data-route-icon="settings"');
   });
 
   it("marks the active row with aria-current=page", () => {
@@ -100,7 +109,9 @@ describe("NavRail", () => {
     // And the primary rows should appear BEFORE the mt-auto <ul>.
     for (const label of ["Studio", "Gallery", "Assets", "Models", "Providers"]) {
       const idx = html.indexOf(`>${label}<`);
-      expect(idx, `${label} should render before the bottom mt-auto <ul>`).toBeLessThan(mtAutoUlIdx);
+      expect(idx, `${label} should render before the bottom mt-auto <ul>`).toBeLessThan(
+        mtAutoUlIdx,
+      );
     }
   });
 

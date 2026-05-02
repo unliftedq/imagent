@@ -1,5 +1,3 @@
-import * as React from "react";
-import { useEffect, useState } from "react";
 import {
   Button,
   Icons,
@@ -8,24 +6,27 @@ import {
   PanelBody,
   PanelHeader,
   Select,
-  Toggle,
-  useTheme,
   type ThemePref,
+  useTheme,
 } from "@imagine/ui";
+import type * as React from "react";
+import { useEffect, useState } from "react";
 import { api } from "../../lib/api.js";
 import { useConfigStore } from "../../state/useConfigStore.js";
 
 export function SettingsPage() {
   const { appPrefs, summaries, refresh, saveAppPrefs } = useConfigStore();
   const { setTheme } = useTheme();
-  const [version, setVersion] = useState<Awaited<ReturnType<typeof api["app.version"]>> | null>(null);
-  const [paths, setPaths] = useState<Awaited<ReturnType<typeof api["app.storagePaths"]>> | null>(null);
+  const [version, setVersion] = useState<Awaited<ReturnType<(typeof api)["app.version"]>> | null>(
+    null,
+  );
   const [saveTimer, setSaveTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     void refresh();
-    void api["app.version"]().then(setVersion).catch(() => {});
-    void api["app.storagePaths"]().then(setPaths).catch(() => {});
+    void api["app.version"]()
+      .then(setVersion)
+      .catch(() => {});
   }, [refresh]);
 
   function patch(next: Partial<NonNullable<typeof appPrefs>>) {
@@ -58,7 +59,7 @@ export function SettingsPage() {
           Settings
         </h1>
         <p className="mt-2 text-(length:--text-body-md) text-(--text)">
-          Workspace defaults and storage. Changes save automatically.
+          Workspace defaults. Changes save automatically.
         </p>
       </header>
 
@@ -79,7 +80,10 @@ export function SettingsPage() {
 
       <Panel>
         <PanelHeader>
-          <SectionTitle icon={<Icons.Plug weight="duotone" className="size-5" />} title="Defaults" />
+          <SectionTitle
+            icon={<Icons.Plug weight="duotone" className="size-5" />}
+            title="Defaults"
+          />
         </PanelHeader>
         <PanelBody>
           <div className="flex flex-col gap-5">
@@ -154,69 +158,6 @@ export function SettingsPage() {
 
       <Panel>
         <PanelHeader>
-          <SectionTitle icon={<Icons.Gear weight="duotone" className="size-5" />} title="Behavior" />
-        </PanelHeader>
-        <PanelBody>
-          <div className="flex flex-col gap-4">
-            <ToggleRow
-              label="Keep prompt history"
-              description="Save recent prompts so the studio can offer them back."
-              checked={appPrefs.keepPromptHistory}
-              onChange={(v) => void saveAppPrefs({ keepPromptHistory: v })}
-            />
-            <ToggleRow
-              label="Open file after generate"
-              description="Reveal newly-generated images in your file manager."
-              checked={appPrefs.openAfterGenerate}
-              onChange={(v) => void saveAppPrefs({ openAfterGenerate: v })}
-            />
-          </div>
-        </PanelBody>
-      </Panel>
-
-      <Panel>
-        <PanelHeader>
-          <SectionTitle
-            icon={<Icons.Folder weight="duotone" className="size-5" />}
-            title="Storage"
-          />
-        </PanelHeader>
-        <PanelBody>
-          {paths ? (
-            <div className="flex flex-col gap-2">
-              <PathRow label="Data directory" value={paths.dataDir} target={paths.dataDir} />
-              <PathRow label="Database" value={paths.dbFile} target={paths.dataDir} />
-              <PathRow label="Config" value={paths.configFile} target={paths.dataDir} />
-              <PathRow label="Catalog" value={paths.catalogFile} target={paths.dataDir} />
-              <PathRow label="Encrypted secrets" value={paths.secretsBin} target={paths.dataDir} />
-              <PathRow label="Gallery" value={paths.galleryDir} target={paths.galleryDir} />
-              <PathRow label="Assets" value={paths.assetsDir} target={paths.assetsDir} />
-              <PathRow label="Logs" value={paths.logsDir} target={paths.logsDir} />
-            </div>
-          ) : (
-            <p className="text-(--text-muted)">Loading…</p>
-          )}
-          <div className="mt-6 border-t border-(--border-faint) pt-4">
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={async () => {
-                const ok = window.confirm(
-                  "Reset config.json to defaults? Your secrets and gallery files are NOT touched.",
-                );
-                if (!ok) return;
-                await api["system.resetConfig"]();
-                await refresh();
-              }}
-            >
-              Reset config to defaults
-            </Button>
-          </div>
-        </PanelBody>
-      </Panel>
-
-      <Panel>
-        <PanelHeader>
           <SectionTitle icon={<Icons.Info weight="duotone" className="size-5" />} title="About" />
         </PanelHeader>
         <PanelBody>
@@ -283,56 +224,6 @@ function SegmentedTheme({
   );
 }
 
-function PathRow({
-  label,
-  value,
-  target,
-}: {
-  label: string;
-  value: string;
-  target: string;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-(--radius-md) border border-(--border-faint) bg-(--surface) px-3 py-2">
-      <div className="min-w-0 flex-1">
-        <div className="text-(length:--text-caption-uppercase) tracking-[1.5px] text-(--text-muted)">
-          {label}
-        </div>
-        <div className="truncate font-mono text-(length:--text-body-sm) text-(--text)">
-          {value}
-        </div>
-      </div>
-      <Button variant="ghost" size="sm" onClick={() => void api["system.openPath"]({ path: target })}>
-        Open
-      </Button>
-    </div>
-  );
-}
-
-function ToggleRow({
-  label,
-  description,
-  checked,
-  onChange,
-}: {
-  label: string;
-  description?: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <label className="flex items-center justify-between gap-4">
-      <div className="flex flex-col gap-0.5">
-        <span className="text-(length:--text-body-md) text-(--text)">{label}</span>
-        {description ? (
-          <span className="text-(length:--text-body-sm) text-(--text-muted)">{description}</span>
-        ) : null}
-      </div>
-      <Toggle checked={checked} onCheckedChange={onChange} />
-    </label>
-  );
-}
-
 function SectionTitle({ icon, title }: { icon: React.ReactNode; title: string }) {
   return (
     <div className="flex items-center gap-2">
@@ -352,7 +243,7 @@ function Field({
   helperText?: string;
 }) {
   return (
-    <label className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5">
       <span className="text-(length:--text-caption-uppercase) tracking-[1.5px] text-(--text-muted)">
         {label}
       </span>
@@ -360,6 +251,6 @@ function Field({
       {helperText ? (
         <span className="text-(length:--text-caption) text-(--text-muted)">{helperText}</span>
       ) : null}
-    </label>
+    </div>
   );
 }

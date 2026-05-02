@@ -4,11 +4,7 @@ import { Icons, Popover } from "@imagine/ui";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import type { StudioMode } from "../../state/useUIStore.js";
-import {
-  MODEL_FAVORITES_LS_KEY,
-  type ModelFavoriteKey,
-  type UnifiedModelOption,
-} from "./types.js";
+import { MODEL_FAVORITES_LS_KEY, type ModelFavoriteKey, type UnifiedModelOption } from "./types.js";
 
 export function ProviderModelPicker({
   mode,
@@ -28,7 +24,9 @@ export function ProviderModelPicker({
   onChange: (next: { providerId: ProviderId; modelId: string }) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const current = options.find((option) => option.providerId === providerId && option.modelId === modelId);
+  const current = options.find(
+    (option) => option.providerId === providerId && option.modelId === modelId,
+  );
   const favorites = options.filter((option) => favoriteKeys.has(modelFavoriteKey(mode, option)));
   const providers = uniqueProviders(options);
   const triggerLabel = current?.modelId ?? "Choose model";
@@ -51,10 +49,8 @@ export function ProviderModelPicker({
           }
           title={triggerLabel}
         >
-          <Icons.Brain weight="duotone" className="size-3.5 shrink-0 text-(--text-muted)" />
-          <span className="min-w-0 truncate font-semibold">
-            {triggerLabel}
-          </span>
+          <Icons.MagicWand weight="duotone" className="size-3.5 shrink-0 text-(--text-muted)" />
+          <span className="min-w-0 truncate font-semibold">{triggerLabel}</span>
         </button>
       </Popover.Trigger>
       <Popover.Content className="w-[420px] p-2">
@@ -141,7 +137,9 @@ function ModelPickerRow({
         onClick={onChoose}
         className="flex min-w-0 flex-1 flex-col text-left focus-visible:outline-none"
       >
-        <span className="truncate text-[12px] font-semibold text-(--text)">{option.displayName}</span>
+        <span className="truncate text-[12px] font-semibold text-(--text)">
+          {option.displayName}
+        </span>
         <span className="truncate text-[11px] text-(--text-faint)">
           {showProvider ? `${option.providerName} · ${option.modelId}` : option.modelId}
         </span>
