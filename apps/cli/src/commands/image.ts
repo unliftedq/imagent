@@ -32,7 +32,7 @@ interface GenerateOptions {
  *
  * Awaits `job.completed` or `job.failed`, prints absolute path on success.
  * `--character/--object/--background/--style` (each repeatable) pull
- * reference images from the slug-based asset and (for style) optionally append
+ * reference images from assets identified by slug and (for style) optionally append
  * the asset's prompt_snippet. References are silently capped at the resolved
  * model's maxReferences with a stderr warning.
  */
