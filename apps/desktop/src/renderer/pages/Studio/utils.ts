@@ -1,3 +1,5 @@
+import type { StudioReferenceRoles } from "../../state/useUIStore.js";
+
 export function autosizeComposer(el: HTMLTextAreaElement | null): void {
   if (!el) return;
   el.style.height = "auto";
@@ -32,4 +34,15 @@ export function resolveGalleryUrl(relPath: string): string {
   const norm = relPath.replace(/\\/g, "/").replace(/^\/+/, "");
   const segments = norm.split("/").map(encodeURIComponent).join("/");
   return `imagine://local/${segments}`;
+}
+
+export function pruneReferenceRoles(
+  roles: StudioReferenceRoles,
+  references: string[],
+): StudioReferenceRoles {
+  const next: StudioReferenceRoles = {};
+  for (const reference of references) {
+    if (roles[reference] !== undefined) next[reference] = roles[reference];
+  }
+  return next;
 }

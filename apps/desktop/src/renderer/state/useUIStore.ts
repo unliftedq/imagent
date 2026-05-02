@@ -1,18 +1,13 @@
-import { create } from "zustand";
+import type { ImageReference } from "@imagine/core";
 import type { ThemePref } from "@imagine/ui";
+import { create } from "zustand";
 
 /**
  * Five top-level routes (DESIGN.md §10.1 / §11). The pre-Quiet-Density
  * `video` route was merged into Studio's `studioMode` tab; old persisted
  * values are migrated transparently in the store initializer below.
  */
-export type Route =
-  | "providers"
-  | "settings"
-  | "studio"
-  | "gallery"
-  | "assets"
-  | "models";
+export type Route = "providers" | "settings" | "studio" | "gallery" | "assets" | "models";
 
 export type StudioMode = "image" | "video";
 
@@ -40,6 +35,9 @@ export interface StudioDraftAssetIds {
   style: string[];
 }
 
+export type StudioReferenceRole = ImageReference["role"];
+export type StudioReferenceRoles = Record<string, StudioReferenceRole>;
+
 export interface ImageDraft {
   prompt: string;
   providerId: string;
@@ -55,6 +53,7 @@ export interface ImageDraft {
    * resolved model's `capabilities.outputFormats` is non-empty. */
   outputFormat?: string;
   references: string[];
+  referenceRoles: StudioReferenceRoles;
   parentId?: string;
   assetIds: StudioDraftAssetIds;
 }
@@ -68,6 +67,7 @@ export interface VideoDraft {
   resolution?: string;
   aspectRatio?: string;
   references: string[];
+  referenceRoles: StudioReferenceRoles;
   /** Optional first-frame image path (drag-drop or picked from gallery). */
   firstFrame?: string;
   parentId?: string;
@@ -90,6 +90,7 @@ const DEFAULT_IMAGE_DRAFT: ImageDraft = {
   modelId: "",
   count: 1,
   references: [],
+  referenceRoles: {},
   assetIds: { character: [], object: [], background: [], style: [] },
 };
 
@@ -98,6 +99,7 @@ const DEFAULT_VIDEO_DRAFT: VideoDraft = {
   providerId: "",
   modelId: "",
   references: [],
+  referenceRoles: {},
   assetIds: { character: [], object: [], background: [], style: [] },
 };
 
@@ -122,6 +124,24 @@ function normalizeAssetIds(input: unknown): StudioDraftAssetIds {
   };
 }
 
+function normalizeReferenceRoles(input: unknown): StudioReferenceRoles {
+  if (!input || typeof input !== "object") return {};
+  const roles = input as Record<string, unknown>;
+  const next: StudioReferenceRoles = {};
+  for (const [path, role] of Object.entries(roles)) {
+    if (
+      role === "character" ||
+      role === "object" ||
+      role === "background" ||
+      role === "style" ||
+      role === "freeform"
+    ) {
+      next[path] = role;
+    }
+  }
+  return next;
+}
+
 function loadImageDraftFromStorage(): ImageDraft {
   if (typeof window === "undefined") return DEFAULT_IMAGE_DRAFT;
   try {
@@ -130,24 +150,16 @@ function loadImageDraftFromStorage(): ImageDraft {
     const parsed = JSON.parse(raw) as Partial<ImageDraft>;
     return {
       prompt: typeof parsed.prompt === "string" ? parsed.prompt : "",
-      providerId:
-        typeof parsed.providerId === "string" ? parsed.providerId : "",
+      providerId: typeof parsed.providerId === "string" ? parsed.providerId : "",
       modelId: typeof parsed.modelId === "string" ? parsed.modelId : "",
       count: typeof parsed.count === "number" && parsed.count >= 1 ? parsed.count : 1,
       ...(typeof parsed.size === "string" ? { size: parsed.size } : {}),
-      ...(typeof parsed.aspectRatio === "string"
-        ? { aspectRatio: parsed.aspectRatio }
-        : {}),
+      ...(typeof parsed.aspectRatio === "string" ? { aspectRatio: parsed.aspectRatio } : {}),
       ...(typeof parsed.quality === "string" ? { quality: parsed.quality } : {}),
-      ...(typeof parsed.outputFormat === "string"
-        ? { outputFormat: parsed.outputFormat }
-        : {}),
-      references: Array.isArray(parsed.references)
-        ? (parsed.references as string[])
-        : [],
-      ...(typeof parsed.parentId === "string"
-        ? { parentId: parsed.parentId }
-        : {}),
+      ...(typeof parsed.outputFormat === "string" ? { outputFormat: parsed.outputFormat } : {}),
+      references: Array.isArray(parsed.references) ? (parsed.references as string[]) : [],
+      referenceRoles: normalizeReferenceRoles(parsed.referenceRoles),
+      ...(typeof parsed.parentId === "string" ? { parentId: parsed.parentId } : {}),
       assetIds: normalizeAssetIds(parsed.assetIds),
     };
   } catch {
@@ -165,25 +177,14 @@ function loadVideoDraftFromStorage(): VideoDraft {
       prompt: typeof parsed.prompt === "string" ? parsed.prompt : "",
       providerId: typeof parsed.providerId === "string" ? parsed.providerId : "",
       modelId: typeof parsed.modelId === "string" ? parsed.modelId : "",
-      ...(typeof parsed.durationSec === "number"
-        ? { durationSec: parsed.durationSec }
-        : {}),
+      ...(typeof parsed.durationSec === "number" ? { durationSec: parsed.durationSec } : {}),
       ...(typeof parsed.fps === "number" ? { fps: parsed.fps } : {}),
-      ...(typeof parsed.resolution === "string"
-        ? { resolution: parsed.resolution }
-        : {}),
-      ...(typeof parsed.aspectRatio === "string"
-        ? { aspectRatio: parsed.aspectRatio }
-        : {}),
-      references: Array.isArray(parsed.references)
-        ? (parsed.references as string[])
-        : [],
-      ...(typeof parsed.firstFrame === "string"
-        ? { firstFrame: parsed.firstFrame }
-        : {}),
-      ...(typeof parsed.parentId === "string"
-        ? { parentId: parsed.parentId }
-        : {}),
+      ...(typeof parsed.resolution === "string" ? { resolution: parsed.resolution } : {}),
+      ...(typeof parsed.aspectRatio === "string" ? { aspectRatio: parsed.aspectRatio } : {}),
+      references: Array.isArray(parsed.references) ? (parsed.references as string[]) : [],
+      referenceRoles: normalizeReferenceRoles(parsed.referenceRoles),
+      ...(typeof parsed.firstFrame === "string" ? { firstFrame: parsed.firstFrame } : {}),
+      ...(typeof parsed.parentId === "string" ? { parentId: parsed.parentId } : {}),
       assetIds: normalizeAssetIds(parsed.assetIds),
     };
   } catch {
@@ -246,7 +247,13 @@ function loadInitialModeAndRoute(): { route: Route; studioMode: StudioMode } {
   let storedRoute: Route = "providers";
   try {
     const r = window.localStorage.getItem(ROUTE_LS_KEY);
-    if (r === "studio" || r === "gallery" || r === "assets" || r === "providers" || r === "settings") {
+    if (
+      r === "studio" ||
+      r === "gallery" ||
+      r === "assets" ||
+      r === "providers" ||
+      r === "settings"
+    ) {
       storedRoute = r;
     } else if (r === "video") {
       // Migrate old 'video' route → studio + studioMode='video'.
@@ -283,7 +290,7 @@ export interface RemixPayloadImage {
     count: number;
     size?: string;
     aspectRatio?: string;
-    references: { path: string }[];
+    references: { path: string; role?: StudioReferenceRole }[];
   };
   parentId: string;
 }
@@ -299,7 +306,7 @@ export interface RemixPayloadVideo {
     resolution?: string;
     aspectRatio?: string;
     firstFrame?: string;
-    references: { path: string }[];
+    references: { path: string; role?: StudioReferenceRole }[];
   };
   parentId: string;
 }
@@ -332,8 +339,7 @@ interface UIState {
   setPreferredInitialRoute: (r: Route | null) => void;
 }
 
-const { route: INITIAL_ROUTE, studioMode: INITIAL_MODE } =
-  loadInitialModeAndRoute();
+const { route: INITIAL_ROUTE, studioMode: INITIAL_MODE } = loadInitialModeAndRoute();
 
 export const useUIStore = create<UIState>((set, get) => ({
   route: INITIAL_ROUTE,
@@ -359,8 +365,7 @@ export const useUIStore = create<UIState>((set, get) => ({
     set((s) => ({ toasts: [...s.toasts, { ...toast, id }] }));
     return id;
   },
-  dismissToast: (id) =>
-    set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
+  dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
   setImageDraft: (patch) => {
     const next: ImageDraft = { ...get().studioDraft.image, ...patch };
     set((s) => ({ studioDraft: { ...s.studioDraft, image: next } }));
@@ -417,6 +422,9 @@ export const useUIStore = create<UIState>((set, get) => ({
         ...(typeof r.aspectRatio === "string" ? { aspectRatio: r.aspectRatio } : {}),
         ...(typeof r.firstFrame === "string" ? { firstFrame: r.firstFrame } : {}),
         references: r.references.map((ref) => ref.path),
+        referenceRoles: Object.fromEntries(
+          r.references.map((ref) => [ref.path, ref.role ?? "freeform"]),
+        ),
         parentId: payload.parentId,
       };
       set((s) => ({
@@ -438,6 +446,9 @@ export const useUIStore = create<UIState>((set, get) => ({
         ...(typeof r.size === "string" ? { size: r.size } : {}),
         ...(typeof r.aspectRatio === "string" ? { aspectRatio: r.aspectRatio } : {}),
         references: r.references.map((ref) => ref.path),
+        referenceRoles: Object.fromEntries(
+          r.references.map((ref) => [ref.path, ref.role ?? "freeform"]),
+        ),
         parentId: payload.parentId,
       };
       set((s) => ({
