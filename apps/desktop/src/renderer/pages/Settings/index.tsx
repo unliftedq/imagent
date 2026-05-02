@@ -12,8 +12,8 @@ import {
   useTheme,
   type ThemePref,
 } from "@imagine/ui";
-import { useConfigStore } from "../state/useConfigStore.js";
-import { api } from "../lib/api.js";
+import { api } from "../../lib/api.js";
+import { useConfigStore } from "../../state/useConfigStore.js";
 
 export function SettingsPage() {
   const { appPrefs, summaries, refresh, saveAppPrefs } = useConfigStore();
@@ -28,7 +28,6 @@ export function SettingsPage() {
     void api["app.storagePaths"]().then(setPaths).catch(() => {});
   }, [refresh]);
 
-  // Debounced save helper — used by Slider/Toggle controls.
   function patch(next: Partial<NonNullable<typeof appPrefs>>) {
     if (saveTimer) clearTimeout(saveTimer);
     const t = setTimeout(() => {
@@ -111,9 +110,7 @@ export function SettingsPage() {
                   max={8}
                   step={1}
                   value={appPrefs.generationConcurrency}
-                  onChange={(e) =>
-                    patch({ generationConcurrency: Number(e.target.value) })
-                  }
+                  onChange={(e) => patch({ generationConcurrency: Number(e.target.value) })}
                   className="flex-1 accent-(--accent)"
                 />
                 <span className="w-8 text-center text-(--text) font-mono text-sm">
@@ -305,11 +302,7 @@ function PathRow({
           {value}
         </div>
       </div>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => void api["system.openPath"]({ path: target })}
-      >
+      <Button variant="ghost" size="sm" onClick={() => void api["system.openPath"]({ path: target })}>
         Open
       </Button>
     </div>
@@ -332,9 +325,7 @@ function ToggleRow({
       <div className="flex flex-col gap-0.5">
         <span className="text-(length:--text-body-md) text-(--text)">{label}</span>
         {description ? (
-          <span className="text-(length:--text-body-sm) text-(--text-muted)">
-            {description}
-          </span>
+          <span className="text-(length:--text-body-sm) text-(--text-muted)">{description}</span>
         ) : null}
       </div>
       <Toggle checked={checked} onCheckedChange={onChange} />
@@ -346,9 +337,7 @@ function SectionTitle({ icon, title }: { icon: React.ReactNode; title: string })
   return (
     <div className="flex items-center gap-2">
       <span className="text-(--text-muted)">{icon}</span>
-      <span className="text-(length:--text-title-md) font-semibold text-(--text)">
-        {title}
-      </span>
+      <span className="text-(length:--text-title-md) font-semibold text-(--text)">{title}</span>
     </div>
   );
 }

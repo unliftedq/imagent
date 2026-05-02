@@ -1,11 +1,11 @@
 import type { ComponentType, ReactElement } from "react";
 import { Icons } from "@imagine/ui";
-import { AssetsPage } from "./pages/Assets.js";
-import { GalleryPage } from "./pages/Gallery.js";
-import { ModelsPage } from "./pages/Models.js";
-import { ProvidersPage } from "./pages/Providers.js";
-import { SettingsPage } from "./pages/Settings.js";
-import { StudioPage } from "./pages/Studio.js";
+import { AssetsPage } from "./pages/Assets";
+import { GalleryPage } from "./pages/Gallery";
+import { ModelsPage } from "./pages/Models";
+import { ProvidersPage } from "./pages/Providers";
+import { SettingsPage } from "./pages/Settings";
+import { StudioPage } from "./pages/Studio";
 import type { Route } from "./state/useUIStore.js";
 
 export interface RouteDef {

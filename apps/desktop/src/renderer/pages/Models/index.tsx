@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Icons } from "@imagine/ui";
 import type { ProviderId } from "@imagine/ipc";
-import { api } from "../lib/api.js";
-import { useUIStore } from "../state/useUIStore.js";
+import { api } from "../../lib/api.js";
+import { useUIStore } from "../../state/useUIStore.js";
 
 interface ProviderEntry {
   providerId: ProviderId;
@@ -24,12 +24,6 @@ interface ModelList {
 
 type Tab = "image" | "video";
 
-/**
- * Models page. One row per logical model id; same id under multiple
- * providers (e.g. `gpt-image-2` via OpenAI + Azure) collapses to one row
- * showing each routable source as a colored badge — green when that
- * provider is configured (auth saved), gray otherwise.
- */
 export function ModelsPage() {
   const navigate = useUIStore((s) => s.navigate);
   const pushToast = useUIStore((s) => s.pushToast);
