@@ -7,7 +7,6 @@ import { api } from "../../lib/api.js";
 import { useAssetsStore } from "../../state/useAssetsStore.js";
 import { useConfigStore } from "../../state/useConfigStore.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
-import type { StudioReferenceRoles } from "../../state/useUIStore.js";
 import { useUIStore } from "../../state/useUIStore.js";
 import { resolveAssetThumbnailUrl } from "../Assets";
 import { ChatComposerShell, ToolbarSelectTrigger } from "./composer.js";
@@ -17,7 +16,7 @@ import {
   useModelFavorites,
 } from "./modelPicker.js";
 import { ReferencePicker } from "./referencePicker.js";
-import { nearestNumber } from "./utils.js";
+import { nearestNumber, pruneReferenceRoles } from "./utils.js";
 import { FirstFrameToolbarPicker } from "./videoFirstFramePicker.js";
 
 export function VideoRail() {
@@ -331,15 +330,4 @@ export function VideoRail() {
       ) : null}
     </ChatComposerShell>
   );
-}
-
-function pruneReferenceRoles(
-  roles: StudioReferenceRoles,
-  references: string[],
-): StudioReferenceRoles {
-  const next: StudioReferenceRoles = {};
-  for (const reference of references) {
-    if (roles[reference]) next[reference] = roles[reference];
-  }
-  return next;
 }

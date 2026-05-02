@@ -7,7 +7,6 @@ import { useAssetsStore } from "../../state/useAssetsStore.js";
 import { useConfigStore } from "../../state/useConfigStore.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
 import { useJobsStore } from "../../state/useJobsStore.js";
-import type { StudioReferenceRoles } from "../../state/useUIStore.js";
 import { useUIStore } from "../../state/useUIStore.js";
 import { resolveAssetThumbnailUrl } from "../Assets";
 import { ChatComposerShell, ToolbarSelectTrigger } from "./composer.js";
@@ -17,6 +16,7 @@ import {
   useModelFavorites,
 } from "./modelPicker.js";
 import { ReferencePicker } from "./referencePicker.js";
+import { pruneReferenceRoles } from "./utils.js";
 
 export function ImageRail() {
   const draft = useUIStore((state) => state.studioDraft.image);
@@ -394,15 +394,4 @@ export function ImageRail() {
       ) : null}
     </ChatComposerShell>
   );
-}
-
-function pruneReferenceRoles(
-  roles: StudioReferenceRoles,
-  references: string[],
-): StudioReferenceRoles {
-  const next: StudioReferenceRoles = {};
-  for (const reference of references) {
-    if (roles[reference]) next[reference] = roles[reference];
-  }
-  return next;
 }

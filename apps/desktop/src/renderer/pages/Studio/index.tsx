@@ -1,11 +1,14 @@
-import type { AssetKind } from "@imagine/core";
 import type { DragEvent } from "react";
 import { useState } from "react";
 import type { StudioMode } from "../../state/useUIStore.js";
 import { type StudioReferenceRole, useUIStore } from "../../state/useUIStore.js";
 import { CanvasArea } from "./canvas.js";
 import { StudioModeSwitch } from "./composer.js";
-import { readStudioReferenceDragData, StudioGalleryRail } from "./galleryRail.js";
+import {
+  readStudioReferenceDragData,
+  StudioGalleryRail,
+  type StudioReferenceDragData,
+} from "./galleryRail.js";
 import { ImageRail } from "./imageRail.js";
 import { ASSET_REFERENCE_KINDS } from "./types.js";
 import { uniqueStrings } from "./utils.js";
@@ -21,6 +24,10 @@ export function StudioPage() {
   const setImageDraft = useUIStore((state) => state.setImageDraft);
   const setVideoDraft = useUIStore((state) => state.setVideoDraft);
   const [galleryCollapsed, setGalleryCollapsed] = useState(false);
+  const [pendingGalleryReference, setPendingGalleryReference] = useState<Extract<
+    StudioReferenceDragData,
+    { source: "gallery" }
+  > | null>(null);
 
   const draft = studioMode === "image" ? imageDraft : videoDraft;
   const setDraft = studioMode === "image" ? setImageDraft : setVideoDraft;
@@ -55,15 +62,19 @@ export function StudioPage() {
       return;
     }
 
-    const role = chooseGalleryReferenceRole();
-    if (!role) return;
+    setPendingGalleryReference(data);
+  };
+
+  const addGalleryReference = (role: StudioReferenceRole): void => {
+    if (!pendingGalleryReference) return;
     setDraft({
-      references: uniqueStrings([...draft.references, data.relPath]),
+      references: uniqueStrings([...draft.references, pendingGalleryReference.relPath]),
       referenceRoles: {
         ...draft.referenceRoles,
-        [data.relPath]: role,
+        [pendingGalleryReference.relPath]: role,
       },
     });
+    setPendingGalleryReference(null);
     pushToast({
       title: `Added gallery reference as ${referenceTypeLabel(role)}`,
       variant: "success",
@@ -98,6 +109,11 @@ export function StudioPage() {
         onViewAll={() => navigate("gallery")}
         onViewAssets={() => navigate("assets")}
       />
+      <GalleryReferenceRoleDialog
+        open={pendingGalleryReference !== null}
+        onSelect={addGalleryReference}
+        onCancel={() => setPendingGalleryReference(null)}
+      />
     </div>
   );
 }
@@ -110,17 +126,63 @@ function StudioComposerDock({ mode }: { mode: StudioMode }) {
 
 export { resolveGalleryUrl } from "./utils.js";
 
-function chooseGalleryReferenceRole(): StudioReferenceRole | null {
-  const value = window.prompt(
-    "Choose reference type: character, object, background, style, or other",
-    "other",
+function GalleryReferenceRoleDialog({
+  open,
+  onSelect,
+  onCancel,
+}: {
+  open: boolean;
+  onSelect: (role: StudioReferenceRole) => void;
+  onCancel: () => void;
+}) {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-(--text)/30 px-4 backdrop-blur-[1px]">
+      <div className="w-full max-w-[360px] rounded-(--radius-lg) border border-(--border) bg-(--surface-raised) p-4 shadow-[0_24px_70px_-30px_rgba(0,0,0,0.65)]">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-[14px] font-semibold text-(--text)">Choose reference type</h2>
+            <p className="mt-1 text-[12px] text-(--text-muted)">
+              Gallery items can be added to the current session with a typed role.
+            </p>
+          </div>
+          <button
+            type="button"
+            aria-label="Cancel reference type selection"
+            onClick={onCancel}
+            className="inline-flex size-7 items-center justify-center rounded-(--radius-sm) text-(--text-muted) hover:bg-(--surface) hover:text-(--text) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring)"
+          >
+            ×
+          </button>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          {ASSET_REFERENCE_KINDS.map((kind) => (
+            <RoleButton key={kind} referenceRole={kind} onSelect={onSelect} />
+          ))}
+          <RoleButton referenceRole="freeform" onSelect={onSelect} />
+        </div>
+      </div>
+    </div>
   );
-  if (value === null) return null;
-  const normalized = value.trim().toLowerCase();
-  if (normalized === "other" || normalized === "freeform") return "freeform";
-  if (ASSET_REFERENCE_KINDS.includes(normalized as AssetKind)) return normalized as AssetKind;
-  window.alert("Reference type must be character, object, background, style, or other.");
-  return null;
+}
+
+function RoleButton({
+  referenceRole,
+  onSelect,
+}: {
+  referenceRole: StudioReferenceRole;
+  onSelect: (role: StudioReferenceRole) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(referenceRole)}
+      className="inline-flex h-10 items-center justify-center rounded-(--radius-md) border border-(--border) bg-(--bg) px-3 text-[12px] font-semibold text-(--text) transition-colors duration-(--motion-fast) hover:border-(--border-strong) hover:bg-(--surface) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring)"
+    >
+      {referenceTypeLabel(referenceRole)}
+    </button>
+  );
 }
 
 function referenceTypeLabel(role: StudioReferenceRole): string {
