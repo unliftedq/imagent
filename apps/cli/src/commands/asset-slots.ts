@@ -1,6 +1,8 @@
 import path from "node:path";
 
 import {
+  type Asset,
+  type AssetKind,
   type AssetSlotInputs as CoreAssetSlotInputs,
   type AssetSlotResolution,
   capReferencePaths,
@@ -42,10 +44,18 @@ export async function buildAssetSlots(
 ): Promise<AssetSlotResult> {
   const repo = new AssetRepository(db);
   const coreInputs: CoreAssetSlotInputs = {
-    ...(inputs.characters ? { character: inputs.characters } : {}),
-    ...(inputs.objects ? { object: inputs.objects } : {}),
-    ...(inputs.backgrounds ? { background: inputs.backgrounds } : {}),
-    ...(inputs.styles ? { style: inputs.styles } : {}),
+    ...(inputs.characters
+      ? { character: resolveAssetSlugs(repo, "character", inputs.characters) }
+      : {}),
+    ...(inputs.objects
+      ? { object: resolveAssetSlugs(repo, "object", inputs.objects) }
+      : {}),
+    ...(inputs.backgrounds
+      ? { background: resolveAssetSlugs(repo, "background", inputs.backgrounds) }
+      : {}),
+    ...(inputs.styles
+      ? { style: resolveAssetSlugs(repo, "style", inputs.styles) }
+      : {}),
   };
   return resolveAssetSlots(
     coreInputs,
@@ -64,6 +74,49 @@ export async function buildAssetSlots(
         : {}),
     },
   );
+}
+
+export function assetSlug(name: string): string {
+  const slug = name
+    .normalize("NFKD")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || "asset";
+}
+
+export function describeAssetSlug(asset: Pick<Asset, "name">): string {
+  return assetSlug(asset.name);
+}
+
+function resolveAssetSlugs(
+  repo: AssetRepository,
+  kind: AssetKind,
+  slugs: string[],
+): string[] {
+  return slugs.map((slug) => resolveAssetSlug(repo, kind, slug));
+}
+
+function resolveAssetSlug(
+  repo: AssetRepository,
+  kind: AssetKind,
+  slug: string,
+): string {
+  const matches = repo
+    .list({ kind })
+    .filter((asset) => assetSlug(asset.name) === slug);
+  if (matches.length === 1) return matches[0]!.id;
+  if (matches.length > 1) {
+    const names = matches.map((asset) => `'${asset.name}'`).join(", ");
+    throw new Error(
+      `asset slug '${slug}' is ambiguous for kind=${kind}; matching assets: ${names}`,
+    );
+  }
+
+  const byId = repo.get(slug);
+  if (byId && byId.kind === kind) return byId.id;
+
+  throw new Error(`asset slug '${slug}' not found (slot=${kind})`);
 }
 
 /**

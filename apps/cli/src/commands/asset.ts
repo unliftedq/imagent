@@ -14,6 +14,7 @@ import {
 import chalk from "chalk";
 import type { Command } from "commander";
 
+import { describeAssetSlug } from "./asset-slots.js";
 import { collect, formatRelativeTime, isTty, truncate } from "./util.js";
 
 const VALID_KINDS: AssetKind[] = ["character", "object", "background", "style"];
@@ -247,7 +248,8 @@ async function runAssetAdd(kind: string, options: AssetAddOptions): Promise<void
     db.close();
   }
 
-  process.stdout.write(`${chalk.green("ok:")} ${assetId}\n`);
+  process.stdout.write(`${chalk.green("ok:")} ${describeAssetSlug(asset)}\n`);
+  process.stdout.write(`  ${chalk.dim("id:")} ${assetId}\n`);
   for (const p of writtenRelPaths) {
     process.stdout.write(`  ${chalk.dim("•")} ${p}\n`);
   }
@@ -282,10 +284,10 @@ async function runAssetList(options: AssetListOptions): Promise<void> {
     // pretty table
     for (const a of list) {
       const refCount = a.files.filter((f) => f.role === "reference").length;
-      const idShort = truncate(a.id, 8);
+      const slug = describeAssetSlug(a);
       const updated = formatRelativeTime(a.updatedAt);
       process.stdout.write(
-        `${chalk.dim(idShort)}  ${kindBadge(a.kind)}  ${chalk.bold(a.name)}  ${chalk.dim(`refs=${refCount}`)}  ${chalk.dim(updated)}\n`,
+        `${chalk.dim(slug)}  ${kindBadge(a.kind)}  ${chalk.bold(a.name)}  ${chalk.dim(`refs=${refCount}`)}  ${chalk.dim(updated)}\n`,
       );
     }
   } finally {
@@ -303,6 +305,7 @@ async function runAssetShow(id: string): Promise<void> {
 
     const lines: string[] = [];
     lines.push(`${chalk.dim("id:        ")}${asset.id}`);
+    lines.push(`${chalk.dim("slug:      ")}${describeAssetSlug(asset)}`);
     lines.push(`${chalk.dim("kind:      ")}${asset.kind}`);
     lines.push(`${chalk.dim("name:      ")}${asset.name}`);
     if (asset.description) lines.push(`${chalk.dim("desc:      ")}${asset.description}`);

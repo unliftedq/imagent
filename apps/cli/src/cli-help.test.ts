@@ -30,10 +30,9 @@ describe("CLI --help", () => {
     expect(r.status).toBe(0);
     for (const cmd of [
       "doctor",
-      "generate",
+      "image",
       "config",
       "asset",
-      "board",
       "gallery",
       "video",
       "job",
@@ -44,14 +43,12 @@ describe("CLI --help", () => {
 
   for (const sub of [
     ["asset", "--help"],
-    ["board", "--help"],
     ["gallery", "--help"],
     ["job", "--help"],
     ["config", "--help"],
-    ["generate", "--help"],
+    ["image", "--help"],
     ["video", "--help"],
     ["asset", "add", "--help"],
-    ["board", "create", "--help"],
     ["gallery", "ls", "--help"],
     ["job", "ls", "--help"],
   ]) {

@@ -15,7 +15,6 @@ interface GenerateOptions {
   size?: string;
   ref?: string[];
   out?: string;
-  board?: string;
   negative?: string;
   seed?: string;
   aspect?: string;
@@ -26,20 +25,20 @@ interface GenerateOptions {
 }
 
 /**
- * `imagine generate <prompt>` — image generation with asset slots (M3).
+ * `imagine image <prompt>` — image generation with asset slots (M3).
  *
  * Wires:
  *   secrets + config → registry → JobRunner → start image intent.
  *
  * Awaits `job.completed` or `job.failed`, prints absolute path on success.
  * `--character/--object/--background/--style` (each repeatable) pull
- * reference images from the named asset and (for style) optionally append
+ * reference images from the slugged asset and (for style) optionally append
  * the asset's prompt_snippet. References are silently capped at the resolved
  * model's maxReferences with a stderr warning.
  */
-export function registerGenerateCommand(program: Command): void {
+export function registerImageCommand(program: Command): void {
   program
-    .command("generate <prompt>")
+    .command("image <prompt>")
     .description("Generate one or more images from a prompt")
     .option("--provider <id>", "Provider id (openai|azure-openai|google|flux-bfl|bytedance|xai)")
     .option("--model <id>", "Model id within the chosen provider")
@@ -49,17 +48,16 @@ export function registerGenerateCommand(program: Command): void {
     .option("--seed <n>", "Random seed")
     .option("--negative <prompt>", "Negative prompt (provider-dependent)")
     .option("--ref <path>", "Freeform reference image path (repeatable)", collect, [])
-    .option("--character <id>", "Attach a character asset (repeatable)", collect, [])
-    .option("--object <id>", "Attach an object asset (repeatable)", collect, [])
-    .option("--background <id>", "Attach a background asset (repeatable)", collect, [])
-    .option("--style <id>", "Attach a style asset (repeatable)", collect, [])
+    .option("--character <slug>", "Attach a character asset (repeatable)", collect, [])
+    .option("--object <slug>", "Attach an object asset (repeatable)", collect, [])
+    .option("--background <slug>", "Attach a background asset (repeatable)", collect, [])
+    .option("--style <slug>", "Attach a style asset (repeatable)", collect, [])
     .option("--out <dir>", "Output directory override")
-    .option("--board <id>", "Add result to a board after generation")
     .action(async (prompt: string, options: GenerateOptions) => {
       try {
         await runGenerate(prompt, options);
       } catch (err) {
-        process.stderr.write(`${chalk.red("generate failed:")} ${(err as Error).message}\n`);
+        process.stderr.write(`${chalk.red("image failed:")} ${(err as Error).message}\n`);
         process.exit(1);
       }
     });
@@ -112,7 +110,6 @@ async function runGenerate(prompt: string, options: GenerateOptions): Promise<vo
         ...(options.seed ? { seed: Number(options.seed) } : {}),
         references: cappedRefs.map((p) => ({ path: p, role: "freeform" as const })),
         assetIds: slots.assetIds,
-        ...(options.board ? { boardId: options.board } : {}),
       } satisfies ImageRequest,
     };
 
