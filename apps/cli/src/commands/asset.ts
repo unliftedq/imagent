@@ -15,7 +15,7 @@ import chalk from "chalk";
 import type { Command } from "commander";
 
 import { describeAssetSlug } from "./asset-slots.js";
-import { collect, formatRelativeTime, isTty, truncate } from "./util.js";
+import { collect, formatRelativeTime, isTty } from "./util.js";
 
 const VALID_KINDS: AssetKind[] = ["character", "object", "background", "style"];
 
@@ -248,7 +248,7 @@ async function runAssetAdd(kind: string, options: AssetAddOptions): Promise<void
     db.close();
   }
 
-  process.stdout.write(`${chalk.green("ok:")} ${describeAssetSlug(asset)}\n`);
+  process.stdout.write(`${chalk.green("ok:")} ${describeAssetSlug({ name: options.name })}\n`);
   process.stdout.write(`  ${chalk.dim("id:")} ${assetId}\n`);
   for (const p of writtenRelPaths) {
     process.stdout.write(`  ${chalk.dim("•")} ${p}\n`);

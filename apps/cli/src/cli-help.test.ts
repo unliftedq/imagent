@@ -28,15 +28,7 @@ describe("CLI --help", () => {
   it("root --help exits 0 and lists every M3 command", () => {
     const r = runCli(["--help"]);
     expect(r.status).toBe(0);
-    for (const cmd of [
-      "doctor",
-      "image",
-      "config",
-      "asset",
-      "gallery",
-      "video",
-      "job",
-    ]) {
+    for (const cmd of ["doctor", "image", "config", "asset", "gallery", "video", "job"]) {
       expect(r.stdout).toContain(cmd);
     }
   });

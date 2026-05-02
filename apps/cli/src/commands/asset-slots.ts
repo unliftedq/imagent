@@ -3,16 +3,12 @@ import path from "node:path";
 import {
   type Asset,
   type AssetKind,
-  type AssetSlotInputs as CoreAssetSlotInputs,
   type AssetSlotResolution,
+  type AssetSlotInputs as CoreAssetSlotInputs,
   capReferencePaths,
   resolveAssetSlots,
 } from "@imagine/core";
-import {
-  AssetRepository,
-  type DatabaseType,
-  type PathResolver,
-} from "@imagine/persistence";
+import { AssetRepository, type DatabaseType, type PathResolver } from "@imagine/persistence";
 
 /** CLI-shaped slot input (plural keys mirror the repeatable CLI flags). */
 export interface AssetSlotInputs {
@@ -47,21 +43,16 @@ export async function buildAssetSlots(
     ...(inputs.characters
       ? { character: resolveAssetSlugs(repo, "character", inputs.characters) }
       : {}),
-    ...(inputs.objects
-      ? { object: resolveAssetSlugs(repo, "object", inputs.objects) }
-      : {}),
+    ...(inputs.objects ? { object: resolveAssetSlugs(repo, "object", inputs.objects) } : {}),
     ...(inputs.backgrounds
       ? { background: resolveAssetSlugs(repo, "background", inputs.backgrounds) }
       : {}),
-    ...(inputs.styles
-      ? { style: resolveAssetSlugs(repo, "style", inputs.styles) }
-      : {}),
+    ...(inputs.styles ? { style: resolveAssetSlugs(repo, "style", inputs.styles) } : {}),
   };
   return resolveAssetSlots(
     coreInputs,
     (id) => repo.get(id),
-    (rel) =>
-      path.isAbsolute(rel) ? rel : path.join(resolver.dataDir, rel),
+    (rel) => (path.isAbsolute(rel) ? rel : path.join(resolver.dataDir, rel)),
     {
       ...(options.supportsReferences !== undefined
         ? { supportsReferences: options.supportsReferences }
@@ -89,23 +80,16 @@ export function describeAssetSlug(asset: Pick<Asset, "name">): string {
   return assetSlug(asset.name);
 }
 
-function resolveAssetSlugs(
-  repo: AssetRepository,
-  kind: AssetKind,
-  slugs: string[],
-): string[] {
+function resolveAssetSlugs(repo: AssetRepository, kind: AssetKind, slugs: string[]): string[] {
   return slugs.map((slug) => resolveAssetSlug(repo, kind, slug));
 }
 
-function resolveAssetSlug(
-  repo: AssetRepository,
-  kind: AssetKind,
-  slug: string,
-): string {
-  const matches = repo
-    .list({ kind })
-    .filter((asset) => assetSlug(asset.name) === slug);
-  if (matches.length === 1) return matches[0]!.id;
+function resolveAssetSlug(repo: AssetRepository, kind: AssetKind, slug: string): string {
+  const matches = repo.list({ kind }).filter((asset) => assetSlug(asset.name) === slug);
+  if (matches.length === 1) {
+    const [match] = matches;
+    if (match) return match.id;
+  }
   if (matches.length > 1) {
     const names = matches.map((asset) => `'${asset.name}'`).join(", ");
     throw new Error(
