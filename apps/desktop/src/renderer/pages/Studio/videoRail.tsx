@@ -7,10 +7,15 @@ import { api } from "../../lib/api.js";
 import { useAssetsStore } from "../../state/useAssetsStore.js";
 import { useConfigStore } from "../../state/useConfigStore.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
+import type { StudioReferenceRoles } from "../../state/useUIStore.js";
 import { useUIStore } from "../../state/useUIStore.js";
 import { resolveAssetThumbnailUrl } from "../Assets";
 import { ChatComposerShell, ToolbarSelectTrigger } from "./composer.js";
-import { createUnifiedModelOptions, ProviderModelPicker, useModelFavorites } from "./modelPicker.js";
+import {
+  createUnifiedModelOptions,
+  ProviderModelPicker,
+  useModelFavorites,
+} from "./modelPicker.js";
 import { ReferencePicker } from "./referencePicker.js";
 import { nearestNumber } from "./utils.js";
 import { FirstFrameToolbarPicker } from "./videoFirstFramePicker.js";
@@ -52,7 +57,8 @@ export function VideoRail() {
     const first = configuredVideoProviders[0];
     if (!first) return;
     const defaultId =
-      draft.providerId && configuredVideoProviders.some((provider) => provider.id === draft.providerId)
+      draft.providerId &&
+      configuredVideoProviders.some((provider) => provider.id === draft.providerId)
         ? (draft.providerId as ProviderId)
         : (first.id as ProviderId);
     if (draft.providerId !== defaultId) {
@@ -98,7 +104,8 @@ export function VideoRail() {
     const activeProvider = draft.providerId || configuredVideoProviders[0]?.id;
     if (!activeProvider) return;
     const activeModels = modelsByProvider[activeProvider] ?? [];
-    if (activeModels.length === 0 || activeModels.some((model) => model.id === draft.modelId)) return;
+    if (activeModels.length === 0 || activeModels.some((model) => model.id === draft.modelId))
+      return;
     const fallback = activeModels[0]?.id ?? "";
     if (fallback) {
       setDraft({ providerId: activeProvider, modelId: fallback });
@@ -168,7 +175,10 @@ export function VideoRail() {
       ...(typeof draft.resolution === "string" ? { resolution: draft.resolution } : {}),
       ...(typeof draft.aspectRatio === "string" ? { aspectRatio: draft.aspectRatio } : {}),
       ...(typeof draft.firstFrame === "string" ? { firstFrame: draft.firstFrame } : {}),
-      references: draft.references.map((path) => ({ path, role: "freeform" as const })),
+      references: draft.references.map((path) => ({
+        path,
+        role: draft.referenceRoles[path] ?? ("freeform" as const),
+      })),
       assetIds: [],
       ...(draft.parentId ? { parentId: draft.parentId } : {}),
       ...(slotsHaveAny ? { assetSlots: draft.assetIds } : {}),
@@ -229,7 +239,12 @@ export function VideoRail() {
         assetsByKind={assetsByKind}
         references={draft.references}
         onAssetIdsChange={(assetIds) => setDraft({ assetIds })}
-        onReferencesChange={(references) => setDraft({ references })}
+        onReferencesChange={(references) =>
+          setDraft({
+            references,
+            referenceRoles: pruneReferenceRoles(draft.referenceRoles, references),
+          })
+        }
         thumbnailUrl={(asset) => resolveAssetThumbnailUrl(asset)}
         onRequestCreateAsset={() => navigate("assets")}
         onError={(message) =>
@@ -316,4 +331,15 @@ export function VideoRail() {
       ) : null}
     </ChatComposerShell>
   );
+}
+
+function pruneReferenceRoles(
+  roles: StudioReferenceRoles,
+  references: string[],
+): StudioReferenceRoles {
+  const next: StudioReferenceRoles = {};
+  for (const reference of references) {
+    if (roles[reference]) next[reference] = roles[reference];
+  }
+  return next;
 }

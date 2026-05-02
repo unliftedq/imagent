@@ -7,10 +7,15 @@ import { useAssetsStore } from "../../state/useAssetsStore.js";
 import { useConfigStore } from "../../state/useConfigStore.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
 import { useJobsStore } from "../../state/useJobsStore.js";
+import type { StudioReferenceRoles } from "../../state/useUIStore.js";
 import { useUIStore } from "../../state/useUIStore.js";
 import { resolveAssetThumbnailUrl } from "../Assets";
 import { ChatComposerShell, ToolbarSelectTrigger } from "./composer.js";
-import { createUnifiedModelOptions, ProviderModelPicker, useModelFavorites } from "./modelPicker.js";
+import {
+  createUnifiedModelOptions,
+  ProviderModelPicker,
+  useModelFavorites,
+} from "./modelPicker.js";
 import { ReferencePicker } from "./referencePicker.js";
 
 export function ImageRail() {
@@ -37,7 +42,10 @@ export function ImageRail() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const { favoriteKeys, toggleFavorite } = useModelFavorites();
 
-  const configuredProviders = useMemo(() => summaries.filter((summary) => summary.configured), [summaries]);
+  const configuredProviders = useMemo(
+    () => summaries.filter((summary) => summary.configured),
+    [summaries],
+  );
 
   useEffect(() => {
     void refreshConfig();
@@ -47,7 +55,10 @@ export function ImageRail() {
 
   useEffect(() => {
     if (configuredProviders.length === 0) return;
-    if (draft.providerId && configuredProviders.some((provider) => provider.id === draft.providerId)) {
+    if (
+      draft.providerId &&
+      configuredProviders.some((provider) => provider.id === draft.providerId)
+    ) {
       return;
     }
     const first =
@@ -100,7 +111,8 @@ export function ImageRail() {
     const activeProvider = draft.providerId || configuredProviders[0]?.id;
     if (!activeProvider) return;
     const activeModels = modelsByProvider[activeProvider] ?? [];
-    if (activeModels.length === 0 || activeModels.some((model) => model.id === draft.modelId)) return;
+    if (activeModels.length === 0 || activeModels.some((model) => model.id === draft.modelId))
+      return;
     const fallback = activeModels[0]?.id ?? "";
     if (fallback) {
       setDraft({ providerId: activeProvider, modelId: fallback });
@@ -184,7 +196,10 @@ export function ImageRail() {
       ...(draft.aspectRatio ? { aspectRatio: draft.aspectRatio } : {}),
       ...(draft.quality ? { quality: draft.quality } : {}),
       ...(draft.outputFormat ? { outputFormat: draft.outputFormat } : {}),
-      references: draft.references.map((path) => ({ path, role: "freeform" as const })),
+      references: draft.references.map((path) => ({
+        path,
+        role: draft.referenceRoles[path] ?? ("freeform" as const),
+      })),
       assetIds: [],
       ...(draft.parentId ? { parentId: draft.parentId } : {}),
       ...(slotsHaveAny ? { assetSlots: draft.assetIds } : {}),
@@ -254,7 +269,12 @@ export function ImageRail() {
         assetsByKind={assetsByKind}
         references={draft.references}
         onAssetIdsChange={(assetIds) => setDraft({ assetIds })}
-        onReferencesChange={(references) => setDraft({ references })}
+        onReferencesChange={(references) =>
+          setDraft({
+            references,
+            referenceRoles: pruneReferenceRoles(draft.referenceRoles, references),
+          })
+        }
         thumbnailUrl={(asset) => resolveAssetThumbnailUrl(asset)}
         maxReferencesHint={caps?.maxReferences}
         onRequestCreateAsset={() => navigate("assets")}
@@ -274,7 +294,10 @@ export function ImageRail() {
       />
 
       {caps?.sizes && caps.sizes.length > 0 ? (
-        <Select.Root value={draft.size ?? caps.sizes[0]} onValueChange={(value) => setDraft({ size: value })}>
+        <Select.Root
+          value={draft.size ?? caps.sizes[0]}
+          onValueChange={(value) => setDraft({ size: value })}
+        >
           <ToolbarSelectTrigger
             ariaLabel="Size"
             icon={<Icons.FrameCorners weight="duotone" className="size-3.5" />}
@@ -371,4 +394,15 @@ export function ImageRail() {
       ) : null}
     </ChatComposerShell>
   );
+}
+
+function pruneReferenceRoles(
+  roles: StudioReferenceRoles,
+  references: string[],
+): StudioReferenceRoles {
+  const next: StudioReferenceRoles = {};
+  for (const reference of references) {
+    if (roles[reference]) next[reference] = roles[reference];
+  }
+  return next;
 }
