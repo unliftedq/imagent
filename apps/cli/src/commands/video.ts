@@ -22,7 +22,6 @@ interface VideoOptions {
   style?: string[];
   wait?: boolean;
   out?: string;
-  board?: string;
 }
 
 export function registerVideoCommand(program: Command): void {
@@ -36,13 +35,12 @@ export function registerVideoCommand(program: Command): void {
     .option("--resolution <r>", "Resolution (e.g. 720p, 1080p)")
     .option("--aspect <ratio>", "Aspect ratio (e.g. 16:9, 9:16)")
     .option("--ref <path>", "Reference image path (repeatable)", collect, [])
-    .option("--character <id>", "Attach a character asset (repeatable)", collect, [])
-    .option("--object <id>", "Attach an object asset (repeatable)", collect, [])
-    .option("--background <id>", "Attach a background asset (repeatable)", collect, [])
-    .option("--style <id>", "Attach a style asset (repeatable)", collect, [])
+    .option("--character <slug>", "Attach a character asset (repeatable)", collect, [])
+    .option("--object <slug>", "Attach an object asset (repeatable)", collect, [])
+    .option("--background <slug>", "Attach a background asset (repeatable)", collect, [])
+    .option("--style <slug>", "Attach a style asset (repeatable)", collect, [])
     .option("--wait", "Block until job completes, printing live progress")
     .option("--out <dir>", "Output directory override")
-    .option("--board <id>", "Add result to a board after generation")
     .action(async (prompt: string, options: VideoOptions) => {
       try {
         await runVideo(prompt, options);
@@ -96,7 +94,6 @@ async function runVideo(prompt: string, options: VideoOptions): Promise<void> {
       ...(options.aspect ? { aspectRatio: options.aspect } : {}),
       references: cappedRefs.map((p) => ({ path: p, role: "freeform" as const })),
       assetIds: slots.assetIds,
-      ...(options.board ? { boardId: options.board } : {}),
     };
 
     const intent: GenerationIntent = { kind: "video", request: req };

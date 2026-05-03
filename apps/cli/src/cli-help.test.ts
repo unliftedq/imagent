@@ -28,30 +28,19 @@ describe("CLI --help", () => {
   it("root --help exits 0 and lists every M3 command", () => {
     const r = runCli(["--help"]);
     expect(r.status).toBe(0);
-    for (const cmd of [
-      "doctor",
-      "generate",
-      "config",
-      "asset",
-      "board",
-      "gallery",
-      "video",
-      "job",
-    ]) {
+    for (const cmd of ["doctor", "image", "config", "asset", "gallery", "video", "job"]) {
       expect(r.stdout).toContain(cmd);
     }
   });
 
   for (const sub of [
     ["asset", "--help"],
-    ["board", "--help"],
     ["gallery", "--help"],
     ["job", "--help"],
     ["config", "--help"],
-    ["generate", "--help"],
+    ["image", "--help"],
     ["video", "--help"],
     ["asset", "add", "--help"],
-    ["board", "create", "--help"],
     ["gallery", "ls", "--help"],
     ["job", "ls", "--help"],
   ]) {

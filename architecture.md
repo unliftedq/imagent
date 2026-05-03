@@ -186,7 +186,7 @@ The resolved model drives the entire downstream pipeline:
 
 - **UI**: PromptComposer reads `capabilities.sizes` to render the size selector and disables the reference dropzone when `maxReferences === 0`. Video Studio's duration slider snaps to `durationsSec`.
 - **Request validation**: `ImageRequest` is validated against the resolved model's capabilities before reaching the provider — invalid `count`, `size`, or refs are rejected with precise error messages.
-- **Defaults injection**: missing fields on the request are filled from `model.defaults` before validation, so a one-line `imagine generate "foo"` still produces sane parameters per chosen model.
+- **Defaults injection**: missing fields on the request are filled from `model.defaults` before validation, so a one-line `imagine image "foo"` still produces sane parameters per chosen model.
 
 **Strict mode is on by default**: an unknown short-form id throws at startup rather than silently degrading. Users adding an unreleased model must supply at least an `id` in long form (capabilities optional, but inline-object syntax signals intent).
 
@@ -406,7 +406,7 @@ createFileSecretsStore(path)             // CLI:    secrets.json (chmod 600)
 createEnvSecretsStore(process.env)       // CLI:    OPENAI_API_KEY etc., overrides file
 ```
 
-CLI startup chains `mergeSecrets(envSecrets, fileSecrets)` — env wins, so `OPENAI_API_KEY=sk-other imagine generate ...` runs with that key without persisting it. Desktop never reads env (avoids accidentally picking up staging keys from a developer shell).
+CLI startup chains `mergeSecrets(envSecrets, fileSecrets)` — env wins, so `OPENAI_API_KEY=sk-other imagine image ...` runs with that key without persisting it. Desktop never reads env (avoids accidentally picking up staging keys from a developer shell).
 
 ### 7.3 Edit & reload paths
 
@@ -466,13 +466,12 @@ export const events = {
 The CLI imports the same packages as the main process (no IPC). It opens the same `studio.db` and writes to the same `gallery/` tree, so anything generated from the shell shows up next time the desktop opens. Commander 12; ships as one bun-compiled binary `imagine.exe`.
 
 ```
-imagine generate "<prompt>"  [--provider bytedance] [--model seedream-3.0] [--ref path,path]
-                             [--character id] [--object id] [--background id] [--style id]
-                             [--count 4] [--out dir] [--board boardId]
-imagine video <prompt>       [--provider bytedance] [--model seedance-1.0-pro] [--duration 5] [--ref ...] [--wait]
+imagine image "<prompt>"     [--provider bytedance] [--model seedream-3.0] [--ref path,path]
+                             [--character slug] [--object slug] [--background slug] [--style slug]
+                             [--count 4] [--out dir]
+imagine video <prompt>       [--provider bytedance] [--model seedance-1.0-pro] [--duration 5] [--ref ...] [--character slug] [--wait]
 imagine job {status|cancel|watch} <jobId>
 imagine asset {add|list|rm|show} ...
-imagine board {create|add|ls|rm} ...
 imagine gallery {ls|remix|rm|favorite} ...
 imagine config {get|set|path}
 imagine doctor               # provider readiness, DB path, FTS status

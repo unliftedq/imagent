@@ -1,16 +1,14 @@
 import path from "node:path";
 
 import {
-  type AssetSlotInputs as CoreAssetSlotInputs,
+  type Asset,
+  type AssetKind,
   type AssetSlotResolution,
+  type AssetSlotInputs as CoreAssetSlotInputs,
   capReferencePaths,
   resolveAssetSlots,
 } from "@imagine/core";
-import {
-  AssetRepository,
-  type DatabaseType,
-  type PathResolver,
-} from "@imagine/persistence";
+import { AssetRepository, type DatabaseType, type PathResolver } from "@imagine/persistence";
 
 /** CLI-shaped slot input (plural keys mirror the repeatable CLI flags). */
 export interface AssetSlotInputs {
@@ -42,16 +40,19 @@ export async function buildAssetSlots(
 ): Promise<AssetSlotResult> {
   const repo = new AssetRepository(db);
   const coreInputs: CoreAssetSlotInputs = {
-    ...(inputs.characters ? { character: inputs.characters } : {}),
-    ...(inputs.objects ? { object: inputs.objects } : {}),
-    ...(inputs.backgrounds ? { background: inputs.backgrounds } : {}),
-    ...(inputs.styles ? { style: inputs.styles } : {}),
+    ...(inputs.characters
+      ? { character: resolveAssetSlugs(repo, "character", inputs.characters) }
+      : {}),
+    ...(inputs.objects ? { object: resolveAssetSlugs(repo, "object", inputs.objects) } : {}),
+    ...(inputs.backgrounds
+      ? { background: resolveAssetSlugs(repo, "background", inputs.backgrounds) }
+      : {}),
+    ...(inputs.styles ? { style: resolveAssetSlugs(repo, "style", inputs.styles) } : {}),
   };
   return resolveAssetSlots(
     coreInputs,
     (id) => repo.get(id),
-    (rel) =>
-      path.isAbsolute(rel) ? rel : path.join(resolver.dataDir, rel),
+    (rel) => (path.isAbsolute(rel) ? rel : path.join(resolver.dataDir, rel)),
     {
       ...(options.supportsReferences !== undefined
         ? { supportsReferences: options.supportsReferences }
@@ -64,6 +65,42 @@ export async function buildAssetSlots(
         : {}),
     },
   );
+}
+
+export function assetSlug(name: string, id?: string): string {
+  const slug = name
+    .normalize("NFKD")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || `asset-${id?.slice(0, 8) ?? "unnamed"}`;
+}
+
+export function describeAssetSlug(asset: Pick<Asset, "id" | "name">): string {
+  return assetSlug(asset.name, asset.id);
+}
+
+function resolveAssetSlugs(repo: AssetRepository, kind: AssetKind, slugs: string[]): string[] {
+  return slugs.map((slug) => resolveAssetSlug(repo, kind, slug));
+}
+
+function resolveAssetSlug(repo: AssetRepository, kind: AssetKind, slug: string): string {
+  const matches = repo.list({ kind }).filter((asset) => assetSlug(asset.name, asset.id) === slug);
+  if (matches.length === 1) {
+    const [match] = matches;
+    if (match) return match.id;
+  }
+  if (matches.length > 1) {
+    const names = matches.map((asset) => `'${asset.name}'`).join(", ");
+    throw new Error(
+      `asset slug '${slug}' is ambiguous for kind=${kind}; matching assets: ${names}`,
+    );
+  }
+
+  const byId = repo.get(slug);
+  if (byId && byId.kind === kind) return byId.id;
+
+  throw new Error(`asset slug '${slug}' not found (slot=${kind})`);
 }
 
 /**

@@ -91,13 +91,12 @@ The CLI imports the same packages as the desktop main process — anything gener
 ```
 imagine doctor                                           # health check
 imagine config {get|set|path}                            # secrets + preferences
-imagine generate "<prompt>" [--provider ...] [--model ...] [--ref ...]
-                            [--character id] [--object id] [--background id] [--style id]
-                            [--count 4] [--out dir] [--board boardId]
+imagine image "<prompt>"    [--provider ...] [--model ...] [--ref ...]
+                            [--character slug] [--object slug] [--background slug] [--style slug]
+                            [--count 4] [--out dir]
 imagine video <prompt>      [--provider bytedance] [--model seedance-1.0-pro]
-                            [--duration 5] [--ref ...] [--wait]
+                            [--duration 5] [--ref ...] [--character slug] [--wait]
 imagine asset {add|list|rm|show} ...
-imagine board {create|add|ls|rm} ...
 imagine gallery {ls|remix|rm|favorite} ...
 imagine job {status|cancel|watch} <jobId>
 ```

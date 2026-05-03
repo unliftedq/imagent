@@ -27,7 +27,6 @@ import {
 
 interface GalleryLsOptions {
   kind?: string;
-  board?: string;
   provider?: string;
   favorite?: boolean;
   limit?: string;
@@ -49,7 +48,6 @@ export function registerGalleryCommands(program: Command): void {
     .command("ls")
     .description("List gallery items, optionally filtered")
     .option("--kind <kind>", "image|video")
-    .option("--board <id>", "Filter by board id")
     .option("--provider <id>", "Filter by provider id")
     .option("--favorite", "Only favorited items")
     .option("--limit <n>", "Maximum rows to print", "50")
@@ -134,7 +132,6 @@ async function runLs(options: GalleryLsOptions): Promise<void> {
     const repo = new GalleryRepository(db);
     const { items } = repo.query({
       ...(options.kind ? { kind: options.kind as "image" | "video" } : {}),
-      ...(options.board ? { boardId: options.board } : {}),
       ...(options.provider ? { providerId: options.provider } : {}),
       ...(options.favorite ? { favoritedOnly: true } : {}),
       ...(options.search ? { search: options.search } : {}),
@@ -310,7 +307,7 @@ async function runRemix(itemId: string, options: GalleryRemixOptions): Promise<v
     }
 
     // Video remix: submit + print job id (no --wait by default to keep parity
-    // with the M2 generate UX). Users can `imagine job watch <id>` after.
+    // with the image generation UX). Users can `imagine job watch <id>` after.
     const provider = runtime.videoRegistry.get(providerId);
     if (!provider) {
       throw new Error(

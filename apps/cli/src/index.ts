@@ -2,12 +2,11 @@
 import { Command } from "commander";
 
 import { registerAssetCommands } from "./commands/asset.js";
-import { registerBoardCommands } from "./commands/board.js";
 import { registerCatalogCommands } from "./commands/catalog.js";
 import { registerConfigCommand } from "./commands/config.js";
 import { runDoctor } from "./commands/doctor.js";
 import { registerGalleryCommands } from "./commands/gallery.js";
-import { registerGenerateCommand } from "./commands/generate.js";
+import { registerImageCommand } from "./commands/image.js";
 import { registerJobCommands } from "./commands/job.js";
 import { registerVideoCommand } from "./commands/video.js";
 import { CLI_VERSION } from "./version.js";
@@ -32,13 +31,12 @@ async function main(): Promise<void> {
     });
 
   // M2 commands.
-  registerGenerateCommand(program);
+  registerImageCommand(program);
   registerConfigCommand(program);
   registerCatalogCommands(program);
 
   // M3 commands.
   registerAssetCommands(program);
-  registerBoardCommands(program);
   registerGalleryCommands(program);
   registerVideoCommand(program);
   registerJobCommands(program);
