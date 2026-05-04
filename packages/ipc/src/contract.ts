@@ -481,6 +481,7 @@ export const contract = {
             mimeType: z.string(),
           }),
         )
+        .max(1)
         .default([]),
     }),
     output: AssetSchema,

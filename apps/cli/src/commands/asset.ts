@@ -43,7 +43,7 @@ export function registerAssetCommands(program: Command): void {
     .requiredOption("--name <name>", "Display name")
     .option("--description <text>", "Optional description")
     .option("--prompt <snippet>", "Prompt snippet (style only)")
-    .option("--ref <path>", "Reference image path (repeatable)", collect, [])
+    .option("--ref <path>", "Reference image path", collect, [])
     .action(async (kind: string, options: AssetAddOptions) => {
       try {
         await runAssetAdd(kind, options);
@@ -55,7 +55,7 @@ export function registerAssetCommands(program: Command): void {
 
   asset
     .command("list")
-    .description("List assets with their reference counts")
+    .description("List assets with their reference status")
     .option("--kind <kind>", "Filter by kind")
     .option("--search <query>", "FTS5 search across name/description/prompt")
     .option("--limit <n>", "Maximum rows to print")
@@ -96,9 +96,7 @@ export function registerAssetCommands(program: Command): void {
 
 async function runAssetAdd(kind: string, options: AssetAddOptions): Promise<void> {
   if (!VALID_KINDS.includes(kind as AssetKind)) {
-    throw new Error(
-      `unknown kind '${kind}'. Expected one of: ${VALID_KINDS.join(", ")}`,
-    );
+    throw new Error(`unknown kind '${kind}'. Expected one of: ${VALID_KINDS.join(", ")}`);
   }
   const assetKind = kind as AssetKind;
 
@@ -111,14 +109,15 @@ async function runAssetAdd(kind: string, options: AssetAddOptions): Promise<void
     );
   }
   const refs = options.ref ?? [];
+  if (refs.length > 1) {
+    throw new Error("assets accept only one --ref");
+  }
   if (refs.length === 0) {
     if (assetKind !== "style") {
-      throw new Error(`kind=${assetKind} requires at least one --ref`);
+      throw new Error(`kind=${assetKind} requires one --ref`);
     }
     if (!options.prompt) {
-      throw new Error(
-        "kind=style needs at least one --ref OR a --prompt snippet (or both)",
-      );
+      throw new Error("kind=style needs one --ref OR a --prompt snippet (or both)");
     }
   }
 
@@ -133,9 +132,9 @@ async function runAssetAdd(kind: string, options: AssetAddOptions): Promise<void
   const fileRows: AssetFile[] = [];
   const writtenRelPaths: string[] = [];
 
-  // 1) Copy each --ref into the asset folder.
-  for (let i = 0; i < refs.length; i += 1) {
-    const src = path.resolve(refs[i]!);
+  // 1) Copy the optional --ref into the asset folder.
+  for (const [i, refPath] of refs.entries()) {
+    const src = path.resolve(refPath);
     const stat = await fs.stat(src).catch(() => {
       throw new Error(`reference not found: ${src}`);
     });
@@ -183,8 +182,8 @@ async function runAssetAdd(kind: string, options: AssetAddOptions): Promise<void
   }
 
   // 2) Generate one thumbnail from the first reference if we have one.
-  if (fileRows.length > 0) {
-    const firstRef = fileRows[0]!;
+  const firstRef = fileRows.find((f) => f.role === "reference");
+  if (firstRef) {
     const thumbRel = path.join("assets", assetId, "thumb.webp");
     const thumbAbs = path.join(resolver.dataDir, thumbRel);
     const srcAbs = path.join(resolver.dataDir, firstRef.relPath);
@@ -199,7 +198,9 @@ async function runAssetAdd(kind: string, options: AssetAddOptions): Promise<void
         width: t.width,
         height: t.height,
         bytes: t.bytes,
-        sha256: createHash("sha256").update(await fs.readFile(thumbAbs)).digest("hex"),
+        sha256: createHash("sha256")
+          .update(await fs.readFile(thumbAbs))
+          .digest("hex"),
         position: 0,
         createdAt: now,
       });
@@ -259,9 +260,7 @@ async function runAssetAdd(kind: string, options: AssetAddOptions): Promise<void
 
 async function runAssetList(options: AssetListOptions): Promise<void> {
   if (options.kind && !VALID_KINDS.includes(options.kind as AssetKind)) {
-    throw new Error(
-      `unknown kind '${options.kind}'. Expected one of: ${VALID_KINDS.join(", ")}`,
-    );
+    throw new Error(`unknown kind '${options.kind}'. Expected one of: ${VALID_KINDS.join(", ")}`);
   }
   const limit = options.limit ? Number.parseInt(options.limit, 10) : undefined;
   if (limit !== undefined && (Number.isNaN(limit) || limit <= 0)) {
@@ -285,11 +284,11 @@ async function runAssetList(options: AssetListOptions): Promise<void> {
 
     // pretty table
     for (const a of list) {
-      const refCount = a.files.filter((f) => f.role === "reference").length;
+      const hasReference = a.files.some((f) => f.role === "reference");
       const slug = describeAssetSlug(a);
       const updated = formatRelativeTime(a.updatedAt);
       process.stdout.write(
-        `${chalk.dim(slug)}  ${kindBadge(a.kind)}  ${chalk.bold(a.name)}  ${chalk.dim(`refs=${refCount}`)}  ${chalk.dim(updated)}\n`,
+        `${chalk.dim(slug)}  ${kindBadge(a.kind)}  ${chalk.bold(a.name)}  ${chalk.dim(hasReference ? "ref=yes" : "ref=no")}  ${chalk.dim(updated)}\n`,
       );
     }
   } finally {
@@ -320,15 +319,13 @@ async function runAssetShow(id: string): Promise<void> {
       lines.push(`${chalk.dim("archived:  ")}${new Date(asset.archivedAt).toISOString()}`);
     }
 
-    const refs = asset.files.filter((f) => f.role === "reference");
+    const reference = asset.files.find((f) => f.role === "reference") ?? null;
     const thumb = asset.files.find((f) => f.role === "thumbnail");
-    if (refs.length > 0) {
-      lines.push(`${chalk.dim("references:")}`);
-      for (const r of refs) {
-        const abs = path.join(resolver.dataDir, r.relPath);
-        const dim = r.width && r.height ? ` (${r.width}x${r.height})` : "";
-        lines.push(`  ${chalk.dim("•")} ${abs}${chalk.dim(dim)}`);
-      }
+    if (reference) {
+      const abs = path.join(resolver.dataDir, reference.relPath);
+      const dim =
+        reference.width && reference.height ? ` (${reference.width}x${reference.height})` : "";
+      lines.push(`${chalk.dim("reference: ")}${abs}${chalk.dim(dim)}`);
     }
     if (thumb) {
       const abs = path.join(resolver.dataDir, thumb.relPath);

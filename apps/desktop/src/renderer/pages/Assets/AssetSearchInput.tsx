@@ -1,16 +1,18 @@
-import { Icons, Input } from "@imagine/ui";
+import { cn, Icons, Input } from "@imagine/ui";
 
 export function AssetSearchInput({
   placeholder,
   value,
   onChange,
+  className,
 }: {
   placeholder: string;
   value: string;
   onChange: (next: string) => void;
+  className?: string;
 }) {
   return (
-    <div className="relative w-full max-w-sm">
+    <div className={cn("relative w-full max-w-[640px]", className)}>
       <Icons.MagnifyingGlass
         weight="bold"
         className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-(--text-muted)"
@@ -19,7 +21,7 @@ export function AssetSearchInput({
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="pl-9 pr-8"
+        className="h-10 pl-9 pr-9 text-(length:--text-body)"
       />
       {value ? (
         <button

@@ -54,9 +54,7 @@ export function AssetDrawer({
       await onSave({
         name: name.trim() || asset.name,
         description: description.trim() || null,
-        ...(asset.kind === "style"
-          ? { promptSnippet: promptSnippet.trim() || null }
-          : {}),
+        ...(asset.kind === "style" ? { promptSnippet: promptSnippet.trim() || null } : {}),
       });
       pushToast({ title: "Saved", variant: "success" });
     } catch (err) {
@@ -81,7 +79,7 @@ export function AssetDrawer({
     }
   };
 
-  const refs = asset?.files.filter((f) => f.role === "reference") ?? [];
+  const reference = asset?.files.find((f) => f.role === "reference") ?? null;
 
   return (
     <Dialog.Root open={asset !== null} onOpenChange={(v) => (v ? null : onClose())}>
@@ -100,27 +98,22 @@ export function AssetDrawer({
               {asset.kind}
             </span>
 
-            {refs.length > 0 ? (
-              <div className="grid grid-cols-3 gap-2">
-                {refs.map((f) => (
-                  <a
-                    key={f.id}
-                    href={resolveDataUrl(f.relPath)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block aspect-square overflow-hidden rounded-(--radius-sm) border border-(--border)"
-                  >
-                    <img
-                      src={resolveDataUrl(f.relPath)}
-                      alt={f.relPath}
-                      className="h-full w-full object-cover"
-                    />
-                  </a>
-                ))}
-              </div>
+            {reference ? (
+              <a
+                href={resolveDataUrl(reference.relPath)}
+                target="_blank"
+                rel="noreferrer"
+                className="block overflow-hidden rounded-(--radius-md) border border-(--border) bg-(--surface)"
+              >
+                <img
+                  src={resolveDataUrl(reference.relPath)}
+                  alt={reference.relPath}
+                  className="block aspect-square w-full object-cover"
+                />
+              </a>
             ) : asset.kind === "style" ? (
               <p className="text-(length:--text-caption) text-(--text-muted)">
-                No reference images — this style relies on the prompt snippet below.
+                No reference image — this style relies on the prompt snippet below.
               </p>
             ) : null}
 
@@ -128,7 +121,11 @@ export function AssetDrawer({
               <Input value={name} onChange={(e) => setName(e.target.value)} />
             </AssetField>
             <AssetField label="Description">
-              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={2}
+              />
             </AssetField>
             {asset.kind === "style" ? (
               <AssetField label="Prompt snippet">
@@ -157,11 +154,7 @@ export function AssetDrawer({
                 {asset.archivedAt !== null ? (
                   confirmHardDelete ? (
                     <>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setConfirmHardDelete(false)}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => setConfirmHardDelete(false)}>
                         Cancel
                       </Button>
                       <Button
@@ -184,22 +177,14 @@ export function AssetDrawer({
                       >
                         Restore
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setConfirmHardDelete(true)}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => setConfirmHardDelete(true)}>
                         Delete permanently
                       </Button>
                     </>
                   )
                 ) : confirmHardDelete ? (
                   <>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setConfirmHardDelete(false)}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => setConfirmHardDelete(false)}>
                       Cancel
                     </Button>
                     <Button
@@ -212,11 +197,7 @@ export function AssetDrawer({
                   </>
                 ) : (
                   <>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setConfirmHardDelete(true)}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => setConfirmHardDelete(true)}>
                       Delete permanently
                     </Button>
                     <Button

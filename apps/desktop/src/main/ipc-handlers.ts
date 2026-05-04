@@ -723,18 +723,24 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       // Server-side validation: non-style requires >=1 upload; style requires
       // >=1 upload OR a prompt snippet.
       const uploads = fileUploads ?? [];
+      if (uploads.length > 1) {
+        throw new IpcHandlerError(
+          "validation_failed",
+          "assets accept only one reference upload",
+        );
+      }
       if (kind === "style") {
         if (uploads.length === 0 && !(promptSnippet && promptSnippet.trim().length > 0)) {
           throw new IpcHandlerError(
             "validation_failed",
-            "style assets require at least one reference upload OR a prompt snippet",
+            "style assets require one reference upload OR a prompt snippet",
           );
         }
       } else {
         if (uploads.length === 0) {
           throw new IpcHandlerError(
             "validation_failed",
-            `${kind} assets require at least one reference upload`,
+            `${kind} assets require one reference upload`,
           );
         }
       }
@@ -746,8 +752,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       const now = Date.now();
       const fileRows: AssetFile[] = [];
 
-      for (let i = 0; i < uploads.length; i += 1) {
-        const u = uploads[i]!;
+      for (const [i, u] of uploads.entries()) {
         const buf = Buffer.from(u.bytes);
         const ext = pickExt(u.originalName, u.mimeType);
         const padded = String(i + 1).padStart(3, "0");
@@ -784,8 +789,8 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       }
 
       // Generate a thumbnail from the first upload (best-effort).
-      if (uploads.length > 0) {
-        const first = uploads[0]!;
+      const first = uploads[0];
+      if (first) {
         const thumbRel = path.join("assets", assetId, "thumb.webp").replace(/\\/g, "/");
         const thumbAbs = path.join(paths.dataDir, thumbRel);
         try {

@@ -99,11 +99,9 @@ export function resolveAssetSlots(
         throw new Error(`asset '${id}' not found (slot=${role})`);
       }
       if (asset.kind !== role) {
-        throw new Error(
-          `asset '${id}' is kind=${asset.kind}, expected ${role}`,
-        );
+        throw new Error(`asset '${id}' is kind=${asset.kind}, expected ${role}`);
       }
-      const refs = (asset.files ?? []).filter((f) => f.role === "reference");
+      const refs = (asset.files ?? []).filter((f) => f.role === "reference").slice(0, 1);
 
       let usedRefHere = false;
       if (supportsRefs) {
@@ -163,10 +161,7 @@ export function capReferencePaths(
  * Concatenate the original prompt with collected style snippets. Separator
  * is `, ` per architecture.md §7's expected style-snippet append behaviour.
  */
-export function appendStylePromptSnippets(
-  prompt: string,
-  snippets: readonly string[],
-): string {
+export function appendStylePromptSnippets(prompt: string, snippets: readonly string[]): string {
   if (snippets.length === 0) return prompt;
   const tail = snippets.join(", ");
   if (!prompt.trim()) return tail;

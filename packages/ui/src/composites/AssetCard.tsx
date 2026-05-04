@@ -23,7 +23,7 @@ const kindColor: Record<AssetKind, string> = {
 
 /**
  * Asset card per design.md §10 — square thumbnail (or letter fallback), name,
- * ref count, optional "used in" counter. Selection ring uses the accent
+ * reference status, optional "used in" counter. Selection ring uses the accent
  * outline + 1px border for the picked state.
  */
 export function AssetCard({
@@ -35,11 +35,8 @@ export function AssetCard({
   onClick,
   className,
 }: AssetCardProps) {
-  const refCount = (asset.files ?? []).filter((f) => f.role === "reference").length;
-  const tile =
-    size === "sm"
-      ? "size-20"
-      : "aspect-square w-full";
+  const hasReference = (asset.files ?? []).some((f) => f.role === "reference");
+  const tile = size === "sm" ? "size-20" : "aspect-square w-full";
   return (
     <button
       type="button"
@@ -56,15 +53,8 @@ export function AssetCard({
         className,
       )}
     >
-      <div
-        className={cn(
-          "overflow-hidden rounded-(--radius-sm) bg-(--surface)",
-          tile,
-        )}
-      >
+      <div className={cn("overflow-hidden rounded-(--radius-sm) bg-(--surface)", tile)}>
         {thumbnailUrl ? (
-          // Plain <img>, lazy-loaded.
-          // biome-ignore lint/a11y/useAltText: alt is asset name.
           <img
             src={thumbnailUrl}
             alt={asset.name}
@@ -94,9 +84,7 @@ export function AssetCard({
           </span>
         </div>
         <div className="flex items-center gap-2 text-(length:--text-caption) text-(--text-muted)">
-          <span>
-            {refCount} ref{refCount === 1 ? "" : "s"}
-          </span>
+          <span>{hasReference ? "Reference image" : "Prompt only"}</span>
           {typeof usageCount === "number" && usageCount > 0 ? (
             <>
               <span aria-hidden>·</span>

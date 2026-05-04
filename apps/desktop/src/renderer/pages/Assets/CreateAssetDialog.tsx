@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useAssetsStore } from "../../state/useAssetsStore.js";
 import { useUIStore } from "../../state/useUIStore.js";
 import { AssetField } from "./AssetField.js";
-import { KINDS, MAX_UPLOADS } from "./constants.js";
+import { KINDS } from "./constants.js";
 
 interface CreateDialogProps {
   open: boolean;
@@ -58,28 +58,28 @@ export function CreateAssetDialog({
   }, [open]);
 
   const addFiles = async (incoming: FileList | File[]): Promise<void> => {
-    const arr = Array.from(incoming);
-    const next: PendingFile[] = [];
-    for (const f of arr) {
-      if (files.length + next.length >= MAX_UPLOADS) {
-        pushToast({
-          title: "Upload cap",
-          description: `Up to ${MAX_UPLOADS} reference images per asset. Extras dropped.`,
-          variant: "warning",
-        });
-        break;
-      }
-      const buf = await f.arrayBuffer();
-      next.push({
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        name: f.name,
-        mimeType: f.type || "application/octet-stream",
-        size: f.size,
-        bytes: buf,
-        previewUrl: URL.createObjectURL(f),
+    const [file, ...extras] = Array.from(incoming);
+    if (!file) return;
+    if (extras.length > 0) {
+      pushToast({
+        title: "One reference image allowed",
+        description: "Only the first selected image was attached.",
+        variant: "warning",
       });
     }
-    setFiles((prev) => [...prev, ...next]);
+    const buf = await file.arrayBuffer();
+    const next: PendingFile = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: file.name,
+      mimeType: file.type || "application/octet-stream",
+      size: file.size,
+      bytes: buf,
+      previewUrl: URL.createObjectURL(file),
+    };
+    setFiles((prev) => {
+      for (const f of prev) URL.revokeObjectURL(f.previewUrl);
+      return [next];
+    });
   };
 
   const removeFile = (id: string): void => {
@@ -97,11 +97,11 @@ export function CreateAssetDialog({
       return;
     }
     if (kind !== "style" && files.length === 0) {
-      setError(`${kind} assets require at least one reference image.`);
+      setError(`${kind} assets require one reference image.`);
       return;
     }
     if (kind === "style" && files.length === 0 && !promptSnippet.trim()) {
-      setError("Style assets require at least one reference OR a prompt snippet.");
+      setError("Style assets require one reference image OR a prompt snippet.");
       return;
     }
 
@@ -121,22 +121,22 @@ export function CreateAssetDialog({
       onCreated(created);
     } catch (err) {
       setError(
-        err instanceof IpcClientError
-          ? err.message
-          : (err as Error)?.message ?? String(err),
+        err instanceof IpcClientError ? err.message : ((err as Error)?.message ?? String(err)),
       );
     } finally {
       setSubmitting(false);
     }
   };
 
-  const onDrop = async (e: React.DragEvent<HTMLDivElement>): Promise<void> => {
+  const onDrop = async (e: React.DragEvent<HTMLLabelElement>): Promise<void> => {
     e.preventDefault();
     setDragOver(false);
     if (e.dataTransfer.files.length > 0) {
       await addFiles(e.dataTransfer.files);
     }
   };
+
+  const attachedFile = files[0] ?? null;
 
   return (
     <Dialog.Root open={open} onOpenChange={(v) => (v ? null : onClose())}>
@@ -190,7 +190,7 @@ export function CreateAssetDialog({
           </AssetField>
 
           {kind === "style" ? (
-            <AssetField label="Prompt snippet (style only)">
+            <AssetField label="Prompt snippet (optional)">
               <Textarea
                 value={promptSnippet}
                 onChange={(e) => setPromptSnippet(e.target.value)}
@@ -203,69 +203,81 @@ export function CreateAssetDialog({
             </AssetField>
           ) : null}
 
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragOver(true);
-            }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={(e) => void onDrop(e)}
-            className={
-              "rounded-(--radius-md) border border-dashed px-4 py-6 text-center " +
-              "transition-colors duration-(--duration-fast) " +
-              (dragOver
-                ? "border-(--text) bg-(--surface-raised)"
-                : "border-(--border) bg-(--surface)")
-            }
-          >
-            <p className="text-(length:--text-caption) text-(--text-muted)">
-              Drag reference images here, or
-              <label className="ml-1 cursor-pointer text-(--text) underline underline-offset-2">
-                browse
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    if (e.target.files) {
-                      void addFiles(e.target.files);
-                      e.target.value = "";
-                    }
-                  }}
-                />
-              </label>
-            </p>
-            <p className="mt-1 text-(length:--text-caption) text-(--text-faint)">
-              Up to {MAX_UPLOADS} per asset. {files.length} attached.
-            </p>
-          </div>
-
-          {files.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {files.map((f) => (
-                <div
-                  key={f.id}
-                  className="relative size-16 overflow-hidden rounded-(--radius-sm) border border-(--border)"
-                >
-                  <img src={f.previewUrl} alt={f.name} className="h-full w-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => removeFile(f.id)}
-                    className={
-                      "absolute right-0.5 top-0.5 inline-flex size-5 items-center justify-center " +
-                      "rounded-full bg-(--bg) text-(--text) " +
-                      "transition-colors duration-(--duration-fast) " +
-                      "hover:bg-(--danger) hover:text-(--accent-fg)"
-                    }
-                    aria-label={`Remove ${f.name}`}
-                  >
-                    <Icons.X weight="bold" className="size-3" />
-                  </button>
+          <div className="relative">
+            <label
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOver(true);
+              }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => void onDrop(e)}
+              className={
+                "block cursor-pointer rounded-(--radius-md) border border-dashed text-center " +
+                "transition-colors duration-(--duration-fast) " +
+                (files.length > 0 ? "p-2" : "px-4 py-6") +
+                " " +
+                (dragOver
+                  ? "border-(--text) bg-(--surface-raised)"
+                  : "border-(--border) bg-(--surface)")
+              }
+            >
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files) {
+                    void addFiles(e.target.files);
+                    e.target.value = "";
+                  }
+                }}
+              />
+              {attachedFile ? (
+                <div className="flex items-center gap-3 text-left">
+                  <div className="size-20 shrink-0 overflow-hidden rounded-(--radius-sm) border border-(--border)">
+                    <img
+                      src={attachedFile.previewUrl}
+                      alt={attachedFile.name}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1 pr-8">
+                    <div className="truncate text-(length:--text-body-sm) font-semibold text-(--text)">
+                      {attachedFile.name}
+                    </div>
+                    <div className="text-(length:--text-caption) text-(--text-muted)">
+                      Reference image attached. Drop or browse to replace.
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
-          ) : null}
+              ) : (
+                <>
+                  <p className="text-(length:--text-caption) text-(--text-muted)">
+                    Drag one reference image here, or
+                    <span className="ml-1 text-(--text) underline underline-offset-2">browse</span>
+                  </p>
+                  <p className="mt-1 text-(length:--text-caption) text-(--text-faint)">
+                    One reference image per asset. None attached.
+                  </p>
+                </>
+              )}
+            </label>
+            {attachedFile ? (
+              <button
+                type="button"
+                onClick={() => removeFile(attachedFile.id)}
+                className={
+                  "absolute right-3 top-3 inline-flex size-6 items-center justify-center " +
+                  "rounded-full bg-(--bg) text-(--text) shadow-[0_0_0_1px_var(--border)] " +
+                  "transition-colors duration-(--duration-fast) " +
+                  "hover:bg-(--danger) hover:text-(--accent-fg)"
+                }
+                aria-label={`Remove ${attachedFile.name}`}
+              >
+                <Icons.X weight="bold" className="size-3.5" />
+              </button>
+            ) : null}
+          </div>
 
           {error ? (
             <div className="rounded-(--radius-md) border border-(--danger)/40 bg-(--danger)/10 px-3 py-2 text-(length:--text-caption) text-(--danger)">

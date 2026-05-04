@@ -16,7 +16,7 @@
           "supportsSeed": false,
           "supportsStyleRef": true
         },
-        "defaults": { "size": "1024x1024", "quality": "auto", "outputFormat": "png", "count": 1 }
+        "defaults": { "size": "1024x1024", "quality": "medium", "outputFormat": "png", "count": 1 }
       },
       "gpt-image-1.5": {
         "id": "gpt-image-1.5",
@@ -31,7 +31,7 @@
           "supportsSeed": false,
           "supportsStyleRef": true
         },
-        "defaults": { "size": "1024x1024", "quality": "auto", "outputFormat": "png", "count": 1 }
+        "defaults": { "size": "1024x1024", "quality": "medium", "outputFormat": "png", "count": 1 }
       },
       "gpt-image-1-mini": {
         "id": "gpt-image-1-mini",
@@ -46,7 +46,7 @@
           "supportsSeed": false,
           "supportsStyleRef": true
         },
-        "defaults": { "size": "1024x1024", "quality": "auto", "outputFormat": "png", "count": 1 }
+        "defaults": { "size": "1024x1024", "quality": "medium", "outputFormat": "png", "count": 1 }
       },
       "gemini-2.5-flash-image": {
         "id": "gemini-2.5-flash-image",

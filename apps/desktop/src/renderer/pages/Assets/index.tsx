@@ -1,21 +1,16 @@
 import type { Asset } from "@imagine/core";
 import { IpcClientError } from "@imagine/ipc";
-import { AssetCard, Button, EmptyState, Icons, Tabs } from "@imagine/ui";
+import { AssetCard, Button, Icons, Tabs, Tooltip } from "@imagine/ui";
 import { useEffect, useMemo, useState } from "react";
-import { CreateAssetDialog } from "./CreateAssetDialog.js";
-import { AssetDrawer } from "./AssetDrawer.js";
-import { ArchivedAssetRow } from "./ArchivedAssetRow.js";
-import { AssetSearchInput } from "./AssetSearchInput.js";
-import {
-  ACTIVE_TAB_LS_KEY,
-  KINDS,
-  KIND_LABEL,
-  TRASH_TAB,
-  type AssetsTab,
-} from "./constants.js";
 import { useAssetsStore } from "../../state/useAssetsStore.js";
 import { useUIStore } from "../../state/useUIStore.js";
+import { ArchivedAssetRow } from "./ArchivedAssetRow.js";
+import { AssetDrawer } from "./AssetDrawer.js";
+import { AssetSearchInput } from "./AssetSearchInput.js";
+import { CreateAssetDialog } from "./CreateAssetDialog.js";
+import { ACTIVE_TAB_LS_KEY, type AssetsTab, KIND_LABEL, KINDS, TRASH_TAB } from "./constants.js";
 import { resolveAssetThumbnailUrl } from "./utils.js";
+
 export { resolveAssetThumbnailUrl } from "./utils.js";
 
 export function AssetsPage() {
@@ -76,6 +71,8 @@ export function AssetsPage() {
     setActiveTab(created.kind);
     setDrawerId(created.id);
   };
+
+  const hasSearch = search.trim().length > 0;
 
   const onArchive = async (id: string): Promise<void> => {
     try {
@@ -141,10 +138,7 @@ export function AssetsPage() {
       }
     }
     pushToast({
-      title:
-        failures === 0
-          ? "Trash emptied"
-          : `Trash emptied (${failures} failed)`,
+      title: failures === 0 ? "Trash emptied" : `Trash emptied (${failures} failed)`,
       variant: failures === 0 ? "success" : "warning",
     });
   };
@@ -192,34 +186,41 @@ export function AssetsPage() {
 
         {KINDS.map((k) => (
           <Tabs.Content key={k} value={k} className="mt-4 flex flex-col gap-4">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <AssetSearchInput
-                placeholder={`Search ${KIND_LABEL[k].toLowerCase()}…`}
+                placeholder={`Search ${KIND_LABEL[k].toLowerCase()} by name, notes, or prompt…`}
                 value={search}
                 onChange={setSearchInput}
               />
+              <Tooltip content="Searches asset names, descriptions, and prompt snippets.">
+                <button
+                  type="button"
+                  aria-label="Search help"
+                  className={
+                    "inline-flex size-7 items-center justify-center rounded-(--radius-pill) " +
+                    "text-(--text-muted) transition-colors duration-(--duration-fast) " +
+                    "hover:bg-(--surface) hover:text-(--text)"
+                  }
+                >
+                  <Icons.Info weight="duotone" className="size-4" />
+                </button>
+              </Tooltip>
+              {hasSearch ? (
+                <span className="text-(length:--text-caption) text-(--text-muted)">
+                  {byKind[k]?.length ?? 0} match{(byKind[k]?.length ?? 0) === 1 ? "" : "es"}
+                </span>
+              ) : null}
             </div>
 
             {(byKind[k]?.length ?? 0) === 0 ? (
-              <EmptyState
-                icon={<Icons.Folder weight="duotone" className="size-10" />}
-                title={`No ${KIND_LABEL[k].toLowerCase()} yet`}
-                description={
-                  k === "style"
-                    ? "Styles can be a reference image, a prompt snippet, or both."
-                    : `Add a ${k} with one or more reference images.`
-                }
-                action={
-                  <Button
-                    leadingIcon={<Icons.Plus weight="bold" className="size-4" />}
-                    onClick={() => {
-                      setCreateKind(k);
-                      setCreateOpen(true);
-                    }}
-                  >
-                    New {k}
-                  </Button>
-                }
+              <AssetsEmptyState
+                kind={k}
+                hasSearch={hasSearch}
+                onClearSearch={() => setSearchInput("")}
+                onCreate={() => {
+                  setCreateKind(k);
+                  setCreateOpen(true);
+                }}
               />
             ) : (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
@@ -237,35 +238,38 @@ export function AssetsPage() {
         ))}
 
         <Tabs.Content value={TRASH_TAB} className="mt-4 flex flex-col gap-4">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-3">
             <AssetSearchInput
-              placeholder="Search trash…"
+              placeholder="Search trash by name, notes, or prompt…"
               value={search}
               onChange={setSearchInput}
             />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => void onEmptyTrash()}
-              disabled={archived.length === 0}
-              leadingIcon={<Icons.Trash weight="bold" className="size-4" />}
-            >
-              Empty Trash
-            </Button>
+            <div className="flex items-center gap-3">
+              {hasSearch ? (
+                <span className="text-(length:--text-caption) text-(--text-muted)">
+                  {archived.length} match{archived.length === 1 ? "" : "es"}
+                </span>
+              ) : null}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => void onEmptyTrash()}
+                disabled={archived.length === 0}
+                leadingIcon={<Icons.Trash weight="bold" className="size-4" />}
+              >
+                Empty Trash
+              </Button>
+            </div>
           </div>
           {archived.length === 0 ? (
-            <EmptyState
-              icon={<Icons.Trash weight="duotone" className="size-10" />}
-              title="Trash is empty"
-              description="Archived assets land here and can be restored at any time."
-            />
+            <TrashEmptyState hasSearch={hasSearch} onClearSearch={() => setSearchInput("")} />
           ) : (
             <ul className="flex flex-col gap-1">
               {archived.map((a) => (
-                    <ArchivedAssetRow
-                      key={a.id}
-                      asset={a}
-                      onOpen={() => setDrawerId(a.id)}
+                <ArchivedAssetRow
+                  key={a.id}
+                  asset={a}
+                  onOpen={() => setDrawerId(a.id)}
                   onRestore={() => void onRestore(a.id)}
                   onPermanentlyDelete={() => {
                     if (
@@ -304,4 +308,112 @@ export function AssetsPage() {
       />
     </div>
   );
+}
+
+function AssetsEmptyState({
+  kind,
+  hasSearch,
+  onClearSearch,
+  onCreate,
+}: {
+  kind: (typeof KINDS)[number];
+  hasSearch: boolean;
+  onClearSearch: () => void;
+  onCreate: () => void;
+}) {
+  if (hasSearch) {
+    return (
+      <div className="mx-auto mt-16 flex w-full max-w-[420px] flex-col items-center text-center">
+        <div className="mb-4 inline-flex size-14 items-center justify-center rounded-(--radius-pill) bg-(--surface)">
+          <Icons.MagnifyingGlass weight="duotone" className="size-6 text-(--text-muted)" />
+        </div>
+        <h2 className="text-(length:--text-title) font-semibold tracking-[-0.01em] text-(--text)">
+          No matches
+        </h2>
+        <p className="mt-1.5 max-w-[320px] text-(length:--text-body-sm) leading-5 text-(--text-muted)">
+          Try a different keyword. Search looks across names, descriptions, and prompt snippets.
+        </p>
+        <Button variant="secondary" size="sm" className="mt-5" onClick={onClearSearch}>
+          Clear search
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto mt-20 flex w-full max-w-[420px] flex-col items-center text-center">
+      <div className="relative mb-5 flex size-20 items-center justify-center">
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 rounded-(--radius-pill) bg-(--accent)/8"
+        />
+        <span
+          aria-hidden="true"
+          className="absolute inset-2 rounded-(--radius-pill) bg-(--accent)/12"
+        />
+        <AssetKindIcon kind={kind} className="relative size-9 text-(--accent)" />
+      </div>
+      <h2 className="text-(length:--text-display) font-semibold tracking-[-0.01em] text-(--text)">
+        No {KIND_LABEL[kind].toLowerCase()} yet
+      </h2>
+      <p className="mt-2 max-w-[340px] text-(length:--text-body-sm) leading-5 text-(--text-muted)">
+        {kind === "style"
+          ? "Save one reference image, a prompt snippet, or both so a visual style is ready when you compose."
+          : `Add reusable ${KIND_LABEL[kind].toLowerCase()} once, then pull them into image and video prompts from Studio.`}
+      </p>
+      <div className="mt-6 inline-flex items-center gap-2">
+        <Button onClick={onCreate} leadingIcon={<Icons.Plus weight="bold" className="size-4" />}>
+          New {kind}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function TrashEmptyState({
+  hasSearch,
+  onClearSearch,
+}: {
+  hasSearch: boolean;
+  onClearSearch: () => void;
+}) {
+  if (hasSearch) {
+    return (
+      <div className="mx-auto mt-16 flex w-full max-w-[420px] flex-col items-center text-center">
+        <div className="mb-4 inline-flex size-14 items-center justify-center rounded-(--radius-pill) bg-(--surface)">
+          <Icons.MagnifyingGlass weight="duotone" className="size-6 text-(--text-muted)" />
+        </div>
+        <h2 className="text-(length:--text-title) font-semibold tracking-[-0.01em] text-(--text)">
+          No matches
+        </h2>
+        <p className="mt-1.5 max-w-[320px] text-(length:--text-body-sm) leading-5 text-(--text-muted)">
+          Try a different keyword or clear search to see every archived asset.
+        </p>
+        <Button variant="secondary" size="sm" className="mt-5" onClick={onClearSearch}>
+          Clear search
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto mt-20 flex w-full max-w-[420px] flex-col items-center text-center">
+      <div className="mb-4 inline-flex size-14 items-center justify-center rounded-(--radius-pill) bg-(--surface)">
+        <Icons.Trash weight="duotone" className="size-6 text-(--text-muted)" />
+      </div>
+      <h2 className="text-(length:--text-title) font-semibold tracking-[-0.01em] text-(--text)">
+        Trash is empty
+      </h2>
+      <p className="mt-1.5 max-w-[320px] text-(length:--text-body-sm) leading-5 text-(--text-muted)">
+        Archived assets land here and can be restored before they are permanently deleted.
+      </p>
+    </div>
+  );
+}
+
+function AssetKindIcon({ kind, className }: { kind: (typeof KINDS)[number]; className?: string }) {
+  if (kind === "character") return <Icons.UserCircle weight="duotone" className={className} />;
+  if (kind === "object") return <Icons.Cube weight="duotone" className={className} />;
+  if (kind === "background") return <Icons.Mountains weight="duotone" className={className} />;
+  return <Icons.Palette weight="duotone" className={className} />;
 }
