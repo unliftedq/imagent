@@ -12,12 +12,13 @@ import { useBoardsStore } from "../../state/useBoardsStore.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
 import { useUIStore } from "../../state/useUIStore.js";
 import { resolveGalleryUrl } from "../Studio";
-import { BoardRow, DetailDrawer } from "./components.js";
+import { BoardRow, LightboxPreview } from "./components.js";
 import { BOARD_ALL, BOARD_FAVORITES } from "./constants.js";
 
 export function GalleryPage() {
   const items = useGalleryStore((s) => s.items);
   const total = useGalleryStore((s) => s.total);
+  const allTotal = useGalleryStore((s) => s.allTotal);
   const query = useGalleryStore((s) => s.query);
   const setQuery = useGalleryStore((s) => s.setQuery);
   const refresh = useGalleryStore((s) => s.refresh);
@@ -36,11 +37,13 @@ export function GalleryPage() {
   const pushToast = useUIStore((s) => s.pushToast);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [drawerId, setDrawerId] = useState<string | null>(null);
+  const [previewId, setPreviewId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<string>(BOARD_ALL);
   const [creatingBoard, setCreatingBoard] = useState(false);
   const [newBoardName, setNewBoardName] = useState("");
   const [searchInput, setSearchInput] = useState<string>(query.search ?? "");
+
+  const navigate = useUIStore((s) => s.navigate);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -173,7 +176,7 @@ export function GalleryPage() {
           <BoardSidebarItem
             id={BOARD_ALL}
             label="All"
-            count={total}
+            count={allTotal}
             active={activeFilter === BOARD_ALL}
             acceptsDrop={false}
             onClick={() => setActiveFilter(BOARD_ALL)}
@@ -243,16 +246,16 @@ export function GalleryPage() {
 
         <section className="flex-1 overflow-y-auto px-6 py-4">
           <div className="mb-4 flex items-center gap-3">
-            <div className="relative w-full max-w-md">
+            <div className="relative w-full max-w-[640px]">
               <Icons.MagnifyingGlass
                 weight="bold"
                 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-(--text-muted)"
               />
               <Input
-                placeholder="Search prompts…"
+                placeholder="Search prompts or file names…"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                className="pl-9 pr-8"
+                className="h-10 pl-9 pr-9 text-(length:--text-body)"
               />
               {searchInput ? (
                 <button
@@ -269,7 +272,7 @@ export function GalleryPage() {
                 </button>
               ) : null}
             </div>
-            <Tooltip content="Use 'prompt:foo' to match only the prompt column. FTS5 supports AND/OR/NEAR.">
+            <Tooltip content="Matches prompts (FTS) and file names. Use multiple words to AND-combine.">
               <button
                 type="button"
                 aria-label="Search syntax help"
@@ -289,15 +292,13 @@ export function GalleryPage() {
             ) : null}
           </div>
           {items.length === 0 ? (
-            <div className="mx-auto mt-12 max-w-md text-center">
-              <Icons.Folder
-                weight="duotone"
-                className="mx-auto size-10 text-(--text-muted)"
-              />
-              <p className="mt-3 text-(length:--text-body-sm) text-(--text-muted)">
-                Nothing here yet — head to Studio and generate something.
-              </p>
-            </div>
+            <GalleryEmptyState
+              hasSearch={Boolean(query.search)}
+              activeFilter={activeFilter}
+              onClearSearch={() => setSearchInput("")}
+              onResetFilter={() => setActiveFilter(BOARD_ALL)}
+              onGoToStudio={() => navigate("studio")}
+            />
           ) : (
             <div style={{ columnWidth: 240, columnGap: 12 }} className="w-full">
               {items.map((it) => {
@@ -320,8 +321,11 @@ export function GalleryPage() {
                     favorited={it.favorited}
                     selected={selectedId === it.id}
                     boards={boards.map((b) => ({ id: b.id, name: b.name }))}
-                    onSelect={() => setSelectedId(it.id)}
-                    onOpen={() => setDrawerId(it.id)}
+                    onSelect={() => {
+                      setSelectedId(it.id);
+                      setPreviewId(it.id);
+                    }}
+                    onOpen={() => setPreviewId(it.id)}
                     onRemix={() => void handleRemix(it.id)}
                     onToggleFavorite={() => void toggleFav(it.id)}
                     onAddToBoard={(boardId) => void addItem(boardId, it.id)}
@@ -344,17 +348,105 @@ export function GalleryPage() {
           ) : null}
         </section>
 
-        {drawerId ? (
-          <DetailDrawer
-            itemId={drawerId}
-            onClose={() => setDrawerId(null)}
+        {previewId ? (
+          <LightboxPreview
+            itemId={previewId}
+            onClose={() => setPreviewId(null)}
             onRemix={(id) => {
-              setDrawerId(null);
+              setPreviewId(null);
               void handleRemix(id);
             }}
           />
         ) : null}
       </div>
     </DndContext>
+  );
+}
+
+function GalleryEmptyState({
+  hasSearch,
+  activeFilter,
+  onClearSearch,
+  onResetFilter,
+  onGoToStudio,
+}: {
+  hasSearch: boolean;
+  activeFilter: string;
+  onClearSearch: () => void;
+  onResetFilter: () => void;
+  onGoToStudio: () => void;
+}) {
+  if (hasSearch) {
+    return (
+      <div className="mx-auto mt-16 flex w-full max-w-[420px] flex-col items-center text-center">
+        <div className="mb-4 inline-flex size-14 items-center justify-center rounded-(--radius-pill) bg-(--surface)">
+          <Icons.MagnifyingGlass
+            weight="duotone"
+            className="size-6 text-(--text-muted)"
+          />
+        </div>
+        <h2 className="text-(length:--text-title) font-semibold tracking-[-0.01em] text-(--text)">
+          No matches
+        </h2>
+        <p className="mt-1.5 max-w-[320px] text-(length:--text-body-sm) leading-5 text-(--text-muted)">
+          Try a different keyword. Search looks across prompts and file names.
+        </p>
+        <Button variant="secondary" size="sm" className="mt-5" onClick={onClearSearch}>
+          Clear search
+        </Button>
+      </div>
+    );
+  }
+
+  if (activeFilter !== BOARD_ALL) {
+    return (
+      <div className="mx-auto mt-16 flex w-full max-w-[420px] flex-col items-center text-center">
+        <div className="mb-4 inline-flex size-14 items-center justify-center rounded-(--radius-pill) bg-(--surface)">
+          <Icons.Folder weight="duotone" className="size-6 text-(--text-muted)" />
+        </div>
+        <h2 className="text-(length:--text-title) font-semibold tracking-[-0.01em] text-(--text)">
+          {activeFilter === BOARD_FAVORITES ? "No favorites yet" : "This board is empty"}
+        </h2>
+        <p className="mt-1.5 max-w-[320px] text-(length:--text-body-sm) leading-5 text-(--text-muted)">
+          {activeFilter === BOARD_FAVORITES
+            ? "Tap the heart on any image to keep it close at hand."
+            : "Drag any gallery item onto this board from the All view."}
+        </p>
+        <Button variant="secondary" size="sm" className="mt-5" onClick={onResetFilter}>
+          Show all items
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto mt-20 flex w-full max-w-[420px] flex-col items-center text-center">
+      <div className="relative mb-5 flex size-20 items-center justify-center">
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 rounded-(--radius-pill) bg-(--accent)/8"
+        />
+        <span
+          aria-hidden="true"
+          className="absolute inset-2 rounded-(--radius-pill) bg-(--accent)/12"
+        />
+        <Icons.ImageSquare
+          weight="duotone"
+          className="relative size-9 text-(--accent)"
+        />
+      </div>
+      <h2 className="text-(length:--text-display) font-semibold tracking-[-0.01em] text-(--text)">
+        Your gallery is quiet
+      </h2>
+      <p className="mt-2 max-w-[340px] text-(length:--text-body-sm) leading-5 text-(--text-muted)">
+        Generated images and videos will collect here. Open Studio to create
+        the first one — every item is searchable and remixable later.
+      </p>
+      <div className="mt-6 inline-flex items-center gap-2">
+        <Button onClick={onGoToStudio} leadingIcon={<Icons.MagicWand weight="bold" className="size-4" />}>
+          Open Studio
+        </Button>
+      </div>
+    </div>
   );
 }

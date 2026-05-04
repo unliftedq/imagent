@@ -237,15 +237,35 @@ export function setupIpc(deps: IpcDeps): IpcServer {
     },
 
     "system.openPath": async ({ path: target }) => {
+      // Renderers pass dataDir-relative paths (e.g. `images/2025/04/foo.png`
+      // or `assets/<id>`). Resolve against `dataDir` first so the validation
+      // gate is meaningful; absolute paths fall through unchanged.
+      const abs = path.isAbsolute(target)
+        ? path.resolve(target)
+        : path.resolve(paths.dataDir, target);
       // Only allow paths inside dataDir to avoid arbitrary fs poking from the renderer.
-      const abs = path.resolve(target);
       if (!abs.startsWith(path.resolve(paths.dataDir))) {
         throw new IpcHandlerError("validation_failed", `Refusing to open path outside dataDir`);
+      }
+      // If the path points to an existing file, reveal it in Finder/Explorer
+      // (highlighted in the parent dir). For directories — or paths that
+      // don't exist yet (e.g. first reveal of `assets/<id>`) — fall back to
+      // creating the dir and opening it.
+      let isFile = false;
+      try {
+        const stat = await fs.stat(abs);
+        isFile = stat.isFile();
+      } catch {
+        // path doesn't exist yet
+      }
+      if (isFile) {
+        shell.showItemInFolder(abs);
+        return;
       }
       try {
         await fs.mkdir(abs, { recursive: true });
       } catch {
-        // path may be a file — that's fine; openPath handles both.
+        // path may already exist; openPath handles that.
       }
       const reason = await shell.openPath(abs);
       if (reason) throw new IpcHandlerError("internal", `openPath failed: ${reason}`);

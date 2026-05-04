@@ -1,6 +1,17 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useDraggable } from "@dnd-kit/core";
-import { Heart, DotsThree, FilmStrip, Play } from "@phosphor-icons/react";
+import {
+  ArrowSquareOut,
+  CaretRight,
+  DotsThree,
+  FilmStrip,
+  Folder,
+  Heart,
+  MagicWand,
+  Play,
+  Plus,
+  Trash,
+} from "@phosphor-icons/react";
 import { type ReactNode, useState } from "react";
 import { cn } from "../lib/cn.js";
 
@@ -176,141 +187,101 @@ function ImageVariant({
 
   return (
     <DropdownMenu.Root open={menuOpen} onOpenChange={setMenuOpen}>
-      <DropdownMenu.Trigger asChild>
-        {/* The trigger acts as the right-click anchor; we forward the event. */}
-        <div
-          ref={setNodeRef}
-          {...listeners}
-          {...attributes}
-          onClick={onSelect}
-          onDoubleClick={onOpen}
-          onContextMenu={(e) => {
-            e.preventDefault();
-            setMenuOpen(true);
-          }}
-          className={cn(
-            "group relative break-inside-avoid mb-3 w-full cursor-pointer overflow-hidden " +
-              "rounded-(--radius-md) border border-(--border) bg-(--bg) " +
-              "transition-colors duration-(--duration-fast)",
-            selected
-              ? "border-(--text) outline outline-2 outline-(--accent) outline-offset-1"
-              : "hover:border-(--text)",
-            isDragging ? "opacity-50" : "",
-            className,
-          )}
-          aria-label={`Gallery item ${id}`}
-        >
-          <div style={{ aspectRatio: ratio }} className="bg-(--surface)">
-            <img
-              src={src}
-              alt={caption ?? "Gallery item"}
-              loading="lazy"
-              draggable={false}
-              className="block h-full w-full object-cover"
-            />
-          </div>
-          {/* Caption — hidden by default; visible on hover for context. */}
-          {caption ? (
-            <div
-              className={
-                "absolute inset-x-0 bottom-0 flex items-end p-2 " +
-                "bg-gradient-to-t from-black/55 via-black/15 to-transparent " +
-                "opacity-0 transition-opacity duration-(--duration-fast) " +
-                "group-hover:opacity-100"
-              }
-            >
-              <span className="line-clamp-2 text-(length:--text-caption) text-white">
-                {caption}
-              </span>
-            </div>
-          ) : null}
-          {/* Top-right hover actions. */}
+      {/*
+       * The card is NOT the dropdown trigger — clicking it must run
+       * `onSelect` (open lightbox), not toggle the menu. The kebab button
+       * below is the only Radix Trigger; right-click anywhere on the card
+       * imperatively opens the menu, which Radix then anchors to that
+       * kebab button.
+       */}
+      <div
+        ref={setNodeRef}
+        {...listeners}
+        {...attributes}
+        onClick={onSelect}
+        onDoubleClick={onOpen}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          setMenuOpen(true);
+        }}
+        className={cn(
+          "group relative break-inside-avoid mb-3 w-full cursor-pointer overflow-hidden " +
+            "rounded-(--radius-md) border border-(--border) bg-(--bg) " +
+            "transition-colors duration-(--duration-fast)",
+          selected
+            ? "border-(--text) outline outline-2 outline-(--accent) outline-offset-1"
+            : "hover:border-(--text)",
+          isDragging ? "opacity-50" : "",
+          className,
+        )}
+        aria-label={`Gallery item ${id}`}
+      >
+        <div style={{ aspectRatio: ratio }} className="bg-(--surface)">
+          <img
+            src={src}
+            alt={caption ?? "Gallery item"}
+            loading="lazy"
+            draggable={false}
+            className="block h-full w-full object-cover"
+          />
+        </div>
+        {/* Caption — hidden by default; visible on hover for context. */}
+        {caption ? (
           <div
             className={
-              "absolute right-2 top-2 flex items-center gap-1 " +
+              "absolute inset-x-0 bottom-0 flex items-end p-2 " +
+              "bg-gradient-to-t from-black/55 via-black/15 to-transparent " +
               "opacity-0 transition-opacity duration-(--duration-fast) " +
-              "group-hover:opacity-100 focus-within:opacity-100"
+              "group-hover:opacity-100"
             }
           >
-            <CornerButton
-              ariaLabel={favorited ? "Unfavorite" : "Favorite"}
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleFavorite?.();
-              }}
-              active={favorited}
-            >
-              <Heart
-                weight={favorited ? "fill" : "regular"}
-                className="size-4"
-              />
-            </CornerButton>
+            <span className="line-clamp-2 text-(length:--text-caption) text-white">
+              {caption}
+            </span>
+          </div>
+        ) : null}
+        {/* Top-right hover actions. */}
+        <div
+          className={
+            "absolute right-2 top-2 flex items-center gap-1 " +
+            "opacity-0 transition-opacity duration-(--duration-fast) " +
+            "group-hover:opacity-100 focus-within:opacity-100"
+          }
+        >
+          <CornerButton
+            ariaLabel={favorited ? "Unfavorite" : "Favorite"}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleFavorite?.();
+            }}
+            active={favorited}
+          >
+            <Heart
+              weight={favorited ? "fill" : "regular"}
+              className="size-4"
+            />
+          </CornerButton>
+          <DropdownMenu.Trigger asChild>
             <CornerButton
               ariaLabel="More actions"
               onClick={(e) => {
                 e.stopPropagation();
-                setMenuOpen(true);
               }}
             >
               <DotsThree weight="bold" className="size-4" />
             </CornerButton>
-          </div>
+          </DropdownMenu.Trigger>
         </div>
-      </DropdownMenu.Trigger>
-      <DropdownMenu.Portal>
-        <DropdownMenu.Content
-          align="start"
-          sideOffset={4}
-          className={cn(
-            "z-50 min-w-[200px] overflow-hidden rounded-(--radius-md) " +
-              "border border-(--border) bg-(--bg) p-1 " +
-              "shadow-[0_4px_24px_-8px_rgba(0,0,0,0.08)]",
-          )}
-        >
-          <Item onSelect={onOpen}>Open in drawer</Item>
-          <Item onSelect={onRemix}>Remix</Item>
-          <Item onSelect={onToggleFavorite}>
-            {favorited ? "Unfavorite" : "Favorite"}
-          </Item>
-          {boards && boards.length > 0 ? (
-            <DropdownMenu.Sub>
-              <DropdownMenu.SubTrigger
-                className={
-                  "relative flex cursor-pointer select-none items-center justify-between " +
-                  "rounded-(--radius-sm) px-3 py-2 text-(length:--text-body-sm) " +
-                  "data-[highlighted]:bg-(--surface) outline-none"
-                }
-              >
-                Add to board
-                <span className="ml-2 text-(--text-muted)">›</span>
-              </DropdownMenu.SubTrigger>
-              <DropdownMenu.Portal>
-                <DropdownMenu.SubContent
-                  className={cn(
-                    "z-50 min-w-[180px] overflow-hidden rounded-(--radius-md) " +
-                      "border border-(--border) bg-(--bg) p-1 " +
-                      "shadow-[0_4px_24px_-8px_rgba(0,0,0,0.08)]",
-                  )}
-                >
-                  {boards.map((b) => (
-                    <Item
-                      key={b.id}
-                      onSelect={() => onAddToBoard?.(b.id)}
-                    >
-                      {b.name}
-                    </Item>
-                  ))}
-                </DropdownMenu.SubContent>
-              </DropdownMenu.Portal>
-            </DropdownMenu.Sub>
-          ) : null}
-          <DropdownMenu.Separator className="my-1 h-px bg-(--border-faint)" />
-          <Item onSelect={onOpenFileLocation}>Open file location</Item>
-          <Item onSelect={onDelete} variant="danger">
-            Delete
-          </Item>
-        </DropdownMenu.Content>
-      </DropdownMenu.Portal>
+      </div>
+      <ActionMenuContent
+        favorited={favorited}
+        boards={boards}
+        onRemix={onRemix}
+        onToggleFavorite={onToggleFavorite}
+        onAddToBoard={onAddToBoard}
+        onOpenFileLocation={onOpenFileLocation}
+        onDelete={onDelete}
+      />
     </DropdownMenu.Root>
   );
 }
@@ -350,157 +321,112 @@ function VideoVariant({
 
   return (
     <DropdownMenu.Root open={menuOpen} onOpenChange={setMenuOpen}>
-      <DropdownMenu.Trigger asChild>
+      {/* See ImageVariant: card click → onSelect, kebab is the trigger. */}
+      <div
+        ref={setNodeRef}
+        {...listeners}
+        {...attributes}
+        onClick={onSelect}
+        onDoubleClick={onOpen}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          setMenuOpen(true);
+        }}
+        className={cn(
+          "group relative break-inside-avoid mb-3 w-full cursor-pointer overflow-hidden " +
+            "rounded-(--radius-md) border border-(--border) bg-(--bg) " +
+            "transition-colors duration-(--duration-fast)",
+          selected
+            ? "border-(--text) outline outline-2 outline-(--accent) outline-offset-1"
+            : "hover:border-(--text)",
+          isDragging ? "opacity-50" : "",
+          className,
+        )}
+        aria-label={`Video gallery item ${id}`}
+      >
         <div
-          ref={setNodeRef}
-          {...listeners}
-          {...attributes}
-          onClick={onSelect}
-          onDoubleClick={onOpen}
-          onContextMenu={(e) => {
-            e.preventDefault();
-            setMenuOpen(true);
-          }}
-          className={cn(
-            "group relative break-inside-avoid mb-3 w-full cursor-pointer overflow-hidden " +
-              "rounded-(--radius-md) border border-(--border) bg-(--bg) " +
-              "transition-colors duration-(--duration-fast)",
-            selected
-              ? "border-(--text) outline outline-2 outline-(--accent) outline-offset-1"
-              : "hover:border-(--text)",
-            isDragging ? "opacity-50" : "",
-            className,
-          )}
-          aria-label={`Video gallery item ${id}`}
+          style={{ aspectRatio: ratio }}
+          className="relative bg-(--surface)"
         >
-          <div
-            style={{ aspectRatio: ratio }}
-            className="relative bg-(--surface)"
-          >
-            {hasThumb ? (
-              <img
-                src={src}
-                alt={caption ?? "Video thumbnail"}
-                loading="lazy"
-                draggable={false}
-                className="block h-full w-full object-cover"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-(--text-muted)">
-                <FilmStrip weight="duotone" className="size-10" />
-              </div>
-            )}
-            {/* Bottom-left play triangle */}
-            <div className="pointer-events-none absolute bottom-2 left-2 inline-flex size-7 items-center justify-center rounded-(--radius-pill) bg-black/55 text-white">
-              <Play weight="fill" className="size-3.5" />
+          {hasThumb ? (
+            <img
+              src={src}
+              alt={caption ?? "Video thumbnail"}
+              loading="lazy"
+              draggable={false}
+              className="block h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-(--text-muted)">
+              <FilmStrip weight="duotone" className="size-10" />
             </div>
-            {/* Bottom-right duration badge */}
-            {typeof durationMs === "number" && durationMs > 0 ? (
-              <div className="pointer-events-none absolute bottom-2 right-2 rounded-(--radius-pill) bg-black/55 px-2 py-0.5 text-(length:--text-caption) text-white [font-variant-numeric:tabular-nums]">
-                {formatVideoDuration(durationMs)}
-              </div>
-            ) : null}
+          )}
+          {/* Bottom-left play triangle */}
+          <div className="pointer-events-none absolute bottom-2 left-2 inline-flex size-7 items-center justify-center rounded-(--radius-pill) bg-black/55 text-white">
+            <Play weight="fill" className="size-3.5" />
           </div>
-          {caption ? (
-            <div
-              className={
-                "absolute inset-x-0 top-0 flex items-start p-2 " +
-                "bg-gradient-to-b from-black/55 via-black/15 to-transparent " +
-                "opacity-0 transition-opacity duration-(--duration-fast) " +
-                "group-hover:opacity-100"
-              }
-            >
-              <span className="line-clamp-2 text-(length:--text-caption) text-white">
-                {caption}
-              </span>
+          {/* Bottom-right duration badge */}
+          {typeof durationMs === "number" && durationMs > 0 ? (
+            <div className="pointer-events-none absolute bottom-2 right-2 rounded-(--radius-pill) bg-black/55 px-2 py-0.5 text-(length:--text-caption) text-white [font-variant-numeric:tabular-nums]">
+              {formatVideoDuration(durationMs)}
             </div>
           ) : null}
+        </div>
+        {caption ? (
           <div
             className={
-              "absolute right-2 top-2 flex items-center gap-1 " +
+              "absolute inset-x-0 top-0 flex items-start p-2 " +
+              "bg-gradient-to-b from-black/55 via-black/15 to-transparent " +
               "opacity-0 transition-opacity duration-(--duration-fast) " +
-              "group-hover:opacity-100 focus-within:opacity-100"
+              "group-hover:opacity-100"
             }
           >
-            <CornerButton
-              ariaLabel={favorited ? "Unfavorite" : "Favorite"}
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleFavorite?.();
-              }}
-              active={favorited}
-            >
-              <Heart
-                weight={favorited ? "fill" : "regular"}
-                className="size-4"
-              />
-            </CornerButton>
+            <span className="line-clamp-2 text-(length:--text-caption) text-white">
+              {caption}
+            </span>
+          </div>
+        ) : null}
+        <div
+          className={
+            "absolute right-2 top-2 flex items-center gap-1 " +
+            "opacity-0 transition-opacity duration-(--duration-fast) " +
+            "group-hover:opacity-100 focus-within:opacity-100"
+          }
+        >
+          <CornerButton
+            ariaLabel={favorited ? "Unfavorite" : "Favorite"}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleFavorite?.();
+            }}
+            active={favorited}
+          >
+            <Heart
+              weight={favorited ? "fill" : "regular"}
+              className="size-4"
+            />
+          </CornerButton>
+          <DropdownMenu.Trigger asChild>
             <CornerButton
               ariaLabel="More actions"
               onClick={(e) => {
                 e.stopPropagation();
-                setMenuOpen(true);
               }}
             >
               <DotsThree weight="bold" className="size-4" />
             </CornerButton>
-          </div>
+          </DropdownMenu.Trigger>
         </div>
-      </DropdownMenu.Trigger>
-      <DropdownMenu.Portal>
-        <DropdownMenu.Content
-          align="start"
-          sideOffset={4}
-          className={cn(
-            "z-50 min-w-[200px] overflow-hidden rounded-(--radius-md) " +
-              "border border-(--border) bg-(--bg) p-1 " +
-              "shadow-[0_4px_24px_-8px_rgba(0,0,0,0.08)]",
-          )}
-        >
-          <Item onSelect={onOpen}>Open in drawer</Item>
-          <Item onSelect={onRemix}>Remix</Item>
-          <Item onSelect={onToggleFavorite}>
-            {favorited ? "Unfavorite" : "Favorite"}
-          </Item>
-          {boards && boards.length > 0 ? (
-            <DropdownMenu.Sub>
-              <DropdownMenu.SubTrigger
-                className={
-                  "relative flex cursor-pointer select-none items-center justify-between " +
-                  "rounded-(--radius-sm) px-3 py-2 text-(length:--text-body-sm) " +
-                  "data-[highlighted]:bg-(--surface) outline-none"
-                }
-              >
-                Add to board
-                <span className="ml-2 text-(--text-muted)">›</span>
-              </DropdownMenu.SubTrigger>
-              <DropdownMenu.Portal>
-                <DropdownMenu.SubContent
-                  className={cn(
-                    "z-50 min-w-[180px] overflow-hidden rounded-(--radius-md) " +
-                      "border border-(--border) bg-(--bg) p-1 " +
-                      "shadow-[0_4px_24px_-8px_rgba(0,0,0,0.08)]",
-                  )}
-                >
-                  {boards.map((b) => (
-                    <Item
-                      key={b.id}
-                      onSelect={() => onAddToBoard?.(b.id)}
-                    >
-                      {b.name}
-                    </Item>
-                  ))}
-                </DropdownMenu.SubContent>
-              </DropdownMenu.Portal>
-            </DropdownMenu.Sub>
-          ) : null}
-          <DropdownMenu.Separator className="my-1 h-px bg-(--border-faint)" />
-          <Item onSelect={onOpenFileLocation}>Open file location</Item>
-          <Item onSelect={onDelete} variant="danger">
-            Delete
-          </Item>
-        </DropdownMenu.Content>
-      </DropdownMenu.Portal>
+      </div>
+      <ActionMenuContent
+        favorited={favorited}
+        boards={boards}
+        onRemix={onRemix}
+        onToggleFavorite={onToggleFavorite}
+        onAddToBoard={onAddToBoard}
+        onOpenFileLocation={onOpenFileLocation}
+        onDelete={onDelete}
+      />
     </DropdownMenu.Root>
   );
 }
@@ -514,10 +440,12 @@ function formatVideoDuration(durationMs: number): string {
 
 function Item({
   children,
+  icon,
   onSelect,
   variant,
 }: {
   children: ReactNode;
+  icon?: ReactNode;
   onSelect?: () => void;
   variant?: "danger";
 }) {
@@ -526,15 +454,140 @@ function Item({
       disabled={!onSelect}
       onSelect={() => onSelect?.()}
       className={cn(
-        "relative flex cursor-pointer select-none items-center " +
-          "rounded-(--radius-sm) px-3 py-2 text-(length:--text-body-sm) outline-none " +
+        "group relative flex cursor-pointer select-none items-center gap-2.5 " +
+          "rounded-(--radius-sm) px-2.5 py-1.5 text-(length:--text-body-sm) outline-none " +
+          "transition-colors duration-(--duration-fast) " +
           "data-[highlighted]:bg-(--surface) " +
           "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-        variant === "danger" ? "text-(--danger)" : "text-(--text)",
+        variant === "danger"
+          ? "text-(--danger) data-[highlighted]:bg-(--danger-soft)"
+          : "text-(--text)",
       )}
     >
-      {children}
+      {icon ? (
+        <span
+          className={cn(
+            "inline-flex size-4 shrink-0 items-center justify-center",
+            variant === "danger" ? "text-(--danger)" : "text-(--text-muted)",
+          )}
+        >
+          {icon}
+        </span>
+      ) : (
+        <span className="inline-flex size-4 shrink-0" aria-hidden="true" />
+      )}
+      <span className="flex-1 truncate">{children}</span>
     </DropdownMenu.Item>
+  );
+}
+
+/**
+ * Action sheet shared between image / video cards. Tighter padding, leading
+ * icons in a muted color, soft separators, themed danger row, and a polished
+ * "Add to board" submenu with a creation hint when no boards exist.
+ */
+function ActionMenuContent({
+  favorited,
+  boards,
+  onRemix,
+  onToggleFavorite,
+  onAddToBoard,
+  onOpenFileLocation,
+  onDelete,
+}: {
+  favorited?: boolean;
+  boards?: ReadonlyArray<GalleryItemCardBoardOption>;
+  onRemix?: () => void;
+  onToggleFavorite?: () => void;
+  onAddToBoard?: (boardId: string) => void;
+  onOpenFileLocation?: () => void;
+  onDelete?: () => void;
+}) {
+  const hasBoards = !!boards && boards.length > 0;
+  return (
+    <DropdownMenu.Portal>
+      <DropdownMenu.Content
+        align="end"
+        sideOffset={6}
+        className={cn(
+          "z-50 min-w-[208px] overflow-hidden rounded-(--radius-md) " +
+            "border border-(--border) bg-(--bg) p-1 " +
+            "shadow-[0_12px_32px_-12px_rgba(0,0,0,0.18),0_2px_6px_-2px_rgba(0,0,0,0.08)] " +
+            "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 " +
+            "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
+        )}
+      >
+        <Item icon={<MagicWand weight="bold" className="size-4" />} onSelect={onRemix}>
+          Remix
+        </Item>
+        <Item
+          icon={
+            <Heart
+              weight={favorited ? "fill" : "regular"}
+              className={cn("size-4", favorited ? "text-(--danger)" : "")}
+            />
+          }
+          onSelect={onToggleFavorite}
+        >
+          {favorited ? "Unfavorite" : "Favorite"}
+        </Item>
+        {hasBoards ? (
+          <DropdownMenu.Sub>
+            <DropdownMenu.SubTrigger
+              className={cn(
+                "group relative flex cursor-pointer select-none items-center gap-2.5 " +
+                  "rounded-(--radius-sm) px-2.5 py-1.5 text-(length:--text-body-sm) outline-none " +
+                  "text-(--text) transition-colors duration-(--duration-fast) " +
+                  "data-[highlighted]:bg-(--surface) data-[state=open]:bg-(--surface)",
+              )}
+            >
+              <span className="inline-flex size-4 shrink-0 items-center justify-center text-(--text-muted)">
+                <Plus weight="bold" className="size-4" />
+              </span>
+              <span className="flex-1 truncate">Add to board</span>
+              <CaretRight weight="bold" className="size-3 text-(--text-muted)" />
+            </DropdownMenu.SubTrigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.SubContent
+                sideOffset={8}
+                className={cn(
+                  "z-50 min-w-[200px] max-h-[320px] overflow-y-auto rounded-(--radius-md) " +
+                    "border border-(--border) bg-(--bg) p-1 " +
+                    "shadow-[0_12px_32px_-12px_rgba(0,0,0,0.18),0_2px_6px_-2px_rgba(0,0,0,0.08)] " +
+                    "data-[state=open]:animate-in data-[state=open]:fade-in-0 " +
+                    "data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
+                )}
+              >
+                {boards.map((b) => (
+                  <Item
+                    key={b.id}
+                    icon={<Folder weight="duotone" className="size-4" />}
+                    onSelect={() => onAddToBoard?.(b.id)}
+                  >
+                    {b.name}
+                  </Item>
+                ))}
+              </DropdownMenu.SubContent>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Sub>
+        ) : null}
+        <DropdownMenu.Separator className="my-1 h-px bg-(--border-faint)" />
+        <Item
+          icon={<ArrowSquareOut weight="bold" className="size-4" />}
+          onSelect={onOpenFileLocation}
+        >
+          Reveal in Finder
+        </Item>
+        <DropdownMenu.Separator className="my-1 h-px bg-(--border-faint)" />
+        <Item
+          icon={<Trash weight="bold" className="size-4" />}
+          onSelect={onDelete}
+          variant="danger"
+        >
+          Delete
+        </Item>
+      </DropdownMenu.Content>
+    </DropdownMenu.Portal>
   );
 }
 
@@ -543,23 +596,31 @@ function CornerButton({
   onClick,
   ariaLabel,
   active,
+  ref,
+  ...rest
 }: {
   children: ReactNode;
-  onClick: (e: React.MouseEvent) => void;
+  onClick?: (e: React.MouseEvent) => void;
   ariaLabel: string;
   active?: boolean;
+} & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "onClick" | "aria-label" | "children" | "ref"> & {
+  ref?: React.Ref<HTMLButtonElement>;
 }) {
   return (
     <button
+      ref={ref}
       type="button"
       onClick={onClick}
       aria-label={ariaLabel}
       className={cn(
         "inline-flex size-7 items-center justify-center rounded-(--radius-sm) " +
           "border border-(--border) bg-(--bg) text-(--text) " +
-          "transition-colors duration-(--duration-fast) hover:bg-(--surface)",
+          "transition-colors duration-(--duration-fast) hover:bg-(--surface) " +
+          "data-[state=open]:bg-(--surface) focus-visible:outline-none " +
+          "focus-visible:ring-2 focus-visible:ring-(--focus-ring)",
         active ? "text-(--danger)" : "",
       )}
+      {...rest}
     >
       {children}
     </button>

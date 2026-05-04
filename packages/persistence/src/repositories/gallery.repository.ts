@@ -43,6 +43,22 @@ function rowToItem(r: GalleryRow): GalleryItem {
   };
 }
 
+/**
+ * Wrap a raw user search string into an FTS5-safe phrase query. FTS5
+ * MATCH inputs are parsed; punctuation (`.`, `-`, `/`, `:`, etc.) and
+ * unbalanced quotes throw `unrecognized token` / `syntax error`. We use
+ * the simplest robust strategy: split into whitespace tokens, escape
+ * any embedded `"` characters, double-quote each token, and AND them.
+ */
+function ftsPhrase(raw: string): string {
+  const tokens = raw
+    .split(/\s+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length > 0);
+  if (tokens.length === 0) return '""';
+  return tokens.map((t) => `"${t.replace(/"/g, '""')}"`).join(" ");
+}
+
 export class GalleryRepository {
   constructor(private readonly db: DatabaseType) {}
 
@@ -73,9 +89,17 @@ export class GalleryRepository {
       params.push(query.boardId);
     }
     if (query.search && query.search.trim().length > 0) {
-      join += " JOIN gallery_items_fts f ON g.rowid = f.rowid";
-      where.push("f.gallery_items_fts MATCH ?");
-      params.push(query.search);
+      const raw = query.search.trim();
+      // Prompt + negative_prompt go through FTS5 for tokenized matching.
+      // File path falls back to LIKE — FTS doesn't index file names and
+      // users routinely paste in a basename like `0a1f...png`.
+      // Wrap the FTS query as a quoted phrase so user input containing
+      // punctuation (`.`, `-`, `/`) doesn't blow up FTS5's tokenizer.
+      const ftsQuery = ftsPhrase(raw);
+      where.push(
+        "(g.id IN (SELECT g2.id FROM gallery_items g2 JOIN gallery_items_fts f2 ON g2.rowid = f2.rowid WHERE f2.gallery_items_fts MATCH ?) OR g.rel_path LIKE ?)",
+      );
+      params.push(ftsQuery, `%${raw}%`);
     }
     const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
     const totalRow = this.db

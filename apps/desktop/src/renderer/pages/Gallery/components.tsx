@@ -1,7 +1,7 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useEffect, useState } from "react";
-import { BoardSidebarItem, Button, IconButton, Icons } from "@imagine/ui";
+import { BoardSidebarItem, Icons } from "@imagine/ui";
 import type { Board, GalleryItem } from "@imagine/core";
 import { api } from "../../lib/api.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
@@ -87,12 +87,14 @@ export function BoardRow({
       />
       <DropdownMenu.Portal>
         <DropdownMenu.Content
-          align="start"
-          sideOffset={4}
+          align="end"
+          sideOffset={6}
           className={
-            "z-50 min-w-[160px] overflow-hidden rounded-(--radius-md) " +
+            "z-50 min-w-[176px] overflow-hidden rounded-(--radius-md) " +
             "border border-(--border) bg-(--bg) p-1 " +
-            "shadow-[0_4px_24px_-8px_rgba(0,0,0,0.08)]"
+            "shadow-[0_12px_32px_-12px_rgba(0,0,0,0.18),0_2px_6px_-2px_rgba(0,0,0,0.08)] " +
+            "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 " +
+            "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
           }
         >
           <DropdownMenu.Item
@@ -101,28 +103,31 @@ export function BoardRow({
               setDraft(board.name);
             }}
             className={
-              "flex cursor-pointer select-none items-center rounded-(--radius-sm) " +
-              "px-3 py-2 text-(length:--text-body-sm) outline-none " +
+              "group flex cursor-pointer select-none items-center gap-2.5 " +
+              "rounded-(--radius-sm) px-2.5 py-1.5 text-(length:--text-body-sm) text-(--text) " +
+              "outline-none transition-colors duration-(--duration-fast) " +
               "data-[highlighted]:bg-(--surface)"
             }
           >
+            <span className="inline-flex size-4 shrink-0 items-center justify-center text-(--text-muted)">
+              <Icons.Pencil weight="bold" className="size-4" />
+            </span>
             Rename
           </DropdownMenu.Item>
-          <DropdownMenu.Item
-            disabled
-            className="px-3 py-2 text-(length:--text-body-sm) text-(--text-faint)"
-          >
-            Set cover (coming soon)
-          </DropdownMenu.Item>
+          <DropdownMenu.Separator className="my-1 h-px bg-(--border-faint)" />
           <DropdownMenu.Item
             onSelect={() => onDelete()}
             className={
-              "flex cursor-pointer select-none items-center rounded-(--radius-sm) " +
-              "px-3 py-2 text-(length:--text-body-sm) text-(--danger) outline-none " +
-              "data-[highlighted]:bg-(--danger)/10"
+              "group flex cursor-pointer select-none items-center gap-2.5 " +
+              "rounded-(--radius-sm) px-2.5 py-1.5 text-(length:--text-body-sm) text-(--danger) " +
+              "outline-none transition-colors duration-(--duration-fast) " +
+              "data-[highlighted]:bg-(--danger-soft)"
             }
           >
-            Delete
+            <span className="inline-flex size-4 shrink-0 items-center justify-center text-(--danger)">
+              <Icons.Trash weight="bold" className="size-4" />
+            </span>
+            Delete board
           </DropdownMenu.Item>
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
@@ -130,7 +135,7 @@ export function BoardRow({
   );
 }
 
-export function DetailDrawer({
+export function LightboxPreview({
   itemId,
   onClose,
   onRemix,
@@ -151,8 +156,28 @@ export function DetailDrawer({
       kind: "character" | "object" | "background" | "style" | null;
     }>;
   } | null>(null);
+  const [showInfo, setShowInfo] = useState(false);
+  const [copied, setCopied] = useState(false);
   const removeItem = useGalleryStore((s) => s.remove);
   const toggleFav = useGalleryStore((s) => s.toggleFavorite);
+  const cachedItem = useGalleryStore((s) =>
+    s.items.find((it) => it.id === itemId) ?? null,
+  );
+
+  // Show the cached row from the store immediately so the lightbox never
+  // flashes "Loading…" — gallery.show() then enriches with lineage + assets.
+  useEffect(() => {
+    if (cachedItem && !data) {
+      setData({
+        item: cachedItem,
+        parent: null,
+        children: [],
+        siblings: [],
+        assets: [],
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cachedItem]);
 
   useEffect(() => {
     let cancelled = false;
@@ -169,168 +194,296 @@ export function DetailDrawer({
           });
         }
       } catch {
-        if (!cancelled) onClose();
+        // Stay open with whatever we have from the store; lineage / assets
+        // panel will simply remain empty until the next refresh.
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [itemId, onClose]);
+  }, [itemId]);
+
+  const copyPrompt = async (text: string): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1400);
+    } catch {
+      /* ignore */
+    }
+  };
 
   return (
     <Dialog.Root open onOpenChange={(o) => !o && onClose()}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-black/30" />
-        <Dialog.Content
+        <Dialog.Overlay
           className={
-            "fixed inset-y-0 right-0 z-50 flex w-[420px] flex-col " +
-            "border-l border-(--border) bg-(--bg) shadow-2xl"
+            "fixed inset-0 z-40 bg-black/72 backdrop-blur-[2px] " +
+            "data-[state=open]:animate-in data-[state=open]:fade-in-0 " +
+            "data-[state=closed]:animate-out data-[state=closed]:fade-out-0"
           }
+        />
+        <Dialog.Content
+          aria-describedby={undefined}
+          className={
+            "fixed inset-0 z-50 flex flex-col outline-none " +
+            "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 " +
+            "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
+          }
+          onClick={(e) => {
+            // Click outside the media closes the lightbox.
+            if (e.target === e.currentTarget) onClose();
+          }}
         >
-          <header className="flex items-center justify-between border-b border-(--border) p-4">
-            <Dialog.Title className="text-(length:--text-title-md) font-semibold text-(--text)">
-              Item details
-            </Dialog.Title>
-            <IconButton
-              icon={<Icons.X weight="bold" className="size-4" />}
-              aria-label="Close"
-              size="sm"
-              onClick={onClose}
-            />
-          </header>
+          <Dialog.Title className="sr-only">Gallery item preview</Dialog.Title>
+          {/* Close button — top-right. */}
+          <button
+            type="button"
+            aria-label="Close preview"
+            onClick={onClose}
+            className={
+              "absolute right-4 top-4 z-10 inline-flex size-9 items-center justify-center " +
+              "rounded-(--radius-pill) bg-white/8 text-white backdrop-blur-md " +
+              "transition-colors duration-(--duration-fast) hover:bg-white/16"
+            }
+          >
+            <Icons.X weight="bold" className="size-4" />
+          </button>
+
           {data ? (
-            <div className="flex-1 overflow-y-auto p-4">
-              {data.item.kind === "video" ? (
-                // eslint-disable-next-line jsx-a11y/media-has-caption
-                <video
-                  src={resolveGalleryUrl(data.item.relPath)}
-                  controls
-                  preload="metadata"
-                  className="block w-full rounded-(--radius-md) border border-(--border) bg-black"
-                />
-              ) : (
-                <img
-                  src={resolveGalleryUrl(data.item.relPath)}
-                  alt={data.item.prompt}
-                  className="block w-full rounded-(--radius-md) border border-(--border)"
-                />
-              )}
-              <dl className="mt-4 grid grid-cols-[80px_minmax(0,1fr)] gap-x-3 gap-y-1 text-(length:--text-body-sm)">
-                <dt className="text-(--text-muted)">prompt</dt>
-                <dd className="text-(--text) whitespace-pre-wrap">{data.item.prompt}</dd>
-                <dt className="text-(--text-muted)">provider</dt>
-                <dd className="text-(--text)">{data.item.providerId}</dd>
-                <dt className="text-(--text-muted)">model</dt>
-                <dd className="text-(--text)">{data.item.model}</dd>
-                <dt className="text-(--text-muted)">file</dt>
-                <dd className="text-(--text) break-all">{data.item.relPath}</dd>
-                <dt className="text-(--text-muted)">params</dt>
-                <dd className="font-(family-name:--font-mono) text-(length:--text-caption) text-(--text-muted) break-all">
-                  {data.item.paramsJson}
-                </dd>
-              </dl>
-              <div className="mt-4 flex gap-2">
-                <Button size="sm" onClick={() => onRemix(data.item.id)}>
-                  Remix
-                </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => void toggleFav(data.item.id)}
-                >
-                  {data.item.favorited ? "Unfavorite" : "Favorite"}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => {
-                    void api["system.openPath"]({ path: data.item.relPath });
-                  }}
-                >
-                  Open file location
-                </Button>
-                <Button
-                  size="sm"
-                  variant="danger"
-                  onClick={() => {
-                    if (window.confirm("Delete this item?")) {
-                      void removeItem(data.item.id);
-                      onClose();
-                    }
-                  }}
-                >
-                  Delete
-                </Button>
+            <>
+              <div
+                className="flex flex-1 items-center justify-center p-12"
+                onClick={(e) => {
+                  if (e.target === e.currentTarget) onClose();
+                }}
+              >
+                {data.item.kind === "video" ? (
+                  // eslint-disable-next-line jsx-a11y/media-has-caption
+                  <video
+                    src={resolveGalleryUrl(data.item.relPath)}
+                    controls
+                    autoPlay
+                    preload="metadata"
+                    className="block max-h-full max-w-full rounded-(--radius-md) bg-black shadow-[0_24px_64px_-16px_rgba(0,0,0,0.65)]"
+                  />
+                ) : (
+                  <img
+                    src={resolveGalleryUrl(data.item.relPath)}
+                    alt={data.item.prompt}
+                    className="block max-h-full max-w-full rounded-(--radius-md) shadow-[0_24px_64px_-16px_rgba(0,0,0,0.65)]"
+                  />
+                )}
               </div>
 
-              {data.assets.length > 0 ? (
-                <div className="mt-6">
-                  <h3 className="text-(length:--text-caption-uppercase) font-semibold uppercase tracking-[1.5px] text-(--text-muted)">
-                    Used assets
-                  </h3>
-                  <ul className="mt-2 flex flex-wrap gap-1.5">
-                    {data.assets.map((a) => (
-                      <li
-                        key={a.assetId}
+              {/* Bottom action bar — floats over the dimmed overlay. */}
+              <div
+                className={
+                  "pointer-events-none absolute inset-x-0 bottom-6 z-10 flex justify-center"
+                }
+              >
+                <div
+                  className={
+                    "pointer-events-auto inline-flex items-center gap-1 rounded-(--radius-pill) " +
+                    "border border-white/10 bg-black/55 p-1 text-white shadow-[0_8px_32px_-12px_rgba(0,0,0,0.6)] " +
+                    "backdrop-blur-xl"
+                  }
+                >
+                  <LightboxAction
+                    icon={
+                      <Icons.MagicWand weight="bold" className="size-4" />
+                    }
+                    label="Remix"
+                    onClick={() => onRemix(data.item.id)}
+                  />
+                  <LightboxAction
+                    icon={
+                      <Icons.Heart
+                        weight={data.item.favorited ? "fill" : "regular"}
                         className={
-                          "inline-flex items-center gap-1 rounded-(--radius-pill) " +
-                          "bg-(--surface-raised) px-2 py-1 text-(length:--text-caption) text-(--text)"
+                          data.item.favorited
+                            ? "size-4 text-(--danger)"
+                            : "size-4"
                         }
-                      >
-                        <span className="font-semibold">{a.name ?? a.assetId.slice(0, 8)}</span>
-                        <span className="text-(--text-muted)">({a.role})</span>
-                      </li>
-                    ))}
-                  </ul>
+                      />
+                    }
+                    label={data.item.favorited ? "Unfavorite" : "Favorite"}
+                    onClick={() => void toggleFav(data.item.id)}
+                  />
+                  <LightboxAction
+                    icon={
+                      copied ? (
+                        <Icons.Check weight="bold" className="size-4" />
+                      ) : (
+                        <Icons.Paperclip weight="bold" className="size-4" />
+                      )
+                    }
+                    label={copied ? "Copied!" : "Copy prompt"}
+                    onClick={() => void copyPrompt(data.item.prompt)}
+                  />
+                  <LightboxAction
+                    icon={<Icons.Folder weight="bold" className="size-4" />}
+                    label="Reveal"
+                    onClick={() => {
+                      void api["system.openPath"]({ path: data.item.relPath });
+                    }}
+                  />
+                  <span className="mx-0.5 h-5 w-px bg-white/12" aria-hidden="true" />
+                  <LightboxAction
+                    icon={<Icons.Info weight="bold" className="size-4" />}
+                    label={showInfo ? "Hide info" : "Info"}
+                    onClick={() => setShowInfo((v) => !v)}
+                    active={showInfo}
+                  />
+                  <LightboxAction
+                    icon={<Icons.Trash weight="bold" className="size-4" />}
+                    label="Delete"
+                    danger
+                    onClick={() => {
+                      if (window.confirm("Delete this item?")) {
+                        void removeItem(data.item.id);
+                        onClose();
+                      }
+                    }}
+                  />
                 </div>
-              ) : null}
+              </div>
 
-              {(data.parent || data.children.length > 0 || data.siblings.length > 0) ? (
-                <div className="mt-6">
-                  <h3 className="text-(length:--text-caption-uppercase) font-semibold uppercase tracking-[1.5px] text-(--text-muted)">
-                    Lineage
-                  </h3>
-                  {data.parent ? (
-                    <div className="mt-2">
-                      <div className="text-(length:--text-caption) text-(--text-muted)">parent</div>
-                      <LineageTile item={data.parent} />
-                    </div>
-                  ) : null}
-                  {data.siblings.length > 0 ? (
-                    <div className="mt-2">
-                      <div className="text-(length:--text-caption) text-(--text-muted)">
-                        siblings (up to 3)
+              {/* Slide-up info panel — left side. */}
+              {showInfo ? (
+                <aside
+                  className={
+                    "absolute right-4 top-16 bottom-24 z-10 w-[340px] overflow-y-auto " +
+                    "rounded-(--radius-md) border border-white/10 bg-black/65 p-4 text-white " +
+                    "shadow-[0_8px_32px_-12px_rgba(0,0,0,0.6)] backdrop-blur-xl"
+                  }
+                >
+                  <div className="text-(length:--text-caption-uppercase) font-semibold uppercase tracking-[1.5px] text-white/55">
+                    Prompt
+                  </div>
+                  <p className="mt-1.5 whitespace-pre-wrap text-(length:--text-body-sm) leading-5">
+                    {data.item.prompt}
+                  </p>
+                  <dl className="mt-4 grid grid-cols-[72px_minmax(0,1fr)] gap-x-3 gap-y-1 text-(length:--text-body-sm)">
+                    <dt className="text-white/55">Provider</dt>
+                    <dd className="text-white">{data.item.providerId}</dd>
+                    <dt className="text-white/55">Model</dt>
+                    <dd className="text-white">{data.item.model}</dd>
+                    <dt className="text-white/55">File</dt>
+                    <dd className="break-all font-(family-name:--font-mono) text-(length:--text-caption) text-white/85">
+                      {data.item.relPath}
+                    </dd>
+                    <dt className="text-white/55">Params</dt>
+                    <dd className="break-all font-(family-name:--font-mono) text-(length:--text-caption) text-white/70">
+                      {data.item.paramsJson}
+                    </dd>
+                  </dl>
+                  {data.assets.length > 0 ? (
+                    <div className="mt-4">
+                      <div className="text-(length:--text-caption-uppercase) font-semibold uppercase tracking-[1.5px] text-white/55">
+                        Used assets
                       </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        {data.siblings.map((s) => (
-                          <LineageTile key={s.id} item={s} />
+                      <ul className="mt-2 flex flex-wrap gap-1.5">
+                        {data.assets.map((a) => (
+                          <li
+                            key={a.assetId}
+                            className={
+                              "inline-flex items-center gap-1 rounded-(--radius-pill) " +
+                              "border border-white/10 bg-white/8 px-2 py-0.5 text-(length:--text-caption)"
+                            }
+                          >
+                            <span className="font-semibold">
+                              {a.name ?? a.assetId.slice(0, 8)}
+                            </span>
+                            <span className="text-white/55">({a.role})</span>
+                          </li>
                         ))}
-                      </div>
+                      </ul>
                     </div>
                   ) : null}
-                  {data.children.length > 0 ? (
-                    <div className="mt-2">
-                      <div className="text-(length:--text-caption) text-(--text-muted)">
-                        children (up to 3)
+                  {data.parent || data.children.length > 0 || data.siblings.length > 0 ? (
+                    <div className="mt-4">
+                      <div className="text-(length:--text-caption-uppercase) font-semibold uppercase tracking-[1.5px] text-white/55">
+                        Lineage
                       </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        {data.children.map((c) => (
-                          <LineageTile key={c.id} item={c} />
-                        ))}
-                      </div>
+                      {data.parent ? (
+                        <div className="mt-2">
+                          <div className="text-(length:--text-caption) text-white/55">parent</div>
+                          <LineageTile item={data.parent} />
+                        </div>
+                      ) : null}
+                      {data.siblings.length > 0 ? (
+                        <div className="mt-2">
+                          <div className="text-(length:--text-caption) text-white/55">
+                            siblings
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            {data.siblings.map((s) => (
+                              <LineageTile key={s.id} item={s} />
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                      {data.children.length > 0 ? (
+                        <div className="mt-2">
+                          <div className="text-(length:--text-caption) text-white/55">
+                            children
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            {data.children.map((c) => (
+                              <LineageTile key={c.id} item={c} />
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   ) : null}
-                </div>
+                </aside>
               ) : null}
-            </div>
+            </>
           ) : (
-            <div className="flex flex-1 items-center justify-center text-(length:--text-body-sm) text-(--text-muted)">
+            <div className="flex flex-1 items-center justify-center text-(length:--text-body-sm) text-white/70">
               Loading…
             </div>
           )}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
+  );
+}
+
+function LightboxAction({
+  icon,
+  label,
+  onClick,
+  active,
+  danger,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  active?: boolean;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      className={
+        "inline-flex h-8 items-center gap-1.5 rounded-(--radius-pill) px-3 " +
+        "text-(length:--text-caption) font-medium transition-colors duration-(--motion-fast) " +
+        (danger
+          ? "text-white/85 hover:bg-(--danger)/85 hover:text-white "
+          : active
+            ? "bg-white/16 text-white "
+            : "text-white/85 hover:bg-white/12 hover:text-white ")
+      }
+    >
+      {icon}
+      <span className="hidden sm:inline">{label}</span>
+    </button>
   );
 }
 
