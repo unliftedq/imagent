@@ -293,6 +293,10 @@ export class JobRunner extends EventEmitter {
       this.intentOverrides.set(id, overrides);
     }
 
+    // Surface the running id immediately so subscribers (Studio's cancel
+    // affordance) can target jobs.cancel before the provider responds.
+    this.emit("job.progress", { id, progress: 0, state: job.state });
+
     // Run async; surface failures via events, not the start() promise.
     this.imageGenerationLoop(job, req, provider, abort.signal).catch((err) => {
       this.deps.logger.error("image job loop crashed", { id, err: String(err) });

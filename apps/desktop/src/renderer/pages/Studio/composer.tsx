@@ -168,18 +168,20 @@ export function ChatComposerShell({
             title={actionLabel}
             onClick={onSubmit}
             disabled={disabled || submitting}
-            className={
-              "ml-auto inline-flex size-9 items-center justify-center rounded-(--radius-md) " +
-              "bg-(--accent) text-(--accent-fg) transition-colors duration-(--motion-fast) " +
-              "hover:bg-(--accent-hover) focus-visible:outline-none focus-visible:ring-2 " +
-              "focus-visible:ring-(--focus-ring) disabled:cursor-not-allowed " +
-              "disabled:bg-(--surface-sunken) disabled:text-(--text-muted)"
-            }
+            className="studio-composer-submit ml-auto"
           >
             {submitting ? (
-              <Icons.CircleNotch weight="bold" className="size-4 animate-spin" />
+              <Icons.CircleNotch
+                weight="bold"
+                className="size-[15px] animate-spin"
+                aria-hidden="true"
+              />
             ) : (
-              <Icons.Play weight="fill" className="ml-0.5 size-4" />
+              <Icons.ArrowRight
+                weight="bold"
+                className="studio-composer-submit-icon size-[15px]"
+                aria-hidden="true"
+              />
             )}
           </button>
         </div>

@@ -1,5 +1,5 @@
 import type { GalleryItem } from "@imagine/core";
-import { Icons } from "@imagine/ui";
+import { Button, Dialog, Icons } from "@imagine/ui";
 import { useEffect, useMemo, useState } from "react";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
 import { useJobsStore } from "../../state/useJobsStore.js";
@@ -61,27 +61,102 @@ function GeneratingCanvas({
   mode: StudioMode;
   prompt: string;
 }) {
-  const label = prompt.trim()
-    ? `Generating ${mode}: ${prompt.trim().slice(0, 80)}`
+  const trimmed = prompt.trim();
+  const label = trimmed
+    ? `Generating ${mode}: ${trimmed.slice(0, 80)}`
     : `Generating ${mode}`;
 
   return (
     <div
-      className="studio-generating-placeholder relative w-full max-w-3xl overflow-hidden bg-(--surface-sunken)"
+      className="studio-generating-placeholder relative w-full max-w-3xl overflow-hidden"
       role="status"
       aria-label={label}
     >
-      <GenerationLayers />
+      <div className="studio-generation-shimmer" aria-hidden="true" />
+      <div className="studio-generation-grain" aria-hidden="true" />
+      <div className="studio-generation-badge">
+        <span className="studio-generation-badge-dot" aria-hidden="true" />
+        <span className="studio-generation-badge-label">Generating</span>
+        <span className="studio-generation-badge-divider" aria-hidden="true" />
+        <CancelGenerationControl mode={mode} />
+      </div>
     </div>
   );
 }
 
-function GenerationLayers() {
+function CancelGenerationControl({ mode }: { mode: StudioMode }) {
+  const activeJobId = useJobsStore((state) => state.activeJobId);
+  const cancelJob = useJobsStore((state) => state.cancel);
+  const pushToast = useUIStore((state) => state.pushToast);
+
+  const [open, setOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
+  const hasRealJobId = !!activeJobId && activeJobId !== "__pending__";
+
+  const handleConfirm = async (): Promise<void> => {
+    if (!activeJobId || activeJobId === "__pending__") {
+      // Runner hasn't returned a job id yet — wait for the next progress
+      // tick. Keep the dialog open so the user can retry the moment the
+      // job becomes cancellable.
+      return;
+    }
+    setCancelling(true);
+    try {
+      await cancelJob(activeJobId);
+      setOpen(false);
+      pushToast({
+        title: `${mode === "video" ? "Video" : "Image"} generation cancelled`,
+        variant: "info",
+      });
+    } catch (err) {
+      pushToast({
+        title: "Cancel failed",
+        description: (err as Error)?.message ?? String(err),
+        variant: "error",
+      });
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   return (
-    <>
-      <div className="studio-generation-dot-field" />
-      <div className="studio-generation-vellum" />
-    </>
+    <Dialog.Root open={open} onOpenChange={setOpen}>
+      <Dialog.Trigger asChild>
+        <button
+          type="button"
+          className="studio-generation-cancel-button"
+          aria-label="Cancel generation"
+          title="Cancel generation"
+        >
+          <Icons.Stop weight="fill" className="size-3" aria-hidden="true" />
+          <span>Stop</span>
+        </button>
+      </Dialog.Trigger>
+      <Dialog.Content className="max-w-[420px]" showClose={false}>
+        <Dialog.Title className="text-[15px] font-semibold tracking-[-0.01em] text-(--text)">
+          Stop {mode === "video" ? "video" : "image"} generation?
+        </Dialog.Title>
+        <Dialog.Description className="mt-2 text-[13px] leading-5 text-(--text-muted)">
+          {hasRealJobId
+            ? "This will end the current job. Any partial result will be discarded."
+            : "The job is still being prepared. Try again in a moment to cancel it cleanly."}
+        </Dialog.Description>
+        <div className="mt-6 flex items-center justify-end gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setOpen(false)} disabled={cancelling}>
+            Keep generating
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => void handleConfirm()}
+            disabled={!hasRealJobId || cancelling}
+          >
+            {cancelling ? "Stopping…" : "Stop generation"}
+          </Button>
+        </div>
+      </Dialog.Content>
+    </Dialog.Root>
   );
 }
 

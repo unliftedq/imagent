@@ -5,6 +5,7 @@
 export {
   ArrowClockwise,
   ArrowCounterClockwise,
+  ArrowRight,
   ArrowSquareOut,
   Brain,
   CaretDown,
@@ -46,6 +47,7 @@ export {
   StackPlus,
   Star,
   StarFour,
+  Stop,
   Sun,
   TiktokLogo,
   Timer,

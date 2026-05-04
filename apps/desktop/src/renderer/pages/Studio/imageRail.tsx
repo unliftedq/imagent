@@ -218,6 +218,11 @@ export function ImageRail() {
       if (draft.parentId) setDraft({ parentId: undefined });
     } catch (err) {
       const message = (err as Error)?.message ?? String(err);
+      // The cancel control surfaces its own info toast; don't double-up
+      // with a "generation failed" error when the user explicitly stopped.
+      if (/state '?cancelled'?/i.test(message) || /^cancelled$/i.test(message)) {
+        return;
+      }
       const providerLabel =
         configuredProviders.find((provider) => provider.id === draft.providerId)?.displayName ??
         draft.providerId;
