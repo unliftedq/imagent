@@ -24,6 +24,8 @@ const SERVER_INFO = {
 const SUPPORTED_PROTOCOL_VERSIONS = ["2024-11-05", "2025-03-26", "2025-06-18"] as const;
 const DEFAULT_PROTOCOL_VERSION =
   SUPPORTED_PROTOCOL_VERSIONS[SUPPORTED_PROTOCOL_VERSIONS.length - 1] ?? "2025-06-18";
+const DEFAULT_TIMEOUT_MS = 120_000;
+const MAX_TIMEOUT_MS = 600_000;
 
 const IMAGINE_CLI_TOOL = {
   name: "imagine_cli",
@@ -41,7 +43,7 @@ const IMAGINE_CLI_TOOL = {
       timeoutMs: {
         type: "number",
         minimum: 1,
-        maximum: 600_000,
+        maximum: MAX_TIMEOUT_MS,
         description: "Optional command timeout in milliseconds. Defaults to 120000.",
       },
     },
@@ -68,6 +70,7 @@ async function runMcpServer(): Promise<void> {
   process.stdin.setEncoding("utf8");
 
   let buffer = "";
+  let processing = Promise.resolve();
   process.stdin.on("data", (chunk: string) => {
     buffer += chunk;
     const lines = buffer.split(/\r?\n/);
@@ -76,13 +79,16 @@ async function runMcpServer(): Promise<void> {
     for (const line of lines) {
       const trimmed = line.trim();
       if (!trimmed) continue;
-      void handleLine(trimmed);
+      processing = processing
+        .then(() => handleLine(trimmed))
+        .catch((err) => writeError(null, -32000, (err as Error).message));
     }
   });
 
   await new Promise<void>((resolve) => {
     process.stdin.on("end", resolve);
   });
+  await processing;
 }
 
 async function handleLine(line: string): Promise<void> {
@@ -225,11 +231,11 @@ async function runImagineCli(input: ToolCallArgs): Promise<{
 }
 
 function normalizeTimeout(value: unknown): number {
-  if (value === undefined) return 120_000;
+  if (value === undefined) return DEFAULT_TIMEOUT_MS;
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
     throw new Error("timeoutMs must be a positive number");
   }
-  return Math.min(Math.floor(value), 600_000);
+  return Math.min(Math.floor(value), MAX_TIMEOUT_MS);
 }
 
 function writeResult(id: JsonRpcId, result: unknown): void {
