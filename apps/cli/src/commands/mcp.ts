@@ -21,6 +21,10 @@ const SERVER_INFO = {
   version: "0.0.1",
 };
 
+const SUPPORTED_PROTOCOL_VERSIONS = ["2024-11-05", "2025-03-26", "2025-06-18"] as const;
+const DEFAULT_PROTOCOL_VERSION =
+  SUPPORTED_PROTOCOL_VERSIONS[SUPPORTED_PROTOCOL_VERSIONS.length - 1] ?? "2025-06-18";
+
 const IMAGINE_CLI_TOOL = {
   name: "imagine_cli",
   description:
@@ -134,10 +138,16 @@ async function handleLine(line: string): Promise<void> {
 }
 
 function resolveProtocolVersion(params: unknown): string {
-  if (isRecord(params) && typeof params.protocolVersion === "string") {
-    return params.protocolVersion;
+  const requested =
+    isRecord(params) && typeof params.protocolVersion === "string"
+      ? params.protocolVersion
+      : DEFAULT_PROTOCOL_VERSION;
+  if (
+    !SUPPORTED_PROTOCOL_VERSIONS.includes(requested as (typeof SUPPORTED_PROTOCOL_VERSIONS)[number])
+  ) {
+    throw new Error(`Unsupported protocolVersion: ${requested}`);
   }
-  return "2024-11-05";
+  return requested;
 }
 
 async function callTool(params: unknown): Promise<unknown> {
@@ -145,8 +155,8 @@ async function callTool(params: unknown): Promise<unknown> {
     throw new Error(`Unknown tool: ${isRecord(params) ? String(params.name) : "(missing)"}`);
   }
 
-  const args = isRecord(params.arguments) ? (params.arguments as ToolCallArgs) : {};
-  const result = await runImagineCli(args);
+  const toolArguments = isRecord(params.arguments) ? (params.arguments as ToolCallArgs) : {};
+  const result = await runImagineCli(toolArguments);
   const isError = result.status !== 0 || result.timedOut;
 
   return {
@@ -168,7 +178,7 @@ async function runImagineCli(input: ToolCallArgs): Promise<{
   timedOut: boolean;
 }> {
   if (!Array.isArray(input.args) || !input.args.every((arg) => typeof arg === "string")) {
-    throw new Error("arguments.args must be an array of strings");
+    throw new Error("args must be an array of strings");
   }
   const args = input.args;
   if (args[0] === "mcp") {
@@ -217,7 +227,7 @@ async function runImagineCli(input: ToolCallArgs): Promise<{
 function normalizeTimeout(value: unknown): number {
   if (value === undefined) return 120_000;
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
-    throw new Error("arguments.timeoutMs must be a positive number");
+    throw new Error("timeoutMs must be a positive number");
   }
   return Math.min(Math.floor(value), 600_000);
 }
