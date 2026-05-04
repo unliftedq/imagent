@@ -58,56 +58,62 @@ describe("CLI MCP server", () => {
     const child = spawn(process.execPath, [ENTRY, "mcp"], {
       stdio: ["pipe", "pipe", "pipe"],
     });
-    child.stdout.setEncoding("utf8");
-    child.stderr.setEncoding("utf8");
+    try {
+      child.stdout.setEncoding("utf8");
+      child.stderr.setEncoding("utf8");
 
-    const responses: Array<Record<string, unknown>> = [];
-    let buffer = "";
-    child.stdout.on("data", (chunk: string) => {
-      buffer += chunk;
-      const lines = buffer.split(/\r?\n/);
-      buffer = lines.pop() ?? "";
-      for (const line of lines) {
-        if (line.trim()) responses.push(JSON.parse(line) as Record<string, unknown>);
-      }
-    });
+      const responses: Array<Record<string, unknown>> = [];
+      let buffer = "";
+      child.stdout.on("data", (chunk: string) => {
+        buffer += chunk;
+        const lines = buffer.split(/\r?\n/);
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (line.trim()) responses.push(JSON.parse(line) as Record<string, unknown>);
+        }
+      });
 
-    child.stdin.write(
-      `${JSON.stringify({
-        jsonrpc: "2.0",
-        id: 1,
-        method: "initialize",
-        params: { protocolVersion: "2024-11-05" },
-      })}\n`,
-    );
-    child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list" })}\n`);
-    child.stdin.write(
-      `${JSON.stringify({
-        jsonrpc: "2.0",
-        id: 3,
-        method: "tools/call",
-        params: { name: "imagine_cli", arguments: { args: ["--version"] } },
-      })}\n`,
-    );
+      child.stdin.write(
+        `${JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "initialize",
+          params: { protocolVersion: "2024-11-05" },
+        })}\n`,
+      );
+      child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list" })}\n`);
+      child.stdin.write(
+        `${JSON.stringify({
+          jsonrpc: "2.0",
+          id: 3,
+          method: "tools/call",
+          params: { name: "imagine_cli", arguments: { args: ["--version"] } },
+        })}\n`,
+      );
 
-    await waitFor(() => responses.length >= 3);
-    child.stdin.end();
+      await waitFor(() => responses.length >= 3);
 
-    expect(responses.find((r) => r.id === 1)?.result).toMatchObject({
-      protocolVersion: "2024-11-05",
-      serverInfo: { name: "imagine" },
-    });
-    expect(responses.find((r) => r.id === 2)?.result).toMatchObject({
-      tools: [{ name: "imagine_cli" }],
-    });
+      expect(responses.find((r) => r.id === 1)?.result).toMatchObject({
+        protocolVersion: "2024-11-05",
+        serverInfo: { name: "imagine" },
+      });
+      expect(responses.find((r) => r.id === 2)?.result).toMatchObject({
+        tools: [{ name: "imagine_cli" }],
+      });
 
-    const callResult = responses.find((r) => r.id === 3)?.result as {
-      content: Array<{ text: string }>;
-    };
-    const payload = JSON.parse(callResult.content[0]!.text) as { stdout: string; status: number };
-    expect(payload.status).toBe(0);
-    expect(payload.stdout.trim()).toBe("0.0.1");
-  });
+      const callResult = responses.find((r) => r.id === 3)?.result as {
+        content?: Array<{ text: string }>;
+      };
+      const text = callResult.content?.[0]?.text;
+      expect(text).toBeTypeOf("string");
+      const payload = JSON.parse(text as string) as { stdout: string; status: number };
+      expect(payload.status).toBe(0);
+      expect(payload.stdout.trim()).toBe("0.0.1");
+    } finally {
+      child.stdin.end();
+      child.kill();
+    }
+  }, 15_000);
 });
 
 async function waitFor(predicate: () => boolean): Promise<void> {

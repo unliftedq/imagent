@@ -31,7 +31,8 @@ const IMAGINE_CLI_TOOL = {
       args: {
         type: "array",
         items: { type: "string" },
-        description: "Arguments to pass after `imagine`, for example [\"image\", \"a cat\", \"--provider\", \"openai\"].",
+        description:
+          'Arguments to pass after `imagine`, for example ["image", "a cat", "--provider", "openai"].',
       },
       timeoutMs: {
         type: "number",
@@ -169,7 +170,8 @@ async function runImagineCli(input: ToolCallArgs): Promise<{
   if (!Array.isArray(input.args) || !input.args.every((arg) => typeof arg === "string")) {
     throw new Error("arguments.args must be an array of strings");
   }
-  if (input.args[0] === "mcp") {
+  const args = input.args;
+  if (args[0] === "mcp") {
     throw new Error("the mcp subcommand cannot be called from the MCP server");
   }
 
@@ -180,7 +182,7 @@ async function runImagineCli(input: ToolCallArgs): Promise<{
   }
 
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [entry, ...input.args], {
+    const child = spawn(process.execPath, [entry, ...args], {
       env: { ...process.env, NO_COLOR: "1" },
       stdio: ["ignore", "pipe", "pipe"],
     });
