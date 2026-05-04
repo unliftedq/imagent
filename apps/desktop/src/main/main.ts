@@ -14,6 +14,8 @@ import { setupIpc } from "./ipc-handlers.js";
 const isDev = !app.isPackaged && process.env.NODE_ENV !== "production";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const appIconPath = path.resolve(__dirname, "..", "..", "assets", "imagine.png");
+const macAppIconPath = path.resolve(__dirname, "..", "..", "assets", "imagine-macos.png");
 
 /**
  * Custom URL scheme that serves files inside the user's data dir back to the
@@ -93,6 +95,7 @@ async function createWindow() {
     backgroundColor: "#fffaf0",
     autoHideMenuBar: true,
     title: "Imagine Studio",
+    icon: process.platform === "darwin" ? macAppIconPath : appIconPath,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -188,6 +191,9 @@ async function bootstrap(): Promise<RuntimeServices> {
 
 app.whenReady().then(async () => {
   try {
+    if (process.platform === "darwin") {
+      app.dock.setIcon(macAppIconPath);
+    }
     const t0 = Date.now();
     const runtime = await bootstrap();
     await createWindow();

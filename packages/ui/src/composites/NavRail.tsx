@@ -69,27 +69,6 @@ export function NavRail({
         className,
       )}
     >
-      {/* Wordmark */}
-      <div className="flex items-center gap-2 px-4 pt-4 pb-3">
-        <div
-          aria-hidden="true"
-          className={
-            "inline-flex size-7 items-center justify-center rounded-(--radius-sm) " +
-            "border border-(--border) bg-(--surface-raised) text-(--text)"
-          }
-        >
-          <Image weight="duotone" className="size-4" />
-        </div>
-        <div className="flex flex-col leading-none">
-          <span className="text-[20px] font-semibold tracking-[-0.01em] text-(--text)">
-            Imagine
-          </span>
-          <span className="mt-0.5 text-[11px] font-medium text-(--text-faint)">{version}</span>
-        </div>
-      </div>
-
-      <div className="mx-4 my-1 h-px bg-(--border-faint)" aria-hidden="true" />
-
       {/* Top nav rows (Studio / Gallery / Assets / Providers) */}
       <ul className="flex flex-col gap-1 p-3">
         {topNav.map((r) => (

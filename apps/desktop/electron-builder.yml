@@ -1,9 +1,13 @@
-appId: com.qiaowan.imagine.studio
+appId: com.fpcool.imagine.studio
 productName: Imagine Studio
+icon: assets/imagine.png
 directories:
   output: release
 files:
   - dist/**/*
+  - assets/imagine.png
+  - assets/imagine-macos.png
+  - assets/imagine.icns
   - package.json
 asar: true
 asarUnpack:
@@ -14,6 +18,7 @@ win:
     - target: nsis
       arch: [x64]
 mac:
+  icon: assets/imagine.icns
   target:
     - target: dmg
       arch: [x64, arm64]
