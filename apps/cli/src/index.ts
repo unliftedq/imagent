@@ -15,8 +15,8 @@ import { CLI_VERSION } from "./version.js";
 async function main(): Promise<void> {
   const program = new Command();
   program
-    .name("imagine")
-    .description("imagine CLI — local image and video generation")
+    .name("imagent")
+    .description("imagent CLI — local image and video generation")
     .version(CLI_VERSION);
 
   program

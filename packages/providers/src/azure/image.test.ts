@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ProviderError, ProviderHttpError, type ImageRequest } from "@imagine/core";
+import { ProviderError, ProviderHttpError, type ImageRequest } from "@imagent/core";
 import { APIError } from "openai";
 import { AzureOpenAIImageProvider } from "./image.js";
 import type { OpenAIClientLike } from "../openai/image.js";

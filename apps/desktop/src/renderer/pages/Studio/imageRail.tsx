@@ -1,6 +1,6 @@
-import type { ImageModelDef, ImageRequest } from "@imagine/core";
-import type { ProviderId } from "@imagine/ipc";
-import { Button, Icons, Select } from "@imagine/ui";
+import type { ImageModelDef, ImageRequest } from "@imagent/core";
+import type { ProviderId } from "@imagent/ipc";
+import { Button, Icons, Select } from "@imagent/ui";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api.js";
 import { useAssetsStore } from "../../state/useAssetsStore.js";
@@ -211,7 +211,7 @@ export function ImageRail() {
       const item = await api["image.generate"](request);
       upsertOne(item);
       window.dispatchEvent(
-        new CustomEvent<{ id: string }>("imagine:canvas-pin", {
+        new CustomEvent<{ id: string }>("imagent:canvas-pin", {
           detail: { id: item.id },
         }),
       );

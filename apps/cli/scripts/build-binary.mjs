@@ -1,23 +1,23 @@
 #!/usr/bin/env node
 /**
- * Build the single-file CLI binary `imagine.exe` (or `imagine` on POSIX) via
+ * Build the single-file CLI binary `imagent.exe` (or `imagent` on POSIX) via
  * Node SEA. Steps mirror Node's official SEA recipe:
  *
  *   1. tsc -b              (already run by the calling `bun run build:binary`).
- *   2. esbuild dist/index.js → dist/imagine.bundle.cjs (single-file CJS).
- *   3. node --experimental-sea-config sea-config.json → dist/imagine.blob.
- *   4. Copy the host node binary to dist/imagine.exe.
+ *   2. esbuild dist/index.js → dist/imagent.bundle.cjs (single-file CJS).
+ *   3. node --experimental-sea-config sea-config.json → dist/imagent.blob.
+ *   4. Copy the host node binary to dist/imagent.exe.
  *   5. signtool remove (Windows, best-effort).
  *   6. postject inject the blob.
  *
  * Native modules (`better-sqlite3`, `sharp`) are NOT bundled — they remain as
  * `require()` calls and the binary expects them in an adjacent `node_modules/`.
  * v1 ships the binary alongside the workspace's installed `node_modules/`;
- * the CLI README covers the layout. (workplan.md §1 M8.)
+ * the CLI README covers the layout..
  *
  * If any step fails irrecoverably on Windows native-modules, we fall back to
- * just shipping `dist/imagine.cjs` and printing instructions to invoke it as
- * `node dist/imagine.cjs <args>`.
+ * just shipping `dist/imagent.cjs` and printing instructions to invoke it as
+ * `node dist/imagent.cjs <args>`.
  */
 import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
@@ -56,7 +56,7 @@ function isWindows() {
 }
 
 function exeName() {
-  return isWindows() ? "imagine.exe" : "imagine";
+  return isWindows() ? "imagent.exe" : "imagent";
 }
 
 async function main() {
@@ -73,7 +73,7 @@ async function main() {
       `expected ${entry} — run 'tsc -b' first (build:binary depends on build).`,
     );
   }
-  const bundle = path.join(distDir, "imagine.bundle.cjs");
+  const bundle = path.join(distDir, "imagent.bundle.cjs");
   // Run the esbuild shim from the workspace root so its `import "esbuild"`
   // resolves against the hoisted root node_modules/.
   // Banner: under Node SEA, the embedder's `require()` only resolves builtins
@@ -90,7 +90,7 @@ async function main() {
   // We also probe the workspace's `packages/persistence/node_modules` because
   // Bun-style hoisting puts the native modules under that workspace.
   const seaRequireBanner =
-    "// imagine CLI bundle (Node SEA)\n" +
+    "// imagent CLI bundle (Node SEA)\n" +
     "var __seaRequire;try{var __sea=require('node:sea');" +
     "if(__sea&&__sea.isSea&&__sea.isSea()){" +
     "var __mod=require('node:module');var __path=require('node:path');" +
@@ -123,7 +123,7 @@ await esbuild.build({
   target: "node22",
   format: "cjs",
   // Native + dynamic-load modules are kept external. The binary resolves
-  // them via require() against node_modules/ adjacent to imagine.exe.
+  // them via require() against node_modules/ adjacent to imagent.exe.
   external: [
     "better-sqlite3",
     "sharp",
@@ -137,7 +137,7 @@ await esbuild.build({
 `;
   // Run from cliRoot so the shim's `import "esbuild"` resolves against
   // apps/cli/node_modules/esbuild.
-  const shimPath = path.join(cliRoot, "node_modules", ".imagine-esbuild-shim.mjs");
+  const shimPath = path.join(cliRoot, "node_modules", ".imagent-esbuild-shim.mjs");
   writeFileSync(shimPath, esbuildShim);
   run(process.execPath, [shimPath], { cwd: cliRoot });
 
@@ -172,7 +172,7 @@ await esbuild.build({
     "postject",
     target,
     "NODE_SEA_BLOB",
-    path.join(distDir, "imagine.blob"),
+    path.join(distDir, "imagent.blob"),
     "--sentinel-fuse",
     "NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2",
   ];
@@ -186,13 +186,13 @@ await esbuild.build({
 
 main().catch(async (err) => {
   console.error("\n[sea] FAILED:", err.message);
-  console.error("[sea] falling back to dist/imagine.cjs (run with: node dist/imagine.cjs <args>)");
-  // Fallback: leave dist/imagine.bundle.cjs in place and copy it to imagine.cjs.
+  console.error("[sea] falling back to dist/imagent.cjs (run with: node dist/imagent.cjs <args>)");
+  // Fallback: leave dist/imagent.bundle.cjs in place and copy it to imagent.cjs.
   try {
-    const bundle = path.join(distDir, "imagine.bundle.cjs");
+    const bundle = path.join(distDir, "imagent.bundle.cjs");
     if (existsSync(bundle)) {
-      copyFileSync(bundle, path.join(distDir, "imagine.cjs"));
-      console.error(`[sea] fallback bundle: ${path.join(distDir, "imagine.cjs")}`);
+      copyFileSync(bundle, path.join(distDir, "imagent.cjs"));
+      console.error(`[sea] fallback bundle: ${path.join(distDir, "imagent.cjs")}`);
     }
   } catch (fallbackErr) {
     console.error("[sea] fallback copy failed:", fallbackErr);

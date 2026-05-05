@@ -4,15 +4,15 @@ import {
   createFileSecretsStore,
   mergeSecrets,
   type ProviderSecrets,
-} from "@imagine/config";
-import { countFtsTables, createPathResolver, ensureDataDir, openDatabase } from "@imagine/persistence";
-import { TOTAL_PROVIDER_COUNT, configuredProviderCount } from "@imagine/providers";
+} from "@imagent/config";
+import { countFtsTables, createPathResolver, ensureDataDir, openDatabase } from "@imagent/persistence";
+import { TOTAL_PROVIDER_COUNT, configuredProviderCount } from "@imagent/providers";
 import chalk from "chalk";
 
 import { CLI_VERSION } from "../version.js";
 
 /**
- * `imagine doctor` — first-run friendly health check. Creates the data dir,
+ * `imagent doctor` — first-run friendly health check. Creates the data dir,
  * runs migrations, prints DB / FTS / config / providers status. No network
  * calls in M1; provider-readiness pings arrive in M2.
  */
@@ -38,7 +38,7 @@ export async function runDoctor(): Promise<void> {
   const configured = configuredProviderCount(secrets);
 
   // ----- print --------------------------------------------------------
-  process.stdout.write(`${chalk.bold(`imagine v${CLI_VERSION}`)}\n`);
+  process.stdout.write(`${chalk.bold(`imagent v${CLI_VERSION}`)}\n`);
   process.stdout.write(`${chalk.dim("DB:        ")}${dbPath} ${ftsBadge(ftsStatus)}\n`);
   process.stdout.write(`${chalk.dim("Config:    ")}${configPath} (${configLabel})\n`);
   process.stdout.write(

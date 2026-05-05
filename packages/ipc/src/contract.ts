@@ -11,16 +11,16 @@ import {
   VideoModelCapsOverrideSchema,
   VideoModelDefSchema,
   VideoRequestSchema,
-} from "@imagine/core";
+} from "@imagent/core";
 import { z } from "zod";
 
 /**
  * Inline ModelCatalog schema. We deliberately define this here (rather than
- * importing from @imagine/providers) so the IPC package stays free of a
- * dependency on @imagine/providers — the renderer needs the contract types
+ * importing from @imagent/providers) so the IPC package stays free of a
+ * dependency on @imagent/providers — the renderer needs the contract types
  * to compile and the renderer must not pull in provider implementations.
  *
- * Shape mirrors `@imagine/providers#ModelCatalogSchema`.
+ * Shape mirrors `@imagent/providers#ModelCatalogSchema`.
  */
 const IpcImageProviderModelSchema = z.object({
   id: z.string(),
@@ -250,7 +250,7 @@ export type AppVersionInfo = z.infer<typeof AppVersionInfoSchema>;
 export const StoragePathsSchema = z.object({
   dataDir: z.string(),
   configFile: z.string(),
-  /** Path to the user-editable JSON model catalog (`~/.imagine/catalog.json`). */
+  /** Path to the user-editable JSON model catalog (`~/.imagent/catalog.json`). */
   catalogFile: z.string(),
   secretsJson: z.string(),
   dbFile: z.string(),
@@ -299,7 +299,7 @@ export const contract = {
   "app.version": { input: z.void(), output: AppVersionInfoSchema },
   "app.storagePaths": { input: z.void(), output: StoragePathsSchema },
 
-  // Catalog (Phase 2). The runtime catalog file lives at `~/.imagine/catalog.json`
+  // Catalog (Phase 2). The runtime catalog file lives at `~/.imagent/catalog.json`
   // and is user-editable. `catalog.get` returns the loaded snapshot;
   // `catalog.path` returns its absolute path so the UI / CLI can offer an
   // "open in editor" affordance.

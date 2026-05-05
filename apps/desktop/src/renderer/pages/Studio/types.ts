@@ -1,9 +1,9 @@
-import type { AssetKind, ImageModelDef, VideoModelDef } from "@imagine/core";
-import type { ProviderId } from "@imagine/ipc";
+import type { AssetKind, ImageModelDef, VideoModelDef } from "@imagent/core";
+import type { ProviderId } from "@imagent/ipc";
 import type { StudioMode } from "../../state/useUIStore.js";
 
 export const ASSET_REFERENCE_KINDS = ["character", "object", "background", "style"] as const;
-export const MODEL_FAVORITES_LS_KEY = "imagine.favoriteModels.v1";
+export const MODEL_FAVORITES_LS_KEY = "imagent.favoriteModels.v1";
 export const IMAGE_FILE_FILTERS = [
   { name: "Images", extensions: ["png", "jpg", "jpeg", "webp", "gif"] },
 ];

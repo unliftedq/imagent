@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { Asset, GalleryItem } from "@imagine/core";
+import type { Asset, GalleryItem } from "@imagent/core";
 import { openDatabase } from "../db.js";
 import { AssetRepository } from "./assets.repository.js";
 import { GalleryRepository } from "./gallery.repository.js";
@@ -11,7 +11,7 @@ let dbPath: string;
 let tmp: string;
 
 beforeEach(async () => {
-  tmp = await fs.mkdtemp(path.join(os.tmpdir(), "imagine-fts-"));
+  tmp = await fs.mkdtemp(path.join(os.tmpdir(), "imagent-fts-"));
   dbPath = path.join(tmp, "test.db");
 });
 afterEach(async () => {

@@ -1,4 +1,4 @@
-import type { Asset, AssetKind } from "@imagine/core";
+import type { Asset, AssetKind } from "@imagent/core";
 import { Plus } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 import { cn } from "../lib/cn.js";

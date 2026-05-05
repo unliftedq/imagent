@@ -87,7 +87,7 @@ describe("CLI MCP server", () => {
           jsonrpc: "2.0",
           id: 3,
           method: "tools/call",
-          params: { name: "imagine_doctor", arguments: { args: ["--help"] } },
+          params: { name: "imagent_doctor", arguments: { args: ["--help"] } },
         })}\n`,
       );
 
@@ -95,24 +95,24 @@ describe("CLI MCP server", () => {
 
       expect(responses.find((r) => r.id === 1)?.result).toMatchObject({
         protocolVersion: "2024-11-05",
-        serverInfo: { name: "imagine" },
+        serverInfo: { name: "imagent" },
       });
       const listResult = responses.find((r) => r.id === 2)?.result as {
         tools?: Array<{ name: string }>;
       };
       expect(listResult).toMatchObject({
         tools: expect.arrayContaining([
-          expect.objectContaining({ name: "imagine_doctor" }),
-          expect.objectContaining({ name: "imagine_image" }),
-          expect.objectContaining({ name: "imagine_video" }),
-          expect.objectContaining({ name: "imagine_config" }),
-          expect.objectContaining({ name: "imagine_catalog" }),
-          expect.objectContaining({ name: "imagine_asset" }),
-          expect.objectContaining({ name: "imagine_gallery" }),
-          expect.objectContaining({ name: "imagine_job" }),
+          expect.objectContaining({ name: "imagent_doctor" }),
+          expect.objectContaining({ name: "imagent_image" }),
+          expect.objectContaining({ name: "imagent_video" }),
+          expect.objectContaining({ name: "imagent_config" }),
+          expect.objectContaining({ name: "imagent_catalog" }),
+          expect.objectContaining({ name: "imagent_asset" }),
+          expect.objectContaining({ name: "imagent_gallery" }),
+          expect.objectContaining({ name: "imagent_job" }),
         ]),
       });
-      expect(listResult.tools?.map((tool) => tool.name)).not.toContain("imagine_cli");
+      expect(listResult.tools?.map((tool) => tool.name)).not.toContain("imagent_cli");
 
       const callResult = responses.find((r) => r.id === 3)?.result as {
         content?: Array<{ text: string }>;
@@ -121,7 +121,7 @@ describe("CLI MCP server", () => {
       expect(text).toBeTypeOf("string");
       const payload = JSON.parse(text as string) as { stdout: string; status: number };
       expect(payload.status).toBe(0);
-      expect(payload.stdout).toContain("Usage: imagine doctor");
+      expect(payload.stdout).toContain("Usage: imagent doctor");
     } finally {
       child.stdin.end();
       child.kill();

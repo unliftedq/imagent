@@ -15,7 +15,7 @@ import {
   type VideoProvider,
   type VideoRequest,
   validateVideoRequestAgainstModel,
-} from "@imagine/core";
+} from "@imagent/core";
 import { GoogleGenAI } from "@google/genai";
 import { createHttpClient, type HttpClient } from "../http/index.js";
 import { testFailureFromError } from "../openai/image.js";

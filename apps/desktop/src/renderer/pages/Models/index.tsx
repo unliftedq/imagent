@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Icons } from "@imagine/ui";
-import type { ProviderId } from "@imagine/ipc";
+import { Icons } from "@imagent/ui";
+import type { ProviderId } from "@imagent/ipc";
 import { api } from "../../lib/api.js";
 import { useUIStore } from "../../state/useUIStore.js";
 

@@ -3,7 +3,7 @@ dist/
 .turbo/
 *.log
 .DS_Store
-.imagine-test/
+.imagent-test/
 *.tsbuildinfo
 .env
 .env.local

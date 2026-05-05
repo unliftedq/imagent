@@ -1,13 +1,13 @@
-appId: com.fpcool.imagine.studio
-productName: Imagine Studio
-icon: assets/imagine.png
+appId: com.fpcool.imagent
+productName: Imagent
+icon: assets/imagent.png
 directories:
   output: release
 files:
   - dist/**/*
-  - assets/imagine.png
-  - assets/imagine-macos.png
-  - assets/imagine.icns
+  - assets/imagent.png
+  - assets/imagent-macos.png
+  - assets/imagent.icns
   - package.json
 asar: true
 asarUnpack:
@@ -18,7 +18,7 @@ win:
     - target: nsis
       arch: [x64]
 mac:
-  icon: assets/imagine.icns
+  icon: assets/imagent.icns
   target:
     - target: dmg
       arch: [x64, arm64]
@@ -30,7 +30,7 @@ nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
   perMachine: false
-  # Keep ~/.imagine/ in place between reinstalls so the user's gallery,
+  # Keep ~/.imagent/ in place between reinstalls so the user's gallery,
   # boards, and config survive an upgrade. Set to true if you want a clean
   # uninstall to wipe data too.
   deleteAppDataOnUninstall: false

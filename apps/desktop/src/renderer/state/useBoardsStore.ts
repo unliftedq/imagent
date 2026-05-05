@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Board } from "@imagine/core";
+import type { Board } from "@imagent/core";
 import { api } from "../lib/api.js";
 
 interface BoardsState {

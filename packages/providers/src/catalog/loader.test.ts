@@ -6,7 +6,7 @@ import { getBundledCatalog, loadCatalog, saveCatalog } from "./loader.js";
 import type { ModelCatalog } from "./schema.js";
 
 async function tempDir(): Promise<string> {
-  return fs.mkdtemp(path.join(os.tmpdir(), "imagine-catalog-test-"));
+  return fs.mkdtemp(path.join(os.tmpdir(), "imagent-catalog-test-"));
 }
 
 function silentLogger(): { info: () => void; warn: () => void } {

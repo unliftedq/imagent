@@ -15,7 +15,7 @@ import {
   type VideoProvider,
   type VideoRequest,
   validateVideoRequestAgainstModel,
-} from "@imagine/core";
+} from "@imagent/core";
 import { createByteDance, type ByteDanceProvider } from "@ai-sdk/bytedance";
 import { experimental_generateVideo, type GenerateVideoResult } from "ai";
 import { createHttpClient, type HttpClient } from "../http/index.js";

@@ -1,11 +1,11 @@
-@import "@imagine/ui/styles.css";
+@import "@imagent/ui/styles.css";
 
 /* ── Studio · generating placeholder ─────────────────────────────── *
  * A quiet skeleton state: a calm tinted canvas, one slow shimmer
  * pass, a hint of grain to keep it from feeling flat, and a small
  * centered "Generating" badge with a breathing status dot. No glow,
  * no rings, no chrome. Reduced-motion is handled globally by the
- * @media rule shipped from @imagine/ui.
+ * @media rule shipped from @imagent/ui.
  * ─────────────────────────────────────────────────────────────── */
 
 .studio-generating-placeholder {

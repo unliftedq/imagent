@@ -13,7 +13,7 @@ import {
   ProviderResponseError,
   type ProviderTestResult,
   validateImageRequestAgainstModel,
-} from "@imagine/core";
+} from "@imagent/core";
 import OpenAI, { APIError } from "openai";
 
 /**

@@ -1,4 +1,4 @@
-import type { ImageModelDef, VideoModelDef } from "@imagine/core";
+import type { ImageModelDef, VideoModelDef } from "@imagent/core";
 import type { ModelCatalog } from "./schema.js";
 
 /**
@@ -6,7 +6,7 @@ import type { ModelCatalog } from "./schema.js";
  * NOT need to match the bundled `catalog.default.json` exactly — they exist
  * so per-vendor tests construct providers with a deterministic shape rather
  * than reaching into the JSON file. New entries added here are not affected
- * by user catalog edits in `~/.imagine/catalog.json`.
+ * by user catalog edits in `~/.imagent/catalog.json`.
  */
 
 export const OPENAI_IMAGE_MODELS: Record<string, ImageModelDef> = {

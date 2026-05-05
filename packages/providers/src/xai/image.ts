@@ -13,7 +13,7 @@ import {
   type Logger,
   type ProviderTestResult,
   validateImageRequestAgainstModel,
-} from "@imagine/core";
+} from "@imagent/core";
 import { createXai } from "@ai-sdk/xai";
 import { generateImage, type ImageModel } from "ai";
 import { createHttpClient, type HttpClient } from "../http/index.js";

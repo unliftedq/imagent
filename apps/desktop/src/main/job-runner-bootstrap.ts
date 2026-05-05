@@ -1,10 +1,10 @@
-import { JobRunner, type Logger } from "@imagine/core";
+import { JobRunner, type Logger } from "@imagent/core";
 import {
   type ConfigStore,
   type ProviderPreferences,
   type ProviderSecrets,
   type SecretsStore,
-} from "@imagine/config";
+} from "@imagent/config";
 import {
   BoardRepository,
   GalleryRepository,
@@ -12,7 +12,7 @@ import {
   videoThumbnailService,
   type DatabaseType,
   type PathResolver,
-} from "@imagine/persistence";
+} from "@imagent/persistence";
 import {
   createImageRegistry,
   createVideoRegistry,
@@ -20,7 +20,7 @@ import {
   type ImageRegistry,
   type ModelCatalog,
   type VideoRegistry,
-} from "@imagine/providers";
+} from "@imagent/providers";
 
 /**
  * Bootstrap state mutated as config changes. The desktop main process holds
@@ -81,7 +81,7 @@ export async function bootstrapRuntime(deps: BootstrapDeps): Promise<RuntimeServ
   const videoRegistry = new Map() as Map<string, never>;
 
   // Load the JSON model catalog once. On `refresh()` we re-read from disk so
-  // hand-edits to ~/.imagine/catalog.json take effect on the next IPC tick.
+  // hand-edits to ~/.imagent/catalog.json take effect on the next IPC tick.
   const catalogPath = paths.catalogFile();
   let catalog = await loadCatalog({ path: catalogPath, logger });
 

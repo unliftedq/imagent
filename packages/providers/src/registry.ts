@@ -1,5 +1,5 @@
-import type { ProviderPreferences, ProviderSecrets } from "@imagine/config";
-import type { ImageProvider, VideoModelDef, VideoProvider } from "@imagine/core";
+import type { ProviderPreferences, ProviderSecrets } from "@imagent/config";
+import type { ImageProvider, VideoModelDef, VideoProvider } from "@imagent/core";
 import { AzureOpenAIImageProvider } from "./azure/image.js";
 import { ByteDanceImageProvider } from "./bytedance/image.js";
 import { ByteDanceVideoProvider } from "./bytedance/video.js";
@@ -102,7 +102,7 @@ export function createImageRegistry(
       new OpenAIImageProvider({
         providerId,
         displayName: catalog.providers[providerId]?.displayName ?? providerId,
-        apiKey: customSecrets.apiKey ?? "imagine-no-api-key",
+        apiKey: customSecrets.apiKey ?? "imagent-no-api-key",
         baseUrl: customSecrets.baseUrl,
         models: mapFromList(models),
       }),
@@ -161,7 +161,7 @@ export function createVideoRegistry(
 /**
  * Distinct vendor-secret count. Configuring `bytedance.apiKey` increments
  * by 1 even though it unlocks both image + video; `xai.apiKey` increments
- * by 1 too. Used by `imagine doctor` to render "Providers: X / 6 configured".
+ * by 1 too. Used by `imagent doctor` to render "Providers: X / 6 configured".
  */
 export function configuredProviderCount(secrets: ProviderSecrets): number {
   let n = 0;
@@ -197,7 +197,7 @@ export {
   resolveVideoProviderModel,
   resolveVideoProviderModels,
 } from "./catalog/resolve.js";
-// Re-export the catalog types so consumers can import them via @imagine/providers.
+// Re-export the catalog types so consumers can import them via @imagent/providers.
 export type { ModelCatalog } from "./catalog/schema.js";
 export {
   type ImageProviderModel,

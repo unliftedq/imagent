@@ -4,12 +4,12 @@ import path from "node:path";
 
 /**
  * Resolves the on-disk paths described in architecture.md §6. The default
- * data root is `~/.imagine/`. Override with `dataDir` for tests.
+ * data root is `~/.imagent/`. Override with `dataDir` for tests.
  */
 export interface PathResolver {
   readonly dataDir: string;
   configFile(): string;
-  /** Path to the user-editable JSON model catalog (`~/.imagine/catalog.json`). */
+  /** Path to the user-editable JSON model catalog (`~/.imagent/catalog.json`). */
   catalogFile(): string;
   secretsFile(): string;
   dbFile(): string;
@@ -24,7 +24,7 @@ export interface PathResolver {
 }
 
 export function createPathResolver(dataDir?: string): PathResolver {
-  const root = dataDir ?? path.join(os.homedir(), ".imagine");
+  const root = dataDir ?? path.join(os.homedir(), ".imagent");
   return {
     dataDir: root,
     configFile: () => path.join(root, "config.json"),

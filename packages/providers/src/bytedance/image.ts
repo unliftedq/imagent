@@ -12,7 +12,7 @@ import {
   type Logger,
   type ProviderTestResult,
   validateImageRequestAgainstModel,
-} from "@imagine/core";
+} from "@imagent/core";
 import OpenAI from "openai";
 import {
   aggregateCapabilities,

@@ -12,7 +12,7 @@ import {
   type Logger,
   type ProviderTestResult,
   validateImageRequestAgainstModel,
-} from "@imagine/core";
+} from "@imagent/core";
 import { GoogleGenAI } from "@google/genai";
 import { aggregateCapabilities, decodeBase64, testFailureFromError } from "../openai/image.js";
 

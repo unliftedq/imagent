@@ -1,5 +1,5 @@
-import type { MaskedSecrets, ModelCatalogPayload, SecretsWrite } from "@imagine/ipc";
-import { Icons } from "@imagine/ui";
+import type { MaskedSecrets, ModelCatalogPayload, SecretsWrite } from "@imagent/ipc";
+import { Icons } from "@imagent/ui";
 import { useId } from "react";
 
 type ProviderIconComponent = React.ComponentType<{

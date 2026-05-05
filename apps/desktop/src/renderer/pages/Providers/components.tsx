@@ -1,4 +1,4 @@
-import type { ProviderSummary } from "@imagine/ipc";
+import type { ProviderSummary } from "@imagent/ipc";
 import {
   Button,
   Dialog,
@@ -7,7 +7,7 @@ import {
   type ProviderTestStatus,
   Select,
   Tooltip,
-} from "@imagine/ui";
+} from "@imagent/ui";
 import { useState } from "react";
 import {
   mappingRow,

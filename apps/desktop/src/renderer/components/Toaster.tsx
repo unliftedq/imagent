@@ -6,7 +6,7 @@ import {
   ToastRoot,
   ToastTitle,
   ToastViewport,
-} from "@imagine/ui";
+} from "@imagent/ui";
 import { useUIStore, type ToastEntry } from "../state/useUIStore.js";
 
 /**

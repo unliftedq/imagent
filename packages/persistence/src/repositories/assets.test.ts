@@ -9,7 +9,7 @@ let dbPath: string;
 let tmp: string;
 
 beforeEach(async () => {
-  tmp = await fs.mkdtemp(path.join(os.tmpdir(), "imagine-asset-repo-"));
+  tmp = await fs.mkdtemp(path.join(os.tmpdir(), "imagent-asset-repo-"));
   dbPath = path.join(tmp, "test.db");
 });
 afterEach(async () => {

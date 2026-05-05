@@ -1,5 +1,5 @@
-import type { GalleryItem } from "@imagine/core";
-import { Button, Dialog, Icons } from "@imagine/ui";
+import type { GalleryItem } from "@imagent/core";
+import { Button, Dialog, Icons } from "@imagent/ui";
 import { useEffect, useMemo, useState } from "react";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
 import { useJobsStore } from "../../state/useJobsStore.js";
@@ -21,9 +21,9 @@ export function CanvasArea({ mode }: { mode: StudioMode }) {
       const customEvent = event as CustomEvent<{ id: string }>;
       if (customEvent.detail?.id) setPinnedId(customEvent.detail.id);
     };
-    window.addEventListener("imagine:canvas-pin", onPin as EventListener);
+    window.addEventListener("imagent:canvas-pin", onPin as EventListener);
     return () => {
-      window.removeEventListener("imagine:canvas-pin", onPin as EventListener);
+      window.removeEventListener("imagent:canvas-pin", onPin as EventListener);
     };
   }, []);
 

@@ -1,4 +1,4 @@
-import { EmptyState, Icons } from "@imagine/ui";
+import { EmptyState, Icons } from "@imagent/ui";
 
 export interface NotYetImplementedProps {
   title: string;

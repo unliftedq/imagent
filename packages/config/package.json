@@ -1,5 +1,5 @@
 {
-  "name": "@imagine/config",
+  "name": "@imagent/config",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -18,7 +18,7 @@
     "clean": "rm -rf dist .tsbuildinfo"
   },
   "dependencies": {
-    "@imagine/core": "workspace:*",
+    "@imagent/core": "workspace:*",
     "zod": "^4.4.1"
   },
   "devDependencies": {

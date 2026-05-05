@@ -25,7 +25,7 @@ import {
   type ProviderPreferences,
   type ProviderSecrets,
   type SecretsStore,
-} from "@imagine/config";
+} from "@imagent/config";
 import { createIpcClient, type IpcTransport } from "./client.js";
 import { registerIpcHandlers, type ContractHandlers, type IpcMainLike } from "./server.js";
 import type { MaskedSecrets, ProviderPreferencesPayload, SecretsWrite } from "./contract.js";
@@ -172,7 +172,7 @@ let configStore: ConfigStore;
 let secretsStore: SecretsStore;
 
 beforeEach(async () => {
-  tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "imagine-roundtrip-"));
+  tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "imagent-roundtrip-"));
   configStore = createFileConfigStore(path.join(tmpDir, "config.json"));
   secretsStore = createFileSecretsStore(path.join(tmpDir, "secrets.json"));
 });

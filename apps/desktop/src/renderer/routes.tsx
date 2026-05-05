@@ -1,4 +1,4 @@
-import { Icons } from "@imagine/ui";
+import { Icons } from "@imagent/ui";
 import type { ComponentType, ReactElement } from "react";
 import { AssetsPage } from "./pages/Assets";
 import { GalleryPage } from "./pages/Gallery";

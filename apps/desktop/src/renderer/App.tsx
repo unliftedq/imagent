@@ -1,4 +1,4 @@
-import { NavRail, TooltipProvider, useTheme } from "@imagine/ui";
+import { NavRail, TooltipProvider, useTheme } from "@imagent/ui";
 import { useEffect, useRef } from "react";
 import { Toaster } from "./components/Toaster.js";
 import { ROUTES } from "./routes.js";

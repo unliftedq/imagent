@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ProviderError, type ImageRequest } from "@imagine/core";
+import { ProviderError, type ImageRequest } from "@imagent/core";
 import { GoogleImageProvider, type GoogleGenAIClientLike } from "./image.js";
 import { GOOGLE_IMAGE_MODELS } from "../catalog/test-fixtures.js";
 

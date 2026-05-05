@@ -1,5 +1,5 @@
-import type { GalleryItem } from "@imagine/core";
-import { Button, Icons, Popover } from "@imagine/ui";
+import type { GalleryItem } from "@imagent/core";
+import { Button, Icons, Popover } from "@imagent/ui";
 import type { DragEvent } from "react";
 import { resolveGalleryUrl } from "./utils.js";
 

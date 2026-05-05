@@ -2,12 +2,12 @@
 
 /* Tailwind v4 auto-detects content from the consuming app's root, but workspace
  * packages aren't scanned by default. Explicitly include this package's source
- * so utility classes used in `@imagine/ui` composites (e.g. `h-10` in NavRail,
+ * so utility classes used in `@imagent/ui` composites (e.g. `h-10` in NavRail,
  * `h-11` in Button/Input/Select) make it into the generated stylesheet. */
 @source "./**/*.{ts,tsx}";
 
 /* -------------------------------------------------------------------------
- * Imagine Studio "Quiet-Density" tokens — DESIGN.md §3.
+ * Imagent "Quiet-Density" tokens — DESIGN.md §3.
  *
  * Cool-tinted neutral grays + a single blue-violet accent (~265°). Light is
  * the canonical theme; dark adapts the same palette by stepping the

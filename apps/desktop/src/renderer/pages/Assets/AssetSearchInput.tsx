@@ -1,4 +1,4 @@
-import { cn, Icons, Input } from "@imagine/ui";
+import { cn, Icons, Input } from "@imagent/ui";
 
 export function AssetSearchInput({
   placeholder,

@@ -1,6 +1,6 @@
-import type { ImageModelDef, VideoModelDef } from "@imagine/core";
-import type { ProviderId, ProviderSummary } from "@imagine/ipc";
-import { Icons, Popover } from "@imagine/ui";
+import type { ImageModelDef, VideoModelDef } from "@imagent/core";
+import type { ProviderId, ProviderSummary } from "@imagent/ipc";
+import { Icons, Popover } from "@imagent/ui";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import type { StudioMode } from "../../state/useUIStore.js";

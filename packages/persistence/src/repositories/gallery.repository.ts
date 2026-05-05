@@ -1,4 +1,4 @@
-import type { GalleryItem, GalleryItemAssetLink, GalleryQuery } from "@imagine/core";
+import type { GalleryItem, GalleryItemAssetLink, GalleryQuery } from "@imagent/core";
 import type { DatabaseType } from "../db.js";
 
 interface GalleryRow {

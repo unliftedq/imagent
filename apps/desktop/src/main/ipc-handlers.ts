@@ -7,7 +7,7 @@ import {
   type ProviderPreferences,
   type ProviderSecrets,
   type SecretsStore,
-} from "@imagine/config";
+} from "@imagent/config";
 import type {
   Asset,
   AssetFile,
@@ -18,15 +18,15 @@ import type {
   Job,
   Logger,
   VideoRequest,
-} from "@imagine/core";
-import { appendStylePromptSnippets, capReferencePaths, resolveAssetSlots } from "@imagine/core";
+} from "@imagent/core";
+import { appendStylePromptSnippets, capReferencePaths, resolveAssetSlots } from "@imagent/core";
 import {
   type ContractHandlers,
   IpcHandlerError,
   type IpcServer,
   notImplemented,
   registerIpcHandlers,
-} from "@imagine/ipc";
+} from "@imagent/ipc";
 import {
   AssetRepository,
   BoardRepository,
@@ -36,14 +36,14 @@ import {
   JobRepository,
   KvRepository,
   type PathResolver,
-} from "@imagine/persistence";
+} from "@imagent/persistence";
 import {
   configuredProviderCount as _unused,
   type ImageRegistry,
   type ModelCatalog,
   saveCatalog,
   type VideoRegistry,
-} from "@imagine/providers";
+} from "@imagent/providers";
 import { app, type BrowserWindow, dialog, type IpcMain, shell } from "electron";
 import sharp from "sharp";
 import type { RuntimeServices } from "./job-runner-bootstrap.js";
@@ -912,7 +912,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
 
     /**
      * Permanent delete — removes the `assets` row, cascades `asset_files`,
-     * and rm-rf's `~/.imagine/assets/<id>/`. Irreversible. The Assets
+     * and rm-rf's `~/.imagent/assets/<id>/`. Irreversible. The Assets
      * page surfaces archive-first; this fires from "Delete permanently" only.
      */
     "assets.delete": async ({ id }) => {

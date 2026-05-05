@@ -33,7 +33,7 @@ export function fileName(path: string): string {
 export function resolveGalleryUrl(relPath: string): string {
   const norm = relPath.replace(/\\/g, "/").replace(/^\/+/, "");
   const segments = norm.split("/").map(encodeURIComponent).join("/");
-  return `imagine://local/${segments}`;
+  return `imagent://local/${segments}`;
 }
 
 export function pruneReferenceRoles(

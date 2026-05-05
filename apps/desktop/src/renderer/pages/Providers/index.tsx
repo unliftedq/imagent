@@ -1,5 +1,5 @@
-import { IpcClientError, type ModelCatalogPayload } from "@imagine/ipc";
-import { Button, Icons, type ProviderTestStatus } from "@imagine/ui";
+import { IpcClientError, type ModelCatalogPayload } from "@imagent/ipc";
+import { Button, Icons, type ProviderTestStatus } from "@imagent/ui";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api.js";
 import { useConfigStore } from "../../state/useConfigStore.js";

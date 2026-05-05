@@ -1,6 +1,6 @@
-# imagine — Architecture
+# imagent — Architecture
 
-A localized image **and** video generation studio shipping as Electron desktop **+** Node CLI from one greenfield monorepo. Single-user, fully local: SQLite + filesystem under `~/.imagine/`, no remote backend, no auth.
+A localized image **and** video generation studio shipping as Electron desktop **+** Node CLI from one greenfield monorepo. Single-user, fully local: SQLite + filesystem under `~/.imagent/`, no remote backend, no auth.
 
 ## 1. Purpose & Scope
 
@@ -18,7 +18,7 @@ A localized image **and** video generation studio shipping as Electron desktop *
 ## 2. Tech Stack
 
 - **TypeScript 5.9 strict** (NodeNext), **Bun 1.3** workspaces, **Turborepo 2.x** for `build/typecheck/test`.
-- **React 19** + **Tailwind CSS v4** (`@theme`) + **Radix UI** primitives + **Phosphor** duotone icons (matches sibling `agentra`, `imagine-cli`).
+- **React 19** + **Tailwind CSS v4** (`@theme`) + **Radix UI** primitives + **Phosphor** duotone icons (matches sibling `agentra`, `imagent-cli`).
 - **Zustand 5** for renderer state.
 - **better-sqlite3 12.x** + WAL, opened from main process only.
 - **Electron 33** with three Vite configs (main / preload / renderer).
@@ -29,23 +29,23 @@ A localized image **and** video generation studio shipping as Electron desktop *
 ## 3. Monorepo Layout
 
 ```
-imagine/
+imagent/
   package.json   bun.lock   turbo.json   tsconfig.base.json   biome.jsonc
 
   packages/
-    core/         # @imagine/core         — domain types, ports, use cases (no I/O)
-    providers/    # @imagine/providers    — ImageProvider + VideoProvider impls per vendor
-    persistence/  # @imagine/persistence  — better-sqlite3, migrations, repos, files, thumbnails
-    config/       # @imagine/config       — zod schema, secrets abstraction
-    ipc/          # @imagine/ipc          — zod IPC contract + client/server bindings
-    ui/           # @imagine/ui           — Radix primitives + Tailwind v4 components
+    core/         # @imagent/core         — domain types, ports, use cases (no I/O)
+    providers/    # @imagent/providers    — ImageProvider + VideoProvider impls per vendor
+    persistence/  # @imagent/persistence  — better-sqlite3, migrations, repos, files, thumbnails
+    config/       # @imagent/config       — zod schema, secrets abstraction
+    ipc/          # @imagent/ipc          — zod IPC contract + client/server bindings
+    ui/           # @imagent/ui           — Radix primitives + Tailwind v4 components
 
   apps/
-    desktop/      # @imagine/studio       — Imagine Studio Electron app (3 Vite configs: main / preload / renderer)
-    cli/          # @imagine/cli (bin: imagine) — Commander, ships as bun-compiled binary
+    desktop/      # @imagent/studio       — Imagent Electron app (3 Vite configs: main / preload / renderer)
+    cli/          # @imagent/cli (bin: imagent) — Commander, ships as bun-compiled binary
 ```
 
-Why Bun + Turbo: matches sibling `editor`, package-manager-familiar from `imagine-cli`. Turbo provides cache for `build/typecheck/test` across 8 packages where `tsc -b` alone breaks down. All packages are private; the CLI binary is the only externally-shippable artifact.
+Why Bun + Turbo: matches sibling `editor`, package-manager-familiar from `imagent-cli`. Turbo provides cache for `build/typecheck/test` across 8 packages where `tsc -b` alone breaks down. All packages are private; the CLI binary is the only externally-shippable artifact.
 
 ## 4. Domain Model & Provider Ports
 
@@ -102,7 +102,7 @@ createVideoRegistry(secrets, settings) -> { bytedance }                         
 
 A model is more than a string id — different models within one provider expose different sizes, max-reference counts, durations, fps.
 
-The **built-in default catalog** ships as `packages/providers/src/catalog.default.json`; the **runtime** catalog lives at `~/.imagine/catalog.json` (user-editable JSON, validated against `ModelCatalogSchema` on load). On first run the bundled default is written to that path; on subsequent runs the user file is **authoritative** (no merge with bundled). On parse failure the loader logs a warning and falls back to bundled in-memory without overwriting the broken file. Users never maintain `models[]` in `config.json` — they only configure authentication.
+The **built-in default catalog** ships as `packages/providers/src/catalog.default.json`; the **runtime** catalog lives at `~/.imagent/catalog.json` (user-editable JSON, validated against `ModelCatalogSchema` on load). On first run the bundled default is written to that path; on subsequent runs the user file is **authoritative** (no merge with bundled). On parse failure the loader logs a warning and falls back to bundled in-memory without overwriting the broken file. Users never maintain `models[]` in `config.json` — they only configure authentication.
 
 Catalog v2 separates model identity from provider routing:
 
@@ -186,7 +186,7 @@ The resolved model drives the entire downstream pipeline:
 
 - **UI**: PromptComposer reads `capabilities.sizes` to render the size selector and disables the reference dropzone when `maxReferences === 0`. Video Studio's duration slider snaps to `durationsSec`.
 - **Request validation**: `ImageRequest` is validated against the resolved model's capabilities before reaching the provider — invalid `count`, `size`, or refs are rejected with precise error messages.
-- **Defaults injection**: missing fields on the request are filled from `model.defaults` before validation, so a one-line `imagine image "foo"` still produces sane parameters per chosen model.
+- **Defaults injection**: missing fields on the request are filled from `model.defaults` before validation, so a one-line `imagent image "foo"` still produces sane parameters per chosen model.
 
 **Strict mode is on by default**: an unknown short-form id throws at startup rather than silently degrading. Users adding an unreleased model must supply at least an `id` in long form (capabilities optional, but inline-object syntax signals intent).
 
@@ -212,7 +212,7 @@ CREATE TABLE asset_files (
   id            TEXT PRIMARY KEY,
   asset_id      TEXT NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
   role          TEXT NOT NULL CHECK (role IN ('reference','thumbnail')),
-  rel_path      TEXT NOT NULL,               -- relative to ~/.imagine/assets/
+  rel_path      TEXT NOT NULL,               -- relative to ~/.imagent/assets/
   mime_type     TEXT NOT NULL,
   width         INTEGER, height INTEGER,
   bytes         INTEGER NOT NULL,
@@ -242,7 +242,7 @@ CREATE TABLE gallery_items (
   provider_id      TEXT NOT NULL,            -- "openai" | "azure-openai" | "google" | "flux-bfl" | "bytedance" | "xai"
   model            TEXT NOT NULL,
   params_json      TEXT NOT NULL,            -- aspect, size, fps, duration, count, seed, raw provider params
-  rel_path         TEXT NOT NULL,            -- output file under ~/.imagine/gallery/
+  rel_path         TEXT NOT NULL,            -- output file under ~/.imagent/gallery/
   thumb_path       TEXT,
   duration_ms      INTEGER,                  -- video only
   width            INTEGER, height INTEGER,
@@ -304,7 +304,7 @@ CREATE VIRTUAL TABLE assets_fts USING fts5(
 -- Triggers AFTER INSERT/UPDATE/DELETE on each base table mirror into FTS.
 ```
 
-## 6. Filesystem Layout (`~/.imagine/`)
+## 6. Filesystem Layout (`~/.imagent/`)
 
 ```
 config.json               # non-secret app config (zod-validated)
@@ -369,7 +369,7 @@ export const ProviderPreferencesSchema = z.object({
 export const AppPreferencesSchema = z.object({
   theme:                 z.enum(["light","dark","system"]).default("system"),
   defaultProvider:       z.string().default("openai"),
-  defaultOutputDir:      z.string().nullable().default(null),     // null → ~/.imagine/gallery
+  defaultOutputDir:      z.string().nullable().default(null),     // null → ~/.imagent/gallery
   generationConcurrency: z.number().int().min(1).max(8).default(2),
   keepPromptHistory:     z.boolean().default(true),
   openAfterGenerate:     z.boolean().default(false),
@@ -386,7 +386,7 @@ Note: both secrets and preferences are keyed by **provider id** (= vendor). Byte
 
 ### 7.2 Access (dependency injection)
 
-`@imagine/config` exposes interfaces, not singletons. Three implementations slot in:
+`@imagent/config` exposes interfaces, not singletons. Three implementations slot in:
 
 ```ts
 export interface ConfigStore {
@@ -404,13 +404,13 @@ createFileSecretsStore(path)             // desktop + CLI: secrets.json (chmod 6
 createEnvSecretsStore(process.env)       // CLI:    OPENAI_API_KEY etc., overrides file
 ```
 
-CLI startup chains `mergeSecrets(fileSecrets, envSecrets)` — env wins, so `OPENAI_API_KEY=sk-other imagine image ...` runs with that key without persisting it. Desktop never reads env (avoids accidentally picking up staging keys from a developer shell).
+CLI startup chains `mergeSecrets(fileSecrets, envSecrets)` — env wins, so `OPENAI_API_KEY=sk-other imagent image ...` runs with that key without persisting it. Desktop never reads env (avoids accidentally picking up staging keys from a developer shell).
 
 ### 7.3 Edit & reload paths
 
 - **UI edits** (Providers / Settings page) → IPC `providers.config.set` / `providers.secrets.set` → main saves → re-instantiates registry → broadcasts `config.changed` → renderer `useConfigStore.refresh()`.
-- **Hand edits** to `config.json` → `fs.watch` detects mtime change → `loadConfig` → broadcasts `config.changed`. Lets `vim ~/.imagine/config.json` workflows just work.
-- **Hand edits to secrets** are supported through `secrets.json`; users can also use `imagine config set <vendor>.apiKey ...`.
+- **Hand edits** to `config.json` → `fs.watch` detects mtime change → `loadConfig` → broadcasts `config.changed`. Lets `vim ~/.imagent/config.json` workflows just work.
+- **Hand edits to secrets** are supported through `secrets.json`; users can also use `imagent config set <vendor>.apiKey ...`.
 - **Workspace state** (`kv` table) flows through `workspace.kv.{get,set,delete}` IPC; only the app itself writes here, no fs watcher needed.
 
 ### 7.4 Migrations
@@ -421,7 +421,7 @@ CLI startup chains `mergeSecrets(fileSecrets, envSecrets)` — env wins, so `OPE
 
 Three Vite configs (matches sibling `agentra`): `vite.main.config.ts`, `vite.preload.config.ts`, `vite.renderer.config.ts`. HMR for renderer, watch+restart for main/preload.
 
-- **Main**: owns DB handle, FS, JobRunner, polling intervals, and native dialogs. Imports `@imagine/{persistence,providers,config,ipc}`.
+- **Main**: owns DB handle, FS, JobRunner, polling intervals, and native dialogs. Imports `@imagent/{persistence,providers,config,ipc}`.
 - **Preload**: thin — exposes `window.api` as a typed Proxy mirroring the IPC contract; subscribes to push events.
 - **Renderer**: React 19 + Tailwind v4 + Radix + Phosphor. Never imports Node modules. Talks only via `window.api`.
 
@@ -459,18 +459,18 @@ export const events = {
 
 ## 9. CLI Surface
 
-The CLI imports the same packages as the main process (no IPC). It opens the same `studio.db` and writes to the same `gallery/` tree, so anything generated from the shell shows up next time the desktop opens. Commander 12; ships as one bun-compiled binary `imagine.exe`.
+The CLI imports the same packages as the main process (no IPC). It opens the same `studio.db` and writes to the same `gallery/` tree, so anything generated from the shell shows up next time the desktop opens. Commander 12; ships as one bun-compiled binary `imagent.exe`.
 
 ```
-imagine image "<prompt>"     [--provider bytedance] [--model seedream-3.0] [--ref path,path]
+imagent image "<prompt>"     [--provider bytedance] [--model seedream-3.0] [--ref path,path]
                              [--character slug] [--object slug] [--background slug] [--style slug]
                              [--count 4] [--out dir]
-imagine video <prompt>       [--provider bytedance] [--model seedance-1.0-pro] [--duration 5] [--ref ...] [--character slug] [--wait]
-imagine job {status|cancel|watch} <jobId>
-imagine asset {add|list|rm|show} ...
-imagine gallery {ls|remix|rm|favorite} ...
-imagine config {get|set|path}
-imagine doctor               # provider readiness, DB path, FTS status
+imagent video <prompt>       [--provider bytedance] [--model seedance-1.0-pro] [--duration 5] [--ref ...] [--character slug] [--wait]
+imagent job {status|cancel|watch} <jobId>
+imagent asset {add|list|rm|show} ...
+imagent gallery {ls|remix|rm|favorite} ...
+imagent config {get|set|path}
+imagent doctor               # provider readiness, DB path, FTS status
 ```
 
 ## 10. UI Screens & State
@@ -503,7 +503,7 @@ Primitives: Radix `Dialog / DropdownMenu / Select / Tabs / ScrollArea / Tooltip 
 - **Dev**:
   - Root: `bun run dev` → Turbo runs `dev` everywhere.
   - CLI: `tsc -b && node dist/index.js <args>` (Node, not Bun, because of the SQLite constraint above).
-  - Desktop: `concurrently` runs three Vite watchers (main / preload / renderer) + an Electron launcher waiting on `dist/main/main.mjs`. Electron's embedded Node loads `better-sqlite3` natively after a one-time `bun run --filter @imagine/desktop rebuild` (see *Native rebuild* below).
+  - Desktop: `concurrently` runs three Vite watchers (main / preload / renderer) + an Electron launcher waiting on `dist/main/main.mjs`. Electron's embedded Node loads `better-sqlite3` natively after a one-time `bun run --filter @imagent/desktop rebuild` (see *Native rebuild* below).
 
 - **Build**:
   - Packages: `tsc -b` via Turbo.
@@ -514,10 +514,10 @@ Primitives: Radix `Dialog / DropdownMenu / Select / Tabs / ScrollArea / Tooltip 
 
 - **Package**:
   - Desktop: `electron-builder` with NSIS for Windows (primary host), DMG for macOS, AppImage for Linux. Block matches sibling `agentra`.
-  - CLI: **Node SEA** (Single Executable Applications, stdlib since Node 21) bundles the CLI + Node runtime into one `imagine.exe`. Migrations and any other static assets get embedded via SEA's asset map. Alternative: `pkg` if Node SEA's Windows code-signing story remains rough at M8.
+  - CLI: **Node SEA** (Single Executable Applications, stdlib since Node 21) bundles the CLI + Node runtime into one `imagent.exe`. Migrations and any other static assets get embedded via SEA's asset map. Alternative: `pkg` if Node SEA's Windows code-signing story remains rough at M8.
 
 - **Native rebuild (manual, not postinstall)**: `better-sqlite3` and `sharp` ship prebuilt binaries for the **host Node ABI**, which is what `bun install` lands. Electron 33 embeds a *different* Node ABI, so the desktop app needs `@electron/rebuild` to swap in Electron-ABI binaries. Running this on every `bun install` would also break the CLI and `packages/persistence` tests (which use host Node), so we **don't** wire it into `postinstall`. Instead:
-  - `bun run --filter @imagine/desktop rebuild` — switches `better-sqlite3` + `sharp` to Electron ABI before launching desktop.
+  - `bun run --filter @imagent/desktop rebuild` — switches `better-sqlite3` + `sharp` to Electron ABI before launching desktop.
   - `npm rebuild better-sqlite3` (run inside `node_modules/.bun/better-sqlite3@x.y.z/node_modules/better-sqlite3`) — switches back to host Node ABI before running CLI / persistence tests.
   - The flip is fast (<5s) but a real source of "why does my test suite suddenly fail" if you forget. M8 packaging will pin Electron-ABI binaries inside the produced `electron-builder` artifact.
 
@@ -531,7 +531,7 @@ Primitives: Radix `Dialog / DropdownMenu / Select / Tabs / ScrollArea / Tooltip 
 
 ### Catalog load order
 
-The model catalog loader (`@imagine/providers#loadCatalog`) runs at app boot (desktop main: in `bootstrapRuntime`) and once per CLI invocation (`loadCliRuntime`), parsed against `ModelCatalogSchema` **before** the image / video registries are constructed. The desktop `RuntimeServices.refresh()` re-reads the catalog so hand-edits to `~/.imagine/catalog.json` take effect without an app restart.
+The model catalog loader (`@imagent/providers#loadCatalog`) runs at app boot (desktop main: in `bootstrapRuntime`) and once per CLI invocation (`loadCliRuntime`), parsed against `ModelCatalogSchema` **before** the image / video registries are constructed. The desktop `RuntimeServices.refresh()` re-reads the catalog so hand-edits to `~/.imagent/catalog.json` take effect without an app restart.
 
 ## 12. Critical Files (net-new)
 
@@ -554,7 +554,7 @@ apps/cli/src/{index,commands/*}.ts
 ```
 
 Read-only references (sibling patterns we mirror but do not import):
-- `Q:/development/imagine-cli/packages/core/src/ports/image-provider.ts` — port shape
-- `Q:/development/imagine-cli/packages/providers/src/providers/*` — vendor HTTP patterns (esp. ByteDance signing)
+- `Q:/development/imagent-cli/packages/core/src/ports/image-provider.ts` — port shape
+- `Q:/development/imagent-cli/packages/providers/src/providers/*` — vendor HTTP patterns (esp. ByteDance signing)
 - `Q:/development/agentra/{vite.{main,preload,renderer}.config.ts, package.json}` — Electron + Vite triple-config layout, electron-builder block
 - `Q:/development/openclaw/tsdown.config.ts` — CLI bundling

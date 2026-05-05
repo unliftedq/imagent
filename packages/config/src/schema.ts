@@ -9,7 +9,7 @@ import { z } from "zod";
  * base URL hardcoded in the provider class; `baseUrl` here is an **optional
  * advanced override** for power users who want to point at a proxy or
  * self-hosted compatible endpoint (the desktop UI does not surface it —
- * edit `~/.imagine/secrets.json` by hand).
+ * edit `~/.imagent/secrets.json` by hand).
  *
  * Azure OpenAI and ByteDance break that pattern: both require an
  * `endpoint + apiKey` pair. Azure's endpoint encodes the user's resource
@@ -67,13 +67,13 @@ export type ProviderSecrets = z.infer<typeof ProviderSecretsSchema>;
 
 /**
  * Preferences are keyed by **provider id** (= vendor). The catalog (in
- * `@imagine/providers`) is the canonical source of model definitions and
+ * `@imagent/providers`) is the canonical source of model definitions and
  * provider-facing model/deployment bindings — users no longer maintain
  * `models[]` in config.json.
  *
  * Each provider's slot is kept (as `z.object({}).default({})`) so future
  * provider-scoped knobs (e.g. concurrency overrides) have a stable home.
- * Azure OpenAI deployment names live in `~/.imagine/catalog.json` under
+ * Azure OpenAI deployment names live in `~/.imagent/catalog.json` under
  * `providers.azure-openai.image[].id`, with `modelId` pointing at the
  * canonical model whose capabilities should be inherited.
  */

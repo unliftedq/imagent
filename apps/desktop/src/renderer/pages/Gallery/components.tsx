@@ -1,8 +1,8 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useEffect, useState } from "react";
-import { BoardSidebarItem, Icons } from "@imagine/ui";
-import type { Board, GalleryItem } from "@imagine/core";
+import { BoardSidebarItem, Icons } from "@imagent/ui";
+import type { Board, GalleryItem } from "@imagent/core";
 import { api } from "../../lib/api.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
 import { resolveGalleryUrl } from "../Studio";

@@ -5,7 +5,7 @@ import {
   createFileSecretsStore,
   mergeSecrets,
   type ProviderSecrets,
-} from "@imagine/config";
+} from "@imagent/config";
 import {
   type FilesServicePort,
   type GalleryRepositoryPort,
@@ -15,7 +15,7 @@ import {
   type Logger,
   type VideoRegistry,
   createConsoleLogger,
-} from "@imagine/core";
+} from "@imagent/core";
 import {
   type DatabaseType,
   GalleryRepository,
@@ -24,13 +24,13 @@ import {
   createPathResolver,
   ensureDataDir,
   openDatabase,
-} from "@imagine/persistence";
+} from "@imagent/persistence";
 import {
   createImageRegistry,
   createVideoRegistry,
   loadCatalog,
   type ModelCatalog,
-} from "@imagine/providers";
+} from "@imagent/providers";
 
 export interface CliRuntime {
   resolver: PathResolver;
@@ -56,7 +56,7 @@ export async function loadCliRuntime(): Promise<CliRuntime> {
   const secrets = mergeSecrets(fileSecrets, envSecrets);
 
   // Catalog: USER FILE IS AUTHORITATIVE. First run seeds bundled defaults to
-  // ~/.imagine/catalog.json; subsequent runs read whatever the user edited.
+  // ~/.imagent/catalog.json; subsequent runs read whatever the user edited.
   const catalog = await loadCatalog({ path: resolver.catalogFile() });
 
   const imageRegistry = createImageRegistry(secrets, config.providers, catalog);
@@ -92,7 +92,7 @@ export function buildRunner(runtime: CliRuntime, logger?: Logger): RunnerBundle 
     files,
     imageRegistry: runtime.imageRegistry,
     videoRegistry: runtime.videoRegistry,
-    logger: logger ?? createConsoleLogger("imagine"),
+    logger: logger ?? createConsoleLogger("imagent"),
   });
   return { db, jobs, gallery, files, runner };
 }
