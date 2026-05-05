@@ -97,7 +97,10 @@ describe("CLI MCP server", () => {
         protocolVersion: "2024-11-05",
         serverInfo: { name: "imagine" },
       });
-      expect(responses.find((r) => r.id === 2)?.result).toMatchObject({
+      const listResult = responses.find((r) => r.id === 2)?.result as {
+        tools?: Array<{ name: string }>;
+      };
+      expect(listResult).toMatchObject({
         tools: expect.arrayContaining([
           expect.objectContaining({ name: "imagine_doctor" }),
           expect.objectContaining({ name: "imagine_image" }),
@@ -107,9 +110,9 @@ describe("CLI MCP server", () => {
           expect.objectContaining({ name: "imagine_asset" }),
           expect.objectContaining({ name: "imagine_gallery" }),
           expect.objectContaining({ name: "imagine_job" }),
-          expect.objectContaining({ name: "imagine_cli" }),
         ]),
       });
+      expect(listResult.tools?.map((tool) => tool.name)).not.toContain("imagine_cli");
 
       const callResult = responses.find((r) => r.id === 3)?.result as {
         content?: Array<{ text: string }>;

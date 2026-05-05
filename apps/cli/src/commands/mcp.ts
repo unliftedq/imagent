@@ -86,25 +86,6 @@ const MCP_TOOLS: McpTool[] = [
     "Run `imagine gallery` to browse or curate outputs.",
   ),
   subcommandTool("imagine_job", "job", "Run `imagine job` to inspect, cancel, or watch jobs."),
-  {
-    name: "imagine_cli",
-    description:
-      "Run an imagine CLI command not covered by a dedicated tool. Pass only the arguments after `imagine`; the `mcp` subcommand is blocked to avoid recursion.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        args: {
-          type: "array",
-          items: { type: "string" },
-          description:
-            'Arguments to pass after `imagine`, for example ["image", "a cat", "--provider", "openai"].',
-        },
-        timeoutMs: TIMEOUT_SCHEMA,
-      },
-      required: ["args"],
-      additionalProperties: false,
-    },
-  },
 ];
 
 const MCP_TOOL_BY_NAME = new Map(MCP_TOOLS.map((tool) => [tool.name, tool]));
