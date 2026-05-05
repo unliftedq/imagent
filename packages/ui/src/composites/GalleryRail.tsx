@@ -29,7 +29,7 @@ export interface GalleryRailProps {
 }
 
 /**
- * GalleryRail — DESIGN.md §10.4 (right-rail variant) + §11.1 (Studio page).
+ * GalleryRail — design spec §10.4 (right-rail variant) + §11.1 (Studio page).
  * 240px right column showing a vertical 2-up grid of recent gallery
  * thumbnails with two filter pill chips and a "View all" footer button.
  *

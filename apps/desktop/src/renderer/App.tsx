@@ -12,7 +12,7 @@ const NAV_ROUTES = ROUTES.filter((route) => route.available).map(({ id, label, i
 }));
 
 /**
- * App shell — DESIGN.md §5.4. The window is a 2-column grid: the persistent
+ * App shell — design spec §5.4. The window is a 2-column grid: the persistent
  * `NavRail` (220px) on the left and the active route's page on the right.
  * There is no top app bar; the wordmark lives in the rail header.
  */

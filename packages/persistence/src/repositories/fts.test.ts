@@ -64,7 +64,7 @@ function makeAsset(
 }
 
 /**
- * Per architecture.md §5 / workplan.md §1 M8: gallery and asset search must
+ * Per architecture.md §5: gallery and asset search must
  * hit FTS5 virtual tables, not full-table scans against base tables. These
  * tests inspect the SQLite plan via `EXPLAIN QUERY PLAN` and assert the FTS
  * index is consulted.

@@ -3,7 +3,7 @@ import type { ThemePref } from "@imagent/ui";
 import { create } from "zustand";
 
 /**
- * Five top-level routes (DESIGN.md §10.1 / §11). The pre-Quiet-Density
+ * Five top-level routes (design spec §10.1 / §11). The pre-Quiet-Density
  * `video` route was merged into Studio's `studioMode` tab; old persisted
  * values are migrated transparently in the store initializer below.
  */
@@ -229,7 +229,7 @@ function persistMode(mode: StudioMode): void {
 
 /**
  * One-time migration: a stored `activeRoute='video'` (or our older
- * `imagine.route.v1='video'`) maps to `{ route: 'studio', studioMode: 'video' }`.
+ * `imagent.route.v1='video'`) maps to `{ route: 'studio', studioMode: 'video' }`.
  * Read both possible keys; if either points at the dropped 'video' route,
  * normalise on first boot.
  */

@@ -25,7 +25,7 @@ export type VideoRegistry = ReadonlyMap<string, VideoProvider>;
  *   - Google image / video → `@google/genai` SDK.
  *   - Flux + ByteDance Seedance + xAI video → raw HTTP (no usable SDK).
  *
- * Providers without configured secrets are skipped silently — `imagine
+ * Providers without configured secrets are skipped silently — `imagent
  * doctor` reports the gap.
  *
  * Keys: `"openai" | "azure-openai" | "google" | "flux-bfl" | "bytedance" | "xai"`.

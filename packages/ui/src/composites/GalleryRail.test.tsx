@@ -4,7 +4,7 @@ import { createElement } from "react";
 import { GalleryRail, type GalleryRailItem } from "./GalleryRail.js";
 
 /**
- * Smoke tests for the GalleryRail composite (DESIGN.md §10.4 right-rail
+ * Smoke tests for the GalleryRail composite (design spec §10.4 right-rail
  * variant). React-dom/server only — a full interaction test (clicking a
  * thumbnail dispatches onItemClick) requires jsdom which isn't in the
  * workspace today.
