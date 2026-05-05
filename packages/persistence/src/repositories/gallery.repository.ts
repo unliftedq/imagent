@@ -70,9 +70,7 @@ function ftsPhrase(raw: string): string {
 export class GalleryRepository {
   constructor(private readonly db: DatabaseType) {}
 
-  query(
-    query: GalleryQuery & { providerId?: string },
-  ): { items: GalleryItem[]; total: number } {
+  query(query: GalleryQuery & { providerId?: string }): { items: GalleryItem[]; total: number } {
     const where: string[] = [];
     const params: unknown[] = [];
     if (query.kind) {
@@ -122,9 +120,9 @@ export class GalleryRepository {
   }
 
   get(id: string): GalleryItem | null {
-    const row = this.db
-      .prepare("SELECT * FROM gallery_items WHERE id = ?")
-      .get(id) as GalleryRow | undefined;
+    const row = this.db.prepare("SELECT * FROM gallery_items WHERE id = ?").get(id) as
+      | GalleryRow
+      | undefined;
     return row ? rowToItem(row) : null;
   }
 
@@ -156,12 +154,16 @@ export class GalleryRepository {
         item.favorited ? 1 : 0,
         item.createdAt,
       );
-    const row = this.db.prepare("SELECT * FROM gallery_items WHERE id = ?").get(item.id) as GalleryRow;
+    const row = this.db
+      .prepare("SELECT * FROM gallery_items WHERE id = ?")
+      .get(item.id) as GalleryRow;
     return rowToItem(row);
   }
 
   toggleFavorite(id: string, favorited: boolean): void {
-    this.db.prepare("UPDATE gallery_items SET favorited = ? WHERE id = ?").run(favorited ? 1 : 0, id);
+    this.db
+      .prepare("UPDATE gallery_items SET favorited = ? WHERE id = ?")
+      .run(favorited ? 1 : 0, id);
   }
 
   delete(id: string): void {
