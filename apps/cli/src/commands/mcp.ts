@@ -63,6 +63,7 @@ function subcommandTool(name: string, command: string, description: string): Mcp
         args: SUBCOMMAND_ARGS_SCHEMA,
         timeoutMs: TIMEOUT_SCHEMA,
       },
+      required: ["args"],
       additionalProperties: false,
     },
   };
@@ -251,11 +252,10 @@ async function runImagineCli(
   signal: NodeJS.Signals | null;
   timedOut: boolean;
 }> {
-  const rawArgs = input.args ?? (prefix.length > 0 ? [] : undefined);
-  if (!Array.isArray(rawArgs) || !rawArgs.every((arg) => typeof arg === "string")) {
+  if (!Array.isArray(input.args) || !input.args.every((arg) => typeof arg === "string")) {
     throw new Error("args must be an array of strings");
   }
-  const args = [...prefix, ...rawArgs];
+  const args = [...prefix, ...input.args];
   if (args[0] === "mcp") {
     throw new Error("the mcp subcommand cannot be called from the MCP server");
   }
