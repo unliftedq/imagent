@@ -52,9 +52,10 @@ function rowToItem(r: GalleryRow): GalleryItem {
  */
 function ftsPhrase(raw: string): string {
   const columnMatch = raw.match(/^([A-Za-z_][A-Za-z0-9_]*):(.*)$/s);
-  if (columnMatch && (columnMatch[1] === "prompt" || columnMatch[1] === "negative_prompt")) {
-    const phrase = ftsPhrase(columnMatch[2].trim());
-    return `${columnMatch[1]}:${phrase}`;
+  const column = columnMatch?.[1];
+  if (column === "prompt" || column === "negative_prompt") {
+    const phrase = ftsPhrase(columnMatch[2]?.trim() ?? "");
+    return `${column}:${phrase}`;
   }
 
   const tokens = raw
