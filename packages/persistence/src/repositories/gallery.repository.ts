@@ -51,6 +51,12 @@ function rowToItem(r: GalleryRow): GalleryItem {
  * any embedded `"` characters, double-quote each token, and AND them.
  */
 function ftsPhrase(raw: string): string {
+  const columnMatch = raw.match(/^([A-Za-z_][A-Za-z0-9_]*):(.*)$/s);
+  if (columnMatch && (columnMatch[1] === "prompt" || columnMatch[1] === "negative_prompt")) {
+    const phrase = ftsPhrase(columnMatch[2].trim());
+    return `${columnMatch[1]}:${phrase}`;
+  }
+
   const tokens = raw
     .split(/\s+/)
     .map((t) => t.trim())
