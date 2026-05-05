@@ -1,9 +1,9 @@
 import { app, BrowserWindow, ipcMain, net, protocol } from "electron";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { createFileConfigStore, createFileSecretsStore } from "@imagine/config";
-import { ensureDataDir, openDatabase } from "@imagine/persistence";
-import type { Logger } from "@imagine/core";
+import { createFileConfigStore, createFileSecretsStore } from "@imagent/config";
+import { ensureDataDir, openDatabase } from "@imagent/persistence";
+import type { Logger } from "@imagent/core";
 import { createDesktopPathResolver } from "./app-paths.js";
 import { bootstrapRuntime, type RuntimeServices } from "./job-runner-bootstrap.js";
 import { setupIpc } from "./ipc-handlers.js";
@@ -11,13 +11,13 @@ import { setupIpc } from "./ipc-handlers.js";
 const isDev = !app.isPackaged && process.env.NODE_ENV !== "production";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const appIconPath = path.resolve(__dirname, "..", "..", "assets", "imagine.png");
-const macAppIconPath = path.resolve(__dirname, "..", "..", "assets", "imagine-macos.png");
+const appIconPath = path.resolve(__dirname, "..", "..", "assets", "imagent.png");
+const macAppIconPath = path.resolve(__dirname, "..", "..", "assets", "imagent-macos.png");
 
 /**
  * Custom URL scheme that serves files inside the user's data dir back to the
- * renderer. The renderer uses `imagine://local/<relPath>` (e.g.
- * `imagine://local/gallery/2026/04/foo.png`) for `<img src=...>`/`<video src=...>`
+ * renderer. The renderer uses `imagent://local/<relPath>` (e.g.
+ * `imagent://local/gallery/2026/04/foo.png`) for `<img src=...>`/`<video src=...>`
  * — Electron's default web security blocks plain `file://` URLs from being
  * loaded by a renderer served over `http://localhost` (dev) or `file://app/...`
  * (prod), so we tunnel through this scheme instead. Must be registered as
@@ -26,7 +26,7 @@ const macAppIconPath = path.resolve(__dirname, "..", "..", "assets", "imagine-ma
  */
 protocol.registerSchemesAsPrivileged([
   {
-    scheme: "imagine",
+    scheme: "imagent",
     privileges: {
       standard: true,
       secure: true,
@@ -93,7 +93,7 @@ async function createWindow() {
     minHeight: 640,
     backgroundColor: "#fffaf0",
     autoHideMenuBar: true,
-    title: "Imagine Studio",
+    title: "Imagent",
     icon: process.platform === "darwin" ? macAppIconPath : appIconPath,
     webPreferences: {
       contextIsolation: true,
@@ -106,9 +106,9 @@ async function createWindow() {
   mainWindow.setMenuBarVisibility(false);
 
   if (isDev) {
-    const url = process.env.IMAGINE_DEV_SERVER ?? "http://localhost:5173";
+    const url = process.env.IMAGENT_DEV_SERVER ?? "http://localhost:5173";
     await mainWindow.loadURL(url);
-    if (process.env.IMAGINE_OPEN_DEVTOOLS !== "0") {
+    if (process.env.IMAGENT_OPEN_DEVTOOLS !== "0") {
       mainWindow.webContents.openDevTools({ mode: "right" });
     }
   } else {
@@ -121,13 +121,13 @@ async function createWindow() {
 }
 
 /**
- * Wire `imagine://local/<relPath>` to a path inside the data dir. The
+ * Wire `imagent://local/<relPath>` to a path inside the data dir. The
  * normalized absolute path is whitelisted against the data dir prefix so a
  * renderer-side `..` in the rel path can't escape and read e.g. `secrets.json`.
  */
-function registerImagineProtocol(dataDir: string): void {
+function registerImagentProtocol(dataDir: string): void {
   const dataDirAbs = path.normalize(dataDir);
-  protocol.handle("imagine", async (request) => {
+  protocol.handle("imagent", async (request) => {
     try {
       const url = new URL(request.url);
       const relPath = decodeURIComponent(url.pathname.replace(/^\/+/, ""));
@@ -137,7 +137,7 @@ function registerImagineProtocol(dataDir: string): void {
       }
       return net.fetch(pathToFileURL(absPath).toString());
     } catch (err) {
-      logger.warn("imagine:// fetch failed", { url: request.url, err });
+      logger.warn("imagent:// fetch failed", { url: request.url, err });
       return new Response("not found", { status: 404 });
     }
   });
@@ -146,7 +146,7 @@ function registerImagineProtocol(dataDir: string): void {
 async function bootstrap(): Promise<RuntimeServices> {
   const paths = createDesktopPathResolver();
   await ensureDataDir(paths);
-  registerImagineProtocol(paths.dataDir);
+  registerImagentProtocol(paths.dataDir);
 
   const db = openDatabase(paths.dbFile());
   const configStore = createFileConfigStore(paths.configFile());
@@ -186,7 +186,7 @@ async function bootstrap(): Promise<RuntimeServices> {
 app.whenReady().then(async () => {
   try {
     if (process.platform === "darwin") {
-      app.dock.setIcon(macAppIconPath);
+      app.dock?.setIcon(macAppIconPath);
     }
     const t0 = Date.now();
     const runtime = await bootstrap();

@@ -70,7 +70,7 @@ export function countFtsTables(db: DatabaseType): number {
 }
 
 function loadBuiltinMigrations(): readonly Migration[] {
-  // Node SEA path: when bundled into the `imagine` binary, migrations are
+  // Node SEA path: when bundled into the `imagent` binary, migrations are
   // embedded as SEA assets via apps/cli/sea-config.json. We probe with a
   // lazy require so that *non-SEA* hosts (Bun, normal Node, Electron) don't
   // trip the experimental warning.

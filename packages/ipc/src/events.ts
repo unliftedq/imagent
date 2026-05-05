@@ -1,4 +1,4 @@
-import { GalleryItemSchema, JobSchema, JobStateSchema } from "@imagine/core";
+import { GalleryItemSchema, JobSchema, JobStateSchema } from "@imagent/core";
 import { z } from "zod";
 
 /**

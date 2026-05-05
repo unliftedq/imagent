@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ProviderError, ProviderHttpError, type ImageRequest } from "@imagine/core";
+import { ProviderError, ProviderHttpError, type ImageRequest } from "@imagent/core";
 import { FluxImageProvider } from "./image.js";
 import { FLUX_IMAGE_MODELS } from "../catalog/test-fixtures.js";
 

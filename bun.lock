@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "imagine",
+      "name": "imagent",
       "devDependencies": {
         "@biomejs/biome": "^2.4.13",
         "@types/node": "^25.6.0",
@@ -13,16 +13,16 @@
       },
     },
     "apps/cli": {
-      "name": "@imagine/cli",
+      "name": "@imagent/cli",
       "version": "0.0.1",
       "bin": {
-        "imagine": "./dist/index.js",
+        "imagent": "./dist/index.js",
       },
       "dependencies": {
-        "@imagine/config": "workspace:*",
-        "@imagine/core": "workspace:*",
-        "@imagine/persistence": "workspace:*",
-        "@imagine/providers": "workspace:*",
+        "@imagent/config": "workspace:*",
+        "@imagent/core": "workspace:*",
+        "@imagent/persistence": "workspace:*",
+        "@imagent/providers": "workspace:*",
         "chalk": "^5.6.2",
         "commander": "^14.0.3",
       },
@@ -34,16 +34,16 @@
       },
     },
     "apps/desktop": {
-      "name": "@imagine/studio",
+      "name": "@imagent/studio",
       "version": "0.0.1",
       "dependencies": {
         "@dnd-kit/core": "^6.3.1",
-        "@imagine/config": "workspace:*",
-        "@imagine/core": "workspace:*",
-        "@imagine/ipc": "workspace:*",
-        "@imagine/persistence": "workspace:*",
-        "@imagine/providers": "workspace:*",
-        "@imagine/ui": "workspace:*",
+        "@imagent/config": "workspace:*",
+        "@imagent/core": "workspace:*",
+        "@imagent/ipc": "workspace:*",
+        "@imagent/persistence": "workspace:*",
+        "@imagent/providers": "workspace:*",
+        "@imagent/ui": "workspace:*",
         "@phosphor-icons/react": "^2.1.10",
         "@radix-ui/react-dialog": "^1.1.15",
         "@radix-ui/react-dropdown-menu": "^2.1.16",
@@ -71,10 +71,10 @@
       },
     },
     "packages/config": {
-      "name": "@imagine/config",
+      "name": "@imagent/config",
       "version": "0.0.1",
       "dependencies": {
-        "@imagine/core": "workspace:*",
+        "@imagent/core": "workspace:*",
         "zod": "^4.4.1",
       },
       "devDependencies": {
@@ -83,7 +83,7 @@
       },
     },
     "packages/core": {
-      "name": "@imagine/core",
+      "name": "@imagent/core",
       "version": "0.0.1",
       "dependencies": {
         "zod": "^4.4.1",
@@ -94,23 +94,23 @@
       },
     },
     "packages/ipc": {
-      "name": "@imagine/ipc",
+      "name": "@imagent/ipc",
       "version": "0.0.1",
       "dependencies": {
-        "@imagine/core": "workspace:*",
+        "@imagent/core": "workspace:*",
         "zod": "^4.4.1",
       },
       "devDependencies": {
-        "@imagine/config": "workspace:*",
+        "@imagent/config": "workspace:*",
         "@types/node": "^25.6.0",
         "vitest": "^4.1.5",
       },
     },
     "packages/persistence": {
-      "name": "@imagine/persistence",
+      "name": "@imagent/persistence",
       "version": "0.0.1",
       "dependencies": {
-        "@imagine/core": "workspace:*",
+        "@imagent/core": "workspace:*",
         "better-sqlite3": "^12.9.0",
         "ffmpeg-static": "^5.3.0",
         "sharp": "^0.34.5",
@@ -122,14 +122,14 @@
       },
     },
     "packages/providers": {
-      "name": "@imagine/providers",
+      "name": "@imagent/providers",
       "version": "0.0.1",
       "dependencies": {
         "@ai-sdk/bytedance": "^2.0.0-beta.30",
         "@ai-sdk/xai": "^4.0.0-beta.46",
         "@google/genai": "^1.51.0",
-        "@imagine/config": "workspace:*",
-        "@imagine/core": "workspace:*",
+        "@imagent/config": "workspace:*",
+        "@imagent/core": "workspace:*",
         "ai": "^7.0.0-beta.113",
         "openai": "^6.35.0",
         "zod": "^4.4.1",
@@ -140,12 +140,12 @@
       },
     },
     "packages/ui": {
-      "name": "@imagine/ui",
+      "name": "@imagent/ui",
       "version": "0.0.1",
       "dependencies": {
         "@dnd-kit/core": "^6.3.1",
-        "@imagine/core": "workspace:*",
-        "@imagine/ipc": "workspace:*",
+        "@imagent/core": "workspace:*",
+        "@imagent/ipc": "workspace:*",
         "@phosphor-icons/react": "^2.1.10",
         "@radix-ui/react-dialog": "^1.1.15",
         "@radix-ui/react-dropdown-menu": "^2.1.16",
@@ -312,21 +312,21 @@
 
     "@hapi/topo": ["@hapi/topo@6.0.2", "", { "dependencies": { "@hapi/hoek": "^11.0.2" } }, "sha512-KR3rD5inZbGMrHmgPxsJ9dbi6zEK+C3ZwUwTa+eMwWLz7oijWUTWD2pMSNNYJAU6Qq+65NkxXjqHr/7LM2Xkqg=="],
 
-    "@imagine/cli": ["@imagine/cli@workspace:apps/cli"],
+    "@imagent/cli": ["@imagent/cli@workspace:apps/cli"],
 
-    "@imagine/config": ["@imagine/config@workspace:packages/config"],
+    "@imagent/config": ["@imagent/config@workspace:packages/config"],
 
-    "@imagine/core": ["@imagine/core@workspace:packages/core"],
+    "@imagent/core": ["@imagent/core@workspace:packages/core"],
 
-    "@imagine/ipc": ["@imagine/ipc@workspace:packages/ipc"],
+    "@imagent/ipc": ["@imagent/ipc@workspace:packages/ipc"],
 
-    "@imagine/persistence": ["@imagine/persistence@workspace:packages/persistence"],
+    "@imagent/persistence": ["@imagent/persistence@workspace:packages/persistence"],
 
-    "@imagine/providers": ["@imagine/providers@workspace:packages/providers"],
+    "@imagent/providers": ["@imagent/providers@workspace:packages/providers"],
 
-    "@imagine/studio": ["@imagine/studio@workspace:apps/desktop"],
+    "@imagent/studio": ["@imagent/studio@workspace:apps/desktop"],
 
-    "@imagine/ui": ["@imagine/ui@workspace:packages/ui"],
+    "@imagent/ui": ["@imagent/ui@workspace:packages/ui"],
 
     "@img/colour": ["@img/colour@1.1.0", "", {}, "sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ=="],
 

@@ -2,15 +2,15 @@ import {
   type ProviderSecrets,
   ProviderSecretsSchema,
   createFileSecretsStore,
-} from "@imagine/config";
-import { createPathResolver, ensureDataDir } from "@imagine/persistence";
+} from "@imagent/config";
+import { createPathResolver, ensureDataDir } from "@imagent/persistence";
 import chalk from "chalk";
 import type { Command } from "commander";
 
 /**
- * `imagine config set <vendor>.<key> <value>`
- * `imagine config get <vendor>.<key>`
- * `imagine config path`
+ * `imagent config set <vendor>.<key> <value>`
+ * `imagent config get <vendor>.<key>`
+ * `imagent config path`
  *
  * Walks the dotted path against the secrets schema. After the
  * "minimum-auth" reshape, only **secrets** paths are accepted: the catalog
@@ -29,7 +29,7 @@ import type { Command } from "commander";
 export function registerConfigCommand(program: Command): void {
   const config = program
     .command("config")
-    .description("Inspect and edit ~/.imagine/config.json and secrets.json");
+    .description("Inspect and edit ~/.imagent/config.json and secrets.json");
 
   config
     .command("set <key> <value>")
@@ -64,7 +64,7 @@ export function registerConfigCommand(program: Command): void {
       process.stdout.write(`secrets: ${resolver.secretsFile()}\n`);
       process.stdout.write(
         `${chalk.dim(
-          "note: model lists and Azure deployment names come from the model catalog; use `imagine catalog path` to find it.",
+          "note: model lists and Azure deployment names come from the model catalog; use `imagent catalog path` to find it.",
         )}\n`,
       );
     });

@@ -7,7 +7,7 @@ import { createEnvSecretsStore, createFileSecretsStore, mergeSecrets } from "./s
 let tmpDir: string;
 
 beforeEach(async () => {
-  tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "imagine-secrets-"));
+  tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "imagent-secrets-"));
 });
 
 afterEach(async () => {

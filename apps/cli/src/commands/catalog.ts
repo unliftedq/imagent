@@ -1,22 +1,22 @@
-import { getBundledCatalog, loadCatalog, saveCatalog, type ModelCatalog } from "@imagine/providers";
-import { createPathResolver, ensureDataDir } from "@imagine/persistence";
+import { getBundledCatalog, loadCatalog, saveCatalog, type ModelCatalog } from "@imagent/providers";
+import { createPathResolver, ensureDataDir } from "@imagent/persistence";
 import chalk from "chalk";
 import type { Command } from "commander";
 import { createInterface } from "node:readline/promises";
 
 /**
- * `imagine catalog path` — print the absolute catalog path.
- * `imagine catalog show [--provider <id>] [--kind image|video]` — pretty-print.
- * `imagine catalog reset [--force]` — overwrite user catalog with bundled default.
+ * `imagent catalog path` — print the absolute catalog path.
+ * `imagent catalog show [--provider <id>] [--kind image|video]` — pretty-print.
+ * `imagent catalog reset [--force]` — overwrite user catalog with bundled default.
  */
 export function registerCatalogCommands(program: Command): void {
   const cmd = program
     .command("catalog")
-    .description("Inspect and manage the model catalog (~/.imagine/catalog.json)");
+    .description("Inspect and manage the model catalog (~/.imagent/catalog.json)");
 
   cmd
     .command("path")
-    .description("Print the absolute path to ~/.imagine/catalog.json")
+    .description("Print the absolute path to ~/.imagent/catalog.json")
     .action(async () => {
       const resolver = createPathResolver();
       await ensureDataDir(resolver);
@@ -41,7 +41,7 @@ export function registerCatalogCommands(program: Command): void {
 
   cmd
     .command("reset")
-    .description("Overwrite ~/.imagine/catalog.json with the bundled default")
+    .description("Overwrite ~/.imagent/catalog.json with the bundled default")
     .option("--force", "Skip the confirmation prompt", false)
     .action(async (options: { force?: boolean }) => {
       try {

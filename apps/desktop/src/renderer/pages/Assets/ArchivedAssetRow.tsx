@@ -1,5 +1,5 @@
-import type { Asset } from "@imagine/core";
-import { Button, Icons } from "@imagine/ui";
+import type { Asset } from "@imagent/core";
+import { Button, Icons } from "@imagent/ui";
 import { resolveAssetThumbnailUrl } from "./utils.js";
 
 export function ArchivedAssetRow({

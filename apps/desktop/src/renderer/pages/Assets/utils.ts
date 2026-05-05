@@ -1,9 +1,9 @@
-import type { Asset } from "@imagine/core";
+import type { Asset } from "@imagent/core";
 
 export function resolveDataUrl(relPath: string): string {
   const norm = relPath.replace(/\\/g, "/").replace(/^\/+/, "");
   const segments = norm.split("/").map(encodeURIComponent).join("/");
-  return `imagine://local/${segments}`;
+  return `imagent://local/${segments}`;
 }
 
 export function resolveAssetThumbnailUrl(asset: Asset): string | null {

@@ -4,7 +4,7 @@ import {
   ImageModelDefSchema,
   VideoModelCapsOverrideSchema,
   VideoModelDefSchema,
-} from "@imagine/core";
+} from "@imagent/core";
 
 export const ImageProviderModelSchema = z.object({
   /** Provider-facing model id, deployment name, or route name. */

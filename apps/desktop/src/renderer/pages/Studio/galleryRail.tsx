@@ -1,5 +1,5 @@
-import type { Asset, AssetKind, GalleryItem } from "@imagine/core";
-import { Icons } from "@imagine/ui";
+import type { Asset, AssetKind, GalleryItem } from "@imagent/core";
+import { Icons } from "@imagent/ui";
 import type { DragEvent, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useAssetsStore } from "../../state/useAssetsStore.js";
@@ -10,7 +10,7 @@ import { CreateAssetDialog } from "../Assets/CreateAssetDialog.js";
 import { ASSET_REFERENCE_KINDS } from "./types.js";
 import { resolveGalleryUrl } from "./utils.js";
 
-export const STUDIO_REFERENCE_MIME = "application/x-imagine-studio-reference";
+export const STUDIO_REFERENCE_MIME = "application/x-imagent-studio-reference";
 
 export type StudioReferenceDragData =
   | { source: "asset"; id: string; kind: AssetKind }
@@ -277,7 +277,7 @@ function GalleryThumb({
         type="button"
         onClick={() => {
           window.dispatchEvent(
-            new CustomEvent<{ id: string }>("imagine:canvas-pin", {
+            new CustomEvent<{ id: string }>("imagent:canvas-pin", {
               detail: { id: item.id },
             }),
           );

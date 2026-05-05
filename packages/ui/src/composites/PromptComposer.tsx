@@ -1,5 +1,5 @@
 import { useEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
-import type { Asset, AssetKind } from "@imagine/core";
+import type { Asset, AssetKind } from "@imagent/core";
 import { Plus } from "@phosphor-icons/react";
 import { cn } from "../lib/cn.js";
 import { Tooltip } from "../primitives/Tooltip.js";
@@ -60,7 +60,7 @@ export interface PromptComposerProps {
 }
 
 /**
- * PromptComposer — DESIGN.md §10.2 (rail-fitted).
+ * PromptComposer rail-fitted variant.
  *
  * Lives inside the 280px params rail; vertically stacked, no internal
  * max-width. Sections are separated by hairline dividers and labelled with
@@ -91,7 +91,7 @@ export function PromptComposer({
   const promptRef = useRef<HTMLTextAreaElement>(null);
   const negRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-grow up to ~10 lines (DESIGN.md §10.2: default 5, max 10).
+  // Auto-grow up to ~10 lines (default 5, max 10).
   useEffect(() => {
     autosize(promptRef.current, 5, 10);
   }, [prompt]);

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ProviderError, type VideoRequest } from "@imagine/core";
+import { ProviderError, type VideoRequest } from "@imagent/core";
 import { GoogleVideoProvider, type GoogleGenAIVideoClientLike } from "./video.js";
 import { GOOGLE_VIDEO_MODELS } from "../catalog/test-fixtures.js";
 

@@ -4,7 +4,7 @@
  * needed at M1.)
  */
 
-import type { GalleryItem, ImageRequest, Job, JobsQuery } from "@imagine/core";
+import type { GalleryItem, ImageRequest, Job, JobsQuery } from "@imagent/core";
 import type { Input, Output } from "./contract.js";
 
 // image.generate accepts ImageRequest, returns GalleryItem.

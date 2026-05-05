@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ProviderAbortError, ProviderHttpError, ProviderResponseError } from "@imagine/core";
+import { ProviderAbortError, ProviderHttpError, ProviderResponseError } from "@imagent/core";
 import { z } from "zod";
 import { createHttpClient } from "./client.js";
 

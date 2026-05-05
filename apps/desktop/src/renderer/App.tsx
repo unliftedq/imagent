@@ -1,4 +1,4 @@
-import { NavRail, TooltipProvider, useTheme } from "@imagine/ui";
+import { NavRail, TooltipProvider, useTheme } from "@imagent/ui";
 import { useEffect, useRef } from "react";
 import { Toaster } from "./components/Toaster.js";
 import { ROUTES } from "./routes.js";
@@ -12,7 +12,7 @@ const NAV_ROUTES = ROUTES.filter((route) => route.available).map(({ id, label, i
 }));
 
 /**
- * App shell — DESIGN.md §5.4. The window is a 2-column grid: the persistent
+ * App shell. The window is a 2-column grid: the persistent
  * `NavRail` (220px) on the left and the active route's page on the right.
  * There is no top app bar; the wordmark lives in the rail header.
  */

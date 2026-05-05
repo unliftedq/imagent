@@ -7,8 +7,8 @@ import {
   type AssetSlotInputs as CoreAssetSlotInputs,
   capReferencePaths,
   resolveAssetSlots,
-} from "@imagine/core";
-import { AssetRepository, type DatabaseType, type PathResolver } from "@imagine/persistence";
+} from "@imagent/core";
+import { AssetRepository, type DatabaseType, type PathResolver } from "@imagent/persistence";
 
 /** CLI-shaped slot input (plural keys mirror the repeatable CLI flags). */
 export interface AssetSlotInputs {

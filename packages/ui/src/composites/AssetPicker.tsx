@@ -1,4 +1,4 @@
-import type { Asset, AssetKind } from "@imagine/core";
+import type { Asset, AssetKind } from "@imagent/core";
 import { Plus } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 import { cn } from "../lib/cn.js";
@@ -36,7 +36,7 @@ export interface AssetPickerProps {
  * of `AssetCard`s. Multi-select; click a card to toggle. Footer carries
  * Apply / Clear / Create new.
  *
- * Per DESIGN.md: pill chip trigger, no shadow, accent ring on selected
+ * Uses a pill chip trigger, no shadow, accent ring on selected
  * cards, hairline border around the popover.
  */
 export function AssetPicker({

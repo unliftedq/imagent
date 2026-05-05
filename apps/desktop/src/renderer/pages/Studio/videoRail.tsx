@@ -1,7 +1,7 @@
-import type { VideoModelDef, VideoRequest } from "@imagine/core";
-import type { ProviderId } from "@imagine/ipc";
-import { IpcClientError } from "@imagine/ipc";
-import { Button, Icons, Select } from "@imagine/ui";
+import type { VideoModelDef, VideoRequest } from "@imagent/core";
+import type { ProviderId } from "@imagent/ipc";
+import { IpcClientError } from "@imagent/ipc";
+import { Button, Icons, Select } from "@imagent/ui";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api.js";
 import { useAssetsStore } from "../../state/useAssetsStore.js";

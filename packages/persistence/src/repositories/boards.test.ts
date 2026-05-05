@@ -10,7 +10,7 @@ let dbPath: string;
 let tmp: string;
 
 beforeEach(async () => {
-  tmp = await fs.mkdtemp(path.join(os.tmpdir(), "imagine-board-repo-"));
+  tmp = await fs.mkdtemp(path.join(os.tmpdir(), "imagent-board-repo-"));
   dbPath = path.join(tmp, "test.db");
 });
 afterEach(async () => {

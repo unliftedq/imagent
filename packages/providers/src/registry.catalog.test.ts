@@ -1,4 +1,4 @@
-import type { ProviderPreferences, ProviderSecrets } from "@imagine/config";
+import type { ProviderPreferences, ProviderSecrets } from "@imagent/config";
 import { describe, expect, it } from "vitest";
 import { ModelCatalogSchema } from "./catalog/schema.js";
 import { buildTestCatalog } from "./catalog/test-fixtures.js";

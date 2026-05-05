@@ -1,4 +1,4 @@
-import { Icons, Select } from "@imagine/ui";
+import { Icons, Select } from "@imagent/ui";
 import {
   type KeyboardEvent,
   type ReactNode,

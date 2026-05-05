@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import type { GenerationIntent, ImageRequest, Job } from "@imagine/core";
+import type { GenerationIntent, ImageRequest, Job } from "@imagent/core";
 import chalk from "chalk";
 import type { Command } from "commander";
 
@@ -25,7 +25,7 @@ interface GenerateOptions {
 }
 
 /**
- * `imagine image <prompt>` — image generation with asset slots.
+ * `imagent image <prompt>` — image generation with asset slots.
  *
  * Wires:
  *   secrets + config → registry → JobRunner → start image intent.
@@ -69,7 +69,7 @@ async function runGenerate(prompt: string, options: GenerateOptions): Promise<vo
   const provider = runtime.imageRegistry.get(providerId);
   if (!provider) {
     throw new Error(
-      `provider '${providerId}' is not configured. Run \`imagine config set ${providerId.split("-")[0]}.apiKey ...\` first.`,
+      `provider '${providerId}' is not configured. Run \`imagent config set ${providerId.split("-")[0]}.apiKey ...\` first.`,
     );
   }
   const model = pickModel(providerId, options.model, provider.models);

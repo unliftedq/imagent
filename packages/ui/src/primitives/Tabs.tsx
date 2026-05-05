@@ -44,7 +44,7 @@ export const TabsTrigger = forwardRef<
 export const TabsContent = TabsPrimitive.Content;
 
 /**
- * Underline tab strip — DESIGN.md §9.6. 40px tall row, hairline-bottom
+ * Underline tab strip. 40px tall row, hairline-bottom
  * border on the *list*, accent rule under the active trigger. Used at the
  * top of the Studio params rail (`Image | Video`).
  */

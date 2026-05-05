@@ -1,4 +1,4 @@
-import { Icons } from "@imagine/ui";
+import { Icons } from "@imagent/ui";
 import type { ComponentType, ReactElement } from "react";
 import { AssetsPage } from "./pages/Assets";
 import { GalleryPage } from "./pages/Gallery";
@@ -18,7 +18,7 @@ export interface RouteDef {
 }
 
 /**
- * Five routes (DESIGN.md §10.1). The pre-Quiet-Density `video` route was
+ * Five routes. The pre-Quiet-Density `video` route was
  * merged into Studio's `studioMode` tab — see `useUIStore.applyRemix`.
  */
 export const ROUTES: RouteDef[] = [

@@ -11,7 +11,7 @@ import { type Logger, NoopLogger } from "./logger.js";
 // ---------------------------------------------------------------------------
 // Repository / files contracts.
 //
-// JobRunner lives in `core`, which must not import @imagine/persistence
+// JobRunner lives in `core`, which must not import @imagent/persistence
 // (better-sqlite3 is a runtime concern). The runner depends on duck-typed
 // interfaces; the persistence package's `JobRepository` and
 // `GalleryRepository` already satisfy these once the M2 implementations land.
@@ -515,7 +515,7 @@ export class JobRunner extends EventEmitter {
       return;
     }
 
-    // DB-poll-cancellation check: another process / `imagine job cancel`
+    // DB-poll-cancellation check: another process / `imagent job cancel`
     // may have flipped state=cancelled while we were polling. Bail before
     // we record progress for an already-cancelled job.
     const persisted = this.deps.jobs.get(id);
@@ -675,7 +675,7 @@ export class JobRunner extends EventEmitter {
   }
 
   /**
-   * Re-attach to a previously-submitted job (e.g. `imagine job watch`).
+   * Re-attach to a previously-submitted job (e.g. `imagent job watch`).
    * Resolves on terminal completion, rejects on terminal failure.
    *
    * - If the job is already terminal, returns/rejects immediately.

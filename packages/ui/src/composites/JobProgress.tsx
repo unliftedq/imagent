@@ -108,7 +108,7 @@ export function JobProgress({
                     : "100%",
                 animation:
                   typeof progress !== "number"
-                    ? "imagine-stripe 1.2s linear infinite"
+                    ? "imagent-stripe 1.2s linear infinite"
                     : undefined,
               }}
             />
@@ -129,7 +129,7 @@ export function JobProgress({
         />
       ) : null}
       {/* Stripes keyframes — global; harmless if duplicated. */}
-      <style>{`@keyframes imagine-stripe { to { background-position: 32px 0; } }`}</style>
+      <style>{`@keyframes imagent-stripe { to { background-position: 32px 0; } }`}</style>
     </div>
   );
 }
@@ -231,7 +231,7 @@ function VideoVariant({
             style={{
               backgroundImage:
                 "repeating-linear-gradient(45deg, rgba(255,255,255,0.35) 0 8px, transparent 8px 16px)",
-              animation: "imagine-stripe 1.2s linear infinite",
+              animation: "imagent-stripe 1.2s linear infinite",
             }}
           />
         )}
@@ -241,7 +241,7 @@ function VideoVariant({
           {errorMessage}
         </span>
       ) : null}
-      <style>{`@keyframes imagine-stripe { to { background-position: 32px 0; } }`}</style>
+      <style>{`@keyframes imagent-stripe { to { background-position: 32px 0; } }`}</style>
     </div>
   );
 }

@@ -29,7 +29,7 @@ interface McpTool {
 }
 
 const SERVER_INFO = {
-  name: "imagine",
+  name: "imagent",
   version: "0.0.1",
 };
 
@@ -42,7 +42,7 @@ const MAX_TIMEOUT_MS = 600_000;
 const SUBCOMMAND_ARGS_SCHEMA = {
   type: "array",
   items: { type: "string" },
-  description: "Arguments to pass after the mapped imagine subcommand.",
+  description: "Arguments to pass after the mapped imagent subcommand.",
 };
 
 const TIMEOUT_SCHEMA = {
@@ -71,44 +71,44 @@ function subcommandTool(name: string, command: string, description: string): Mcp
 
 const MCP_TOOLS: McpTool[] = [
   subcommandTool(
-    "imagine_doctor",
+    "imagent_doctor",
     "doctor",
-    'Check whether imagine is ready to run. Verifies the data directory, database/FTS setup, config files, and configured provider count. Pass args after `imagine doctor`, for example [] or ["--help"].',
+    'Check whether imagent is ready to run. Verifies the data directory, database/FTS setup, config files, and configured provider count. Pass args after `imagent doctor`, for example [] or ["--help"].',
   ),
   subcommandTool(
-    "imagine_image",
+    "imagent_image",
     "image",
-    'Generate one or more images from a text prompt. Use for text-to-image requests, provider/model overrides, output count, size/aspect, seed, negative prompt, freeform references, and character/object/background/style asset slots. Pass args after `imagine image`, for example ["a cinematic robot portrait", "--provider", "openai", "--count", "2"].',
+    'Generate one or more images from a text prompt. Use for text-to-image requests, provider/model overrides, output count, size/aspect, seed, negative prompt, freeform references, and character/object/background/style asset slots. Pass args after `imagent image`, for example ["a cinematic robot portrait", "--provider", "openai", "--count", "2"].',
   ),
   subcommandTool(
-    "imagine_video",
+    "imagent_video",
     "video",
-    'Submit or wait for a video generation job from a text prompt. Use for text-to-video requests, provider/model overrides, duration, FPS, resolution/aspect, reference images, asset slots, and `--wait` progress streaming. Pass args after `imagine video`, for example ["a camera orbit around a glass sculpture", "--duration", "5", "--wait"].',
+    'Submit or wait for a video generation job from a text prompt. Use for text-to-video requests, provider/model overrides, duration, FPS, resolution/aspect, reference images, asset slots, and `--wait` progress streaming. Pass args after `imagent video`, for example ["a camera orbit around a glass sculpture", "--duration", "5", "--wait"].',
   ),
   subcommandTool(
-    "imagine_config",
+    "imagent_config",
     "config",
-    'Inspect or edit local provider secrets and config paths. Use to set/get API keys, endpoints, or base URLs for openai, azure-openai, google, flux-bfl, bytedance, and xai, or to locate config files. Pass args after `imagine config`, for example ["set", "openai.apiKey", "sk-..."] or ["path"].',
+    'Inspect or edit local provider secrets and config paths. Use to set/get API keys, endpoints, or base URLs for openai, azure-openai, google, flux-bfl, bytedance, and xai, or to locate config files. Pass args after `imagent config`, for example ["set", "openai.apiKey", "sk-..."] or ["path"].',
   ),
   subcommandTool(
-    "imagine_catalog",
+    "imagent_catalog",
     "catalog",
-    'Inspect and manage the local model catalog at ~/.imagine/catalog.json. Use to find the catalog path, show available image/video models filtered by provider or kind, or reset the catalog to bundled defaults. Pass args after `imagine catalog`, for example ["show", "--kind", "image"] or ["reset", "--force"].',
+    'Inspect and manage the local model catalog at ~/.imagent/catalog.json. Use to find the catalog path, show available image/video models filtered by provider or kind, or reset the catalog to bundled defaults. Pass args after `imagent catalog`, for example ["show", "--kind", "image"] or ["reset", "--force"].',
   ),
   subcommandTool(
-    "imagine_asset",
+    "imagent_asset",
     "asset",
-    'Manage reusable generation assets: characters, objects, backgrounds, and styles. Use to add reference assets, list/search assets, inspect stored paths and metadata, or remove assets. Pass args after `imagine asset`, for example ["add", "character", "--name", "Ari", "--ref", "./ari.png"] or ["list", "--kind", "style"].',
+    'Manage reusable generation assets: characters, objects, backgrounds, and styles. Use to add reference assets, list/search assets, inspect stored paths and metadata, or remove assets. Pass args after `imagent asset`, for example ["add", "character", "--name", "Ari", "--ref", "./ari.png"] or ["list", "--kind", "style"].',
   ),
   subcommandTool(
-    "imagine_gallery",
+    "imagent_gallery",
     "gallery",
-    'Browse and curate prior generations stored in the local gallery. Use to list/filter outputs, show prompts/files/lineage/attached assets, remix an existing item, delete an item, or toggle favorites. Pass args after `imagine gallery`, for example ["ls", "--favorite"] or ["show", "<itemId>"].',
+    'Browse and curate prior generations stored in the local gallery. Use to list/filter outputs, show prompts/files/lineage/attached assets, remix an existing item, delete an item, or toggle favorites. Pass args after `imagent gallery`, for example ["ls", "--favorite"] or ["show", "<itemId>"].',
   ),
   subcommandTool(
-    "imagine_job",
+    "imagent_job",
     "job",
-    'Inspect and control generation jobs. Use to list jobs, check status/progress, cancel queued or running work, or watch a job until completion. Pass args after `imagine job`, for example ["ls", "--state", "running"] or ["watch", "<jobId>"].',
+    'Inspect and control generation jobs. Use to list jobs, check status/progress, cancel queued or running work, or watch a job until completion. Pass args after `imagent job`, for example ["ls", "--state", "running"] or ["watch", "<jobId>"].',
   ),
 ];
 
@@ -119,7 +119,7 @@ const PUBLIC_MCP_TOOLS = MCP_TOOLS.map(({ commandPrefix: _commandPrefix, ...tool
 export function registerMcpCommand(program: Command): void {
   program
     .command("mcp")
-    .description("Run an MCP stdio server exposing the imagine CLI to other agents")
+    .description("Run an MCP stdio server exposing the imagent CLI to other agents")
     .action(async () => {
       try {
         await runMcpServer();
@@ -268,7 +268,7 @@ async function runImagineCli(
   const timeoutMs = normalizeTimeout(input.timeoutMs);
   const entry = process.argv[1];
   if (!entry) {
-    throw new Error("cannot locate imagine CLI entrypoint");
+    throw new Error("cannot locate imagent CLI entrypoint");
   }
 
   return new Promise((resolve, reject) => {

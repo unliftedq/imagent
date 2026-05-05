@@ -1,5 +1,5 @@
-import type { Asset, AssetKind } from "@imagine/core";
-import { Icons, Popover } from "@imagine/ui";
+import type { Asset, AssetKind } from "@imagent/core";
+import { Icons, Popover } from "@imagent/ui";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { api } from "../../lib/api.js";

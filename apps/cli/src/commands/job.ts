@@ -4,14 +4,14 @@ import type {
   Job,
   JobProgressEvent,
   JobState,
-} from "@imagine/core";
+} from "@imagent/core";
 import {
   GalleryRepository,
   JobRepository,
   createPathResolver,
   ensureDataDir,
   openDatabase,
-} from "@imagine/persistence";
+} from "@imagent/persistence";
 import chalk from "chalk";
 import type { Command } from "commander";
 

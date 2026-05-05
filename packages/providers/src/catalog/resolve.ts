@@ -3,7 +3,7 @@ import {
   VideoModelDefSchema,
   type ImageModelDef,
   type VideoModelDef,
-} from "@imagine/core";
+} from "@imagent/core";
 import type { ImageProviderModel, ModelCatalog, VideoProviderModel } from "./schema.js";
 
 export function resolveImageProviderModels(

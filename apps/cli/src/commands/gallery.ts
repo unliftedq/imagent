@@ -6,14 +6,14 @@ import type {
   ImageRequest,
   Job,
   VideoRequest,
-} from "@imagine/core";
+} from "@imagent/core";
 import {
   AssetRepository,
   GalleryRepository,
   createPathResolver,
   ensureDataDir,
   openDatabase,
-} from "@imagine/persistence";
+} from "@imagent/persistence";
 import chalk from "chalk";
 import type { Command } from "commander";
 
@@ -234,7 +234,7 @@ async function runRemix(itemId: string, options: GalleryRemixOptions): Promise<v
       const provider = runtime.imageRegistry.get(providerId);
       if (!provider) {
         throw new Error(
-          `provider '${providerId}' is not configured. Run \`imagine config set ${providerId.split("-")[0]}.apiKey ...\` first.`,
+          `provider '${providerId}' is not configured. Run \`imagent config set ${providerId.split("-")[0]}.apiKey ...\` first.`,
         );
       }
       // Carry the parent's asset attachments through to the remix unless
@@ -307,11 +307,11 @@ async function runRemix(itemId: string, options: GalleryRemixOptions): Promise<v
     }
 
     // Video remix: submit + print job id (no --wait by default to keep parity
-    // with the image generation UX). Users can `imagine job watch <id>` after.
+    // with the image generation UX). Users can `imagent job watch <id>` after.
     const provider = runtime.videoRegistry.get(providerId);
     if (!provider) {
       throw new Error(
-        `video provider '${providerId}' is not configured. Run \`imagine config set bytedance.apiKey ...\` first.`,
+        `video provider '${providerId}' is not configured. Run \`imagent config set bytedance.apiKey ...\` first.`,
       );
     }
     const req: VideoRequest = {
@@ -331,11 +331,11 @@ async function runRemix(itemId: string, options: GalleryRemixOptions): Promise<v
     // Set parent_id once the gallery item lands. Persist a marker now so we
     // don't lose lineage if the polling continues across restarts: we use
     // params_json for the parent reference only when the gallery row exists,
-    // so for video we attach via post-processing in `imagine job watch`. For
+    // so for video we attach via post-processing in `imagent job watch`. For
     // CLI v1 we only set parent_id directly when --wait is used.
     process.stdout.write(`${chalk.green("submitted:")} ${jobId}\n`);
     process.stdout.write(
-      `${chalk.dim("note:")} polling stops when CLI exits; reattach with 'imagine job watch ${jobId}' from the same machine\n`,
+      `${chalk.dim("note:")} polling stops when CLI exits; reattach with 'imagent job watch ${jobId}' from the same machine\n`,
     );
   } finally {
     db.close();

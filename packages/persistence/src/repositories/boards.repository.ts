@@ -1,4 +1,4 @@
-import type { Board, BoardItem } from "@imagine/core";
+import type { Board, BoardItem } from "@imagent/core";
 import type { DatabaseType } from "../db.js";
 
 interface BoardRow {

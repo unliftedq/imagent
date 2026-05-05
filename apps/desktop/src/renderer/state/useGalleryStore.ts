@@ -1,4 +1,4 @@
-import type { GalleryItem, GalleryQuery } from "@imagine/core";
+import type { GalleryItem, GalleryQuery } from "@imagent/core";
 import { create } from "zustand";
 import { api } from "../lib/api.js";
 

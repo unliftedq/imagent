@@ -43,7 +43,7 @@ export default defineConfig({
         "assert",
         // Workspace packages — keep external so persistence can still find
         // its migrations via import.meta.url.
-        /^@imagine\//,
+        /^@imagent\//,
       ],
     },
   },

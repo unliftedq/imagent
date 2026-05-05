@@ -1,4 +1,4 @@
-import type { Asset, AssetFile, AssetKind } from "@imagine/core";
+import type { Asset, AssetFile, AssetKind } from "@imagent/core";
 import type { DatabaseType } from "../db.js";
 
 interface AssetRow {

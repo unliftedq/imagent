@@ -15,7 +15,7 @@ import {
 let tmpDir: string;
 
 beforeEach(async () => {
-  tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "imagine-thumb-"));
+  tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "imagent-thumb-"));
 });
 afterEach(async () => {
   // Sharp keeps file handles open briefly on Windows; retry transient EBUSY.

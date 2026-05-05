@@ -1,9 +1,9 @@
-import type { ImageReference } from "@imagine/core";
-import type { ThemePref } from "@imagine/ui";
+import type { ImageReference } from "@imagent/core";
+import type { ThemePref } from "@imagent/ui";
 import { create } from "zustand";
 
 /**
- * Five top-level routes (DESIGN.md §10.1 / §11). The pre-Quiet-Density
+ * Five top-level routes. The pre-Quiet-Density
  * `video` route was merged into Studio's `studioMode` tab; old persisted
  * values are migrated transparently in the store initializer below.
  */
@@ -79,10 +79,10 @@ export interface StudioDraft {
   video: VideoDraft;
 }
 
-export const STUDIO_MODE_LS_KEY = "imagine.studioMode.v1";
-export const STUDIO_DRAFT_LS_KEY = "imagine.studioDraft.v1";
-export const VIDEO_DRAFT_LS_KEY = "imagine.videoDraft.v1";
-export const ROUTE_LS_KEY = "imagine.route.v1";
+export const STUDIO_MODE_LS_KEY = "imagent.studioMode.v1";
+export const STUDIO_DRAFT_LS_KEY = "imagent.studioDraft.v1";
+export const VIDEO_DRAFT_LS_KEY = "imagent.videoDraft.v1";
+export const ROUTE_LS_KEY = "imagent.route.v1";
 
 const DEFAULT_IMAGE_DRAFT: ImageDraft = {
   prompt: "",
@@ -229,7 +229,7 @@ function persistMode(mode: StudioMode): void {
 
 /**
  * One-time migration: a stored `activeRoute='video'` (or our older
- * `imagine.route.v1='video'`) maps to `{ route: 'studio', studioMode: 'video' }`.
+ * `imagent.route.v1='video'`) maps to `{ route: 'studio', studioMode: 'video' }`.
  * Read both possible keys; if either points at the dropped 'video' route,
  * normalise on first boot.
  */

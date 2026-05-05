@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "comments": "Bundled default model catalog. v2 separates canonical model capabilities from provider-facing offerings. Edit ~/.imagine/catalog.json to change provider routes such as Azure deployment names; do not edit this bundled file directly. Capabilities sourced from .research/models-2026.md (2026-04-28 snapshot). TODO(verify) items: OpenAI gpt-image-2 maxReferences/maxOutputs; Google Gemini supportsSeed; Nano Banana 2 supportsSeed; xAI Grok Imagine supportsSeed; ByteDance Seedream 4.0 maxReferences and supportsNegativePrompt; xAI grok-imagine-video supportsLastFrame and resolution default.",
+  "comments": "Bundled default model catalog. v2 separates canonical model capabilities from provider-facing offerings. Edit ~/.imagent/catalog.json to change provider routes such as Azure deployment names; do not edit this bundled file directly. Capabilities sourced from .research/models-2026.md (2026-04-28 snapshot). TODO(verify) items: OpenAI gpt-image-2 maxReferences/maxOutputs; Google Gemini supportsSeed; Nano Banana 2 supportsSeed; xAI Grok Imagine supportsSeed; ByteDance Seedream 4.0 maxReferences and supportsNegativePrompt; xAI grok-imagine-video supportsLastFrame and resolution default.",
   "models": {
     "image": {
       "gpt-image-2": {

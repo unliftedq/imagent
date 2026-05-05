@@ -15,7 +15,7 @@ import {
   type VideoProvider,
   type VideoRequest,
   validateVideoRequestAgainstModel,
-} from "@imagine/core";
+} from "@imagent/core";
 import { createXai, type XaiProvider } from "@ai-sdk/xai";
 import { experimental_generateVideo, type GenerateVideoResult } from "ai";
 

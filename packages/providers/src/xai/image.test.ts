@@ -4,7 +4,7 @@ import {
   ProviderError,
   ProviderHttpError,
   type ImageRequest,
-} from "@imagine/core";
+} from "@imagent/core";
 import type { ImageModel } from "ai";
 import { XaiImageProvider } from "./image.js";
 import { XAI_IMAGE_MODELS } from "../catalog/test-fixtures.js";

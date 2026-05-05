@@ -1,6 +1,6 @@
-import type { Asset } from "@imagine/core";
-import { IpcClientError } from "@imagine/ipc";
-import { AssetCard, Button, Icons, Tabs, Tooltip } from "@imagine/ui";
+import type { Asset } from "@imagent/core";
+import { IpcClientError } from "@imagent/ipc";
+import { AssetCard, Button, Icons, Tabs, Tooltip } from "@imagent/ui";
 import { useEffect, useMemo, useState } from "react";
 import { useAssetsStore } from "../../state/useAssetsStore.js";
 import { useUIStore } from "../../state/useUIStore.js";

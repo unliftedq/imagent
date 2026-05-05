@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import type { GenerationIntent, Job, JobProgressEvent, VideoRequest } from "@imagine/core";
+import type { GenerationIntent, Job, JobProgressEvent, VideoRequest } from "@imagent/core";
 import chalk from "chalk";
 import type { Command } from "commander";
 
@@ -57,7 +57,7 @@ async function runVideo(prompt: string, options: VideoOptions): Promise<void> {
   const provider = runtime.videoRegistry.get(providerId);
   if (!provider) {
     throw new Error(
-      `video provider '${providerId}' is not configured. Run \`imagine config set bytedance.apiKey ...\` first.`,
+      `video provider '${providerId}' is not configured. Run \`imagent config set bytedance.apiKey ...\` first.`,
     );
   }
   const model = pickVideoModel(providerId, options.model, provider.models);
@@ -102,7 +102,7 @@ async function runVideo(prompt: string, options: VideoOptions): Promise<void> {
       const id = await runner.start(intent);
       process.stdout.write(`${chalk.green("submitted:")} ${id}\n`);
       process.stdout.write(
-        `${chalk.dim("note:")} polling stops when CLI exits; reattach with 'imagine job watch ${id}' from the same machine\n`,
+        `${chalk.dim("note:")} polling stops when CLI exits; reattach with 'imagent job watch ${id}' from the same machine\n`,
       );
       // Don't await the polling loop; exiting is the documented behaviour.
       return;

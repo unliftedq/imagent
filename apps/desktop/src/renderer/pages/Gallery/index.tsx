@@ -5,9 +5,9 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import type { Asset, AssetKind, GalleryItem } from "@imagine/core";
+import type { Asset, AssetKind, GalleryItem } from "@imagent/core";
 import { useEffect, useMemo, useState } from "react";
-import { BoardSidebarItem, Button, GalleryItemCard, Icons, Input, Tooltip } from "@imagine/ui";
+import { BoardSidebarItem, Button, GalleryItemCard, Icons, Input, Tooltip } from "@imagent/ui";
 import { api } from "../../lib/api.js";
 import { useBoardsStore } from "../../state/useBoardsStore.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";

@@ -33,7 +33,7 @@ export function StudioPage() {
   const setDraft = studioMode === "image" ? setImageDraft : setVideoDraft;
 
   const onDragOver = (event: DragEvent<HTMLElement>): void => {
-    if (!Array.from(event.dataTransfer.types).includes("application/x-imagine-studio-reference")) {
+    if (!Array.from(event.dataTransfer.types).includes("application/x-imagent-studio-reference")) {
       return;
     }
     event.preventDefault();

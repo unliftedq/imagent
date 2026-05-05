@@ -656,14 +656,14 @@ describe("registerIpcHandlers", () => {
     it("catalog.path: returns the absolute file path", async () => {
       const { ipcMain, invoke } = makeFakeIpc();
       registerIpcHandlers(ipcMain, {
-        "catalog.path": async () => ({ path: "/home/u/.imagine/catalog.json" }),
+        "catalog.path": async () => ({ path: "/home/u/.imagent/catalog.json" }),
       });
       const reply = (await invoke("catalog.path", undefined)) as {
         ok: true;
         value: { path: string };
       };
       expect(reply.ok).toBe(true);
-      expect(reply.value.path).toBe("/home/u/.imagine/catalog.json");
+      expect(reply.value.path).toBe("/home/u/.imagent/catalog.json");
     });
 
     it("catalog.get: returns the loaded catalog snapshot", async () => {
