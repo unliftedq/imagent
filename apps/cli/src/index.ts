@@ -8,6 +8,7 @@ import { runDoctor } from "./commands/doctor.js";
 import { registerGalleryCommands } from "./commands/gallery.js";
 import { registerImageCommand } from "./commands/image.js";
 import { registerJobCommands } from "./commands/job.js";
+import { registerMcpCommand } from "./commands/mcp.js";
 import { registerVideoCommand } from "./commands/video.js";
 import { CLI_VERSION } from "./version.js";
 
@@ -40,6 +41,7 @@ async function main(): Promise<void> {
   registerGalleryCommands(program);
   registerVideoCommand(program);
   registerJobCommands(program);
+  registerMcpCommand(program);
 
   await program.parseAsync(process.argv);
 }
