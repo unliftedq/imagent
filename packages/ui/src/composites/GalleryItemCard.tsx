@@ -10,6 +10,7 @@ import {
   MagicWand,
   Play,
   Plus,
+  StackPlus,
   Trash,
 } from "@phosphor-icons/react";
 import { type ReactNode, useState } from "react";
@@ -51,6 +52,7 @@ export interface GalleryItemCardProps {
   onSelect?: () => void;
   onOpen?: () => void;
   onRemix?: () => void;
+  onSaveAsAsset?: () => void;
   onToggleFavorite?: () => void;
   onAddToBoard?: (boardId: string) => void;
   onOpenFileLocation?: () => void;
@@ -166,6 +168,7 @@ function ImageVariant({
   onSelect,
   onOpen,
   onRemix,
+  onSaveAsAsset,
   onToggleFavorite,
   onAddToBoard,
   onOpenFileLocation,
@@ -277,6 +280,7 @@ function ImageVariant({
         favorited={favorited}
         boards={boards}
         onRemix={onRemix}
+        onSaveAsAsset={onSaveAsAsset}
         onToggleFavorite={onToggleFavorite}
         onAddToBoard={onAddToBoard}
         onOpenFileLocation={onOpenFileLocation}
@@ -299,6 +303,7 @@ function VideoVariant({
   onSelect,
   onOpen,
   onRemix,
+  onSaveAsAsset,
   onToggleFavorite,
   onAddToBoard,
   onOpenFileLocation,
@@ -422,6 +427,7 @@ function VideoVariant({
         favorited={favorited}
         boards={boards}
         onRemix={onRemix}
+        onSaveAsAsset={onSaveAsAsset}
         onToggleFavorite={onToggleFavorite}
         onAddToBoard={onAddToBoard}
         onOpenFileLocation={onOpenFileLocation}
@@ -490,6 +496,7 @@ function ActionMenuContent({
   favorited,
   boards,
   onRemix,
+  onSaveAsAsset,
   onToggleFavorite,
   onAddToBoard,
   onOpenFileLocation,
@@ -498,6 +505,7 @@ function ActionMenuContent({
   favorited?: boolean;
   boards?: ReadonlyArray<GalleryItemCardBoardOption>;
   onRemix?: () => void;
+  onSaveAsAsset?: () => void;
   onToggleFavorite?: () => void;
   onAddToBoard?: (boardId: string) => void;
   onOpenFileLocation?: () => void;
@@ -519,6 +527,9 @@ function ActionMenuContent({
       >
         <Item icon={<MagicWand weight="bold" className="size-4" />} onSelect={onRemix}>
           Remix
+        </Item>
+        <Item icon={<StackPlus weight="bold" className="size-4" />} onSelect={onSaveAsAsset}>
+          Save as asset
         </Item>
         <Item
           icon={

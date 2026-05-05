@@ -139,10 +139,12 @@ export function LightboxPreview({
   itemId,
   onClose,
   onRemix,
+  onSaveAsAsset,
 }: {
   itemId: string;
   onClose: () => void;
   onRemix: (id: string) => void;
+  onSaveAsAsset: (item: GalleryItem) => void;
 }) {
   const [data, setData] = useState<{
     item: GalleryItem;
@@ -309,6 +311,11 @@ export function LightboxPreview({
                     }
                     label={data.item.favorited ? "Unfavorite" : "Favorite"}
                     onClick={() => void toggleFav(data.item.id)}
+                  />
+                  <LightboxAction
+                    icon={<Icons.StackPlus weight="bold" className="size-4" />}
+                    label="Save as asset"
+                    onClick={() => onSaveAsAsset(data.item)}
                   />
                   <LightboxAction
                     icon={

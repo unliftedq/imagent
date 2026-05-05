@@ -144,7 +144,7 @@ export function AssetsPage() {
   };
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-6 px-8 py-8">
+    <div className="flex w-full min-w-0 flex-col gap-6 px-8 py-8">
       <header className="flex items-start justify-between gap-4">
         <div className="flex flex-col">
           <h1 className="text-(length:--text-display-sm) font-(family-name:--font-display) text-(--text)">
@@ -223,7 +223,7 @@ export function AssetsPage() {
                 }}
               />
             ) : (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,260px))] justify-start gap-4">
                 {(byKind[k] ?? []).map((a) => (
                   <AssetCard
                     key={a.id}

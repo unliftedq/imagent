@@ -4,8 +4,9 @@ import type { DragEvent, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useAssetsStore } from "../../state/useAssetsStore.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
-import type { StudioMode } from "../../state/useUIStore.js";
+import { type StudioMode, useUIStore } from "../../state/useUIStore.js";
 import { resolveAssetThumbnailUrl } from "../Assets";
+import { CreateAssetDialog } from "../Assets/CreateAssetDialog.js";
 import { ASSET_REFERENCE_KINDS } from "./types.js";
 import { resolveGalleryUrl } from "./utils.js";
 
@@ -68,9 +69,12 @@ export function StudioGalleryRail({
   const refreshGallery = useGalleryStore((state) => state.refresh);
   const assetsByKind = useAssetsStore((state) => state.byKind);
   const refreshAssets = useAssetsStore((state) => state.refresh);
+  const pushToast = useUIStore((state) => state.pushToast);
   const [tab, setTab] = useState<RailTab>("gallery");
   const [galleryFilter, setGalleryFilter] = useState<GalleryFilter>("all");
   const [assetFilter, setAssetFilter] = useState<AssetFilter>("all");
+  const [assetDialogItem, setAssetDialogItem] = useState<GalleryItem | null>(null);
+  const [assetDialogKind, setAssetDialogKind] = useState<AssetKind>("character");
 
   useEffect(() => {
     void refreshGallery();
@@ -89,6 +93,33 @@ export function StudioGalleryRail({
     }
     return assetsByKind[assetFilter] ?? [];
   }, [assetsByKind, assetFilter]);
+
+  const openSaveAsAssetDialog = (item: GalleryItem): void => {
+    if (item.kind === "video" && !item.thumbPath) {
+      pushToast({
+        title: "Thumbnail unavailable",
+        description: "This video item needs a thumbnail before it can become an asset.",
+        variant: "warning",
+      });
+      return;
+    }
+    setAssetDialogItem(item);
+  };
+
+  const assetDialogSource = useMemo(() => {
+    if (!assetDialogItem) return null;
+    const relPath =
+      assetDialogItem.kind === "video"
+        ? (assetDialogItem.thumbPath ?? assetDialogItem.relPath)
+        : assetDialogItem.relPath;
+    return {
+      itemId: assetDialogItem.id,
+      itemKind: assetDialogItem.kind,
+      prompt: assetDialogItem.prompt,
+      previewUrl: resolveGalleryUrl(relPath),
+      relPath,
+    };
+  }, [assetDialogItem]);
 
   if (collapsed) {
     return (
@@ -159,7 +190,7 @@ export function StudioGalleryRail({
             ) : (
               <div className="grid grid-cols-2 gap-2">
                 {filteredGallery.map((item) => (
-                  <GalleryThumb key={item.id} item={item} />
+                  <GalleryThumb key={item.id} item={item} onSaveAsAsset={openSaveAsAssetDialog} />
                 ))}
               </div>
             )}
@@ -193,11 +224,34 @@ export function StudioGalleryRail({
           <RailFooterButton onClick={onViewAssets}>Open assets</RailFooterButton>
         </>
       )}
+      <CreateAssetDialog
+        open={Boolean(assetDialogItem)}
+        kind={assetDialogKind}
+        onKindChange={setAssetDialogKind}
+        onClose={() => setAssetDialogItem(null)}
+        onCreated={(asset) => {
+          setAssetDialogItem(null);
+          setTab("assets");
+          setAssetFilter(asset.kind);
+          pushToast({
+            title: "Asset saved",
+            description: `${asset.name} is available in Assets.`,
+            variant: "success",
+          });
+        }}
+        gallerySource={assetDialogSource}
+      />
     </aside>
   );
 }
 
-function GalleryThumb({ item }: { item: GalleryItem }) {
+function GalleryThumb({
+  item,
+  onSaveAsAsset,
+}: {
+  item: GalleryItem;
+  onSaveAsAsset: (item: GalleryItem) => void;
+}) {
   const src =
     item.kind === "video"
       ? item.thumbPath
@@ -206,8 +260,7 @@ function GalleryThumb({ item }: { item: GalleryItem }) {
       : resolveGalleryUrl(item.relPath);
 
   return (
-    <button
-      type="button"
+    <div
       draggable
       onDragStart={(event) =>
         setDragData(event, {
@@ -217,30 +270,50 @@ function GalleryThumb({ item }: { item: GalleryItem }) {
           relPath: item.relPath,
         })
       }
-      onClick={() => {
-        window.dispatchEvent(
-          new CustomEvent<{ id: string }>("imagine:canvas-pin", {
-            detail: { id: item.id },
-          }),
-        );
-      }}
       title={item.prompt}
-      aria-label={item.prompt || `Gallery item ${item.id}`}
       className="group relative aspect-square w-full overflow-hidden rounded-(--radius-sm) border border-(--border) bg-(--surface-sunken) transition-colors duration-(--motion-fast) hover:border-(--border-strong) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring)"
     >
-      {src ? (
-        <img
-          src={src}
-          alt=""
-          loading="lazy"
-          draggable={false}
-          className="block h-full w-full object-cover"
-        />
-      ) : (
-        <span className="flex h-full w-full items-center justify-center text-(--text-muted)">
-          <Icons.FilmReel weight="duotone" className="size-8" />
-        </span>
-      )}
+      <button
+        type="button"
+        onClick={() => {
+          window.dispatchEvent(
+            new CustomEvent<{ id: string }>("imagine:canvas-pin", {
+              detail: { id: item.id },
+            }),
+          );
+        }}
+        aria-label={item.prompt || `Gallery item ${item.id}`}
+        className="block h-full w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring)"
+      >
+        {src ? (
+          <img
+            src={src}
+            alt=""
+            loading="lazy"
+            draggable={false}
+            className="block h-full w-full object-cover"
+          />
+        ) : (
+          <span className="flex h-full w-full items-center justify-center text-(--text-muted)">
+            <Icons.FilmReel weight="duotone" className="size-8" />
+          </span>
+        )}
+      </button>
+      <button
+        type="button"
+        aria-label="Save as asset"
+        title="Save as asset"
+        onClick={() => onSaveAsAsset(item)}
+        className={
+          "absolute left-1 top-1 inline-flex size-6 items-center justify-center " +
+          "rounded-(--radius-sm) border border-white/20 bg-black/55 text-white opacity-0 " +
+          "backdrop-blur transition-opacity duration-(--motion-fast) hover:bg-black/70 " +
+          "focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring) " +
+          "group-hover:opacity-100"
+        }
+      >
+        <Icons.StackPlus weight="bold" className="size-3.5" />
+      </button>
       {item.kind === "video" ? (
         <Badge className="bottom-1 left-1">
           <Icons.Play weight="fill" className="size-2.5" />
@@ -251,7 +324,7 @@ function GalleryThumb({ item }: { item: GalleryItem }) {
           <Icons.Star weight="fill" className="size-2.5" />
         </Badge>
       ) : null}
-    </button>
+    </div>
   );
 }
 

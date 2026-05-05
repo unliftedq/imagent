@@ -85,11 +85,11 @@ export const DialogSheet = forwardRef<
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
-          "fixed right-0 top-0 z-50 h-full w-full max-w-lg " +
+          "fixed right-0 top-0 z-50 h-full w-screen max-w-[32rem] " +
             "border-l border-(--border) bg-(--bg) p-6 outline-none " +
             "overflow-y-auto " +
             "data-[state=open]:animate-in data-[state=closed]:animate-out " +
-            "data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right",
+            "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
           className,
         )}
         {...rest}

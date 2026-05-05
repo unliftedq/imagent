@@ -486,6 +486,16 @@ export const contract = {
     }),
     output: AssetSchema,
   },
+  "assets.createFromGalleryItem": {
+    input: z.object({
+      itemId: z.string(),
+      kind: z.enum(["character", "object", "background", "style"]),
+      name: z.string().min(1),
+      description: z.string().nullable().optional(),
+      promptSnippet: z.string().nullable().optional(),
+    }),
+    output: AssetSchema,
+  },
   "assets.update": {
     input: z.object({
       id: z.string(),

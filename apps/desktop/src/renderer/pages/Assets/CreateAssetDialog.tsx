@@ -1,4 +1,4 @@
-import type { Asset, AssetKind } from "@imagine/core";
+import type { Asset, AssetKind, GalleryItem } from "@imagine/core";
 import { IpcClientError } from "@imagine/ipc";
 import { Button, Dialog, Icons, Input, Textarea } from "@imagine/ui";
 import { useEffect, useState } from "react";
@@ -13,6 +13,15 @@ interface CreateDialogProps {
   onKindChange: (k: AssetKind) => void;
   onClose: () => void;
   onCreated: (asset: Asset) => void;
+  gallerySource?: GalleryAssetSource | null;
+}
+
+export interface GalleryAssetSource {
+  itemId: string;
+  itemKind: GalleryItem["kind"];
+  prompt: string;
+  previewUrl: string;
+  relPath: string;
 }
 
 interface PendingFile {
@@ -30,8 +39,10 @@ export function CreateAssetDialog({
   onKindChange,
   onClose,
   onCreated,
+  gallerySource = null,
 }: CreateDialogProps) {
   const create = useAssetsStore((s) => s.create);
+  const createFromGalleryItem = useAssetsStore((s) => s.createFromGalleryItem);
   const pushToast = useUIStore((s) => s.pushToast);
 
   const [name, setName] = useState("");
@@ -56,6 +67,20 @@ export function CreateAssetDialog({
       setSubmitting(false);
     }
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !gallerySource) return;
+    setName("");
+    setDescription("");
+    setPromptSnippet("");
+    setFiles((prev) => {
+      for (const f of prev) URL.revokeObjectURL(f.previewUrl);
+      return [];
+    });
+    setError(null);
+    setDragOver(false);
+    setSubmitting(false);
+  }, [open, gallerySource]);
 
   const addFiles = async (incoming: FileList | File[]): Promise<void> => {
     const [file, ...extras] = Array.from(incoming);
@@ -96,28 +121,37 @@ export function CreateAssetDialog({
       setError("Name is required.");
       return;
     }
-    if (kind !== "style" && files.length === 0) {
+    const usingGallerySource = Boolean(gallerySource) && files.length === 0;
+    if (kind !== "style" && files.length === 0 && !usingGallerySource) {
       setError(`${kind} assets require one reference image.`);
       return;
     }
-    if (kind === "style" && files.length === 0 && !promptSnippet.trim()) {
+    if (kind === "style" && files.length === 0 && !usingGallerySource && !promptSnippet.trim()) {
       setError("Style assets require one reference image OR a prompt snippet.");
       return;
     }
 
     setSubmitting(true);
     try {
-      const created = await create({
-        kind,
-        name: name.trim(),
-        description: description.trim() || null,
-        promptSnippet: promptSnippet.trim() || null,
-        fileUploads: files.map((f) => ({
-          bytes: new Uint8Array(f.bytes),
-          originalName: f.name,
-          mimeType: f.mimeType,
-        })),
-      });
+      const created = usingGallerySource
+        ? await createFromGalleryItem({
+            itemId: gallerySource!.itemId,
+            kind,
+            name: name.trim(),
+            description: description.trim() || null,
+            promptSnippet: promptSnippet.trim() || null,
+          })
+        : await create({
+            kind,
+            name: name.trim(),
+            description: description.trim() || null,
+            promptSnippet: promptSnippet.trim() || null,
+            fileUploads: files.map((f) => ({
+              bytes: new Uint8Array(f.bytes),
+              originalName: f.name,
+              mimeType: f.mimeType,
+            })),
+          });
       onCreated(created);
     } catch (err) {
       setError(
@@ -137,6 +171,7 @@ export function CreateAssetDialog({
   };
 
   const attachedFile = files[0] ?? null;
+  const attachedGallerySource = attachedFile ? null : gallerySource;
 
   return (
     <Dialog.Root open={open} onOpenChange={(v) => (v ? null : onClose())}>
@@ -145,8 +180,9 @@ export function CreateAssetDialog({
           New asset
         </Dialog.Title>
         <Dialog.Description className="mt-1 text-(length:--text-body-sm) text-(--text-muted)">
-          Create a reusable {kind === "style" ? "style" : kind} that can be picked from any
-          generation.
+          {gallerySource
+            ? "Save this gallery item as a reusable reference."
+            : `Create a reusable ${kind === "style" ? "style" : kind} that can be picked from any generation.`}
         </Dialog.Description>
 
         <div className="mt-4 flex flex-col gap-4">
@@ -247,6 +283,24 @@ export function CreateAssetDialog({
                     </div>
                     <div className="text-(length:--text-caption) text-(--text-muted)">
                       Reference image attached. Drop or browse to replace.
+                    </div>
+                  </div>
+                </div>
+              ) : attachedGallerySource ? (
+                <div className="flex items-center gap-3 text-left">
+                  <div className="size-20 shrink-0 overflow-hidden rounded-(--radius-sm) border border-(--border)">
+                    <img
+                      src={attachedGallerySource.previewUrl}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1 pr-8">
+                    <div className="truncate text-(length:--text-body-sm) font-semibold text-(--text)">
+                      {attachedGallerySource.relPath}
+                    </div>
+                    <div className="text-(length:--text-caption) text-(--text-muted)">
+                      Gallery reference attached. Drop or browse to replace.
                     </div>
                   </div>
                 </div>

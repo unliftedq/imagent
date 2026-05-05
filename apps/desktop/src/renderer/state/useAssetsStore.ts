@@ -12,6 +12,14 @@ export interface AssetCreateInput {
   fileUploads: { bytes: Uint8Array; originalName: string; mimeType: string }[];
 }
 
+export interface AssetCreateFromGalleryItemInput {
+  itemId: string;
+  kind: AssetKind;
+  name: string;
+  description?: string | null;
+  promptSnippet?: string | null;
+}
+
 export interface AssetUpdateInput {
   id: string;
   name?: string;
@@ -31,6 +39,7 @@ interface AssetsState {
   refreshArchived: () => Promise<void>;
   setSearch: (search: string | undefined) => void;
   create: (input: AssetCreateInput) => Promise<Asset>;
+  createFromGalleryItem: (input: AssetCreateFromGalleryItemInput) => Promise<Asset>;
   update: (input: AssetUpdateInput) => Promise<Asset>;
   /**
    * Soft-delete (M8): moves the asset to the Trash tab. AssetPicker filters
@@ -120,6 +129,23 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
       })),
     });
     // Insert into the matching kind bucket at the front (most recent).
+    set((s) => ({
+      byKind: {
+        ...s.byKind,
+        [created.kind]: [created, ...s.byKind[created.kind]],
+      },
+    }));
+    return created;
+  },
+
+  createFromGalleryItem: async (input) => {
+    const created = await api["assets.createFromGalleryItem"]({
+      itemId: input.itemId,
+      kind: input.kind,
+      name: input.name,
+      description: input.description ?? null,
+      promptSnippet: input.promptSnippet ?? null,
+    });
     set((s) => ({
       byKind: {
         ...s.byKind,

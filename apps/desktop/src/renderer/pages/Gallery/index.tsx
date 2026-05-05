@@ -5,12 +5,14 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { useEffect, useState } from "react";
+import type { Asset, AssetKind, GalleryItem } from "@imagine/core";
+import { useEffect, useMemo, useState } from "react";
 import { BoardSidebarItem, Button, GalleryItemCard, Icons, Input, Tooltip } from "@imagine/ui";
 import { api } from "../../lib/api.js";
 import { useBoardsStore } from "../../state/useBoardsStore.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
 import { useUIStore } from "../../state/useUIStore.js";
+import { CreateAssetDialog } from "../Assets/CreateAssetDialog.js";
 import { resolveGalleryUrl } from "../Studio";
 import { BoardRow, LightboxPreview } from "./components.js";
 import { BOARD_ALL, BOARD_FAVORITES } from "./constants.js";
@@ -42,6 +44,8 @@ export function GalleryPage() {
   const [creatingBoard, setCreatingBoard] = useState(false);
   const [newBoardName, setNewBoardName] = useState("");
   const [searchInput, setSearchInput] = useState<string>(query.search ?? "");
+  const [assetDialogItem, setAssetDialogItem] = useState<GalleryItem | null>(null);
+  const [assetDialogKind, setAssetDialogKind] = useState<AssetKind>("character");
 
   const navigate = useUIStore((s) => s.navigate);
 
@@ -165,6 +169,42 @@ export function GalleryPage() {
       });
     }
   };
+
+  const openSaveAsAssetDialog = (item: GalleryItem): void => {
+    if (item.kind === "video" && !item.thumbPath) {
+      pushToast({
+        title: "Thumbnail unavailable",
+        description: "This video item needs a thumbnail before it can become an asset.",
+        variant: "warning",
+      });
+      return;
+    }
+    setAssetDialogItem(item);
+  };
+
+  const onAssetCreated = (asset: Asset): void => {
+    setAssetDialogItem(null);
+    pushToast({
+      title: "Asset saved",
+      description: `${asset.name} is available in Assets.`,
+      variant: "success",
+    });
+  };
+
+  const assetDialogSource = useMemo(() => {
+    if (!assetDialogItem) return null;
+    const relPath =
+      assetDialogItem.kind === "video"
+        ? (assetDialogItem.thumbPath ?? assetDialogItem.relPath)
+        : assetDialogItem.relPath;
+    return {
+      itemId: assetDialogItem.id,
+      itemKind: assetDialogItem.kind,
+      prompt: assetDialogItem.prompt,
+      previewUrl: resolveGalleryUrl(relPath),
+      relPath,
+    };
+  }, [assetDialogItem]);
 
   return (
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
@@ -327,6 +367,7 @@ export function GalleryPage() {
                     }}
                     onOpen={() => setPreviewId(it.id)}
                     onRemix={() => void handleRemix(it.id)}
+                    onSaveAsAsset={() => openSaveAsAssetDialog(it)}
                     onToggleFavorite={() => void toggleFav(it.id)}
                     onAddToBoard={(boardId) => void addItem(boardId, it.id)}
                     onOpenFileLocation={() => {
@@ -356,8 +397,21 @@ export function GalleryPage() {
               setPreviewId(null);
               void handleRemix(id);
             }}
+            onSaveAsAsset={(item) => {
+              setPreviewId(null);
+              openSaveAsAssetDialog(item);
+            }}
           />
         ) : null}
+
+        <CreateAssetDialog
+          open={Boolean(assetDialogItem)}
+          kind={assetDialogKind}
+          onKindChange={setAssetDialogKind}
+          onClose={() => setAssetDialogItem(null)}
+          onCreated={onAssetCreated}
+          gallerySource={assetDialogSource}
+        />
       </div>
     </DndContext>
   );

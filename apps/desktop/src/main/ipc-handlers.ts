@@ -100,6 +100,130 @@ export function setupIpc(deps: IpcDeps): IpcServer {
     return `id_${Math.random().toString(36).slice(2)}_${Date.now().toString(36)}`;
   };
 
+  const createAssetWithReferenceUploads = async ({
+    kind,
+    name,
+    description,
+    promptSnippet,
+    uploads,
+  }: {
+    kind: AssetKind;
+    name: string;
+    description?: string | null;
+    promptSnippet?: string | null;
+    uploads: { bytes: Uint8Array; originalName: string; mimeType: string }[];
+  }): Promise<Asset> => {
+    if (uploads.length > 1) {
+      throw new IpcHandlerError("validation_failed", "assets accept only one reference upload");
+    }
+    if (kind === "style") {
+      if (uploads.length === 0 && !(promptSnippet && promptSnippet.trim().length > 0)) {
+        throw new IpcHandlerError(
+          "validation_failed",
+          "style assets require one reference upload OR a prompt snippet",
+        );
+      }
+    } else if (uploads.length === 0) {
+      throw new IpcHandlerError("validation_failed", `${kind} assets require one reference upload`);
+    }
+
+    const assetId = randomUUID();
+    const assetDir = paths.assetsDir(assetId);
+    await fs.mkdir(assetDir, { recursive: true });
+
+    const now = Date.now();
+    const fileRows: AssetFile[] = [];
+
+    for (const [i, u] of uploads.entries()) {
+      const buf = Buffer.from(u.bytes);
+      const ext = pickExt(u.originalName, u.mimeType);
+      const padded = String(i + 1).padStart(3, "0");
+      const destRel = path.join("assets", assetId, `ref-${padded}${ext}`).replace(/\\/g, "/");
+      const destAbs = path.join(paths.dataDir, destRel);
+      await fs.writeFile(destAbs, buf);
+
+      let width: number | null = null;
+      let height: number | null = null;
+      let mimeType = u.mimeType || guessMimeFromExt(ext);
+      try {
+        const meta = await sharp(buf).metadata();
+        width = meta.width ?? null;
+        height = meta.height ?? null;
+        if (meta.format) mimeType = `image/${meta.format}`;
+      } catch {
+        // Non-image upload — leave dimensions null and trust the supplied mime.
+      }
+
+      const sha256 = createHash("sha256").update(buf).digest("hex");
+      fileRows.push({
+        id: randomUUID(),
+        assetId,
+        role: "reference",
+        relPath: destRel,
+        mimeType,
+        width,
+        height,
+        bytes: buf.byteLength,
+        sha256,
+        position: i,
+        createdAt: now,
+      });
+    }
+
+    const first = uploads[0];
+    if (first) {
+      const thumbRel = path.join("assets", assetId, "thumb.webp").replace(/\\/g, "/");
+      const thumbAbs = path.join(paths.dataDir, thumbRel);
+      try {
+        const t = await generateImageThumbnailFromBuffer(Buffer.from(first.bytes), thumbAbs, {
+          maxSide: 256,
+        });
+        const thumbBuf = await fs.readFile(thumbAbs);
+        fileRows.push({
+          id: randomUUID(),
+          assetId,
+          role: "thumbnail",
+          relPath: thumbRel,
+          mimeType: "image/webp",
+          width: t.width,
+          height: t.height,
+          bytes: t.bytes,
+          sha256: createHash("sha256").update(thumbBuf).digest("hex"),
+          position: 0,
+          createdAt: now,
+        });
+      } catch (err) {
+        logger.warn("thumbnail generation failed", {
+          assetId,
+          err: String(err),
+        });
+      }
+    }
+
+    const asset: Asset = {
+      id: assetId,
+      kind,
+      name,
+      description: description ?? null,
+      promptSnippet: promptSnippet ?? null,
+      files: fileRows,
+      createdAt: now,
+      updatedAt: now,
+      archivedAt: null,
+    };
+    assetRepo.create(asset);
+    for (const f of fileRows) {
+      assetRepo.addFile(f);
+    }
+
+    try {
+      server.emit("assets.changed", { id: assetId, op: "created" });
+    } catch (err) {
+      logger.warn("assets.changed emit failed", { err: String(err) });
+    }
+    return assetRepo.get(assetId) ?? asset;
+  };
+
   const handlers: Partial<ContractHandlers> = {
     "providers.list": async () => {
       const config = await configStore.loadConfig();
@@ -720,127 +844,53 @@ export function setupIpc(deps: IpcDeps): IpcServer {
     },
 
     "assets.create": async ({ kind, name, description, promptSnippet, fileUploads }) => {
-      // Server-side validation: non-style requires >=1 upload; style requires
-      // >=1 upload OR a prompt snippet.
-      const uploads = fileUploads ?? [];
-      if (uploads.length > 1) {
-        throw new IpcHandlerError(
-          "validation_failed",
-          "assets accept only one reference upload",
-        );
-      }
-      if (kind === "style") {
-        if (uploads.length === 0 && !(promptSnippet && promptSnippet.trim().length > 0)) {
-          throw new IpcHandlerError(
-            "validation_failed",
-            "style assets require one reference upload OR a prompt snippet",
-          );
-        }
-      } else {
-        if (uploads.length === 0) {
-          throw new IpcHandlerError(
-            "validation_failed",
-            `${kind} assets require one reference upload`,
-          );
-        }
-      }
-
-      const assetId = randomUUID();
-      const assetDir = paths.assetsDir(assetId);
-      await fs.mkdir(assetDir, { recursive: true });
-
-      const now = Date.now();
-      const fileRows: AssetFile[] = [];
-
-      for (const [i, u] of uploads.entries()) {
-        const buf = Buffer.from(u.bytes);
-        const ext = pickExt(u.originalName, u.mimeType);
-        const padded = String(i + 1).padStart(3, "0");
-        const destRel = path.join("assets", assetId, `ref-${padded}${ext}`).replace(/\\/g, "/");
-        const destAbs = path.join(paths.dataDir, destRel);
-        await fs.writeFile(destAbs, buf);
-
-        let width: number | null = null;
-        let height: number | null = null;
-        let mimeType = u.mimeType || guessMimeFromExt(ext);
-        try {
-          const meta = await sharp(buf).metadata();
-          width = meta.width ?? null;
-          height = meta.height ?? null;
-          if (meta.format) mimeType = `image/${meta.format}`;
-        } catch {
-          // Non-image upload — leave dimensions null and trust the supplied mime.
-        }
-
-        const sha256 = createHash("sha256").update(buf).digest("hex");
-        fileRows.push({
-          id: randomUUID(),
-          assetId,
-          role: "reference",
-          relPath: destRel,
-          mimeType,
-          width,
-          height,
-          bytes: buf.byteLength,
-          sha256,
-          position: i,
-          createdAt: now,
-        });
-      }
-
-      // Generate a thumbnail from the first upload (best-effort).
-      const first = uploads[0];
-      if (first) {
-        const thumbRel = path.join("assets", assetId, "thumb.webp").replace(/\\/g, "/");
-        const thumbAbs = path.join(paths.dataDir, thumbRel);
-        try {
-          const t = await generateImageThumbnailFromBuffer(Buffer.from(first.bytes), thumbAbs, {
-            maxSide: 256,
-          });
-          const thumbBuf = await fs.readFile(thumbAbs);
-          fileRows.push({
-            id: randomUUID(),
-            assetId,
-            role: "thumbnail",
-            relPath: thumbRel,
-            mimeType: "image/webp",
-            width: t.width,
-            height: t.height,
-            bytes: t.bytes,
-            sha256: createHash("sha256").update(thumbBuf).digest("hex"),
-            position: 0,
-            createdAt: now,
-          });
-        } catch (err) {
-          logger.warn("thumbnail generation failed", {
-            assetId,
-            err: String(err),
-          });
-        }
-      }
-
-      const asset: Asset = {
-        id: assetId,
+      return createAssetWithReferenceUploads({
         kind,
         name,
-        description: description ?? null,
-        promptSnippet: promptSnippet ?? null,
-        files: fileRows,
-        createdAt: now,
-        updatedAt: now,
-        archivedAt: null,
-      };
-      assetRepo.create(asset);
-      for (const f of fileRows) {
-        assetRepo.addFile(f);
+        description,
+        promptSnippet,
+        uploads: fileUploads ?? [],
+      });
+    },
+
+    "assets.createFromGalleryItem": async ({ itemId, kind, name, description, promptSnippet }) => {
+      const item = galleryRepo.get(itemId);
+      if (!item) {
+        throw new IpcHandlerError("not_found", `gallery item '${itemId}' not found`);
+      }
+      const sourceRel = item.kind === "video" ? item.thumbPath : item.relPath;
+      if (!sourceRel) {
+        throw new IpcHandlerError(
+          "validation_failed",
+          "video gallery items need a thumbnail before they can be saved as assets",
+        );
       }
 
+      let bytes: Buffer;
       try {
-        server.emit("assets.changed", { id: assetId, op: "created" });
+        bytes = await fs.readFile(absGalleryPath(sourceRel));
       } catch (err) {
-        logger.warn("assets.changed emit failed", { err: String(err) });
+        const code = (err as NodeJS.ErrnoException)?.code;
+        if (code === "ENOENT") {
+          throw new IpcHandlerError("not_found", `gallery file '${sourceRel}' not found`);
+        }
+        throw err;
       }
-      return assetRepo.get(assetId) ?? asset;
+
+      const ext = path.extname(sourceRel);
+      return createAssetWithReferenceUploads({
+        kind,
+        name,
+        description,
+        promptSnippet,
+        uploads: [
+          {
+            bytes: new Uint8Array(bytes),
+            originalName: path.basename(sourceRel),
+            mimeType: guessMimeFromExt(ext),
+          },
+        ],
+      });
     },
 
     "assets.update": async ({ id, patch }) => {
