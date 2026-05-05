@@ -186,7 +186,7 @@ async function bootstrap(): Promise<RuntimeServices> {
 app.whenReady().then(async () => {
   try {
     if (process.platform === "darwin") {
-      app.dock.setIcon(macAppIconPath);
+      app.dock?.setIcon(macAppIconPath);
     }
     const t0 = Date.now();
     const runtime = await bootstrap();

@@ -69,9 +69,7 @@ async function main() {
   // runtime against a sibling node_modules/).
   const entry = path.join(distDir, "index.js");
   if (!existsSync(entry)) {
-    throw new Error(
-      `expected ${entry} — run 'tsc -b' first (build:binary depends on build).`,
-    );
+    throw new Error(`expected ${entry} — run 'tsc -b' first (build:binary depends on build).`);
   }
   const bundle = path.join(distDir, "imagent.bundle.cjs");
   // Run the esbuild shim from the workspace root so its `import "esbuild"`
@@ -160,9 +158,7 @@ await esbuild.build({
     if (signtool.status === 0) {
       console.log("[sea] signtool: signature removed");
     } else {
-      console.log(
-        "[sea] signtool not found or no signature to remove — continuing",
-      );
+      console.log("[sea] signtool not found or no signature to remove — continuing");
     }
   }
 
