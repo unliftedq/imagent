@@ -70,22 +70,46 @@ function subcommandTool(name: string, command: string, description: string): Mcp
 }
 
 const MCP_TOOLS: McpTool[] = [
-  subcommandTool("imagine_doctor", "doctor", "Run `imagine doctor` health checks."),
-  subcommandTool("imagine_image", "image", "Run `imagine image` to generate images."),
-  subcommandTool("imagine_video", "video", "Run `imagine video` to submit video jobs."),
-  subcommandTool("imagine_config", "config", "Run `imagine config` to inspect or edit settings."),
+  subcommandTool(
+    "imagine_doctor",
+    "doctor",
+    'Check whether imagine is ready to run. Verifies the data directory, database/FTS setup, config files, and configured provider count. Pass args after `imagine doctor`, for example [] or ["--help"].',
+  ),
+  subcommandTool(
+    "imagine_image",
+    "image",
+    'Generate one or more images from a text prompt. Use for text-to-image requests, provider/model overrides, output count, size/aspect, seed, negative prompt, freeform references, and character/object/background/style asset slots. Pass args after `imagine image`, for example ["a cinematic robot portrait", "--provider", "openai", "--count", "2"].',
+  ),
+  subcommandTool(
+    "imagine_video",
+    "video",
+    'Submit or wait for a video generation job from a text prompt. Use for text-to-video requests, provider/model overrides, duration, FPS, resolution/aspect, reference images, asset slots, and `--wait` progress streaming. Pass args after `imagine video`, for example ["a camera orbit around a glass sculpture", "--duration", "5", "--wait"].',
+  ),
+  subcommandTool(
+    "imagine_config",
+    "config",
+    'Inspect or edit local provider secrets and config paths. Use to set/get API keys, endpoints, or base URLs for openai, azure-openai, google, flux-bfl, bytedance, and xai, or to locate config files. Pass args after `imagine config`, for example ["set", "openai.apiKey", "sk-..."] or ["path"].',
+  ),
   subcommandTool(
     "imagine_catalog",
     "catalog",
-    "Run `imagine catalog` to inspect model catalog data.",
+    'Inspect and manage the local model catalog at ~/.imagine/catalog.json. Use to find the catalog path, show available image/video models filtered by provider or kind, or reset the catalog to bundled defaults. Pass args after `imagine catalog`, for example ["show", "--kind", "image"] or ["reset", "--force"].',
   ),
-  subcommandTool("imagine_asset", "asset", "Run `imagine asset` to manage reusable assets."),
+  subcommandTool(
+    "imagine_asset",
+    "asset",
+    'Manage reusable generation assets: characters, objects, backgrounds, and styles. Use to add reference assets, list/search assets, inspect stored paths and metadata, or remove assets. Pass args after `imagine asset`, for example ["add", "character", "--name", "Ari", "--ref", "./ari.png"] or ["list", "--kind", "style"].',
+  ),
   subcommandTool(
     "imagine_gallery",
     "gallery",
-    "Run `imagine gallery` to browse or curate outputs.",
+    'Browse and curate prior generations stored in the local gallery. Use to list/filter outputs, show prompts/files/lineage/attached assets, remix an existing item, delete an item, or toggle favorites. Pass args after `imagine gallery`, for example ["ls", "--favorite"] or ["show", "<itemId>"].',
   ),
-  subcommandTool("imagine_job", "job", "Run `imagine job` to inspect, cancel, or watch jobs."),
+  subcommandTool(
+    "imagine_job",
+    "job",
+    'Inspect and control generation jobs. Use to list jobs, check status/progress, cancel queued or running work, or watch a job until completion. Pass args after `imagine job`, for example ["ls", "--state", "running"] or ["watch", "<jobId>"].',
+  ),
 ];
 
 const MCP_TOOL_BY_NAME = new Map(MCP_TOOLS.map((tool) => [tool.name, tool]));

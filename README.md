@@ -82,7 +82,7 @@ User-facing config splits into three categories by sensitivity and write frequen
 
 Provider model lists come from `~/.imagine/catalog.json`. Azure OpenAI deployment names are modeled there as provider-facing offerings, for example `{ "id": "my-prod-deployment", "modelId": "gpt-image-2" }`, so the deployment can differ from the underlying model while inheriting the right capabilities.
 
-Secrets land in `~/.imagine/secrets.bin` (Electron `safeStorage`-encrypted) or `secrets.json` (CLI, chmod 600). `OPENAI_API_KEY` and the rest can also be set as environment variables to override the file-backed values for one-off CLI runs. A `baseUrl` field is accepted in `secrets.json` for any well-known provider as an advanced override (e.g. point at a proxy); it isn't surfaced in the desktop UI.
+Secrets land in `~/.imagine/secrets.json` (chmod 600) for both desktop and CLI. `OPENAI_API_KEY` and the rest can also be set as environment variables to override the file-backed values for one-off CLI runs. A `baseUrl` field is accepted in `secrets.json` for any well-known provider as an advanced override (e.g. point at a proxy); it isn't surfaced in the desktop UI.
 
 ## CLI usage
 

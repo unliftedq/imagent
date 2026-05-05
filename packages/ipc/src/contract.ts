@@ -252,7 +252,6 @@ export const StoragePathsSchema = z.object({
   configFile: z.string(),
   /** Path to the user-editable JSON model catalog (`~/.imagine/catalog.json`). */
   catalogFile: z.string(),
-  secretsBin: z.string(),
   secretsJson: z.string(),
   dbFile: z.string(),
   galleryDir: z.string(),

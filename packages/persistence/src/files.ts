@@ -12,7 +12,6 @@ export interface PathResolver {
   /** Path to the user-editable JSON model catalog (`~/.imagine/catalog.json`). */
   catalogFile(): string;
   secretsFile(): string;
-  secretsBin(): string;
   dbFile(): string;
   logsDir(): string;
   jobLogsDir(): string;
@@ -31,7 +30,6 @@ export function createPathResolver(dataDir?: string): PathResolver {
     configFile: () => path.join(root, "config.json"),
     catalogFile: () => path.join(root, "catalog.json"),
     secretsFile: () => path.join(root, "secrets.json"),
-    secretsBin: () => path.join(root, "secrets.bin"),
     dbFile: () => path.join(root, "studio.db"),
     logsDir: () => path.join(root, "logs"),
     jobLogsDir: () => path.join(root, "logs", "jobs"),

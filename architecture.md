@@ -309,8 +309,7 @@ CREATE VIRTUAL TABLE assets_fts USING fts5(
 ```
 config.json               # non-secret app config (zod-validated)
 catalog.json              # user-editable model catalog (zod-validated, seeded from bundled default on first run)
-secrets.bin               # safeStorage-encrypted blob (desktop)
-secrets.json              # plaintext fallback for CLI / non-Electron contexts (chmod 600)
+secrets.json              # provider secrets shared by desktop + CLI (chmod 600)
 studio.db {-wal, -shm}    # SQLite + WAL siblings
 logs/main.log
 logs/jobs/{yyyy-mm-dd}.log
@@ -329,7 +328,7 @@ User-facing configuration splits into **three categories** by sensitivity and wr
 
 | Category | Examples | Storage | Writers |
 |---|---|---|---|
-| **Secrets** | API keys; ByteDance `endpoint+apiKey`; Azure `endpoint+apiKey` | `secrets.bin` (safeStorage, desktop) / `secrets.json` (CLI, chmod 600) / env vars (CLI, highest priority) | Main process / CLI |
+| **Secrets** | API keys; ByteDance `endpoint+apiKey`; Azure `endpoint+apiKey` | `secrets.json` (desktop + CLI, chmod 600) / env vars (CLI, highest priority) | Main process / CLI |
 | **Preferences** | Default provider, theme, output dir, concurrency, generation defaults | `config.json` (plaintext, hand-edit friendly, zod-validated) | Main + UI |
 | **Workspace state** | Recent boards, prompt drafts, sidebar collapsed, last-used assets, window bounds | SQLite `kv` table | Renderer (frequent writes) |
 
@@ -401,31 +400,28 @@ export interface SecretsStore {
   saveSecrets(patch: DeepPartial<ProviderSecrets>): Promise<void>;
 }
 
-createElectronSecretsStore(safeStorage)  // desktop: safeStorage + secrets.bin
-createFileSecretsStore(path)             // CLI:    secrets.json (chmod 600)
+createFileSecretsStore(path)             // desktop + CLI: secrets.json (chmod 600)
 createEnvSecretsStore(process.env)       // CLI:    OPENAI_API_KEY etc., overrides file
 ```
 
-CLI startup chains `mergeSecrets(envSecrets, fileSecrets)` — env wins, so `OPENAI_API_KEY=sk-other imagine image ...` runs with that key without persisting it. Desktop never reads env (avoids accidentally picking up staging keys from a developer shell).
+CLI startup chains `mergeSecrets(fileSecrets, envSecrets)` — env wins, so `OPENAI_API_KEY=sk-other imagine image ...` runs with that key without persisting it. Desktop never reads env (avoids accidentally picking up staging keys from a developer shell).
 
 ### 7.3 Edit & reload paths
 
 - **UI edits** (Providers / Settings page) → IPC `providers.config.set` / `providers.secrets.set` → main saves → re-instantiates registry → broadcasts `config.changed` → renderer `useConfigStore.refresh()`.
 - **Hand edits** to `config.json` → `fs.watch` detects mtime change → `loadConfig` → broadcasts `config.changed`. Lets `vim ~/.imagine/config.json` workflows just work.
-- **Hand edits to secrets** are not supported in desktop (encrypted blob); CLI users edit `secrets.json` directly or use `imagine config set <vendor>.apiKey ...`.
+- **Hand edits to secrets** are supported through `secrets.json`; users can also use `imagine config set <vendor>.apiKey ...`.
 - **Workspace state** (`kv` table) flows through `workspace.kv.{get,set,delete}` IPC; only the app itself writes here, no fs watcher needed.
 
 ### 7.4 Migrations
 
-`config.json` carries `version: <n>` at the top level. `loadConfig` runs `migrations[v..currentVersion]` in order, persisting the upgraded form. Secrets don't carry a version (structure is stable); if encryption ever changes, an outer envelope `{algo, payload}` is added without breaking older readers.
-
-The first-run desktop migration: if `secrets.json` exists alongside no `secrets.bin`, encrypt via safeStorage, write `secrets.bin`, **delete** the plaintext.
+`config.json` carries `version: <n>` at the top level. `loadConfig` runs `migrations[v..currentVersion]` in order, persisting the upgraded form. Secrets don't carry a version because their JSON structure is stable and shared by desktop and CLI.
 
 ## 8. Electron Architecture
 
 Three Vite configs (matches sibling `agentra`): `vite.main.config.ts`, `vite.preload.config.ts`, `vite.renderer.config.ts`. HMR for renderer, watch+restart for main/preload.
 
-- **Main**: owns DB handle, FS, JobRunner, polling intervals, native dialogs, safeStorage. Imports `@imagine/{persistence,providers,config,ipc}`.
+- **Main**: owns DB handle, FS, JobRunner, polling intervals, and native dialogs. Imports `@imagine/{persistence,providers,config,ipc}`.
 - **Preload**: thin — exposes `window.api` as a typed Proxy mirroring the IPC contract; subscribes to push events.
 - **Renderer**: React 19 + Tailwind v4 + Radix + Phosphor. Never imports Node modules. Talks only via `window.api`.
 

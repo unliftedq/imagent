@@ -336,7 +336,6 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       dataDir: paths.dataDir,
       configFile: paths.configFile(),
       catalogFile: paths.catalogFile(),
-      secretsBin: paths.secretsBin(),
       secretsJson: paths.secretsFile(),
       dbFile: paths.dbFile(),
       galleryDir: path.join(paths.dataDir, "gallery"),

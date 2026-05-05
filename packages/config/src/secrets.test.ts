@@ -2,33 +2,7 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import {
-  createElectronSecretsStore,
-  type SafeStorageLike,
-} from "./secrets.js";
-
-/**
- * Trivial XOR-based "safeStorage" stand-in. Real Electron uses OS keyring;
- * the unit tests just need a round-trip that distinguishes ciphertext from
- * plaintext.
- */
-function makeFakeSafeStorage(opts: { available?: boolean } = {}): SafeStorageLike {
-  const KEY = 0x5a;
-  return {
-    isEncryptionAvailable: () => opts.available ?? true,
-    encryptString: (plain: string) => {
-      const buf = Buffer.from(plain, "utf8");
-      const out = Buffer.alloc(buf.length);
-      for (let i = 0; i < buf.length; i += 1) out[i] = (buf[i] ?? 0) ^ KEY;
-      return out;
-    },
-    decryptString: (enc: Buffer) => {
-      const out = Buffer.alloc(enc.length);
-      for (let i = 0; i < enc.length; i += 1) out[i] = (enc[i] ?? 0) ^ KEY;
-      return out.toString("utf8");
-    },
-  };
-}
+import { createEnvSecretsStore, createFileSecretsStore, mergeSecrets } from "./secrets.js";
 
 let tmpDir: string;
 
@@ -40,95 +14,96 @@ afterEach(async () => {
   await fs.rm(tmpDir, { recursive: true, force: true });
 });
 
-describe("createElectronSecretsStore", () => {
-  it("happy path: save then load round-trips through the encrypted bin", async () => {
-    const binPath = path.join(tmpDir, "secrets.bin");
-    const store = createElectronSecretsStore({
-      safeStorage: makeFakeSafeStorage(),
-      binPath,
-      platform: "win32",
-    });
-
-    await store.saveSecrets({ openai: { apiKey: "sk-real-key" } });
-
-    // bin file exists and is NOT plaintext JSON.
-    const raw = await fs.readFile(binPath);
-    expect(raw.toString("utf8")).not.toContain("sk-real-key");
-
-    const loaded = await store.loadSecrets();
-    expect(loaded.openai?.apiKey).toBe("sk-real-key");
+describe("createFileSecretsStore", () => {
+  it("returns empty secrets when secrets.json does not exist", async () => {
+    const store = createFileSecretsStore(path.join(tmpDir, "secrets.json"));
+    await expect(store.loadSecrets()).resolves.toEqual({});
   });
 
-  it("first-run migration: encrypts secrets.json into secrets.bin and unlinks the plaintext", async () => {
-    const binPath = path.join(tmpDir, "secrets.bin");
-    const jsonPath = path.join(tmpDir, "secrets.json");
-    await fs.writeFile(
-      jsonPath,
-      JSON.stringify({ openai: { apiKey: "sk-from-json" } }),
-      "utf8",
-    );
+  it("saves provider secrets to plaintext json and reloads them", async () => {
+    const filePath = path.join(tmpDir, "secrets.json");
+    const store = createFileSecretsStore(filePath);
 
-    const messages: string[] = [];
-    const store = createElectronSecretsStore({
-      safeStorage: makeFakeSafeStorage(),
-      binPath,
-      jsonPath,
-      logger: { info: (m) => messages.push(m), warn: () => {} },
-      platform: "win32",
+    await store.saveSecrets({
+      "azure-openai": {
+        endpoint: "https://example.openai.azure.com",
+        apiKey: "azure-key",
+      },
     });
 
-    const loaded = await store.loadSecrets();
-    expect(loaded.openai?.apiKey).toBe("sk-from-json");
-
-    // Plaintext should be deleted.
-    await expect(fs.access(jsonPath)).rejects.toThrow();
-    // Bin should exist.
-    await expect(fs.access(binPath)).resolves.toBeUndefined();
-    expect(messages.some((m) => m.includes("migrated"))).toBe(true);
-
-    // A second loadSecrets call should not re-log.
-    messages.length = 0;
-    const second = await store.loadSecrets();
-    expect(second.openai?.apiKey).toBe("sk-from-json");
-    expect(messages).toEqual([]);
+    const raw = await fs.readFile(filePath, "utf8");
+    expect(JSON.parse(raw)).toEqual({
+      "azure-openai": {
+        endpoint: "https://example.openai.azure.com",
+        apiKey: "azure-key",
+      },
+    });
+    await expect(store.loadSecrets()).resolves.toEqual({
+      "azure-openai": {
+        endpoint: "https://example.openai.azure.com",
+        apiKey: "azure-key",
+      },
+    });
   });
 
-  it("falls back to plaintext file store on Linux when safeStorage is unavailable", async () => {
-    const binPath = path.join(tmpDir, "secrets.bin");
-    const jsonPath = path.join(tmpDir, "secrets.json");
+  it("deep-merges partial provider patches", async () => {
+    const store = createFileSecretsStore(path.join(tmpDir, "secrets.json"));
 
-    const store = createElectronSecretsStore({
-      safeStorage: makeFakeSafeStorage({ available: false }),
-      binPath,
-      jsonPath,
-      logger: { info: () => {}, warn: () => {} },
-      platform: "linux",
+    await store.saveSecrets({
+      "azure-openai": {
+        endpoint: "https://old.example.com",
+        apiKey: "old-key",
+      },
+    });
+    await store.saveSecrets({
+      "azure-openai": {
+        endpoint: "https://new.example.com",
+      },
     });
 
-    await store.saveSecrets({ openai: { apiKey: "sk-plain" } });
-    // The fallback uses the json path, so the plain file should be written.
-    const raw = await fs.readFile(jsonPath, "utf8");
-    expect(raw).toContain("sk-plain");
-  });
-
-  it("throws on Windows when safeStorage is unavailable (refuses plaintext)", () => {
-    expect(() =>
-      createElectronSecretsStore({
-        safeStorage: makeFakeSafeStorage({ available: false }),
-        binPath: path.join(tmpDir, "secrets.bin"),
-        platform: "win32",
-      }),
-    ).toThrow(/safeStorage encryption is unavailable/);
-  });
-
-  it("returns empty when no bin and no json exist", async () => {
-    const binPath = path.join(tmpDir, "secrets.bin");
-    const store = createElectronSecretsStore({
-      safeStorage: makeFakeSafeStorage(),
-      binPath,
-      platform: "win32",
+    await expect(store.loadSecrets()).resolves.toEqual({
+      "azure-openai": {
+        endpoint: "https://new.example.com",
+        apiKey: "old-key",
+      },
     });
-    const loaded = await store.loadSecrets();
-    expect(loaded).toEqual({});
+  });
+});
+
+describe("createEnvSecretsStore", () => {
+  it("loads complete provider records from env vars", async () => {
+    const store = createEnvSecretsStore({
+      AZURE_OPENAI_ENDPOINT: "https://example.openai.azure.com",
+      AZURE_OPENAI_API_KEY: "azure-key",
+    });
+
+    await expect(store.loadSecrets()).resolves.toEqual({
+      "azure-openai": {
+        endpoint: "https://example.openai.azure.com",
+        apiKey: "azure-key",
+      },
+    });
+  });
+
+  it("drops incomplete endpoint/key provider records", async () => {
+    const store = createEnvSecretsStore({
+      AZURE_OPENAI_ENDPOINT: "https://example.openai.azure.com",
+    });
+
+    await expect(store.loadSecrets()).resolves.toEqual({});
+  });
+});
+
+describe("mergeSecrets", () => {
+  it("lets later layers override earlier fields", () => {
+    expect(
+      mergeSecrets(
+        { openai: { apiKey: "file-key" } },
+        { openai: { apiKey: "env-key" }, google: { apiKey: "google-key" } },
+      ),
+    ).toEqual({
+      openai: { apiKey: "env-key" },
+      google: { apiKey: "google-key" },
+    });
   });
 });

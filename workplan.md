@@ -76,7 +76,7 @@ All CLI commands listed in `architecture.md` §9 are functional. You can produce
 
 ### M4 — Electron Shell
 
-Three Vite configs, IPC contract wired end-to-end, **Settings** and **Providers** pages functional. Connection-test buttons turn green for each configured vendor. Config persists via Electron `safeStorage` (`secrets.bin`).
+Three Vite configs, IPC contract wired end-to-end, **Settings** and **Providers** pages functional. Connection-test buttons turn green for each configured vendor. Config persists through shared `~/.imagine/secrets.json`.
 
 **Deliverables**
 - `apps/desktop/{vite.main.config.ts, vite.preload.config.ts, vite.renderer.config.ts, electron-builder.yml, index.html}`.
@@ -84,12 +84,12 @@ Three Vite configs, IPC contract wired end-to-end, **Settings** and **Providers*
 - `packages/ipc` complete: `contract.ts`, `server.ts` (registers handlers on `ipcMain`), `client.ts` (renderer Proxy), `events.ts`.
 - `packages/ui` with Radix-wrapped primitives + Tailwind v4 `@theme`.
 - Renderer scaffold: `main.tsx`, `routes.tsx`, layout shell, **Providers** + **Settings** pages.
-- First-run migration: if `~/.imagine/secrets.json` exists, encrypt to `secrets.bin` and delete plaintext.
+- Desktop and CLI read the same `~/.imagine/secrets.json` secrets file.
 
 **Acceptance**
 - `bun run --filter @imagine/desktop dev` opens an Electron window in <3s.
 - Providers page shows all six vendors; entering keys + clicking *Test* turns each indicator green when valid.
-- Closing and reopening the app, the keys persist (decrypted via `safeStorage`).
+- Closing and reopening the app, the keys persist through `secrets.json`.
 
 ### M5 — Studio (image) + Gallery + Boards + Remix
 

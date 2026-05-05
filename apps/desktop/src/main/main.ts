@@ -1,10 +1,7 @@
-import { app, BrowserWindow, ipcMain, net, protocol, safeStorage } from "electron";
+import { app, BrowserWindow, ipcMain, net, protocol } from "electron";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import {
-  createElectronSecretsStore,
-  createFileConfigStore,
-} from "@imagine/config";
+import { createFileConfigStore, createFileSecretsStore } from "@imagine/config";
 import { ensureDataDir, openDatabase } from "@imagine/persistence";
 import type { Logger } from "@imagine/core";
 import { createDesktopPathResolver } from "./app-paths.js";
@@ -69,7 +66,9 @@ function inflateError(err: unknown): unknown {
 }
 
 /** Replace any `err`/`cause` field in the meta object with an inflated version. */
-function inflateMeta(meta: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+function inflateMeta(
+  meta: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined {
   if (!meta) return meta;
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(meta)) {
@@ -124,7 +123,7 @@ async function createWindow() {
 /**
  * Wire `imagine://local/<relPath>` to a path inside the data dir. The
  * normalized absolute path is whitelisted against the data dir prefix so a
- * renderer-side `..` in the rel path can't escape and read e.g. `secrets.bin`.
+ * renderer-side `..` in the rel path can't escape and read e.g. `secrets.json`.
  */
 function registerImagineProtocol(dataDir: string): void {
   const dataDirAbs = path.normalize(dataDir);
@@ -151,12 +150,7 @@ async function bootstrap(): Promise<RuntimeServices> {
 
   const db = openDatabase(paths.dbFile());
   const configStore = createFileConfigStore(paths.configFile());
-  const secretsStore = createElectronSecretsStore({
-    safeStorage,
-    binPath: paths.secretsBin(),
-    jsonPath: paths.secretsFile(),
-    logger: { info: (m) => logger.info(m), warn: (m) => logger.warn(m) },
-  });
+  const secretsStore = createFileSecretsStore(paths.secretsFile());
 
   const runtime = await bootstrapRuntime({ db, configStore, secretsStore, paths, logger });
   const ipcServer = setupIpc({
@@ -171,8 +165,8 @@ async function bootstrap(): Promise<RuntimeServices> {
   });
 
   // Forward JobRunner events to all renderer windows.
-  const forward = (channel: "job.progress" | "job.completed" | "job.failed") =>
-    (payload: unknown) => {
+  const forward =
+    (channel: "job.progress" | "job.completed" | "job.failed") => (payload: unknown) => {
       for (const win of BrowserWindow.getAllWindows()) {
         win.webContents.send(channel, payload);
       }
