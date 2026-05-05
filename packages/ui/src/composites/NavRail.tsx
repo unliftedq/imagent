@@ -69,6 +69,11 @@ export function NavRail({
         className,
       )}
     >
+      <div className="px-3 py-4">
+        <div className="text-[15px] font-semibold text-(--text)">Imagine</div>
+        <div className="mt-1 text-[11px] text-(--text-muted)">{version}</div>
+      </div>
+
       {/* Top nav rows (Studio / Gallery / Assets / Providers) */}
       <ul className="flex flex-col gap-1 p-3">
         {topNav.map((r) => (
