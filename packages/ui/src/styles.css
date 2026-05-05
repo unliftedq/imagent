@@ -7,7 +7,7 @@
 @source "./**/*.{ts,tsx}";
 
 /* -------------------------------------------------------------------------
- * Imagent "Quiet-Density" tokens — design spec §3.
+ * Imagent "Quiet-Density" tokens.
  *
  * Cool-tinted neutral grays + a single blue-violet accent (~265°). Light is
  * the canonical theme; dark adapts the same palette by stepping the
@@ -21,7 +21,7 @@
  * ----------------------------------------------------------------------- */
 
 @theme {
-  /* radius — design spec §6.1, tops out at 12px */
+  /* radius — tops out at 12px */
   --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -45,7 +45,7 @@
   --z-dialog: 100;
   --z-toast: 120;
 
-  /* shadows — overlays only (design spec §6.3) */
+  /* shadows — overlays only */
   --shadow-popover:
     0 1px 2px oklch(0 0 0 / 0.04),
     0 4px 12px oklch(0 0 0 / 0.06);
@@ -53,7 +53,7 @@
     0 2px 6px oklch(0 0 0 / 0.06),
     0 12px 32px oklch(0 0 0 / 0.10);
 
-  /* spacing — design spec §5.1 (4px base scale) */
+  /* spacing — 4px base scale */
   --spacing-xxs: 2px;
   --spacing-xs: 4px;
   --spacing-sm: 8px;
@@ -63,14 +63,14 @@
   --spacing-xxl: 24px;
   --spacing-section: 64px;
 
-  /* layout widths — design spec §5.2 (load-bearing) */
+  /* layout widths — load-bearing */
   --rail-nav: 220px;
   --rail-params: 280px;
   --rail-gallery: 240px;
   --rail-boards: 240px;
   --drawer-width: 400px;
 
-  /* typography scale — design spec §4.2 (six steps, 13px body, no display-XL) */
+  /* typography scale — six steps, 13px body, no display-XL */
   --text-caption: 11px;
   --text-caption--line-height: 16px;
   --text-caption--font-weight: 500;
@@ -150,7 +150,7 @@
   --text-caption-uppercase--letter-spacing: 0.04em;
   --text-caption-uppercase--font-weight: 600;
 
-  /* motion — design spec §7.1 */
+  /* motion */
   --duration-fast: 120ms;
   --duration-base: 180ms;
   --duration-slow: 240ms;
@@ -164,7 +164,7 @@
 }
 
 /* -------------------------------------------------------------------------
- * Light theme tokens — design spec §3.1 / §3.3 / §3.4 / §3.5
+ * Light theme tokens
  * ----------------------------------------------------------------------- */
 [data-theme="light"],
 :root:not([data-theme="dark"]) {
@@ -191,7 +191,7 @@
   --accent-soft: oklch(0.95 0.025 265);
   --focus-ring: oklch(0.55 0.18 265 / 0.5);
 
-  /* semantic — calm, not neon (design spec §3.5) */
+  /* semantic — calm, not neon */
   --success: oklch(0.62 0.14 150);
   --success-soft: oklch(0.94 0.04 150);
   --warning: oklch(0.74 0.14 75);
@@ -201,7 +201,7 @@
 }
 
 /* -------------------------------------------------------------------------
- * Dark theme tokens — design spec §3.2 (cool dark grays, brighter accent)
+ * Dark theme tokens — cool dark grays, brighter accent
  * ----------------------------------------------------------------------- */
 [data-theme="dark"] {
   --bg: oklch(0.16 0.005 260);
@@ -271,7 +271,7 @@
   html {
     color-scheme: light dark;
   }
-  /* Body @ 13px (design spec §4.4). Tabular figures globally. */
+  /* Body @ 13px. Tabular figures globally. */
   body {
     background-color: var(--bg);
     color: var(--text);
@@ -292,7 +292,7 @@
   .mono {
     font-family: var(--font-mono);
   }
-  /* Global focus ring — design spec §14.1 */
+  /* Global focus ring */
   *:focus-visible {
     outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
@@ -322,7 +322,7 @@
     background-color: var(--accent-soft);
     color: var(--text);
   }
-  /* Reduced motion — design spec §7.2 */
+  /* Reduced motion */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

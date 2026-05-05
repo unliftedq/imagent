@@ -60,7 +60,7 @@ export interface PromptComposerProps {
 }
 
 /**
- * PromptComposer — design spec §10.2 (rail-fitted).
+ * PromptComposer rail-fitted variant.
  *
  * Lives inside the 280px params rail; vertically stacked, no internal
  * max-width. Sections are separated by hairline dividers and labelled with
@@ -91,7 +91,7 @@ export function PromptComposer({
   const promptRef = useRef<HTMLTextAreaElement>(null);
   const negRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-grow up to ~10 lines (design spec §10.2: default 5, max 10).
+  // Auto-grow up to ~10 lines (default 5, max 10).
   useEffect(() => {
     autosize(promptRef.current, 5, 10);
   }, [prompt]);

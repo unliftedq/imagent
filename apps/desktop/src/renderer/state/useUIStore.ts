@@ -3,7 +3,7 @@ import type { ThemePref } from "@imagent/ui";
 import { create } from "zustand";
 
 /**
- * Five top-level routes (design spec §10.1 / §11). The pre-Quiet-Density
+ * Five top-level routes. The pre-Quiet-Density
  * `video` route was merged into Studio's `studioMode` tab; old persisted
  * values are migrated transparently in the store initializer below.
  */

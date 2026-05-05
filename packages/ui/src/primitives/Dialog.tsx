@@ -7,7 +7,7 @@ import { cn } from "../lib/cn.js";
  * Radix Dialog primitives wrapped with Clay tokens. Two flavours:
  *   - `<Dialog.Content>` — centered modal; default for create / confirm flows.
  *   - `<Dialog.Sheet>` — right-side sheet; used for asset detail drawer in
- *     the Assets page (design spec §11).
+ *     the Assets page.
  */
 export const DialogRoot = DialogPrimitive.Root;
 export const DialogTrigger = DialogPrimitive.Trigger;

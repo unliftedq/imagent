@@ -4,7 +4,7 @@ import { createElement } from "react";
 import { NavRail, NAV_RAIL_ROWS, type NavRoute } from "./NavRail.js";
 
 /**
- * Smoke tests for the NavRail composite (design spec §10.1). We're intentionally
+ * Smoke tests for the NavRail composite. We're intentionally
  * lightweight here — full interaction tests would require jsdom + RTL which
  * aren't part of the workspace today. These cover:
  *   1. The five rows appear in the canonical order.

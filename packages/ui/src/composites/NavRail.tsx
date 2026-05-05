@@ -40,7 +40,7 @@ export interface NavRailProps {
 }
 
 /**
- * NavRail — design spec §10.1. Persistent 220px left rail. Wordmark + version
+ * NavRail. Persistent 220px left rail. Wordmark + version
  * at the top, four primary nav rows flush below, and Settings pinned to the
  * bottom via `mt-auto`. No top app bar exists; this rail is the only
  * persistent structural chrome.
