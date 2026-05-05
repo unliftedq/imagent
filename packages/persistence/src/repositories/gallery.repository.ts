@@ -55,10 +55,14 @@ function ftsPhrase(raw: string): string {
   const column = columnMatch?.[1];
   const columnQuery = columnMatch?.[2];
   if (column === "prompt" || column === "negative_prompt") {
-    const phrase = ftsPhrase(columnQuery?.trim() ?? "");
+    const phrase = ftsTokens(columnQuery?.trim() ?? "");
     return `${column}:${phrase}`;
   }
 
+  return ftsTokens(raw);
+}
+
+function ftsTokens(raw: string): string {
   const tokens = raw
     .split(/\s+/)
     .map((t) => t.trim())
