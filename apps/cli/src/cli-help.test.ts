@@ -87,7 +87,7 @@ describe("CLI MCP server", () => {
           jsonrpc: "2.0",
           id: 3,
           method: "tools/call",
-          params: { name: "imagine_cli", arguments: { args: ["--version"] } },
+          params: { name: "imagine_doctor", arguments: { args: ["--help"] } },
         })}\n`,
       );
 
@@ -98,7 +98,17 @@ describe("CLI MCP server", () => {
         serverInfo: { name: "imagine" },
       });
       expect(responses.find((r) => r.id === 2)?.result).toMatchObject({
-        tools: [{ name: "imagine_cli" }],
+        tools: expect.arrayContaining([
+          expect.objectContaining({ name: "imagine_doctor" }),
+          expect.objectContaining({ name: "imagine_image" }),
+          expect.objectContaining({ name: "imagine_video" }),
+          expect.objectContaining({ name: "imagine_config" }),
+          expect.objectContaining({ name: "imagine_catalog" }),
+          expect.objectContaining({ name: "imagine_asset" }),
+          expect.objectContaining({ name: "imagine_gallery" }),
+          expect.objectContaining({ name: "imagine_job" }),
+          expect.objectContaining({ name: "imagine_cli" }),
+        ]),
       });
 
       const callResult = responses.find((r) => r.id === 3)?.result as {
@@ -108,7 +118,7 @@ describe("CLI MCP server", () => {
       expect(text).toBeTypeOf("string");
       const payload = JSON.parse(text as string) as { stdout: string; status: number };
       expect(payload.status).toBe(0);
-      expect(payload.stdout.trim()).toBe("0.0.1");
+      expect(payload.stdout).toContain("Usage: imagine doctor");
     } finally {
       child.stdin.end();
       child.kill();

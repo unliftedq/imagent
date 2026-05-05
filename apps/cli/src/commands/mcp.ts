@@ -16,6 +16,18 @@ interface ToolCallArgs {
   timeoutMs?: unknown;
 }
 
+interface McpTool {
+  name: string;
+  description: string;
+  commandPrefix?: string[];
+  inputSchema: {
+    type: "object";
+    properties: Record<string, unknown>;
+    required?: string[];
+    additionalProperties: false;
+  };
+}
+
 const SERVER_INFO = {
   name: "imagine",
   version: "0.0.1",
@@ -27,30 +39,76 @@ const DEFAULT_PROTOCOL_VERSION =
 const DEFAULT_TIMEOUT_MS = 120_000;
 const MAX_TIMEOUT_MS = 600_000;
 
-const IMAGINE_CLI_TOOL = {
-  name: "imagine_cli",
-  description:
-    "Run an imagine CLI command and return its stdout, stderr, exit status, and timeout state. Pass only the arguments after `imagine`; the `mcp` subcommand is blocked to avoid recursion.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      args: {
-        type: "array",
-        items: { type: "string" },
-        description:
-          'Arguments to pass after `imagine`, for example ["image", "a cat", "--provider", "openai"].',
-      },
-      timeoutMs: {
-        type: "number",
-        minimum: 1,
-        maximum: MAX_TIMEOUT_MS,
-        description: "Optional command timeout in milliseconds. Defaults to 120000.",
-      },
-    },
-    required: ["args"],
-    additionalProperties: false,
-  },
+const SUBCOMMAND_ARGS_SCHEMA = {
+  type: "array",
+  items: { type: "string" },
+  description: "Arguments to pass after the mapped imagine subcommand.",
 };
+
+const TIMEOUT_SCHEMA = {
+  type: "number",
+  minimum: 1,
+  maximum: MAX_TIMEOUT_MS,
+  description: "Optional command timeout in milliseconds. Defaults to 120000.",
+};
+
+function subcommandTool(name: string, command: string, description: string): McpTool {
+  return {
+    name,
+    description,
+    commandPrefix: [command],
+    inputSchema: {
+      type: "object",
+      properties: {
+        args: SUBCOMMAND_ARGS_SCHEMA,
+        timeoutMs: TIMEOUT_SCHEMA,
+      },
+      additionalProperties: false,
+    },
+  };
+}
+
+const MCP_TOOLS: McpTool[] = [
+  subcommandTool("imagine_doctor", "doctor", "Run `imagine doctor` health checks."),
+  subcommandTool("imagine_image", "image", "Run `imagine image` to generate images."),
+  subcommandTool("imagine_video", "video", "Run `imagine video` to submit video jobs."),
+  subcommandTool("imagine_config", "config", "Run `imagine config` to inspect or edit settings."),
+  subcommandTool(
+    "imagine_catalog",
+    "catalog",
+    "Run `imagine catalog` to inspect model catalog data.",
+  ),
+  subcommandTool("imagine_asset", "asset", "Run `imagine asset` to manage reusable assets."),
+  subcommandTool(
+    "imagine_gallery",
+    "gallery",
+    "Run `imagine gallery` to browse or curate outputs.",
+  ),
+  subcommandTool("imagine_job", "job", "Run `imagine job` to inspect, cancel, or watch jobs."),
+  {
+    name: "imagine_cli",
+    description:
+      "Run an imagine CLI command not covered by a dedicated tool. Pass only the arguments after `imagine`; the `mcp` subcommand is blocked to avoid recursion.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        args: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            'Arguments to pass after `imagine`, for example ["image", "a cat", "--provider", "openai"].',
+        },
+        timeoutMs: TIMEOUT_SCHEMA,
+      },
+      required: ["args"],
+      additionalProperties: false,
+    },
+  },
+];
+
+const MCP_TOOL_BY_NAME = new Map(MCP_TOOLS.map((tool) => [tool.name, tool]));
+
+const PUBLIC_MCP_TOOLS = MCP_TOOLS.map(({ commandPrefix: _commandPrefix, ...tool }) => tool);
 
 export function registerMcpCommand(program: Command): void {
   program
@@ -124,7 +182,7 @@ async function handleLine(line: string): Promise<void> {
         writeResult(request.id, {});
         return;
       case "tools/list":
-        writeResult(request.id, { tools: [IMAGINE_CLI_TOOL] });
+        writeResult(request.id, { tools: PUBLIC_MCP_TOOLS });
         return;
       case "tools/call":
         writeResult(request.id, await callTool(request.params));
@@ -157,12 +215,19 @@ function resolveProtocolVersion(params: unknown): string {
 }
 
 async function callTool(params: unknown): Promise<unknown> {
-  if (!isRecord(params) || params.name !== IMAGINE_CLI_TOOL.name) {
-    throw new Error(`Unknown tool: ${isRecord(params) ? String(params.name) : "(missing)"}`);
+  const paramsRecord = isRecord(params) ? params : undefined;
+  const tool =
+    paramsRecord && typeof paramsRecord.name === "string"
+      ? MCP_TOOL_BY_NAME.get(paramsRecord.name)
+      : undefined;
+  if (!paramsRecord || !tool) {
+    throw new Error(`Unknown tool: ${paramsRecord ? String(paramsRecord.name) : "(missing)"}`);
   }
 
-  const toolArguments = isRecord(params.arguments) ? (params.arguments as ToolCallArgs) : {};
-  const result = await runImagineCli(toolArguments);
+  const toolArguments = isRecord(paramsRecord.arguments)
+    ? (paramsRecord.arguments as ToolCallArgs)
+    : {};
+  const result = await runImagineCli(toolArguments, tool.commandPrefix ?? []);
   const isError = result.status !== 0 || result.timedOut;
 
   return {
@@ -176,17 +241,21 @@ async function callTool(params: unknown): Promise<unknown> {
   };
 }
 
-async function runImagineCli(input: ToolCallArgs): Promise<{
+async function runImagineCli(
+  input: ToolCallArgs,
+  prefix: string[],
+): Promise<{
   stdout: string;
   stderr: string;
   status: number | null;
   signal: NodeJS.Signals | null;
   timedOut: boolean;
 }> {
-  if (!Array.isArray(input.args) || !input.args.every((arg) => typeof arg === "string")) {
+  const rawArgs = input.args ?? (prefix.length > 0 ? [] : undefined);
+  if (!Array.isArray(rawArgs) || !rawArgs.every((arg) => typeof arg === "string")) {
     throw new Error("args must be an array of strings");
   }
-  const args = input.args;
+  const args = [...prefix, ...rawArgs];
   if (args[0] === "mcp") {
     throw new Error("the mcp subcommand cannot be called from the MCP server");
   }
