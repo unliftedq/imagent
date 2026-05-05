@@ -1,8 +1,8 @@
 # @imagent/studio
 
-`@imagent/studio` 是 imagent 的 Electron 桌面应用，面向需要可视化创作、资产管理与结果整理的个人工作流。桌面端与 CLI 共享 `~/.imagent/` 工作区。
+`@imagent/studio` is the Electron desktop application for imagent. It is intended for individual workflows that benefit from visual creation, asset management, and result curation. The desktop application shares the same `~/.imagent/` workspace as the CLI.
 
-## 快速开始
+## Quick start
 
 ```bash
 bun install
@@ -10,43 +10,43 @@ bun run --filter @imagent/studio rebuild
 bun run --filter @imagent/studio dev
 ```
 
-首次启动桌面应用前需要执行 `rebuild`，以便将 `better-sqlite3` 与 `sharp` 重建到 Electron ABI。
+Run `rebuild` before the first launch so `better-sqlite3` and `sharp` are rebuilt for the Electron ABI.
 
-如果之后需要回到 CLI 或持久化测试，可将 `better-sqlite3` 重建回当前 Node ABI：
+If you later switch back to the CLI or persistence tests, rebuild `better-sqlite3` for the host Node ABI:
 
 ```bash
 ( cd node_modules/.bun/better-sqlite3@*/node_modules/better-sqlite3 && npm rebuild better-sqlite3 )
 ```
 
-## 页面说明
+## Pages
 
-- **Studio**：图像与视频创作入口，支持 prompt、供应商/模型选择、参数设置、参考图与资产插槽。
-- **Gallery**：查看生成结果，支持搜索、收藏、Boards 整理、lineage 查看与 remix。
-- **Assets**：管理 Characters、Objects、Backgrounds、Styles，并支持归档与恢复。
-- **Models**：查看和管理模型目录。
-- **Providers**：配置 OpenAI、Azure OpenAI、Google、Flux/BFL、ByteDance、xAI 等供应商密钥与端点。
-- **Settings**：设置主题、默认供应商、输出目录、并发数与 prompt history 等偏好。
+- **Studio**: the main image and video creation workspace, including prompts, provider/model selection, generation parameters, reference images, and asset slots.
+- **Gallery**: review generated results with search, favorites, Boards organization, lineage inspection, and remix workflows.
+- **Assets**: manage Characters, Objects, Backgrounds, and Styles, including archive and restore flows.
+- **Models**: inspect and manage the model catalog.
+- **Providers**: configure keys and endpoints for OpenAI, Azure OpenAI, Google, Flux/BFL, ByteDance, xAI, and other supported providers.
+- **Settings**: control theme, default provider, output directory, concurrency, prompt history, and related preferences.
 
-## 基本流程
+## Typical workflow
 
-1. 在 **Providers** 中配置至少一个供应商。
-2. 在 **Assets** 中登记常用角色、物体、背景或风格。
-3. 在 **Studio** 中选择生成模式、模型、参数与资产插槽后发起生成。
-4. 在 **Gallery** 中整理、收藏、搜索或 remix 结果。
-5. 在 **Settings** 中调整默认输出目录、并发数与界面偏好。
+1. Configure at least one provider in **Providers**.
+2. Register reusable characters, objects, backgrounds, or styles in **Assets**.
+3. Choose the generation mode, model, parameters, and asset slots in **Studio**, then start a run.
+4. Organize, favorite, search, or remix results in **Gallery**.
+5. Adjust defaults such as output directory, concurrency, and UI preferences in **Settings**.
 
-## 数据位置
+## Data location
 
-桌面应用使用 `~/.imagent/` 作为默认工作区：
+The desktop application uses `~/.imagent/` as its default workspace:
 
-- `studio.db`：本地 SQLite 数据库。
-- `config.json`：偏好与非敏感配置。
-- `secrets.json`：供应商密钥与端点。
-- `catalog.json`：模型目录。
-- `assets/`：素材文件。
-- `gallery/`：生成结果。
+- `studio.db`: local SQLite database.
+- `config.json`: preferences and non-sensitive configuration.
+- `secrets.json`: provider keys and endpoints.
+- `catalog.json`: model catalog.
+- `assets/`: asset files.
+- `gallery/`: generated outputs.
 
-## 构建与打包
+## Build and package
 
 ```bash
 bun run --filter @imagent/studio typecheck
@@ -54,4 +54,4 @@ bun run --filter @imagent/studio build
 bun run --filter @imagent/studio package
 ```
 
-`package` 会先执行原生模块重建与前端构建，再生成 Windows NSIS 安装包。当前安装包未签名，首次安装可能触发 SmartScreen 提示。macOS 与 Linux 打包配置存在，但尚未作为主要发布目标验证。
+`package` rebuilds native modules, runs the frontend build, and then creates the Windows NSIS installer. The installer is currently unsigned and may trigger a SmartScreen warning on first install. macOS and Linux packaging remain configured but are not yet validated as primary release targets.

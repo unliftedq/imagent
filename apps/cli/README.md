@@ -1,33 +1,33 @@
 # @imagent/cli
 
-`@imagent/cli` 是 imagent 的命令行入口，适合在终端中执行生成、配置、资产管理、结果查询与自动化任务。CLI 与桌面应用共享 `~/.imagent/` 工作区，因此通过命令行创建或更新的内容会同步出现在桌面应用中。
+`@imagent/cli` is the command-line entry point for imagent. It is intended for generation, configuration, asset management, result inspection, and automation workflows in the terminal. The CLI shares the same `~/.imagent/` workspace as the desktop application, so content created or updated from the command line is available in the desktop app as well.
 
-## 快速开始
+## Quick start
 
 ```bash
 bun install
 bun run --filter @imagent/cli dev doctor
 ```
 
-配置至少一个供应商密钥：
+Configure at least one provider key:
 
 ```bash
 bun run --filter @imagent/cli dev config set openai.apiKey sk-...
 ```
 
-生成图像：
+Generate an image:
 
 ```bash
 bun run --filter @imagent/cli dev image "a cinematic portrait of a red fox"
 ```
 
-生成视频：
+Generate a video:
 
 ```bash
 bun run --filter @imagent/cli dev video "a slow camera move through a neon city" --provider bytedance --wait
 ```
 
-## 常用命令
+## Common commands
 
 ```text
 imagent doctor
@@ -41,28 +41,28 @@ imagent job {ls|status|cancel|watch}
 imagent mcp
 ```
 
-## 配置
+## Configuration
 
-配置文件默认位于 `~/.imagent/`：
+Configuration files live under `~/.imagent/` by default:
 
-- `config.json`：偏好设置与非敏感配置。
-- `secrets.json`：供应商密钥与端点信息，默认使用 `chmod 600` 权限。
-- `catalog.json`：可用供应商、模型与能力目录。
+- `config.json`: preferences and non-sensitive configuration.
+- `secrets.json`: provider keys and endpoint settings, written with `chmod 600` by default.
+- `catalog.json`: available providers, models, and capability catalog.
 
-查看实际路径：
+Show the active paths:
 
 ```bash
 bun run --filter @imagent/cli dev config path
 bun run --filter @imagent/cli dev catalog path
 ```
 
-环境变量可覆盖同名密钥，适合一次性执行任务，例如：
+Environment variables can override matching secrets for one-off runs, for example:
 
 ```bash
 OPENAI_API_KEY=sk-... imagent image "minimal product photo"
 ```
 
-## 图像生成
+## Image generation
 
 ```bash
 imagent image "prompt" \
@@ -75,16 +75,16 @@ imagent image "prompt" \
   --out ./outputs
 ```
 
-常用参数：
+Common options:
 
-- `--provider`、`--model`：指定供应商与模型。
-- `--count`：输出数量。
-- `--size`、`--aspect`、`--seed`、`--negative`：模型相关生成参数。
-- `--ref`：添加参考图，可重复传入。
-- `--character`、`--object`、`--background`、`--style`：附加已登记资产。
-- `--out`：覆盖默认输出目录。
+- `--provider`, `--model`: choose the provider and model.
+- `--count`: set the number of outputs.
+- `--size`, `--aspect`, `--seed`, `--negative`: model-specific generation parameters.
+- `--ref`: attach one or more reference images.
+- `--character`, `--object`, `--background`, `--style`: attach registered assets.
+- `--out`: override the default output directory.
 
-## 视频生成
+## Video generation
 
 ```bash
 imagent video "prompt" \
@@ -96,18 +96,18 @@ imagent video "prompt" \
   --wait
 ```
 
-`--wait` 会阻塞当前命令并输出任务进度；未使用时可通过 `imagent job watch <jobId>` 继续跟踪。
+`--wait` blocks the command and streams job progress. Without it, the job can be followed later with `imagent job watch <jobId>`.
 
-## 资产与结果管理
+## Asset and result management
 
-添加资产：
+Add assets:
 
 ```bash
 imagent asset add character --name "Nova" --description "main character" --ref ./nova.png
 imagent asset add style --name "Soft watercolor" --prompt "soft watercolor, muted palette"
 ```
 
-查询与复用结果：
+Inspect and reuse results:
 
 ```bash
 imagent gallery ls --search "prompt:fox"
@@ -116,7 +116,7 @@ imagent gallery remix <itemId> --prompt-suffix "at sunset"
 imagent gallery favorite <itemId>
 ```
 
-## 构建
+## Build
 
 ```bash
 bun run --filter @imagent/cli build
@@ -124,4 +124,4 @@ bun run --filter @imagent/cli test
 bun run --filter @imagent/cli build:binary
 ```
 
-单文件二进制构建结果位于 `apps/cli/dist/`。由于 `better-sqlite3`、`sharp` 等原生模块无法完全嵌入 Node SEA，分发时仍需随附必要的 `node_modules/` 原生依赖。
+The single-file binary is written to `apps/cli/dist/`. Because native modules such as `better-sqlite3` and `sharp` cannot be fully embedded into a Node SEA bundle, redistribution still requires the necessary native dependencies in `node_modules/`.
