@@ -1,134 +1,49 @@
 # imagent
 
-A localized image and video generation studio that ships as both an Electron desktop app (**Imagent**) and a Node CLI from one greenfield monorepo. Single-user, fully local: SQLite plus filesystem under `~/.imagent/`, no remote backend, no auth. Build reusable assets (characters / objects / backgrounds / styles), generate images and videos against six providers (OpenAI, Azure OpenAI, Google Imagen/Gemini, Flux/BFL, ByteDance for Seedream image + Seedance video, xAI Grok), organise outputs into Boards, and remix prior generations.
+imagent 取自 **imagine agent**，目标是为个人创作者提供一个本地优先的图像与视频生成工作台。
 
-## Status: prototype
+项目同时提供桌面应用与命令行工具，共用同一套核心能力、配置、素材库与本地数据。用户可以集中管理角色、物体、背景、风格等可复用资产，连接多个生成服务，并围绕生成结果进行整理、检索与再创作。
 
-Personal-use prototype, not a shipped product. The schema may change between milestones — expect to wipe `~/.imagent/` between major changes if you upgrade across milestone boundaries. The Windows NSIS installer ships **unsigned** at v1; users get a SmartScreen warning on first install. There is no telemetry, no auto-update, no cloud sync.
+## 核心特性
 
-## Quick start
+- **本地优先**：数据默认存放在 `~/.imagent/`，包含 SQLite 数据库、配置、素材与生成结果；不依赖远程后端。
+- **多端一致**：桌面应用与 CLI 共享工作区，任一端生成或管理的内容都可被另一端继续使用。
+- **多供应商接入**：支持 OpenAI、Azure OpenAI、Google Imagen/Gemini、Flux/BFL、ByteDance Seedream/Seedance、xAI Grok 等图像与视频生成能力。
+- **资产化创作**：将角色、物体、背景与风格沉淀为可复用资产，提升系列化创作的一致性。
+- **结果管理**：通过 Gallery、Boards、收藏、搜索与 lineage 关系管理生成结果，便于回溯与 remix。
 
-```bash
-# 1. Install dependencies (Bun-managed monorepo).
-bun install
+## 适用场景
 
-# 2. Verify the setup with the CLI's doctor command.
-bun run --filter @imagent/cli dev doctor
-# → imagent v0.0.1
-# → DB:        ~/.imagent/studio.db (FTS=ok)
-# → Config:    ~/.imagent/config.json (loaded)
-# → Providers: 0 / 6 configured
+- 个人创作者搭建本地化 AI 视觉创作流程。
+- 在多个生成供应商之间快速切换与比较输出。
+- 管理长期复用的角色、风格与参考图资产。
+- 将命令行自动化与桌面交互结合到同一工作区。
 
-# 3. Configure at least one provider (CLI):
-bun run --filter @imagent/cli dev config set openai.apiKey sk-...
+## 项目组成
 
-# 4. Launch the desktop app. The first launch needs an Electron-ABI rebuild
-#    of the native modules (better-sqlite3 + sharp).
-bun run --filter @imagent/studio rebuild
-bun run --filter @imagent/studio dev
-```
-
-When switching back to the CLI or persistence tests after running the desktop app, rebuild for the host Node ABI:
-
-```bash
-( cd node_modules/.bun/better-sqlite3@*/node_modules/better-sqlite3 && npm rebuild better-sqlite3 )
-```
-
-The dual-rebuild dance is documented in [`architecture.md`](./architecture.md) §11.
-
-## Project layout
-
-```
+```text
 imagent/
-  packages/
-    core/         # domain types, ports (ImageProvider, VideoProvider), JobRunner
-    providers/    # six vendor impls + shared HTTP wrapper + registry factories
-    persistence/  # better-sqlite3, migrations, repositories, file/thumbnail helpers
-    config/       # zod schema, ConfigStore + SecretsStore (Electron / file / env)
-    ipc/          # zod-validated contract, hand-rolled client/server bindings
-    ui/           # Radix-wrapped primitives + Tailwind v4 composites
   apps/
-    desktop/      # @imagent/studio — Imagent Electron app (3 Vite configs)
-    cli/          # @imagent/cli — Commander 12, ships as a Node SEA single-file binary
+    desktop/      # @imagent/studio，Electron 桌面应用
+    cli/          # @imagent/cli，命令行工具
+  packages/
+    core/         # 领域类型、端口与任务运行逻辑
+    providers/    # 供应商适配与模型目录
+    persistence/  # SQLite、迁移、仓储、文件与缩略图处理
+    config/       # 配置与密钥管理
+    ipc/          # 桌面端 IPC 协议
+    ui/           # 共享 UI 组件
 ```
 
-See [`architecture.md`](./architecture.md) for the full architectural map (domain model, schema, IPC, provider catalog, build/dev/packaging).
+## 使用入口
 
-## Configuration
+- 桌面应用：见 [`apps/desktop/README.md`](./apps/desktop/README.md)
+- CLI：见 [`apps/cli/README.md`](./apps/cli/README.md)
+- 架构说明：见 [`architecture.md`](./architecture.md)
 
-User-facing config splits into three categories by sensitivity and write frequency: secrets, preferences, workspace state. Detail in [`architecture.md`](./architecture.md) §7. After the "minimum-auth" reshape, the model catalog is built into the providers package — users only configure authentication. The minimal `~/.imagent/config.json` looks like:
+## 当前状态
 
-```json
-{
-  "version": 1,
-  "app": {
-    "theme": "system",
-    "defaultProvider": "openai",
-    "defaultOutputDir": null,
-    "generationConcurrency": 2,
-    "keepPromptHistory": true,
-    "openAfterGenerate": false
-  },
-  "providers": {
-    "openai":         {},
-    "azure-openai":   {},
-    "google":         {},
-    "flux-bfl":       {},
-    "bytedance":      {},
-    "xai":            {}
-  }
-}
-```
-
-Provider model lists come from `~/.imagent/catalog.json`. Azure OpenAI deployment names are modeled there as provider-facing offerings, for example `{ "id": "my-prod-deployment", "modelId": "gpt-image-2" }`, so the deployment can differ from the underlying model while inheriting the right capabilities.
-
-Secrets land in `~/.imagent/secrets.json` (chmod 600) for both desktop and CLI. `OPENAI_API_KEY` and the rest can also be set as environment variables to override the file-backed values for one-off CLI runs. A `baseUrl` field is accepted in `secrets.json` for any well-known provider as an advanced override (e.g. point at a proxy); it isn't surfaced in the desktop UI.
-
-## CLI usage
-
-The CLI imports the same packages as the desktop main process — anything generated from the shell shows up next time the desktop opens.
-
-```
-imagent doctor                                           # health check
-imagent config {get|set|path}                            # secrets + preferences
-imagent image "<prompt>"    [--provider ...] [--model ...] [--ref ...]
-                            [--character slug] [--object slug] [--background slug] [--style slug]
-                            [--count 4] [--out dir]
-imagent video <prompt>      [--provider bytedance] [--model seedance-1.0-pro]
-                            [--duration 5] [--ref ...] [--character slug] [--wait]
-imagent asset {add|list|rm|show} ...
-imagent gallery {ls|remix|rm|favorite} ...
-imagent job {status|cancel|watch} <jobId>
-```
-
-## Desktop usage
-
-Six pages, accessible from the left sidebar:
-
-- **Studio** — image generation. PromptComposer with provider/model selectors, asset slot pickers (character / object / background / style), parameter rail, *Generate* button, recent results strip.
-- **Video Studio** — Seedance jobs with duration / fps / aspect / first-frame controls. Inline JobProgress streams `job.progress` events from the main process; jobs survive app restart and resume against Seedance's 12h server-side TTL.
-- **Gallery** — masonry grid with Boards sidebar (drag-and-drop), favorites filter, and a lineage drawer showing parent / siblings / children. M8 adds a search bar backed by SQLite FTS5: type `prompt:otter` to match only the prompt column.
-- **Assets** — five tabs (Characters / Objects / Backgrounds / Styles / Trash). Soft-delete archives an asset to Trash without removing files; restore from the Trash tab brings it back. Permanent delete is the second-step destructive action.
-- **Providers** — the six vendors with key + endpoint fields and a Test button per row.
-- **Settings** — theme, default provider, default output directory, generation concurrency, prompt history toggle.
-
-## Building installers
-
-```bash
-# Windows NSIS installer for the desktop app.
-bun run --filter @imagent/studio package
-# → apps/desktop/release/Imagent Setup <version>.exe
-
-# Single-file CLI binary (Node SEA).
-bun run --filter @imagent/cli build:binary
-# → apps/cli/dist/imagent.exe (host platform; ~90 MB)
-```
-
-Notes:
-
-- **NSIS is unsigned.** A SmartScreen warning appears on first install. Code-signing requires a paid certificate and is deferred past v1.
-- **macOS / Linux installers are configured but unverified** in the `electron-builder.yml` block — Windows is the v1 host.
-- **The SEA binary needs adjacent `node_modules/`** holding `better-sqlite3` and `sharp`. Native modules can't be embedded in a Node SEA blob; the binary uses `createRequire` to resolve them against the workspace's installed `node_modules/` at runtime. To redistribute, ship `imagent.exe` together with at minimum `packages/persistence/node_modules/{better-sqlite3,sharp,ffmpeg-static}/`.
+imagent 仍处于早期阶段，数据结构、打包方式与部分功能可能继续调整。当前版本不包含遥测、自动更新、云同步或账号系统；Windows 安装包未签名，首次安装可能触发 SmartScreen 提示。
 
 ## License
 
