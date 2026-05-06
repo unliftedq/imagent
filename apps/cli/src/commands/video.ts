@@ -230,6 +230,8 @@ function assertVideoOptionSupported(key: string, model: VideoModelDef): void {
 function supportedVideoOptions(model: VideoModelDef): string[] {
   const caps = model.capabilities;
   if (!caps) {
+    // Unknown capabilities means the catalog cannot provide dynamic guidance,
+    // so keep the full typed request surface available and let providers validate.
     return [
       "durationSec",
       "fps",

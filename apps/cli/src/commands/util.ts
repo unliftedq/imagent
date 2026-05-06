@@ -59,7 +59,7 @@ export function formatRelativeTime(epochMs: number, nowMs: number = Date.now()):
   const diff = nowMs - epochMs;
   const abs = Math.abs(diff);
   const future = diff < 0;
-  const units: [[number, string], ...[number, string][]] = [
+  const units: [number, string][] = [
     [1000, "s"],
     [60_000, "m"],
     [3_600_000, "h"],
@@ -68,7 +68,7 @@ export function formatRelativeTime(epochMs: number, nowMs: number = Date.now()):
     [2_629_800_000, "mo"],
     [31_557_600_000, "y"],
   ];
-  let chosen: [number, string] = units[0];
+  let chosen: [number, string] = units[0] ?? [1000, "s"];
   for (const u of units) {
     if (abs >= u[0]) chosen = u;
   }

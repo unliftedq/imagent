@@ -210,6 +210,8 @@ function assertImageOptionSupported(key: string, model: ImageModelDef): void {
 function supportedImageOptions(model: ImageModelDef): string[] {
   const caps = model.capabilities;
   if (!caps) {
+    // Unknown capabilities means the catalog cannot provide dynamic guidance,
+    // so keep the full typed request surface available and let providers validate.
     return ["size", "aspectRatio", "quality", "outputFormat", "negativePrompt", "seed", "count"];
   }
   const keys = ["count"];
