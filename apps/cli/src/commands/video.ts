@@ -171,7 +171,6 @@ async function runVideo(prompt: string, options: VideoOptions): Promise<void> {
         process.stdout.write(`${chalk.green("copied to:")} ${copied}\n`);
       } catch (err) {
         process.stderr.write(`${chalk.yellow("warn:")} ${(err as Error).message}\n`);
-        process.exitCode = 1;
       }
     }
   } finally {
@@ -188,14 +187,21 @@ async function copyResultToDir(sourcePath: string, outDir: string): Promise<stri
     return targetPath;
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
-    const hint =
-      code === "ENOENT"
-        ? "output directory path is invalid or inaccessible"
-        : code === "EACCES" || code === "EPERM"
-          ? "permission denied"
-          : code === "ENOSPC"
-            ? "not enough disk space"
-            : (err as Error).message;
+    let hint: string;
+    switch (code) {
+      case "ENOENT":
+        hint = "output directory path is invalid or inaccessible";
+        break;
+      case "EACCES":
+      case "EPERM":
+        hint = "permission denied";
+        break;
+      case "ENOSPC":
+        hint = "not enough disk space";
+        break;
+      default:
+        hint = (err as Error).message;
+    }
     throw new Error(
       `generation succeeded, but --out copy from '${sourcePath}' to '${targetPath}' failed: ${hint}`,
     );
