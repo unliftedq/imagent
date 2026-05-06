@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import type { Asset } from "../domain/asset.js";
 import {
   appendStylePromptSnippets,
+  capImageReferences,
   capReferencePaths,
   resolveAssetSlots,
 } from "./asset-slot-resolver.js";
+import { appendImageReferenceInstructions } from "./reference-prompt.js";
 
 function makeAsset(partial: Partial<Asset> & { id: string; kind: Asset["kind"] }): Asset {
   return {
@@ -128,6 +130,7 @@ describe("resolveAssetSlots", () => {
     const r = resolveAssetSlots({}, lookup, abs);
     expect(r).toEqual({
       referencePaths: [],
+      references: [],
       stylePromptSnippets: [],
       assetIds: [],
       attachments: [],
@@ -146,6 +149,24 @@ describe("resolveAssetSlots", () => {
       "/data/assets/bg-c/ref-001.png",
       "/data/assets/style-ref/ref-001.png",
     ]);
+    expect(r.references).toEqual([
+      {
+        path: "/data/assets/char-a/ref-001.png",
+        role: "character",
+        assetName: "asset-char-a",
+      },
+      { path: "/data/assets/obj-b/ref-001.png", role: "object", assetName: "asset-obj-b" },
+      {
+        path: "/data/assets/bg-c/ref-001.png",
+        role: "background",
+        assetName: "asset-bg-c",
+      },
+      {
+        path: "/data/assets/style-ref/ref-001.png",
+        role: "style",
+        assetName: "asset-style-ref",
+      },
+    ]);
     expect(r.attachments.map((a) => a.role)).toEqual([
       "character",
       "object",
@@ -155,59 +176,45 @@ describe("resolveAssetSlots", () => {
   });
 
   it("style with refs and supportsReferences=true → uses refs (no snippet appended)", () => {
-    const r = resolveAssetSlots(
-      { style: ["style-ref"] },
-      lookup,
-      abs,
-      { supportsReferences: true },
-    );
+    const r = resolveAssetSlots({ style: ["style-ref"] }, lookup, abs, {
+      supportsReferences: true,
+    });
     expect(r.referencePaths).toEqual(["/data/assets/style-ref/ref-001.png"]);
     expect(r.stylePromptSnippets).toEqual([]);
     expect(r.attachments).toEqual([{ assetId: "style-ref", role: "style" }]);
   });
 
   it("style with refs and supportsReferences=false → appends snippet", () => {
-    const r = resolveAssetSlots(
-      { style: ["style-ref"] },
-      lookup,
-      abs,
-      { supportsReferences: false },
-    );
+    const r = resolveAssetSlots({ style: ["style-ref"] }, lookup, abs, {
+      supportsReferences: false,
+    });
     expect(r.referencePaths).toEqual([]);
     expect(r.stylePromptSnippets).toEqual(["in the style of Studio Ghibli"]);
     expect(r.attachments).toEqual([{ assetId: "style-ref", role: "style" }]);
   });
 
   it("style with snippet only → always appends snippet", () => {
-    const r = resolveAssetSlots(
-      { style: ["style-only"] },
-      lookup,
-      abs,
-      { supportsReferences: true },
-    );
+    const r = resolveAssetSlots({ style: ["style-only"] }, lookup, abs, {
+      supportsReferences: true,
+    });
     expect(r.referencePaths).toEqual([]);
     expect(r.stylePromptSnippets).toEqual(["soft pastels"]);
   });
 
   it("alwaysAppendStyleSnippets=true with refs and preferStyleRefOverSnippet=false → both", () => {
-    const r = resolveAssetSlots(
-      { style: ["style-ref"] },
-      lookup,
-      abs,
-      {
-        supportsReferences: true,
-        alwaysAppendStyleSnippets: true,
-        preferStyleRefOverSnippet: false,
-      },
-    );
+    const r = resolveAssetSlots({ style: ["style-ref"] }, lookup, abs, {
+      supportsReferences: true,
+      alwaysAppendStyleSnippets: true,
+      preferStyleRefOverSnippet: false,
+    });
     expect(r.referencePaths).toEqual(["/data/assets/style-ref/ref-001.png"]);
     expect(r.stylePromptSnippets).toEqual(["in the style of Studio Ghibli"]);
   });
 
   it("missing asset id → throws", () => {
-    expect(() =>
-      resolveAssetSlots({ character: ["does-not-exist"] }, lookup, abs),
-    ).toThrow(/not found/);
+    expect(() => resolveAssetSlots({ character: ["does-not-exist"] }, lookup, abs)).toThrow(
+      /not found/,
+    );
   });
 
   it("kind mismatch → throws", () => {
@@ -238,6 +245,41 @@ describe("capReferencePaths", () => {
   });
 });
 
+describe("capImageReferences", () => {
+  it("caps references without separating paths from roles", () => {
+    const r = capImageReferences(
+      [
+        { path: "a.png", role: "character" },
+        { path: "b.png", role: "style", assetName: "Painterly Style" },
+        { path: "c.png", role: "freeform" },
+      ],
+      2,
+    );
+    expect(r.references).toEqual([
+      { path: "a.png", role: "character" },
+      { path: "b.png", role: "style", assetName: "Painterly Style" },
+    ]);
+    expect(r.capped).toBe(2);
+  });
+});
+
+describe("appendImageReferenceInstructions", () => {
+  it("numbers prompt instructions in the same order as attached images", () => {
+    const prompt = appendImageReferenceInstructions("draw a scene", [
+      { path: "/tmp/character.png", role: "character", assetName: "Hero Character" },
+      { path: "/tmp/style.webp", role: "style" },
+    ]);
+    expect(prompt).toContain("draw a scene");
+    expect(prompt).toContain(
+      "Reference image 1 (attached image 1) — role: character — asset name: Hero Character.",
+    );
+    expect(prompt).toContain("attached image 1");
+    expect(prompt).toContain("Reference image 2 (attached image 2) — role: style.");
+    expect(prompt).toContain("attached image 2");
+    expect(prompt).not.toContain("source:");
+  });
+});
+
 describe("appendStylePromptSnippets", () => {
   it("no snippets → unchanged", () => {
     expect(appendStylePromptSnippets("a cat", [])).toBe("a cat");
@@ -248,9 +290,9 @@ describe("appendStylePromptSnippets", () => {
   });
 
   it("multiple snippets → joined with commas", () => {
-    expect(
-      appendStylePromptSnippets("a cat", ["pastel", "studio ghibli"]),
-    ).toBe("a cat, pastel, studio ghibli");
+    expect(appendStylePromptSnippets("a cat", ["pastel", "studio ghibli"])).toBe(
+      "a cat, pastel, studio ghibli",
+    );
   });
 
   it("empty prompt → snippets become the whole prompt", () => {

@@ -1,11 +1,17 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import type { GenerationIntent, ImageModelDef, ImageRequest, Job } from "@imagent/core";
+import {
+  capImageReferences,
+  type GenerationIntent,
+  type ImageModelDef,
+  type ImageRequest,
+  type Job,
+} from "@imagent/core";
 import chalk from "chalk";
 import type { Command } from "commander";
 
-import { buildAssetSlots, capReferences } from "./asset-slots.js";
+import { buildAssetSlots } from "./asset-slots.js";
 import { buildRunner, loadCliRuntime } from "./runtime.js";
 import { coerceScalar, collect, parseKeyValueOptions, parsePositiveIntegerOption } from "./util.js";
 
@@ -88,11 +94,14 @@ async function runGenerate(prompt: string, options: GenerateOptions): Promise<vo
       styles: options.style ?? [],
     });
 
-    const allRefPaths = [...(options.ref ?? []), ...slots.referencePaths];
-    const { references: cappedRefs, capped } = capReferences(allRefPaths, maxRefs);
+    const allRefs = [
+      ...(options.ref ?? []).map((p) => ({ path: p, role: "freeform" as const })),
+      ...slots.references,
+    ];
+    const { references: cappedRefs, capped } = capImageReferences(allRefs, maxRefs);
     if (capped !== undefined) {
       process.stderr.write(
-        `${chalk.yellow("warn:")} capped at ${capped} references for model '${model}' (had ${allRefPaths.length})\n`,
+        `${chalk.yellow("warn:")} capped at ${capped} references for model '${model}' (had ${allRefs.length})\n`,
       );
     }
     const promptWithStyle = slots.stylePromptSnippets.length
@@ -107,7 +116,7 @@ async function runGenerate(prompt: string, options: GenerateOptions): Promise<vo
         model,
         count: requestOptions.count ?? 1,
         ...requestOptions,
-        references: cappedRefs.map((p) => ({ path: p, role: "freeform" as const })),
+        references: cappedRefs,
         assetIds: slots.assetIds,
       } satisfies ImageRequest,
     };

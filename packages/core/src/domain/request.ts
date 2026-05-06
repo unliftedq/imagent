@@ -4,6 +4,8 @@ export const ImageReferenceSchema = z.object({
   /** Local path or pre-uploaded data URI. Provider-specific shape comes later. */
   path: z.string(),
   role: z.enum(["character", "object", "background", "style", "freeform"]).default("freeform"),
+  /** Asset display name for asset-derived references, so prompts can refer to it by name. */
+  assetName: z.string().optional(),
 });
 export type ImageReference = z.infer<typeof ImageReferenceSchema>;
 

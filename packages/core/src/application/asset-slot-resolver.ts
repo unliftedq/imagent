@@ -1,4 +1,5 @@
 import type { Asset, AssetKind } from "../domain/asset.js";
+import type { ImageReference } from "../domain/request.js";
 
 /**
  * Asset slots, keyed by kind. Each value is an array of asset ids the user
@@ -20,6 +21,8 @@ export interface AssetSlotInputs {
 export interface AssetSlotResolution {
   /** Absolute paths of reference images contributed by the slots, in slot order. */
   referencePaths: string[];
+  /** Reference images contributed by the slots, with roles and asset names preserved in slot order. */
+  references: Array<ImageReference & { role: AssetKind; assetName: string }>;
   /** Style asset prompt snippets that should be appended to `request.prompt`. */
   stylePromptSnippets: string[];
   /** All asset ids that contributed to this generation (one per asset). */
@@ -84,6 +87,7 @@ export function resolveAssetSlots(
   options: AssetSlotResolveOptions = {},
 ): AssetSlotResolution {
   const referencePaths: string[] = [];
+  const references: Array<ImageReference & { role: AssetKind; assetName: string }> = [];
   const stylePromptSnippets: string[] = [];
   const assetIds: string[] = [];
   const attachments: Array<{ assetId: string; role: AssetKind }> = [];
@@ -106,7 +110,9 @@ export function resolveAssetSlots(
       let usedRefHere = false;
       if (supportsRefs) {
         for (const f of refs) {
-          referencePaths.push(resolveAbs(f.relPath));
+          const refPath = resolveAbs(f.relPath);
+          referencePaths.push(refPath);
+          references.push({ path: refPath, role, assetName: asset.name });
           usedRefHere = true;
         }
       }
@@ -136,7 +142,7 @@ export function resolveAssetSlots(
   handle(inputs.background, "background");
   handle(inputs.style, "style");
 
-  return { referencePaths, stylePromptSnippets, assetIds, attachments };
+  return { referencePaths, references, stylePromptSnippets, assetIds, attachments };
 }
 
 /**
@@ -155,6 +161,24 @@ export function capReferencePaths(
     return { references: [...paths] };
   }
   return { references: paths.slice(0, maxReferences), capped: maxReferences };
+}
+
+/**
+ * Apply the resolved model's `maxReferences` cap while preserving each
+ * reference's role/path pairing. Truncation is deterministic (slice from the
+ * beginning), matching `capReferencePaths`.
+ */
+export function capImageReferences(
+  references: readonly ImageReference[],
+  maxReferences: number | undefined,
+): { references: ImageReference[]; capped?: number } {
+  if (maxReferences === undefined) {
+    return { references: [...references] };
+  }
+  if (references.length <= maxReferences) {
+    return { references: [...references] };
+  }
+  return { references: references.slice(0, maxReferences), capped: maxReferences };
 }
 
 /**

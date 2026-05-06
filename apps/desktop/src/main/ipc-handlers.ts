@@ -19,7 +19,13 @@ import type {
   Logger,
   VideoRequest,
 } from "@imagent/core";
-import { appendStylePromptSnippets, capReferencePaths, resolveAssetSlots } from "@imagent/core";
+import {
+  type AssetSlotResolution,
+  appendStylePromptSnippets,
+  capImageReferences,
+  capReferencePaths,
+  resolveAssetSlots,
+} from "@imagent/core";
 import {
   type ContractHandlers,
   IpcHandlerError,
@@ -459,7 +465,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       const maxRefs = resolvedModel?.capabilities?.maxReferences;
       const supportsRefs = (maxRefs ?? Infinity) > 0;
 
-      let resolution;
+      let resolution: AssetSlotResolution;
       try {
         resolution = resolveAssetSlots(
           slotInputs,
@@ -472,17 +478,20 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       }
 
       // Combine freeform refs with slot-derived refs (slot order: char→obj→bg→style).
-      const allRefPaths = [
-        ...(r.references ?? []).map((ref) => ref.path),
-        ...resolution.referencePaths,
+      const allRefs = [
+        ...(r.references ?? []).map((ref) => ({
+          path: path.isAbsolute(ref.path) ? ref.path : path.join(paths.dataDir, ref.path),
+          role: ref.role ?? ("freeform" as const),
+        })),
+        ...resolution.references,
       ];
-      const { references: cappedRefs, capped } = capReferencePaths(allRefPaths, maxRefs);
+      const { references: cappedRefs, capped } = capImageReferences(allRefs, maxRefs);
       if (capped !== undefined) {
         logger.warn("image.generate: cap-at-max references", {
           providerId: r.providerId,
           model: r.model,
           capped,
-          original: allRefPaths.length,
+          original: allRefs.length,
         });
       }
 
@@ -491,7 +500,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       const finalReq: ImageRequest = {
         ...r,
         prompt: augmentedPrompt,
-        references: cappedRefs.map((p) => ({ path: p, role: "freeform" as const })),
+        references: cappedRefs,
         assetIds: [
           ...(r.assetIds ?? []),
           ...resolution.assetIds.filter((id) => !(r.assetIds ?? []).includes(id)),
@@ -1048,7 +1057,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       // capping to the provider impl + UI-side hints.
       const maxRefs: number | undefined = undefined;
 
-      let resolution;
+      let resolution: AssetSlotResolution;
       try {
         resolution = resolveAssetSlots(
           slotInputs,

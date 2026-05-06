@@ -1,7 +1,4 @@
 import {
-  ProviderError,
-  ProviderRequestError,
-  ProviderResponseError,
   applyImageDefaults,
   type ImageCapabilities,
   type ImageGenerationResult,
@@ -10,6 +7,9 @@ import {
   type ImageProvider,
   type ImageRequest,
   type Logger,
+  ProviderError,
+  ProviderRequestError,
+  ProviderResponseError,
   type ProviderTestResult,
   validateImageRequestAgainstModel,
 } from "@imagent/core";
@@ -20,10 +20,10 @@ import {
   buildOpenAIImageBody,
   decodeBase64,
   mimeTypeForOutputFormat,
+  type OpenAIClientLike,
   parseSize,
   rethrowOpenAIError,
   testFailureFromError,
-  type OpenAIClientLike,
 } from "../openai/image.js";
 
 export interface AzureOpenAIImageProviderOptions {
@@ -103,13 +103,23 @@ export class AzureOpenAIImageProvider implements ImageProvider {
     const merged = applyImageDefaults(req, model);
     validateImageRequestAgainstModel(this.id, merged, model);
 
-    const body = buildOpenAIImageBody(merged, model);
+    const body = await buildOpenAIImageBody(merged, model, this.id);
     const opts: { signal?: AbortSignal } = {};
     if (signal) opts.signal = signal;
 
     let response: { data?: Array<{ b64_json?: string; url?: string; revised_prompt?: string }> };
     try {
-      response = await this.client.images.generate(body, opts);
+      if (merged.references.length > 0) {
+        if (!this.client.images.edit) {
+          throw new ProviderRequestError(
+            `${this.id} SDK client does not support image references via images.edit API. Ensure you are using an SDK version that includes the edit method.`,
+            { vendorId: this.id },
+          );
+        }
+        response = await this.client.images.edit(body, opts);
+      } else {
+        response = await this.client.images.generate(body, opts);
+      }
     } catch (err) {
       throw rethrowOpenAIError(err, this.id);
     }
@@ -163,12 +173,7 @@ export class AzureOpenAIImageProvider implements ImageProvider {
       // `gpt-image-2-1`), so we also accept loose matches in either direction
       // — the field is only used as an informational sample-id annotation.
       const matched = configured.find((d) =>
-        ids.some(
-          (listed) =>
-            listed === d ||
-            d.startsWith(listed) ||
-            listed.startsWith(d),
-        ),
+        ids.some((listed) => listed === d || d.startsWith(listed) || listed.startsWith(d)),
       );
       // Auth working is the only hard requirement — mirror the OpenAI probe
       // and never flag `ok:false` just because the deployment name didn't
@@ -178,10 +183,10 @@ export class AzureOpenAIImageProvider implements ImageProvider {
         ? { ok: true, latencyMs, sampleModelId: matched }
         : { ok: true, latencyMs };
       if (!matched && configured.length > 0) {
-        this.logger?.debug?.(
-          "azure-openai test(): no exact deployment match in /models listing",
-          { configured, listed: ids },
-        );
+        this.logger?.debug?.("azure-openai test(): no exact deployment match in /models listing", {
+          configured,
+          listed: ids,
+        });
       }
       return out;
     } catch (err) {

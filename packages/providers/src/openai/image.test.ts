@@ -1,20 +1,28 @@
-import { describe, expect, it, vi } from "vitest";
-import { ProviderError, ProviderHttpError, ProviderRequestError, type ImageRequest } from "@imagent/core";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import {
+  type ImageRequest,
+  ProviderError,
+  ProviderHttpError,
+  ProviderRequestError,
+} from "@imagent/core";
 import { APIError } from "openai";
-import { OpenAIImageProvider, type OpenAIClientLike } from "./image.js";
+import { describe, expect, it, vi } from "vitest";
 import { OPENAI_IMAGE_MODELS } from "../catalog/test-fixtures.js";
+import { type OpenAIClientLike, OpenAIImageProvider } from "./image.js";
 
 const PNG_B64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkAAIAAAoAAv/lxKUAAAAASUVORK5CYII=";
 
 interface FakeClient {
-  images: { generate: ReturnType<typeof vi.fn> };
+  images: { generate: ReturnType<typeof vi.fn>; edit: ReturnType<typeof vi.fn> };
   models: { list: ReturnType<typeof vi.fn> };
 }
 
 function makeFakeClient(): FakeClient {
   return {
-    images: { generate: vi.fn() },
+    images: { generate: vi.fn(), edit: vi.fn() },
     models: { list: vi.fn() },
   };
 }
@@ -51,7 +59,8 @@ describe("OpenAIImageProvider", () => {
     expect(result.outputs[0]?.mimeType).toBe("image/png");
     expect(result.outputs[0]?.bytes.length).toBeGreaterThan(0);
     expect(client.images.generate).toHaveBeenCalledTimes(1);
-    const [body] = client.images.generate.mock.calls[0]!;
+    const [body] = client.images.generate.mock.calls[0] ?? [];
+    expect(body).toBeDefined();
     expect(body).toMatchObject({
       model: "gpt-image-1",
       prompt: baseRequest.prompt,
@@ -76,9 +85,9 @@ describe("OpenAIImageProvider", () => {
   it("rejects size not in capability list", async () => {
     const client = makeFakeClient();
     const p = makeProvider(client);
-    await expect(
-      p.generate({ ...baseRequest, size: "9999x9999" }),
-    ).rejects.toBeInstanceOf(ProviderRequestError);
+    await expect(p.generate({ ...baseRequest, size: "9999x9999" })).rejects.toBeInstanceOf(
+      ProviderRequestError,
+    );
   });
 
   it("401 from SDK surfaces as ProviderHttpError with status preserved", async () => {
@@ -100,7 +109,42 @@ describe("OpenAIImageProvider", () => {
     client.images.generate.mockResolvedValue({ data: [{ b64_json: PNG_B64 }] });
     const p = makeProvider(client);
     await p.generate({ ...baseRequest, quality: "high" });
-    const [body] = client.images.generate.mock.calls[0]!;
+    const [body] = client.images.generate.mock.calls[0] ?? [];
+    expect(body).toBeDefined();
     expect(body).toMatchObject({ model: "gpt-image-1", quality: "high" });
+  });
+
+  it("routes references through images.edit with ordered prompt instructions", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "imagent-openai-ref-"));
+    try {
+      const refA = path.join(dir, "character.png");
+      const refB = path.join(dir, "style.png");
+      await writeFile(refA, Buffer.from(PNG_B64, "base64"));
+      await writeFile(refB, Buffer.from(PNG_B64, "base64"));
+      const client = makeFakeClient();
+      client.images.edit.mockResolvedValue({ data: [{ b64_json: PNG_B64 }] });
+      const p = makeProvider(client);
+
+      await p.generate({
+        ...baseRequest,
+        references: [
+          { path: refA, role: "character" },
+          { path: refB, role: "style" },
+        ],
+      });
+
+      expect(client.images.generate).not.toHaveBeenCalled();
+      expect(client.images.edit).toHaveBeenCalledTimes(1);
+      const [body] = client.images.edit.mock.calls[0] ?? [];
+      expect(body).toBeDefined();
+      expect(body.prompt).toContain("Reference image 1 (attached image 1) — role: character.");
+      expect(body.prompt).toContain("attached image 1");
+      expect(body.prompt).toContain("Reference image 2 (attached image 2) — role: style.");
+      expect(body.prompt).toContain("attached image 2");
+      expect(body.prompt).not.toContain("source:");
+      expect(body.image).toHaveLength(2);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 });

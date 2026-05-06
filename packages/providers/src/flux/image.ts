@@ -1,4 +1,5 @@
 import {
+  appendImageReferenceInstructions,
   applyImageDefaults,
   type ImageCapabilities,
   type ImageGenerationResult,
@@ -19,6 +20,7 @@ import {
 import { z } from "zod";
 import { createHttpClient, type HttpClient } from "../http/index.js";
 import { aggregateCapabilities, testFailureFromError } from "../openai/image.js";
+import { imageDataUrl, loadImageReferences } from "../reference-images.js";
 
 /** Canonical BFL base URL. */
 export const DEFAULT_FLUX_BASE_URL = "https://api.bfl.ai";
@@ -98,7 +100,7 @@ export class FluxImageProvider implements ImageProvider {
 
     // BFL endpoints are model-named (`/v1/flux-pro-1.1`, etc.).
     const url = `${this.baseUrl}/v1/${encodeURIComponent(model.id)}`;
-    const body = this.buildSubmitBody(merged);
+    const body = await this.buildSubmitBody(merged);
     const submitOpts: { signal?: AbortSignal; schema: typeof FluxSubmitResponseSchema } = {
       schema: FluxSubmitResponseSchema,
     };
@@ -192,8 +194,10 @@ export class FluxImageProvider implements ImageProvider {
     }
   }
 
-  private buildSubmitBody(req: ImageRequest): Record<string, unknown> {
-    const out: Record<string, unknown> = { prompt: req.prompt };
+  private async buildSubmitBody(req: ImageRequest): Promise<Record<string, unknown>> {
+    const out: Record<string, unknown> = {
+      prompt: appendImageReferenceInstructions(req.prompt, req.references),
+    };
     if (req.aspectRatio) out.aspect_ratio = req.aspectRatio;
     if (req.size) {
       const m = /^(\d+)x(\d+)$/.exec(req.size);
@@ -203,6 +207,12 @@ export class FluxImageProvider implements ImageProvider {
       }
     }
     if (req.seed !== undefined) out.seed = req.seed;
+    if (req.references.length > 0) {
+      const refs = await loadImageReferences(req.references, this.id);
+      const dataUrls = refs.map(imageDataUrl);
+      out.input_images = dataUrls;
+      if (dataUrls[0]) out.input_image = dataUrls[0];
+    }
     if (req.raw) Object.assign(out, req.raw);
     return out;
   }
