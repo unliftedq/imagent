@@ -1,6 +1,6 @@
 {
   "name": "@imagent/cli",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Local-first image and video generation CLI for imagent.",
   "license": "UNLICENSED",
   "homepage": "https://github.com/unliftedq/imagent#readme",

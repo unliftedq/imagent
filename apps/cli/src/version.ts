@@ -4,4 +4,4 @@
  * `bun build --compile` single binary at M8 and reading sibling files from
  * inside that binary would be awkward.
  */
-export const CLI_VERSION = "0.0.3";
+export const CLI_VERSION = "0.0.4";
