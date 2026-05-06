@@ -137,9 +137,13 @@ describe("OpenAIImageProvider", () => {
       expect(client.images.edit).toHaveBeenCalledTimes(1);
       const [body] = client.images.edit.mock.calls[0] ?? [];
       expect(body).toBeDefined();
-      expect(body.prompt).toContain("Reference image 1: role=character; source=character.png");
+      expect(body.prompt).toContain(
+        "Reference image 1 (attached image 1) — role: character — source: character.png",
+      );
       expect(body.prompt).toContain("attached image 1");
-      expect(body.prompt).toContain("Reference image 2: role=style; source=style.png");
+      expect(body.prompt).toContain(
+        "Reference image 2 (attached image 2) — role: style — source: style.png",
+      );
       expect(body.prompt).toContain("attached image 2");
       expect(body.image).toHaveLength(2);
     } finally {

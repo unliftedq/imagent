@@ -15,7 +15,7 @@ export function appendImageReferenceInstructions(
     const n = index + 1;
     const role = ref.role ?? "freeform";
     const source = referenceSourceLabel(ref.path);
-    return `Reference image ${n}: role=${role}; source=${source}; this instruction corresponds to attached image ${n}.`;
+    return `Reference image ${n} (attached image ${n}) — role: ${role} — source: ${source}.`;
   });
   const appendix = [
     "Reference images are attached in this exact order. Keep each numbered instruction matched to the same-numbered attached image:",

@@ -213,7 +213,8 @@ export async function buildOpenAIImageBody(
   }
   if (raw.style && caps?.supportsStyleRef) body.style = raw.style;
   if (req.references.length > 0) {
-    body.image = await openAIReferenceFiles(await loadImageReferences(req.references, vendorId));
+    const references = await loadImageReferences(req.references, vendorId);
+    body.image = await openAIReferenceFiles(references);
   }
   return body;
 }

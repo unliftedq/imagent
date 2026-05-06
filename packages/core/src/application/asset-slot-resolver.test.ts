@@ -258,9 +258,13 @@ describe("appendImageReferenceInstructions", () => {
       { path: "/tmp/style.webp", role: "style" },
     ]);
     expect(prompt).toContain("draw a scene");
-    expect(prompt).toContain("Reference image 1: role=character; source=character.png");
+    expect(prompt).toContain(
+      "Reference image 1 (attached image 1) — role: character — source: character.png",
+    );
     expect(prompt).toContain("attached image 1");
-    expect(prompt).toContain("Reference image 2: role=style; source=style.webp");
+    expect(prompt).toContain(
+      "Reference image 2 (attached image 2) — role: style — source: style.webp",
+    );
     expect(prompt).toContain("attached image 2");
   });
 });
