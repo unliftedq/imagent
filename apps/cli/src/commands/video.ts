@@ -170,7 +170,9 @@ async function runVideo(prompt: string, options: VideoOptions): Promise<void> {
         const copied = await copyResultToDir(abs, options.out);
         process.stdout.write(`${chalk.green("copied to:")} ${copied}\n`);
       } catch (err) {
-        process.stderr.write(`${chalk.yellow("warn:")} ${(err as Error).message}\n`);
+        process.stderr.write(
+          `${chalk.yellow("warn:")} failed to copy result: ${(err as Error).message}\n`,
+        );
       }
     }
   } finally {
@@ -190,7 +192,7 @@ async function copyResultToDir(sourcePath: string, outDir: string): Promise<stri
     let hint: string;
     switch (code) {
       case "ENOENT":
-        hint = "source file not found";
+        hint = "source file not found or was removed";
         break;
       case "EACCES":
       case "EPERM":
