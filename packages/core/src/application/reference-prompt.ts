@@ -2,8 +2,10 @@ import type { ImageReference } from "../domain/request.js";
 
 /**
  * Add deterministic, numbered reference instructions to the prompt. The
- * numbering is intentionally the same as the provider attachment order so
- * text instructions cannot drift away from the binary image inputs.
+ * numbering is intentionally 1-based because users and provider prompts refer
+ * to “image 1”, “image 2”, etc. The same index is used for the provider
+ * attachment order so text instructions cannot drift away from the binary
+ * image inputs.
  */
 export function appendImageReferenceInstructions(
   prompt: string,

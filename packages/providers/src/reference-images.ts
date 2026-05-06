@@ -12,6 +12,12 @@ export interface LoadedImageReference {
   base64: string;
 }
 
+/**
+ * Load image reference files from disk for provider request bodies. Each entry
+ * preserves the original ImageReference, derives a safe filename, detects the
+ * MIME type, and exposes both raw bytes and base64 for SDK- and JSON-based
+ * providers.
+ */
 export async function loadImageReferences(
   references: readonly ImageReference[],
   vendorId: string,
@@ -55,6 +61,11 @@ export function imageDataUrl(reference: LoadedImageReference): string {
   return `data:${reference.mimeType};base64,${reference.base64}`;
 }
 
+/**
+ * Detect an image MIME type from the file extension first, then from known
+ * byte signatures for extensionless files. Falls back to image/png because
+ * that is the default output/input format used elsewhere in the providers.
+ */
 export function guessImageMimeType(filePath: string, bytes?: Uint8Array): string {
   const ext = path.extname(filePath).toLowerCase();
   switch (ext) {

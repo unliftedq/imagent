@@ -102,9 +102,10 @@ export class OpenAIImageProvider implements ImageProvider {
     try {
       if (merged.references.length > 0) {
         if (!this.client.images.edit) {
-          throw new ProviderRequestError(`${this.id} SDK client does not expose images.edit`, {
-            vendorId: this.id,
-          });
+          throw new ProviderRequestError(
+            `${this.id} SDK client does not support image references via images.edit API. Ensure you are using an SDK version that includes the edit method.`,
+            { vendorId: this.id },
+          );
         }
         response = await this.client.images.edit(body, opts);
       } else {
