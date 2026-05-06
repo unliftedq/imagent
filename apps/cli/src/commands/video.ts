@@ -186,11 +186,11 @@ async function copyResultToDir(sourcePath: string, outDir: string): Promise<stri
     await fs.copyFile(sourcePath, targetPath);
     return targetPath;
   } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
+    const code = err && typeof err === "object" ? (err as NodeJS.ErrnoException).code : undefined;
     let hint: string;
     switch (code) {
       case "ENOENT":
-        hint = "output directory path is invalid or inaccessible";
+        hint = "source file not found";
         break;
       case "EACCES":
       case "EPERM":
