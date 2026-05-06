@@ -78,12 +78,12 @@ const MCP_TOOLS: McpTool[] = [
   subcommandTool(
     "imagent_image",
     "image",
-    'Generate one or more images from a text prompt. Use for text-to-image requests, provider/model overrides, output count, size/aspect, seed, negative prompt, freeform references, and character/object/background/style asset slots. Pass args after `imagent image`, for example ["a cinematic robot portrait", "--provider", "openai", "--count", "2"].',
+    'Generate one or more images from a text prompt. Use for text-to-image requests, provider/model overrides, model capability options via repeatable `--option key=value`, freeform references, character/object/background/style asset slots, and `--out <dir>` to copy the completed gallery result. Pass args after `imagent image`, for example ["a cinematic robot portrait", "--provider", "openai", "--option", "count=2", "--out", "./outputs"].',
   ),
   subcommandTool(
     "imagent_video",
     "video",
-    'Submit or wait for a video generation job from a text prompt. Use for text-to-video requests, provider/model overrides, duration, FPS, resolution/aspect, reference images, asset slots, and `--wait` progress streaming. Pass args after `imagent video`, for example ["a camera orbit around a glass sculpture", "--duration", "5", "--wait"].',
+    'Submit or wait for a video generation job from a text prompt. Use for text-to-video requests, provider/model overrides, model capability options via repeatable `--option key=value`, reference images, asset slots, `--wait` progress streaming, and `--out <dir>` to wait for completion then copy the completed gallery result. Pass args after `imagent video`, for example ["a camera orbit around a glass sculpture", "--option", "durationSec=5", "--out", "./outputs"].',
   ),
   subcommandTool(
     "imagent_config",

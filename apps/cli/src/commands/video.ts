@@ -1,20 +1,30 @@
+import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import type { GenerationIntent, Job, JobProgressEvent, VideoRequest } from "@imagent/core";
+import type {
+  GenerationIntent,
+  Job,
+  JobProgressEvent,
+  VideoModelDef,
+  VideoRequest,
+} from "@imagent/core";
 import chalk from "chalk";
 import type { Command } from "commander";
 
 import { buildAssetSlots, capReferences } from "./asset-slots.js";
 import { buildRunner, loadCliRuntime } from "./runtime.js";
-import { collect, isTty } from "./util.js";
+import {
+  coerceScalar,
+  collect,
+  isTty,
+  parseKeyValueOptions,
+  parsePositiveNumberOption,
+} from "./util.js";
 
 interface VideoOptions {
   provider?: string;
   model?: string;
-  duration?: string;
-  fps?: string;
-  resolution?: string;
-  aspect?: string;
+  option?: string[];
   ref?: string[];
   character?: string[];
   object?: string[];
@@ -30,17 +40,19 @@ export function registerVideoCommand(program: Command): void {
     .description("Submit a video generation job (default provider: bytedance)")
     .option("--provider <id>", "Provider id", "bytedance")
     .option("--model <id>", "Model id within the chosen provider")
-    .option("--duration <sec>", "Clip duration in seconds")
-    .option("--fps <n>", "Frames per second")
-    .option("--resolution <r>", "Resolution (e.g. 720p, 1080p)")
-    .option("--aspect <ratio>", "Aspect ratio (e.g. 16:9, 9:16)")
+    .option(
+      "-o, --option <key=value>",
+      "Model capability option (repeatable; e.g. durationSec=5, fps=24, resolution=720p, firstFrame=path)",
+      collect,
+      [],
+    )
     .option("--ref <path>", "Reference image path (repeatable)", collect, [])
     .option("--character <slug>", "Attach a character asset (repeatable)", collect, [])
     .option("--object <slug>", "Attach an object asset (repeatable)", collect, [])
     .option("--background <slug>", "Attach a background asset (repeatable)", collect, [])
     .option("--style <slug>", "Attach a style asset (repeatable)", collect, [])
     .option("--wait", "Block until job completes, printing live progress")
-    .option("--out <dir>", "Output directory override")
+    .option("--out <dir>", "Copy the completed result to this directory (waits for completion)")
     .action(async (prompt: string, options: VideoOptions) => {
       try {
         await runVideo(prompt, options);
@@ -62,6 +74,10 @@ async function runVideo(prompt: string, options: VideoOptions): Promise<void> {
   }
   const model = pickVideoModel(providerId, options.model, provider.models);
   const resolved = provider.models.get(model);
+  if (!resolved) {
+    throw new Error(`unknown model '${model}' for video provider '${providerId}'`);
+  }
+  const requestOptions = parseVideoOptions(options.option ?? [], resolved);
   const supportsRefs = resolved?.capabilities?.supportsRefImages !== false;
   const maxRefs = supportsRefs ? undefined : 0;
 
@@ -88,17 +104,14 @@ async function runVideo(prompt: string, options: VideoOptions): Promise<void> {
       prompt: promptWithStyle,
       providerId,
       model,
-      ...(options.duration ? { durationSec: Number(options.duration) } : {}),
-      ...(options.fps ? { fps: Number(options.fps) } : {}),
-      ...(options.resolution ? { resolution: options.resolution } : {}),
-      ...(options.aspect ? { aspectRatio: options.aspect } : {}),
+      ...requestOptions,
       references: cappedRefs.map((p) => ({ path: p, role: "freeform" as const })),
       assetIds: slots.assetIds,
     };
 
     const intent: GenerationIntent = { kind: "video", request: req };
 
-    if (!options.wait) {
+    if (!options.wait && !options.out) {
       const id = await runner.start(intent);
       process.stdout.write(`${chalk.green("submitted:")} ${id}\n`);
       process.stdout.write(
@@ -108,8 +121,8 @@ async function runVideo(prompt: string, options: VideoOptions): Promise<void> {
       return;
     }
 
-    // --wait: subscribe to events, render single-line progress, persist asset
-    // links + lineage on completion.
+    // --wait/--out: subscribe to events, render single-line progress, persist
+    // asset links + lineage on completion.
     const tty = isTty();
     const printProgress = (e: JobProgressEvent): void => {
       const pct = Math.round((e.progress ?? 0) * 100);
@@ -152,9 +165,133 @@ async function runVideo(prompt: string, options: VideoOptions): Promise<void> {
       ? item.relPath
       : path.join(runtime.resolver.dataDir, item.relPath);
     process.stdout.write(`${chalk.green("ok:")} ${abs}\n`);
+    if (options.out) {
+      try {
+        const copied = await copyResultToDir(abs, options.out);
+        process.stdout.write(`${chalk.green("copied to:")} ${copied}\n`);
+      } catch (err) {
+        process.stderr.write(
+          `${chalk.yellow("warn:")} failed to copy result: ${(err as Error).message}\n`,
+        );
+      }
+    }
   } finally {
     db.close();
   }
+}
+
+async function copyResultToDir(sourcePath: string, outDir: string): Promise<string> {
+  const targetDir = path.resolve(outDir);
+  const targetPath = path.join(targetDir, path.basename(sourcePath));
+  try {
+    await fs.mkdir(targetDir, { recursive: true });
+    await fs.copyFile(sourcePath, targetPath);
+    return targetPath;
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    let hint: string;
+    switch (code) {
+      case "ENOENT":
+        hint = "source file not found or was removed";
+        break;
+      case "EACCES":
+      case "EPERM":
+        hint = "permission denied";
+        break;
+      case "ENOSPC":
+        hint = "not enough disk space";
+        break;
+      default:
+        hint = `unexpected file system error: ${(err as Error).message}`;
+    }
+    throw new Error(
+      `generation succeeded, but --out copy from '${sourcePath}' to '${targetPath}' failed: ${hint}`,
+    );
+  }
+}
+
+function parseVideoOptions(values: readonly string[], model: VideoModelDef): Partial<VideoRequest> {
+  const pairs = parseKeyValueOptions(values);
+  const out: Partial<VideoRequest> = {};
+  const raw: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(pairs)) {
+    const canonical = videoOptionAliases[key] ?? key;
+    if (canonical.startsWith("raw.")) {
+      const rawKey = canonical.slice(4);
+      if (!rawKey) throw new Error(`invalid video option '${key}'`);
+      raw[rawKey] = coerceScalar(value);
+      continue;
+    }
+    assertVideoOptionSupported(canonical, model);
+    switch (canonical) {
+      case "durationSec":
+        out.durationSec = parsePositiveNumberOption("video", canonical, value);
+        break;
+      case "fps":
+        out.fps = parsePositiveNumberOption("video", canonical, value);
+        break;
+      case "resolution":
+        out.resolution = value;
+        break;
+      case "aspectRatio":
+        out.aspectRatio = value;
+        break;
+      case "firstFrame":
+        out.firstFrame = value;
+        break;
+      case "lastFrame":
+        out.lastFrame = value;
+        break;
+      case "negativePrompt":
+        out.negativePrompt = value;
+        break;
+      default:
+        throw new Error(
+          `unknown video option '${key}'. Supported for ${model.id}: ${supportedVideoOptions(model).join(", ")}`,
+        );
+    }
+  }
+
+  if (Object.keys(raw).length > 0) out.raw = raw;
+  return out;
+}
+
+const videoOptionAliases: Record<string, string> = {
+  duration: "durationSec",
+  aspect: "aspectRatio",
+  negative: "negativePrompt",
+};
+
+function assertVideoOptionSupported(key: string, model: VideoModelDef): void {
+  if (supportedVideoOptions(model).includes(key)) return;
+  throw new Error(
+    `model '${model.id}' does not advertise video option '${key}'. Supported: ${supportedVideoOptions(model).join(", ")}`,
+  );
+}
+
+function supportedVideoOptions(model: VideoModelDef): string[] {
+  const caps = model.capabilities;
+  if (!caps) {
+    // Unknown capabilities means the catalog cannot provide dynamic guidance,
+    // so keep the full typed request surface available and let providers validate.
+    return [
+      "durationSec",
+      "fps",
+      "resolution",
+      "aspectRatio",
+      "firstFrame",
+      "lastFrame",
+      "negativePrompt",
+    ];
+  }
+  const keys: string[] = [];
+  if (caps.durationsSec || caps.maxDurationSec) keys.push("durationSec");
+  if (caps.fpsOptions && caps.fpsOptions.length > 0) keys.push("fps");
+  if (caps.resolutions && caps.resolutions.length > 0) keys.push("resolution");
+  if (caps.supportsFirstFrame) keys.push("firstFrame");
+  if (caps.supportsLastFrame) keys.push("lastFrame");
+  return keys;
 }
 
 function pickVideoModel(

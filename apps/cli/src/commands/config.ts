@@ -1,9 +1,11 @@
 import {
+  createFileConfigStore,
+  createFileSecretsStore,
   type ProviderSecrets,
   ProviderSecretsSchema,
-  createFileSecretsStore,
 } from "@imagent/config";
 import { createPathResolver, ensureDataDir } from "@imagent/persistence";
+import { loadCatalog } from "@imagent/providers";
 import chalk from "chalk";
 import type { Command } from "commander";
 
@@ -60,7 +62,12 @@ export function registerConfigCommand(program: Command): void {
     .description("Print the absolute config.json and secrets.json paths")
     .action(async () => {
       const resolver = createPathResolver();
+      await ensureDataDir(resolver);
+      await createFileConfigStore(resolver.configFile()).loadConfig();
+      await createFileSecretsStore(resolver.secretsFile()).loadSecrets();
+      await loadCatalog({ path: resolver.catalogFile() });
       process.stdout.write(`config:  ${resolver.configFile()}\n`);
+      process.stdout.write(`catalog: ${resolver.catalogFile()}\n`);
       process.stdout.write(`secrets: ${resolver.secretsFile()}\n`);
       process.stdout.write(
         `${chalk.dim(
@@ -104,7 +111,8 @@ async function runSet(dottedKey: string, value: string): Promise<void> {
   // the merged record manually because zod default-value sub-schemas refuse
   // to round-trip through DeepPartial.
   const merged = applyPatch(current, vendor, field, value);
-  // Ensure the result still parses (schema enforces required fields).
+  // Ensure the result still parses; partial records are allowed so users can
+  // set endpoint/key fields one at a time.
   ProviderSecretsSchema.parse(merged);
   await store.saveSecrets(merged);
   process.stdout.write("OK\n");
@@ -176,10 +184,11 @@ function maskSecrets(s: ProviderSecrets): unknown {
   const out: Record<string, Record<string, string>> = {};
   for (const [vendor, block] of Object.entries(s)) {
     if (!block) continue;
-    out[vendor] = {};
+    const masked: Record<string, string> = {};
     for (const [k, v] of Object.entries(block)) {
-      out[vendor]![k] = maskIfSensitive(k, v);
+      masked[k] = maskIfSensitive(k, v);
     }
+    out[vendor] = masked;
   }
   return out;
 }

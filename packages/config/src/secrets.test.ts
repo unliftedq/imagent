@@ -16,8 +16,18 @@ afterEach(async () => {
 
 describe("createFileSecretsStore", () => {
   it("returns empty secrets when secrets.json does not exist", async () => {
-    const store = createFileSecretsStore(path.join(tmpDir, "secrets.json"));
+    const filePath = path.join(tmpDir, "secrets.json");
+    const store = createFileSecretsStore(filePath);
     await expect(store.loadSecrets()).resolves.toEqual({});
+    await expect(fs.readFile(filePath, "utf8")).resolves.toBe("{}");
+  });
+
+  it("persists incomplete endpoint/key provider records", async () => {
+    const store = createFileSecretsStore(path.join(tmpDir, "secrets.json"));
+    await store.saveSecrets({ "azure-openai": { apiKey: "azure-key" } });
+    await expect(store.loadSecrets()).resolves.toEqual({
+      "azure-openai": { apiKey: "azure-key" },
+    });
   });
 
   it("saves provider secrets to plaintext json and reloads them", async () => {

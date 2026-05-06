@@ -51,6 +51,22 @@ describe("CLI --help", () => {
       expect(r.stdout.length).toBeGreaterThan(0);
     });
   }
+
+  it("image/video help exposes dynamic key=value options instead of stale model flags", () => {
+    const image = runCli(["image", "--help"]);
+    expect(image.status, `stderr:\n${image.stderr}`).toBe(0);
+    expect(image.stdout).toContain("--option <key=value>");
+    expect(image.stdout).toContain("--out <dir>");
+    expect(image.stdout).not.toContain("--negative");
+    expect(image.stdout).not.toContain("--size");
+
+    const video = runCli(["video", "--help"]);
+    expect(video.status, `stderr:\n${video.stderr}`).toBe(0);
+    expect(video.stdout).toContain("--option <key=value>");
+    expect(video.stdout).toContain("--out <dir>");
+    expect(video.stdout).not.toContain("--duration");
+    expect(video.stdout).not.toContain("--resolution");
+  });
 });
 
 describe("CLI MCP server", () => {
@@ -98,13 +114,19 @@ describe("CLI MCP server", () => {
         serverInfo: { name: "imagent" },
       });
       const listResult = responses.find((r) => r.id === 2)?.result as {
-        tools?: Array<{ name: string }>;
+        tools?: Array<{ name: string; description?: string }>;
       };
       expect(listResult).toMatchObject({
         tools: expect.arrayContaining([
           expect.objectContaining({ name: "imagent_doctor" }),
-          expect.objectContaining({ name: "imagent_image" }),
-          expect.objectContaining({ name: "imagent_video" }),
+          expect.objectContaining({
+            name: "imagent_image",
+            description: expect.stringContaining("--option key=value"),
+          }),
+          expect.objectContaining({
+            name: "imagent_video",
+            description: expect.stringContaining("--out <dir>"),
+          }),
           expect.objectContaining({ name: "imagent_config" }),
           expect.objectContaining({ name: "imagent_catalog" }),
           expect.objectContaining({ name: "imagent_asset" }),
@@ -113,6 +135,12 @@ describe("CLI MCP server", () => {
         ]),
       });
       expect(listResult.tools?.map((tool) => tool.name)).not.toContain("imagent_cli");
+      const imageTool = listResult.tools?.find((tool) => tool.name === "imagent_image");
+      const videoTool = listResult.tools?.find((tool) => tool.name === "imagent_video");
+      expect(imageTool?.description).toContain("--out <dir>");
+      expect(imageTool?.description).not.toContain("--count");
+      expect(videoTool?.description).toContain("--option key=value");
+      expect(videoTool?.description).not.toContain("--duration");
 
       const callResult = responses.find((r) => r.id === 3)?.result as {
         content?: Array<{ text: string }>;
