@@ -24,9 +24,10 @@ export async function loadImageReferences(
         buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength),
       );
       const mimeType = guessImageMimeType(reference.path, bytes);
+      const filename = path.basename(reference.path);
       loaded.push({
         reference,
-        filename: path.basename(reference.path) || fallbackFilenameForMime(mimeType),
+        filename: filename.length > 0 ? filename : fallbackFilenameForMime(mimeType),
         mimeType,
         bytes,
         base64: Buffer.from(bytes).toString("base64"),
@@ -68,8 +69,13 @@ export function guessImageMimeType(filePath: string, bytes?: Uint8Array): string
     case ".png":
       return "image/png";
     default:
-      if (bytes?.[0] === 0xff && bytes[1] === 0xd8) return "image/jpeg";
-      if (bytes?.[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) {
+      if (bytes?.[0] === 0xff && bytes?.[1] === 0xd8) return "image/jpeg";
+      if (
+        bytes?.[0] === 0x89 &&
+        bytes?.[1] === 0x50 &&
+        bytes?.[2] === 0x4e &&
+        bytes?.[3] === 0x47
+      ) {
         return "image/png";
       }
       return "image/png";

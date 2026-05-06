@@ -32,14 +32,8 @@ export const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
  */
 export interface OpenAIClientLike {
   images: {
-    generate: (
-      body: Record<string, unknown>,
-      options?: { signal?: AbortSignal },
-    ) => Promise<{ data?: Array<{ b64_json?: string; url?: string; revised_prompt?: string }> }>;
-    edit?: (
-      body: Record<string, unknown>,
-      options?: { signal?: AbortSignal },
-    ) => Promise<{ data?: Array<{ b64_json?: string; url?: string; revised_prompt?: string }> }>;
+    generate: OpenAIImageMethod;
+    edit?: OpenAIImageMethod;
   };
   models: {
     list: (options?: {
@@ -47,6 +41,14 @@ export interface OpenAIClientLike {
     }) => Promise<{ data?: Array<{ id?: string }> }> | AsyncIterable<{ id?: string }>;
   };
 }
+
+type OpenAIImageResponse = {
+  data?: Array<{ b64_json?: string; url?: string; revised_prompt?: string }>;
+};
+type OpenAIImageMethod = (
+  body: Record<string, unknown>,
+  options?: { signal?: AbortSignal },
+) => Promise<OpenAIImageResponse>;
 
 export interface OpenAIImageProviderOptions {
   apiKey: string;
