@@ -186,7 +186,7 @@ async function copyResultToDir(sourcePath: string, outDir: string): Promise<stri
     await fs.copyFile(sourcePath, targetPath);
     return targetPath;
   } catch (err) {
-    const code = err && typeof err === "object" ? (err as NodeJS.ErrnoException).code : undefined;
+    const code = (err as NodeJS.ErrnoException).code;
     let hint: string;
     switch (code) {
       case "ENOENT":
@@ -200,7 +200,7 @@ async function copyResultToDir(sourcePath: string, outDir: string): Promise<stri
         hint = "not enough disk space";
         break;
       default:
-        hint = (err as Error).message;
+        hint = `unexpected file system error: ${(err as Error).message}`;
     }
     throw new Error(
       `generation succeeded, but --out copy from '${sourcePath}' to '${targetPath}' failed: ${hint}`,
