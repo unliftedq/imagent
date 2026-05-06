@@ -1,11 +1,11 @@
 import {
   createFileConfigStore,
+  createFileSecretsStore,
   type ProviderSecrets,
   ProviderSecretsSchema,
-  createFileSecretsStore,
 } from "@imagent/config";
-import { loadCatalog } from "@imagent/providers";
 import { createPathResolver, ensureDataDir } from "@imagent/persistence";
+import { loadCatalog } from "@imagent/providers";
 import chalk from "chalk";
 import type { Command } from "commander";
 
@@ -184,10 +184,11 @@ function maskSecrets(s: ProviderSecrets): unknown {
   const out: Record<string, Record<string, string>> = {};
   for (const [vendor, block] of Object.entries(s)) {
     if (!block) continue;
-    out[vendor] = {};
+    const masked: Record<string, string> = {};
     for (const [k, v] of Object.entries(block)) {
-      out[vendor]![k] = maskIfSensitive(k, v);
+      masked[k] = maskIfSensitive(k, v);
     }
+    out[vendor] = masked;
   }
   return out;
 }

@@ -1,27 +1,29 @@
 import path from "node:path";
 
-import type { GenerationIntent, Job, JobProgressEvent, VideoRequest } from "@imagent/core";
+import type {
+  GenerationIntent,
+  Job,
+  JobProgressEvent,
+  VideoModelDef,
+  VideoRequest,
+} from "@imagent/core";
 import chalk from "chalk";
 import type { Command } from "commander";
 
 import { buildAssetSlots, capReferences } from "./asset-slots.js";
 import { buildRunner, loadCliRuntime } from "./runtime.js";
-import { collect, isTty } from "./util.js";
+import { collect, isTty, parseKeyValueOptions } from "./util.js";
 
 interface VideoOptions {
   provider?: string;
   model?: string;
-  duration?: string;
-  fps?: string;
-  resolution?: string;
-  aspect?: string;
+  option?: string[];
   ref?: string[];
   character?: string[];
   object?: string[];
   background?: string[];
   style?: string[];
   wait?: boolean;
-  out?: string;
 }
 
 export function registerVideoCommand(program: Command): void {
@@ -30,17 +32,18 @@ export function registerVideoCommand(program: Command): void {
     .description("Submit a video generation job (default provider: bytedance)")
     .option("--provider <id>", "Provider id", "bytedance")
     .option("--model <id>", "Model id within the chosen provider")
-    .option("--duration <sec>", "Clip duration in seconds")
-    .option("--fps <n>", "Frames per second")
-    .option("--resolution <r>", "Resolution (e.g. 720p, 1080p)")
-    .option("--aspect <ratio>", "Aspect ratio (e.g. 16:9, 9:16)")
+    .option(
+      "-o, --option <key=value>",
+      "Model capability option (repeatable; e.g. durationSec=5, fps=24, resolution=720p, aspectRatio=16:9, firstFrame=path)",
+      collect,
+      [],
+    )
     .option("--ref <path>", "Reference image path (repeatable)", collect, [])
     .option("--character <slug>", "Attach a character asset (repeatable)", collect, [])
     .option("--object <slug>", "Attach an object asset (repeatable)", collect, [])
     .option("--background <slug>", "Attach a background asset (repeatable)", collect, [])
     .option("--style <slug>", "Attach a style asset (repeatable)", collect, [])
     .option("--wait", "Block until job completes, printing live progress")
-    .option("--out <dir>", "Output directory override")
     .action(async (prompt: string, options: VideoOptions) => {
       try {
         await runVideo(prompt, options);
@@ -62,6 +65,10 @@ async function runVideo(prompt: string, options: VideoOptions): Promise<void> {
   }
   const model = pickVideoModel(providerId, options.model, provider.models);
   const resolved = provider.models.get(model);
+  if (!resolved) {
+    throw new Error(`unknown model '${model}' for video provider '${providerId}'`);
+  }
+  const requestOptions = parseVideoOptions(options.option ?? [], resolved);
   const supportsRefs = resolved?.capabilities?.supportsRefImages !== false;
   const maxRefs = supportsRefs ? undefined : 0;
 
@@ -88,10 +95,7 @@ async function runVideo(prompt: string, options: VideoOptions): Promise<void> {
       prompt: promptWithStyle,
       providerId,
       model,
-      ...(options.duration ? { durationSec: Number(options.duration) } : {}),
-      ...(options.fps ? { fps: Number(options.fps) } : {}),
-      ...(options.resolution ? { resolution: options.resolution } : {}),
-      ...(options.aspect ? { aspectRatio: options.aspect } : {}),
+      ...requestOptions,
       references: cappedRefs.map((p) => ({ path: p, role: "freeform" as const })),
       assetIds: slots.assetIds,
     };
@@ -155,6 +159,103 @@ async function runVideo(prompt: string, options: VideoOptions): Promise<void> {
   } finally {
     db.close();
   }
+}
+
+function parseVideoOptions(values: readonly string[], model: VideoModelDef): Partial<VideoRequest> {
+  const pairs = parseKeyValueOptions(values);
+  const out: Partial<VideoRequest> = {};
+  const raw: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(pairs)) {
+    const canonical = videoOptionAliases[key] ?? key;
+    if (canonical.startsWith("raw.")) {
+      const rawKey = canonical.slice(4);
+      if (!rawKey) throw new Error(`invalid video option '${key}'`);
+      raw[rawKey] = coerceScalar(value);
+      continue;
+    }
+    assertVideoOptionSupported(canonical, model);
+    switch (canonical) {
+      case "durationSec":
+        out.durationSec = parseNumberOption(canonical, value);
+        break;
+      case "fps":
+        out.fps = parseNumberOption(canonical, value);
+        break;
+      case "resolution":
+        out.resolution = value;
+        break;
+      case "aspectRatio":
+        out.aspectRatio = value;
+        break;
+      case "firstFrame":
+        out.firstFrame = value;
+        break;
+      case "lastFrame":
+        out.lastFrame = value;
+        break;
+      case "negativePrompt":
+        out.negativePrompt = value;
+        break;
+      default:
+        throw new Error(
+          `unknown video option '${key}'. Supported for ${model.id}: ${supportedVideoOptions(model).join(", ")}`,
+        );
+    }
+  }
+
+  if (Object.keys(raw).length > 0) out.raw = raw;
+  return out;
+}
+
+const videoOptionAliases: Record<string, string> = {
+  duration: "durationSec",
+  aspect: "aspectRatio",
+  negative: "negativePrompt",
+};
+
+function assertVideoOptionSupported(key: string, model: VideoModelDef): void {
+  if (supportedVideoOptions(model).includes(key)) return;
+  throw new Error(
+    `model '${model.id}' does not advertise video option '${key}'. Supported: ${supportedVideoOptions(model).join(", ")}`,
+  );
+}
+
+function supportedVideoOptions(model: VideoModelDef): string[] {
+  const caps = model.capabilities;
+  if (!caps) {
+    return [
+      "durationSec",
+      "fps",
+      "resolution",
+      "aspectRatio",
+      "firstFrame",
+      "lastFrame",
+      "negativePrompt",
+    ];
+  }
+  const keys = ["aspectRatio", "negativePrompt"];
+  if (caps.durationsSec || caps.maxDurationSec) keys.push("durationSec");
+  if (caps.fpsOptions && caps.fpsOptions.length > 0) keys.push("fps");
+  if (caps.resolutions && caps.resolutions.length > 0) keys.push("resolution");
+  if (caps.supportsFirstFrame) keys.push("firstFrame");
+  if (caps.supportsLastFrame) keys.push("lastFrame");
+  return keys;
+}
+
+function parseNumberOption(key: string, value: string): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error(`video option '${key}' must be a positive number`);
+  }
+  return parsed;
+}
+
+function coerceScalar(value: string): unknown {
+  if (value === "true") return true;
+  if (value === "false") return false;
+  if (/^-?\d+(\.\d+)?$/.test(value)) return Number(value);
+  return value;
 }
 
 function pickVideoModel(

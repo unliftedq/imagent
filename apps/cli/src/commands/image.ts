@@ -1,23 +1,18 @@
 import path from "node:path";
 
-import type { GenerationIntent, ImageRequest, Job } from "@imagent/core";
+import type { GenerationIntent, ImageModelDef, ImageRequest, Job } from "@imagent/core";
 import chalk from "chalk";
 import type { Command } from "commander";
 
 import { buildAssetSlots, capReferences } from "./asset-slots.js";
 import { buildRunner, loadCliRuntime } from "./runtime.js";
-import { collect } from "./util.js";
+import { collect, parseKeyValueOptions } from "./util.js";
 
 interface GenerateOptions {
   provider?: string;
   model?: string;
-  count?: string;
-  size?: string;
+  option?: string[];
   ref?: string[];
-  out?: string;
-  negative?: string;
-  seed?: string;
-  aspect?: string;
   character?: string[];
   object?: string[];
   background?: string[];
@@ -42,17 +37,17 @@ export function registerImageCommand(program: Command): void {
     .description("Generate one or more images from a prompt")
     .option("--provider <id>", "Provider id (openai|azure-openai|google|flux-bfl|bytedance|xai)")
     .option("--model <id>", "Model id within the chosen provider")
-    .option("--count <n>", "Number of outputs", "1")
-    .option("--size <WxH>", "Output size (provider-dependent)")
-    .option("--aspect <ratio>", "Aspect ratio (e.g. 1:1, 16:9)")
-    .option("--seed <n>", "Random seed")
-    .option("--negative <prompt>", "Negative prompt (provider-dependent)")
+    .option(
+      "-o, --option <key=value>",
+      "Model capability option (repeatable; e.g. size=1024x1024, aspectRatio=1:1, quality=high, outputFormat=png, count=1)",
+      collect,
+      [],
+    )
     .option("--ref <path>", "Freeform reference image path (repeatable)", collect, [])
     .option("--character <slug>", "Attach a character asset (repeatable)", collect, [])
     .option("--object <slug>", "Attach an object asset (repeatable)", collect, [])
     .option("--background <slug>", "Attach a background asset (repeatable)", collect, [])
     .option("--style <slug>", "Attach a style asset (repeatable)", collect, [])
-    .option("--out <dir>", "Output directory override")
     .action(async (prompt: string, options: GenerateOptions) => {
       try {
         await runGenerate(prompt, options);
@@ -74,6 +69,10 @@ async function runGenerate(prompt: string, options: GenerateOptions): Promise<vo
   }
   const model = pickModel(providerId, options.model, provider.models);
   const resolved = provider.models.get(model);
+  if (!resolved) {
+    throw new Error(`unknown model '${model}' for provider '${providerId}'`);
+  }
+  const requestOptions = parseImageOptions(options.option ?? [], resolved);
   const maxRefs = resolved?.capabilities?.maxReferences;
 
   const { db, gallery, runner } = buildRunner(runtime);
@@ -101,13 +100,10 @@ async function runGenerate(prompt: string, options: GenerateOptions): Promise<vo
       kind: "image",
       request: {
         prompt: promptWithStyle,
-        ...(options.negative ? { negativePrompt: options.negative } : {}),
         providerId,
         model,
-        count: Number(options.count ?? 1),
-        ...(options.size ? { size: options.size } : {}),
-        ...(options.aspect ? { aspectRatio: options.aspect } : {}),
-        ...(options.seed ? { seed: Number(options.seed) } : {}),
+        count: requestOptions.count ?? 1,
+        ...requestOptions,
         references: cappedRefs.map((p) => ({ path: p, role: "freeform" as const })),
         assetIds: slots.assetIds,
       } satisfies ImageRequest,
@@ -149,6 +145,94 @@ async function runGenerate(prompt: string, options: GenerateOptions): Promise<vo
   } finally {
     db.close();
   }
+}
+
+function parseImageOptions(values: readonly string[], model: ImageModelDef): Partial<ImageRequest> {
+  const pairs = parseKeyValueOptions(values);
+  const out: Partial<ImageRequest> = {};
+  const raw: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(pairs)) {
+    const canonical = imageOptionAliases[key] ?? key;
+    if (canonical.startsWith("raw.")) {
+      const rawKey = canonical.slice(4);
+      if (!rawKey) throw new Error(`invalid image option '${key}'`);
+      raw[rawKey] = coerceScalar(value);
+      continue;
+    }
+    assertImageOptionSupported(canonical, model);
+    switch (canonical) {
+      case "size":
+        out.size = value;
+        break;
+      case "aspectRatio":
+        out.aspectRatio = value;
+        break;
+      case "quality":
+        out.quality = value;
+        break;
+      case "outputFormat":
+        out.outputFormat = value;
+        break;
+      case "negativePrompt":
+        out.negativePrompt = value;
+        break;
+      case "seed":
+        out.seed = parseIntegerOption(canonical, value);
+        break;
+      case "count":
+        out.count = parseIntegerOption(canonical, value);
+        break;
+      default:
+        throw new Error(
+          `unknown image option '${key}'. Supported for ${model.id}: ${supportedImageOptions(model).join(", ")}`,
+        );
+    }
+  }
+
+  if (Object.keys(raw).length > 0) out.raw = raw;
+  return out;
+}
+
+const imageOptionAliases: Record<string, string> = {
+  aspect: "aspectRatio",
+  format: "outputFormat",
+  negative: "negativePrompt",
+};
+
+function assertImageOptionSupported(key: string, model: ImageModelDef): void {
+  if (supportedImageOptions(model).includes(key)) return;
+  throw new Error(
+    `model '${model.id}' does not advertise image option '${key}'. Supported: ${supportedImageOptions(model).join(", ")}`,
+  );
+}
+
+function supportedImageOptions(model: ImageModelDef): string[] {
+  const caps = model.capabilities;
+  if (!caps) {
+    return ["size", "aspectRatio", "quality", "outputFormat", "negativePrompt", "seed", "count"];
+  }
+  const keys = ["count"];
+  if (caps.sizes && caps.sizes.length > 0) keys.push("size");
+  if (caps.aspectRatios && caps.aspectRatios.length > 0) keys.push("aspectRatio");
+  if (caps.qualities && caps.qualities.length > 0) keys.push("quality");
+  if (caps.outputFormats && caps.outputFormats.length > 0) keys.push("outputFormat");
+  if (caps.supportsNegativePrompt) keys.push("negativePrompt");
+  if (caps.supportsSeed) keys.push("seed");
+  return keys;
+}
+
+function parseIntegerOption(key: string, value: string): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed)) throw new Error(`image option '${key}' must be an integer`);
+  return parsed;
+}
+
+function coerceScalar(value: string): unknown {
+  if (value === "true") return true;
+  if (value === "false") return false;
+  if (/^-?\d+(\.\d+)?$/.test(value)) return Number(value);
+  return value;
 }
 
 function pickModel(

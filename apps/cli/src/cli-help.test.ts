@@ -51,6 +51,20 @@ describe("CLI --help", () => {
       expect(r.stdout.length).toBeGreaterThan(0);
     });
   }
+
+  it("image/video help exposes dynamic key=value options instead of stale model flags", () => {
+    const image = runCli(["image", "--help"]);
+    expect(image.status, `stderr:\n${image.stderr}`).toBe(0);
+    expect(image.stdout).toContain("--option <key=value>");
+    expect(image.stdout).not.toContain("--negative");
+    expect(image.stdout).not.toContain("--size");
+
+    const video = runCli(["video", "--help"]);
+    expect(video.status, `stderr:\n${video.stderr}`).toBe(0);
+    expect(video.stdout).toContain("--option <key=value>");
+    expect(video.stdout).not.toContain("--duration");
+    expect(video.stdout).not.toContain("--resolution");
+  });
 });
 
 describe("CLI MCP server", () => {
