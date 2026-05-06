@@ -146,8 +146,13 @@ async function runGenerate(prompt: string, options: GenerateOptions): Promise<vo
       : path.join(runtime.resolver.dataDir, item.relPath);
     process.stdout.write(`${chalk.green("ok:")} ${abs}\n`);
     if (options.out) {
-      const copied = await copyResultToDir(abs, options.out);
-      process.stdout.write(`${chalk.green("copied to:")} ${copied}\n`);
+      try {
+        const copied = await copyResultToDir(abs, options.out);
+        process.stdout.write(`${chalk.green("copied to:")} ${copied}\n`);
+      } catch (err) {
+        process.stderr.write(`${chalk.yellow("warn:")} ${(err as Error).message}\n`);
+        process.exitCode = 1;
+      }
     }
   } finally {
     db.close();
@@ -165,7 +170,7 @@ async function copyResultToDir(sourcePath: string, outDir: string): Promise<stri
     const code = (err as NodeJS.ErrnoException).code;
     const hint =
       code === "ENOENT"
-        ? "source file or output directory was not found"
+        ? "output directory path is invalid or inaccessible"
         : code === "EACCES" || code === "EPERM"
           ? "permission denied"
           : code === "ENOSPC"
