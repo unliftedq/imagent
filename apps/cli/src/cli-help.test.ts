@@ -63,6 +63,7 @@ describe("CLI --help", () => {
     const video = runCli(["video", "--help"]);
     expect(video.status, `stderr:\n${video.stderr}`).toBe(0);
     expect(video.stdout).toContain("--option <key=value>");
+    expect(video.stdout).toContain("--out <dir>");
     expect(video.stdout).not.toContain("--duration");
     expect(video.stdout).not.toContain("--resolution");
   });

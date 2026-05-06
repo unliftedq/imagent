@@ -1,3 +1,4 @@
+import { promises as fs } from "node:fs";
 import path from "node:path";
 
 import type {
@@ -30,6 +31,7 @@ interface VideoOptions {
   background?: string[];
   style?: string[];
   wait?: boolean;
+  out?: string;
 }
 
 export function registerVideoCommand(program: Command): void {
@@ -50,6 +52,7 @@ export function registerVideoCommand(program: Command): void {
     .option("--background <slug>", "Attach a background asset (repeatable)", collect, [])
     .option("--style <slug>", "Attach a style asset (repeatable)", collect, [])
     .option("--wait", "Block until job completes, printing live progress")
+    .option("--out <dir>", "Copy the completed result to this directory (waits for completion)")
     .action(async (prompt: string, options: VideoOptions) => {
       try {
         await runVideo(prompt, options);
@@ -108,7 +111,7 @@ async function runVideo(prompt: string, options: VideoOptions): Promise<void> {
 
     const intent: GenerationIntent = { kind: "video", request: req };
 
-    if (!options.wait) {
+    if (!options.wait && !options.out) {
       const id = await runner.start(intent);
       process.stdout.write(`${chalk.green("submitted:")} ${id}\n`);
       process.stdout.write(
@@ -118,8 +121,8 @@ async function runVideo(prompt: string, options: VideoOptions): Promise<void> {
       return;
     }
 
-    // --wait: subscribe to events, render single-line progress, persist asset
-    // links + lineage on completion.
+    // --wait/--out: subscribe to events, render single-line progress, persist
+    // asset links + lineage on completion.
     const tty = isTty();
     const printProgress = (e: JobProgressEvent): void => {
       const pct = Math.round((e.progress ?? 0) * 100);
@@ -162,8 +165,40 @@ async function runVideo(prompt: string, options: VideoOptions): Promise<void> {
       ? item.relPath
       : path.join(runtime.resolver.dataDir, item.relPath);
     process.stdout.write(`${chalk.green("ok:")} ${abs}\n`);
+    if (options.out) {
+      try {
+        const copied = await copyResultToDir(abs, options.out);
+        process.stdout.write(`${chalk.green("copied to:")} ${copied}\n`);
+      } catch (err) {
+        process.stderr.write(`${chalk.yellow("warn:")} ${(err as Error).message}\n`);
+        process.exitCode = 1;
+      }
+    }
   } finally {
     db.close();
+  }
+}
+
+async function copyResultToDir(sourcePath: string, outDir: string): Promise<string> {
+  const targetDir = path.resolve(outDir);
+  const targetPath = path.join(targetDir, path.basename(sourcePath));
+  try {
+    await fs.mkdir(targetDir, { recursive: true });
+    await fs.copyFile(sourcePath, targetPath);
+    return targetPath;
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    const hint =
+      code === "ENOENT"
+        ? "output directory path is invalid or inaccessible"
+        : code === "EACCES" || code === "EPERM"
+          ? "permission denied"
+          : code === "ENOSPC"
+            ? "not enough disk space"
+            : (err as Error).message;
+    throw new Error(
+      `generation succeeded, but --out copy from '${sourcePath}' to '${targetPath}' failed: ${hint}`,
+    );
   }
 }
 
