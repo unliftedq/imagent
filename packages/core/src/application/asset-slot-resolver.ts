@@ -21,8 +21,8 @@ export interface AssetSlotInputs {
 export interface AssetSlotResolution {
   /** Absolute paths of reference images contributed by the slots, in slot order. */
   referencePaths: string[];
-  /** Reference images contributed by the slots, with roles preserved in slot order. */
-  references: Array<ImageReference & { role: AssetKind }>;
+  /** Reference images contributed by the slots, with roles and asset names preserved in slot order. */
+  references: Array<ImageReference & { role: AssetKind; assetName: string }>;
   /** Style asset prompt snippets that should be appended to `request.prompt`. */
   stylePromptSnippets: string[];
   /** All asset ids that contributed to this generation (one per asset). */
@@ -87,7 +87,7 @@ export function resolveAssetSlots(
   options: AssetSlotResolveOptions = {},
 ): AssetSlotResolution {
   const referencePaths: string[] = [];
-  const references: Array<ImageReference & { role: AssetKind }> = [];
+  const references: Array<ImageReference & { role: AssetKind; assetName: string }> = [];
   const stylePromptSnippets: string[] = [];
   const assetIds: string[] = [];
   const attachments: Array<{ assetId: string; role: AssetKind }> = [];
@@ -112,7 +112,7 @@ export function resolveAssetSlots(
         for (const f of refs) {
           const refPath = resolveAbs(f.relPath);
           referencePaths.push(refPath);
-          references.push({ path: refPath, role });
+          references.push({ path: refPath, role, assetName: asset.name });
           usedRefHere = true;
         }
       }

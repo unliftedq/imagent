@@ -16,7 +16,9 @@ export function appendImageReferenceInstructions(
   const lines = references.map((ref, index) => {
     const n = index + 1;
     const role = ref.role ?? "freeform";
-    return `Reference image ${n} (attached image ${n}) — role: ${role}.`;
+    const assetName = ref.assetName?.trim();
+    const assetLabel = assetName ? ` — asset name: ${assetName}` : "";
+    return `Reference image ${n} (attached image ${n}) — role: ${role}${assetLabel}.`;
   });
   const appendix = [
     "Reference images are attached in this exact order. Keep each numbered instruction matched to the same-numbered attached image:",
