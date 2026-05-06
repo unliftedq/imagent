@@ -146,7 +146,7 @@ async function runGenerate(prompt: string, options: GenerateOptions): Promise<vo
       : path.join(runtime.resolver.dataDir, item.relPath);
     if (options.out) {
       const copied = await copyResultToDir(abs, options.out);
-      process.stdout.write(`${chalk.green("copied:")} ${copied}\n`);
+      process.stdout.write(`${chalk.green("copied to:")} ${copied}\n`);
     }
     process.stdout.write(`${chalk.green("ok:")} ${abs}\n`);
   } finally {
