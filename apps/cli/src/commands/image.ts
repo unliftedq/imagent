@@ -156,10 +156,16 @@ async function runGenerate(prompt: string, options: GenerateOptions): Promise<vo
 
 async function copyResultToDir(sourcePath: string, outDir: string): Promise<string> {
   const targetDir = path.resolve(outDir);
-  await fs.mkdir(targetDir, { recursive: true });
   const targetPath = path.join(targetDir, path.basename(sourcePath));
-  await fs.copyFile(sourcePath, targetPath);
-  return targetPath;
+  try {
+    await fs.mkdir(targetDir, { recursive: true });
+    await fs.copyFile(sourcePath, targetPath);
+    return targetPath;
+  } catch (err) {
+    throw new Error(
+      `failed to copy result from '${sourcePath}' to '${targetPath}': ${(err as Error).message}`,
+    );
+  }
 }
 
 function parseImageOptions(values: readonly string[], model: ImageModelDef): Partial<ImageRequest> {
