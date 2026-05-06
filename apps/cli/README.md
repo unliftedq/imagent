@@ -4,27 +4,35 @@
 
 ## Quick start
 
+Install the CLI globally:
+
 ```bash
-bun install
-bun run --filter @imagent/cli dev doctor
+npm install -g @imagent/cli
+imagent doctor
+```
+
+Or run it without installing:
+
+```bash
+npx -y @imagent/cli doctor
 ```
 
 Configure at least one provider key:
 
 ```bash
-bun run --filter @imagent/cli dev config set openai.apiKey sk-...
+imagent config set openai.apiKey sk-...
 ```
 
 Generate an image:
 
 ```bash
-bun run --filter @imagent/cli dev image "a cinematic portrait of a red fox"
+imagent image "a cinematic portrait of a red fox"
 ```
 
 Generate a video:
 
 ```bash
-bun run --filter @imagent/cli dev video "a slow camera move through a neon city" --provider bytedance --wait
+imagent video "a slow camera move through a neon city" --provider bytedance --wait
 ```
 
 ## Common commands
@@ -52,8 +60,8 @@ Configuration files live under `~/.imagent/` by default:
 Show the active paths:
 
 ```bash
-bun run --filter @imagent/cli dev config path
-bun run --filter @imagent/cli dev catalog path
+imagent config path
+imagent catalog path
 ```
 
 Environment variables can override matching secrets for one-off runs, for example:
@@ -114,19 +122,4 @@ imagent gallery ls --search "prompt:fox"
 imagent gallery show <itemId>
 imagent gallery remix <itemId> --prompt-suffix "at sunset"
 imagent gallery favorite <itemId>
-```
-
-## Build
-
-```bash
-bun run --filter @imagent/cli build
-bun run --filter @imagent/cli test
-```
-
-The npm CLI entry point is written to `apps/cli/dist/cli.js`. The build bundles the internal `@imagent/*` workspace packages into that file, while third-party runtime dependencies such as `better-sqlite3`, `sharp`, provider SDKs, and `commander` remain normal npm dependencies installed alongside the package.
-
-The experimental Node SEA binary build is still available with:
-
-```bash
-bun run --filter @imagent/cli build:binary
 ```

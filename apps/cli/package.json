@@ -1,20 +1,40 @@
 {
   "name": "@imagent/cli",
-  "version": "0.0.1",
+  "version": "0.0.2",
+  "description": "Local-first image and video generation CLI for imagent.",
+  "license": "UNLICENSED",
+  "homepage": "https://github.com/unliftedq/imagent#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/unliftedq/imagent.git",
+    "directory": "apps/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/unliftedq/imagent/issues"
+  },
+  "keywords": [
+    "generative-ai",
+    "generative-art",
+    "image-generation",
+    "video-generation"
+  ],
   "type": "module",
   "main": "./dist/cli.js",
-  "types": "./dist/index.d.ts",
   "bin": {
-    "imagent": "./dist/cli.js"
+    "imagent": "dist/cli.js"
   },
   "files": [
     "dist/cli.js",
-    "dist/index.d.ts",
     "dist/migrations"
   ],
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
       "default": "./dist/cli.js"
     }
   },
