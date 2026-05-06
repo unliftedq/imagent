@@ -1,3 +1,4 @@
+import { promises as fs } from "node:fs";
 import path from "node:path";
 
 import type { GenerationIntent, ImageModelDef, ImageRequest, Job } from "@imagent/core";
@@ -17,6 +18,7 @@ interface GenerateOptions {
   object?: string[];
   background?: string[];
   style?: string[];
+  out?: string;
 }
 
 /**
@@ -48,6 +50,7 @@ export function registerImageCommand(program: Command): void {
     .option("--object <slug>", "Attach an object asset (repeatable)", collect, [])
     .option("--background <slug>", "Attach a background asset (repeatable)", collect, [])
     .option("--style <slug>", "Attach a style asset (repeatable)", collect, [])
+    .option("--out <dir>", "Copy the completed result to this directory")
     .action(async (prompt: string, options: GenerateOptions) => {
       try {
         await runGenerate(prompt, options);
@@ -141,10 +144,22 @@ async function runGenerate(prompt: string, options: GenerateOptions): Promise<vo
     const abs = path.isAbsolute(item.relPath)
       ? item.relPath
       : path.join(runtime.resolver.dataDir, item.relPath);
+    if (options.out) {
+      const copied = await copyResultToDir(abs, options.out);
+      process.stdout.write(`${chalk.green("copied:")} ${copied}\n`);
+    }
     process.stdout.write(`${chalk.green("ok:")} ${abs}\n`);
   } finally {
     db.close();
   }
+}
+
+async function copyResultToDir(sourcePath: string, outDir: string): Promise<string> {
+  const targetDir = path.resolve(outDir);
+  await fs.mkdir(targetDir, { recursive: true });
+  const targetPath = path.join(targetDir, path.basename(sourcePath));
+  await fs.copyFile(sourcePath, targetPath);
+  return targetPath;
 }
 
 function parseImageOptions(values: readonly string[], model: ImageModelDef): Partial<ImageRequest> {

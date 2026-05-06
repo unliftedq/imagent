@@ -56,6 +56,7 @@ describe("CLI --help", () => {
     const image = runCli(["image", "--help"]);
     expect(image.status, `stderr:\n${image.stderr}`).toBe(0);
     expect(image.stdout).toContain("--option <key=value>");
+    expect(image.stdout).toContain("--out <dir>");
     expect(image.stdout).not.toContain("--negative");
     expect(image.stdout).not.toContain("--size");
 
