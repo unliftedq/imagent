@@ -144,11 +144,11 @@ async function runGenerate(prompt: string, options: GenerateOptions): Promise<vo
     const abs = path.isAbsolute(item.relPath)
       ? item.relPath
       : path.join(runtime.resolver.dataDir, item.relPath);
+    process.stdout.write(`${chalk.green("ok:")} ${abs}\n`);
     if (options.out) {
       const copied = await copyResultToDir(abs, options.out);
       process.stdout.write(`${chalk.green("copied to:")} ${copied}\n`);
     }
-    process.stdout.write(`${chalk.green("ok:")} ${abs}\n`);
   } finally {
     db.close();
   }
@@ -162,8 +162,17 @@ async function copyResultToDir(sourcePath: string, outDir: string): Promise<stri
     await fs.copyFile(sourcePath, targetPath);
     return targetPath;
   } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    const hint =
+      code === "ENOENT"
+        ? "source file or output directory was not found"
+        : code === "EACCES" || code === "EPERM"
+          ? "permission denied"
+          : code === "ENOSPC"
+            ? "not enough disk space"
+            : (err as Error).message;
     throw new Error(
-      `failed to copy result from '${sourcePath}' to '${targetPath}': ${(err as Error).message}`,
+      `generation succeeded, but --out copy from '${sourcePath}' to '${targetPath}' failed: ${hint}`,
     );
   }
 }
