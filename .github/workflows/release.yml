@@ -132,6 +132,24 @@ jobs:
           if npm view "@imagent/cli@${package_version}" version >/dev/null 2>&1; then
             echo "@imagent/cli@${package_version} is already published; skipping npm publish."
           else
+            pack_dir="$(mktemp -d)"
+            bun pm pack --destination "${pack_dir}"
+            package_file="$(find "${pack_dir}" -maxdepth 1 -name "*.tgz" -print -quit)"
+            test -n "${package_file}"
+
+            tar -xOf "${package_file}" package/package.json > "${pack_dir}/package.json"
+            node -e '
+              const manifest = require(process.argv[1]);
+              const dependencyGroups = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"];
+              for (const group of dependencyGroups) {
+                for (const [name, version] of Object.entries(manifest[group] ?? {})) {
+                  if (typeof version === "string" && /^(catalog|workspace):/.test(version)) {
+                    throw new Error(`${group}.${name} was not rewritten before publish: ${version}`);
+                  }
+                }
+              }
+            ' "${pack_dir}/package.json"
+
             # Uses npm Trusted Publishing via GitHub OIDC; no registry token is required.
-            npm publish --access public --provenance
+            npm publish "${package_file}" --access public --provenance
           fi

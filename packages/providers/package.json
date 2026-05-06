@@ -1,6 +1,6 @@
 {
   "name": "@imagent/providers",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
@@ -18,17 +18,17 @@
     "clean": "rm -rf dist .tsbuildinfo"
   },
   "dependencies": {
-    "@ai-sdk/bytedance": "^2.0.0-beta.30",
-    "@ai-sdk/xai": "^4.0.0-beta.46",
-    "@google/genai": "^1.51.0",
+    "@ai-sdk/bytedance": "catalog:",
+    "@ai-sdk/xai": "catalog:",
+    "@google/genai": "catalog:",
     "@imagent/config": "workspace:*",
     "@imagent/core": "workspace:*",
-    "ai": "^7.0.0-beta.113",
-    "openai": "^6.35.0",
-    "zod": "^4.4.1"
+    "ai": "catalog:",
+    "openai": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "@types/node": "^25.6.0",
-    "vitest": "^4.1.5"
+    "@types/node": "catalog:",
+    "vitest": "catalog:"
   }
 }
