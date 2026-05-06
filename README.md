@@ -37,6 +37,14 @@ imagent/
 
 ## Documentation entry points
 
+- User documentation:
+  [`Quick Start`](./docs/quick-start.md),
+  [`Installation`](./docs/installation.md),
+  [`Updates`](./docs/updates.md),
+  [`CLI Usage`](./docs/cli.md),
+  [`Providers`](./docs/providers.md),
+  [`Configuration`](./docs/configuration.md),
+  [`Best Practices`](./docs/best-practices.md)
 - Desktop application: [`apps/desktop/README.md`](./apps/desktop/README.md)
 - CLI: [`apps/cli/README.md`](./apps/cli/README.md)
 - Architecture overview: [`architecture.md`](./architecture.md)
