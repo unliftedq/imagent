@@ -1,3 +1,7 @@
+---
+description: Use IMAGENT from scripts for provider setup, generation jobs, gallery queries, and maintenance.
+---
+
 # CLI Usage
 
 ### Command overview
@@ -44,7 +48,7 @@ imagent config get
 imagent config get openai.apiKey
 ```
 
-The CLI config command writes secrets only. General app preferences such as theme, default output directory, default provider, and concurrency are managed by the desktop **Settings** page or by carefully editing `~/.imagent/config.json`.
+The CLI config command writes secrets only. General app preferences such as theme, default output directory, default provider, and concurrency are managed by the desktop **Settings** page or by carefully editing the local workspace `config.json` file.
 
 ### Catalog commands
 
@@ -55,7 +59,7 @@ imagent catalog show --kind image
 imagent catalog reset --force
 ```
 
-The catalog defines supported models, model capabilities, and provider-facing model IDs or deployment names. Azure OpenAI deployment names and custom provider model mappings belong in `~/.imagent/catalog.json`, not in `config.json`.
+The catalog defines supported models, model capabilities, and provider-facing model IDs or deployment names. Azure OpenAI deployment names and custom provider model mappings belong in the local workspace `catalog.json` file, not in `config.json`.
 
 ### Image generation
 
