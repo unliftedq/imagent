@@ -1,3 +1,7 @@
+---
+description: Update the CLI, rebuild the desktop app, and refresh the model catalog.
+---
+
 # Updates
 
 ### Update the CLI
@@ -31,7 +35,7 @@ bun run --filter @imagent/cli build
 
 ### Update the desktop app
 
-The project does not currently include automatic updates. To update the desktop application, install a newer packaged release over the existing installation. User data remains under `~/.imagent/` and is not removed by the Windows uninstaller by default.
+The project does not currently include automatic updates. To update the desktop application, install a newer packaged release over the existing installation. User data remains in the local workspace and is not removed by the Windows uninstaller by default.
 
 If running from source:
 
@@ -46,7 +50,7 @@ Run `rebuild` again after dependency or Electron changes so native modules match
 
 ### Update the model catalog
 
-The runtime model catalog is stored at `~/.imagent/catalog.json`. On first run, imagent seeds it from the bundled default catalog. After that, the user file is authoritative.
+The runtime model catalog is stored in the local workspace `catalog.json` file. On first run, imagent seeds it from the bundled default catalog. After that, the user file is authoritative.
 
 Show the active catalog path:
 

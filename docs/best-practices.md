@@ -1,15 +1,19 @@
+---
+description: Keep assets organized, manage secrets carefully, and preserve reproducible generation history.
+---
+
 # Best Practices
 
 ### Protect secrets
 
 - Prefer `imagent config set` or the desktop **Providers** page over manual secret file edits.
 - Use environment variables for one-off shell sessions and automation.
-- Never commit `~/.imagent/secrets.json` or screenshots containing full API keys.
+- Never commit local workspace secrets files or screenshots containing full API keys.
 - Rotate provider keys if they are accidentally exposed.
 
 ### Keep the workspace backed up
 
-The project is local-first. Your creative history lives in `~/.imagent/`, especially:
+The project is local-first. Your creative history lives in the local workspace, especially:
 
 - `studio.db`
 - `config.json`
@@ -63,7 +67,7 @@ Because the desktop and CLI share one workspace, use the CLI for repeatable auto
 
 ### Avoid destructive cleanup outside imagent
 
-Prefer `imagent asset rm`, `imagent gallery rm`, and desktop delete/archive flows over manually deleting files from `~/.imagent/`. Manual deletion can leave database rows pointing at missing files.
+Prefer `imagent asset rm`, `imagent gallery rm`, and desktop delete/archive flows over manually deleting files from the local workspace. Manual deletion can leave database rows pointing at missing files.
 
 ### Rebuild native modules when switching desktop development contexts
 

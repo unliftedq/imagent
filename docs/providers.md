@@ -1,3 +1,7 @@
+---
+description: Connect OpenAI, Azure OpenAI, Google, Flux, ByteDance, and xAI models.
+---
+
 # Providers
 
 imagent supports six built-in provider IDs:
@@ -19,9 +23,9 @@ You can configure providers in three ways:
 
 1. Desktop app: open **Providers**, choose a provider, enter its key and endpoint if required, optionally test it, and save.
 2. CLI: use `imagent config set <provider>.<field> <value>`.
-3. Environment variables: set secrets for a single CLI process. Environment values override `~/.imagent/secrets.json` for that run.
+3. Environment variables: set secrets for a single CLI process. Environment values override the local workspace secrets file for that run.
 
-Secrets are stored in `~/.imagent/secrets.json`. On POSIX systems, imagent attempts to write the file with `0600` permissions.
+Secrets are stored in the local workspace `secrets.json` file. On POSIX systems, imagent attempts to write the file with `0600` permissions.
 
 ### OpenAI (`openai`)
 
@@ -75,7 +79,7 @@ AZURE_OPENAI_API_KEY=<azure-key> \
 imagent image "prompt" --provider azure-openai
 ```
 
-Azure deployment names are model catalog provider offering IDs. Edit `~/.imagent/catalog.json` or use the desktop **Providers** page to map each Azure deployment ID to a canonical image model such as `gpt-image-2`.
+Azure deployment names are model catalog provider offering IDs. Edit the local workspace `catalog.json` file or use the desktop **Providers** page to map each Azure deployment ID to a canonical image model such as `gpt-image-2`.
 
 Catalog mapping example:
 
@@ -265,6 +269,6 @@ The desktop **Providers** page can add custom OpenAI Images API-compatible provi
 - An optional API key, for endpoints that require direct authentication.
 - One or more image model mappings from provider-facing model IDs to canonical catalog image models.
 
-Custom provider secrets are stored under `customOpenAI` in `~/.imagent/secrets.json`; model mappings are stored under the provider ID in `~/.imagent/catalog.json`.
+Custom provider secrets are stored under `customOpenAI` in the local workspace `secrets.json` file; model mappings are stored under the provider ID in the local workspace `catalog.json` file.
 
 The current CLI `config set` command only supports built-in provider IDs. Configure custom providers through the desktop app or by carefully editing `secrets.json` and `catalog.json`.

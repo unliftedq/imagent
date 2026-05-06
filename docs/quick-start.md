@@ -1,3 +1,7 @@
+---
+description: Create the local workspace, configure a provider, and run the first image or video job.
+---
+
 # Quick Start
 
 ### 1. Install or run the CLI
@@ -57,4 +61,4 @@ Video jobs are asynchronous. Use `--wait` to block until completion, or reattach
 
 ### 5. Use the desktop app
 
-Open the desktop app, configure providers in **Providers**, choose defaults in **Settings**, create assets in **Assets**, generate in **Studio**, and curate results in **Gallery**. The desktop app and CLI read and write the same `~/.imagent/` workspace.
+Open the desktop app, configure providers in **Providers**, choose defaults in **Settings**, create assets in **Assets**, generate in **Studio**, and curate results in **Gallery**. The desktop app and CLI read and write the same local workspace.

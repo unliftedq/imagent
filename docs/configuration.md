@@ -1,20 +1,24 @@
+---
+description: Understand workspace files, secrets, model defaults, and local catalog behavior.
+---
+
 # Configuration
 
 ### Workspace layout
 
-By default, imagent stores all local data under `~/.imagent/`:
+By default, imagent stores all local data in a dedicated local workspace directory:
 
 | Path | Purpose |
 | --- | --- |
-| `~/.imagent/config.json` | Non-sensitive app preferences. |
-| `~/.imagent/secrets.json` | Provider keys, endpoints, base URLs, and custom provider secrets. |
-| `~/.imagent/catalog.json` | User-editable model catalog and provider model mappings. |
-| `~/.imagent/studio.db` | Local SQLite database for assets, gallery, boards, jobs, and metadata. |
-| `~/.imagent/assets/` | Copied asset reference files and thumbnails. |
-| `~/.imagent/gallery/` | Generated image and video outputs, organized by date. |
-| `~/.imagent/logs/` | Application and job logs. |
-| `~/.imagent/cache/provider-responses/` | Provider response cache area. |
-| `~/.imagent/cache/video-temp/` | Temporary video processing area. |
+| `config.json` | Non-sensitive app preferences. |
+| `secrets.json` | Provider keys, endpoints, base URLs, and custom provider secrets. |
+| `catalog.json` | User-editable model catalog and provider model mappings. |
+| `studio.db` | Local SQLite database for assets, gallery, boards, jobs, and metadata. |
+| `assets/` | Copied asset reference files and thumbnails. |
+| `gallery/` | Generated image and video outputs, organized by date. |
+| `logs/` | Application and job logs. |
+| `cache/provider-responses/` | Provider response cache area. |
+| `cache/video-temp/` | Temporary video processing area. |
 
 The desktop application and CLI both use this workspace, so changes made in one interface are visible in the other.
 

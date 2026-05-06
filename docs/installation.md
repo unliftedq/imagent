@@ -1,3 +1,7 @@
+---
+description: Install the CLI, run from source, and prepare the desktop app for local use.
+---
+
 # Installation
 
 ### Prerequisites
@@ -73,4 +77,4 @@ bun run --filter @imagent/studio package:mac
 bun run --filter @imagent/studio package:linux
 ```
 
-Packaged desktop builds keep `~/.imagent/` in place across reinstalls and upgrades, so your gallery, assets, boards, config, and provider secrets remain available.
+Packaged desktop builds keep the local workspace in place across reinstalls and upgrades, so your gallery, assets, boards, config, and provider secrets remain available.
