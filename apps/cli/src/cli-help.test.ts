@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const ENTRY = path.resolve(here, "..", "dist", "index.js");
+const ENTRY = path.resolve(here, "..", "dist", "cli.js");
 
 interface Result {
   status: number | null;

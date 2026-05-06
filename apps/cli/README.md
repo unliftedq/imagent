@@ -121,7 +121,12 @@ imagent gallery favorite <itemId>
 ```bash
 bun run --filter @imagent/cli build
 bun run --filter @imagent/cli test
-bun run --filter @imagent/cli build:binary
 ```
 
-The single-file binary is written to `apps/cli/dist/`. Because native modules such as `better-sqlite3` and `sharp` cannot be fully embedded into a Node SEA bundle, redistribution still requires the necessary native dependencies in `node_modules/`.
+The npm CLI entry point is written to `apps/cli/dist/cli.js`. The build bundles the internal `@imagent/*` workspace packages into that file, while third-party runtime dependencies such as `better-sqlite3`, `sharp`, provider SDKs, and `commander` remain normal npm dependencies installed alongside the package.
+
+The experimental Node SEA binary build is still available with:
+
+```bash
+bun run --filter @imagent/cli build:binary
+```
