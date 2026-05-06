@@ -29,6 +29,8 @@ export function createFileSecretsStore(filePath: string): SecretsStore {
         raw = await fs.readFile(filePath, "utf8");
       } catch (err) {
         if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+          await fs.mkdir(path.dirname(filePath), { recursive: true });
+          await writeSecretsFile(filePath, {});
           return {};
         }
         throw err;
@@ -39,19 +41,23 @@ export function createFileSecretsStore(filePath: string): SecretsStore {
     async saveSecrets(patch): Promise<void> {
       const current = await this.loadSecrets();
       const next = ProviderSecretsSchema.parse(deepMergeSecrets(current, patch));
-      await fs.mkdir(path.dirname(filePath), { recursive: true });
-      await fs.writeFile(filePath, JSON.stringify(next, null, 2), "utf8");
-      try {
-        await fs.chmod(filePath, 0o600);
-      } catch (err) {
-        const code = (err as NodeJS.ErrnoException).code;
-        // Windows NTFS doesn't expose POSIX bits; ignore the failure.
-        if (code !== "EPERM" && code !== "ENOSYS" && code !== "ENOTSUP") {
-          throw err;
-        }
-      }
+      await writeSecretsFile(filePath, next);
     },
   };
+}
+
+async function writeSecretsFile(filePath: string, secrets: ProviderSecrets): Promise<void> {
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, JSON.stringify(secrets, null, 2), "utf8");
+  try {
+    await fs.chmod(filePath, 0o600);
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    // Windows NTFS doesn't expose POSIX bits; ignore the failure.
+    if (code !== "EPERM" && code !== "ENOSYS" && code !== "ENOTSUP") {
+      throw err;
+    }
+  }
 }
 
 /**

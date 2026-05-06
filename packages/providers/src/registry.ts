@@ -46,7 +46,7 @@ export function createImageRegistry(
     out.set("openai", new OpenAIImageProvider(openaiOpts));
   }
 
-  if (secrets["azure-openai"]) {
+  if (hasEndpointKeyPair(secrets["azure-openai"])) {
     out.set(
       "azure-openai",
       new AzureOpenAIImageProvider({
@@ -75,7 +75,7 @@ export function createImageRegistry(
     out.set("flux-bfl", new FluxImageProvider(fluxOpts));
   }
 
-  if (secrets.bytedance) {
+  if (hasEndpointKeyPair(secrets.bytedance)) {
     const bdOpts: ConstructorParameters<typeof ByteDanceImageProvider>[0] = {
       apiKey: secrets.bytedance.apiKey,
       endpoint: secrets.bytedance.endpoint,
@@ -128,7 +128,7 @@ export function createVideoRegistry(
 ): VideoRegistry {
   const out = new Map<string, VideoProvider>();
 
-  if (secrets.bytedance) {
+  if (hasEndpointKeyPair(secrets.bytedance)) {
     const opts: ConstructorParameters<typeof ByteDanceVideoProvider>[0] = {
       apiKey: secrets.bytedance.apiKey,
       endpoint: secrets.bytedance.endpoint,
@@ -166,10 +166,10 @@ export function createVideoRegistry(
 export function configuredProviderCount(secrets: ProviderSecrets): number {
   let n = 0;
   if (secrets.openai) n += 1;
-  if (secrets["azure-openai"]) n += 1;
+  if (hasEndpointKeyPair(secrets["azure-openai"])) n += 1;
   if (secrets.google) n += 1;
   if (secrets["flux-bfl"]) n += 1;
-  if (secrets.bytedance) n += 1;
+  if (hasEndpointKeyPair(secrets.bytedance)) n += 1;
   if (secrets.xai) n += 1;
   n += Object.keys(secrets.customOpenAI ?? {}).length;
   return n;
@@ -182,6 +182,12 @@ export const TOTAL_PROVIDER_COUNT = 6;
 
 function mapFromList<T extends { id: string }>(list: readonly T[]): ReadonlyMap<string, T> {
   return new Map(list.map((item) => [item.id, item]));
+}
+
+function hasEndpointKeyPair(
+  secrets: { endpoint?: string; apiKey?: string } | undefined,
+): secrets is { endpoint: string; apiKey: string } {
+  return Boolean(secrets?.endpoint && secrets.apiKey);
 }
 
 export {

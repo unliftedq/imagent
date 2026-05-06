@@ -25,8 +25,8 @@ export const ProviderSecretsSchema = z.object({
     .optional(),
   "azure-openai": z
     .object({
-      endpoint: z.string(),
-      apiKey: z.string(),
+      endpoint: z.string().optional(),
+      apiKey: z.string().optional(),
     })
     .optional(),
   google: z
@@ -43,8 +43,8 @@ export const ProviderSecretsSchema = z.object({
     .optional(),
   bytedance: z
     .object({
-      endpoint: z.string(),
-      apiKey: z.string(),
+      endpoint: z.string().optional(),
+      apiKey: z.string().optional(),
     })
     .optional(),
   xai: z
