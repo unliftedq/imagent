@@ -116,11 +116,12 @@ describe("GoogleImageProvider", () => {
         parts: Array<{ text?: string; inlineData?: unknown }>;
       }>;
       expect(contents[0]?.parts[0]?.text).toContain(
-        "Reference image 1 (attached image 1) — role: object — source: object.png",
+        "Reference image 1 (attached image 1) — role: object.",
       );
       expect(contents[0]?.parts[0]?.text).toContain(
-        "Reference image 2 (attached image 2) — role: background — source: background.png",
+        "Reference image 2 (attached image 2) — role: background.",
       );
+      expect(contents[0]?.parts[0]?.text).not.toContain("source:");
       expect(contents[0]?.parts.slice(1)).toHaveLength(2);
       expect(contents[0]?.parts[1]?.inlineData).toMatchObject({ mimeType: "image/png" });
       expect(contents[0]?.parts[2]?.inlineData).toMatchObject({ mimeType: "image/png" });
