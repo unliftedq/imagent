@@ -37,7 +37,7 @@ imagent/
 
 ## Documentation entry points
 
-- Comprehensive user guide: [`docs/README.md`](./docs/README.md)
+- Documentation index: [`docs/README.md`](./docs/README.md)
 - Desktop application: [`apps/desktop/README.md`](./apps/desktop/README.md)
 - CLI: [`apps/cli/README.md`](./apps/cli/README.md)
 - Architecture overview: [`architecture.md`](./architecture.md)
