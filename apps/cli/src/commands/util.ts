@@ -22,6 +22,29 @@ export function parseKeyValueOptions(values: readonly string[] = []): Record<str
   return out;
 }
 
+export function coerceScalar(value: string): unknown {
+  if (value === "true") return true;
+  if (value === "false") return false;
+  if (/^-?\d+(\.\d+)?$/.test(value)) return Number(value);
+  return value;
+}
+
+export function parsePositiveIntegerOption(command: string, key: string, value: string): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error(`${command} option '${key}' must be a positive integer`);
+  }
+  return parsed;
+}
+
+export function parsePositiveNumberOption(command: string, key: string, value: string): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error(`${command} option '${key}' must be a positive number`);
+  }
+  return parsed;
+}
+
 export function isTty(): boolean {
   return Boolean(process.stdout.isTTY);
 }

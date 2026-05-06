@@ -12,7 +12,13 @@ import type { Command } from "commander";
 
 import { buildAssetSlots, capReferences } from "./asset-slots.js";
 import { buildRunner, loadCliRuntime } from "./runtime.js";
-import { collect, isTty, parseKeyValueOptions } from "./util.js";
+import {
+  coerceScalar,
+  collect,
+  isTty,
+  parseKeyValueOptions,
+  parsePositiveNumberOption,
+} from "./util.js";
 
 interface VideoOptions {
   provider?: string;
@@ -177,10 +183,10 @@ function parseVideoOptions(values: readonly string[], model: VideoModelDef): Par
     assertVideoOptionSupported(canonical, model);
     switch (canonical) {
       case "durationSec":
-        out.durationSec = parseNumberOption(canonical, value);
+        out.durationSec = parsePositiveNumberOption("video", canonical, value);
         break;
       case "fps":
-        out.fps = parseNumberOption(canonical, value);
+        out.fps = parsePositiveNumberOption("video", canonical, value);
         break;
       case "resolution":
         out.resolution = value;
@@ -241,21 +247,6 @@ function supportedVideoOptions(model: VideoModelDef): string[] {
   if (caps.supportsFirstFrame) keys.push("firstFrame");
   if (caps.supportsLastFrame) keys.push("lastFrame");
   return keys;
-}
-
-function parseNumberOption(key: string, value: string): number {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    throw new Error(`video option '${key}' must be a positive number`);
-  }
-  return parsed;
-}
-
-function coerceScalar(value: string): unknown {
-  if (value === "true") return true;
-  if (value === "false") return false;
-  if (/^-?\d+(\.\d+)?$/.test(value)) return Number(value);
-  return value;
 }
 
 function pickVideoModel(

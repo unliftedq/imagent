@@ -29,7 +29,6 @@ export function createFileSecretsStore(filePath: string): SecretsStore {
         raw = await fs.readFile(filePath, "utf8");
       } catch (err) {
         if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-          await fs.mkdir(path.dirname(filePath), { recursive: true });
           await writeSecretsFile(filePath, {});
           return {};
         }
