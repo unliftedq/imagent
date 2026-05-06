@@ -1,4 +1,5 @@
 import {
+  appendImageReferenceInstructions,
   ProviderError,
   ProviderHttpError,
   ProviderRequestError,
@@ -22,6 +23,7 @@ import {
   parseSize,
   testFailureFromError,
 } from "../openai/image.js";
+import { imageDataUrl, loadImageReferences } from "../reference-images.js";
 
 /** Canonical xAI base URL. OpenAI-compatible. */
 export const DEFAULT_XAI_BASE_URL = "https://api.x.ai/v1";
@@ -113,11 +115,18 @@ export class XaiImageProvider implements ImageProvider {
 
     const args: Parameters<typeof generateImage>[0] = {
       model,
-      prompt: merged.prompt,
+      prompt: appendImageReferenceInstructions(merged.prompt, merged.references),
       n: merged.count,
     };
     if (merged.size && /^\d+x\d+$/.test(merged.size)) {
       args.size = merged.size as `${number}x${number}`;
+    }
+    if (merged.references.length > 0) {
+      const dataUrls = (await loadImageReferences(merged.references, this.id)).map(imageDataUrl);
+      (args as Record<string, unknown>).providerOptions = {
+        ...((args as { providerOptions?: Record<string, unknown> }).providerOptions ?? {}),
+        xai: { referenceImages: dataUrls },
+      };
     }
     if (signal) args.abortSignal = signal;
 

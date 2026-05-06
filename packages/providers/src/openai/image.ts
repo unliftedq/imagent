@@ -1,4 +1,5 @@
 import {
+  appendImageReferenceInstructions,
   applyImageDefaults,
   type ImageCapabilities,
   type ImageGenerationResult,
@@ -15,6 +16,7 @@ import {
   validateImageRequestAgainstModel,
 } from "@imagent/core";
 import OpenAI, { APIError } from "openai";
+import { loadImageReferences, openAIReferenceFiles } from "../reference-images.js";
 
 /**
  * Canonical OpenAI base URL. Hardcoded — users configure auth only. A
@@ -31,6 +33,10 @@ export const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
 export interface OpenAIClientLike {
   images: {
     generate: (
+      body: Record<string, unknown>,
+      options?: { signal?: AbortSignal },
+    ) => Promise<{ data?: Array<{ b64_json?: string; url?: string; revised_prompt?: string }> }>;
+    edit?: (
       body: Record<string, unknown>,
       options?: { signal?: AbortSignal },
     ) => Promise<{ data?: Array<{ b64_json?: string; url?: string; revised_prompt?: string }> }>;
@@ -86,13 +92,22 @@ export class OpenAIImageProvider implements ImageProvider {
     const merged = applyImageDefaults(req, model);
     validateImageRequestAgainstModel(this.id, merged, model);
 
-    const body = buildOpenAIImageBody(merged, model);
+    const body = await buildOpenAIImageBody(merged, model, this.id);
     const opts: { signal?: AbortSignal } = {};
     if (signal) opts.signal = signal;
 
     let response: { data?: Array<{ b64_json?: string; url?: string; revised_prompt?: string }> };
     try {
-      response = await this.client.images.generate(body, opts);
+      if (merged.references.length > 0) {
+        if (!this.client.images.edit) {
+          throw new ProviderRequestError(`${this.id} SDK client does not expose images.edit`, {
+            vendorId: this.id,
+          });
+        }
+        response = await this.client.images.edit(body, opts);
+      } else {
+        response = await this.client.images.generate(body, opts);
+      }
     } catch (err) {
       throw rethrowOpenAIError(err, this.id);
     }
@@ -156,10 +171,11 @@ export class OpenAIImageProvider implements ImageProvider {
  * ByteDance via direct import (each provider stays its own class but doesn't
  * need to re-derive what defaults to forward).
  */
-export function buildOpenAIImageBody(
+export async function buildOpenAIImageBody(
   req: ImageRequest,
   model: ImageModelDef,
-): Record<string, unknown> {
+  vendorId = "openai",
+): Promise<Record<string, unknown>> {
   const caps = model.capabilities;
   const supportsOutputFormat = caps?.outputFormats !== undefined && caps.outputFormats.length > 0;
   // Backstop for catalogs that pre-date the `outputFormats` capability:
@@ -173,7 +189,7 @@ export function buildOpenAIImageBody(
   const useOutputFormat = supportsOutputFormat || looksLikeGptImage;
   const body: Record<string, unknown> = {
     model: model.id,
-    prompt: req.prompt,
+    prompt: appendImageReferenceInstructions(req.prompt, req.references),
     n: req.count,
   };
   // Newer image models (gpt-image-* family) use `output_format` (png/jpeg/
@@ -196,6 +212,9 @@ export function buildOpenAIImageBody(
     body.quality = raw.quality;
   }
   if (raw.style && caps?.supportsStyleRef) body.style = raw.style;
+  if (req.references.length > 0) {
+    body.image = await openAIReferenceFiles(await loadImageReferences(req.references, vendorId));
+  }
   return body;
 }
 

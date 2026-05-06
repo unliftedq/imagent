@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import type { Asset } from "../domain/asset.js";
 import {
   appendStylePromptSnippets,
+  capImageReferences,
   capReferencePaths,
   resolveAssetSlots,
 } from "./asset-slot-resolver.js";
+import { appendImageReferenceInstructions } from "./reference-prompt.js";
 
 function makeAsset(partial: Partial<Asset> & { id: string; kind: Asset["kind"] }): Asset {
   return {
@@ -128,6 +130,7 @@ describe("resolveAssetSlots", () => {
     const r = resolveAssetSlots({}, lookup, abs);
     expect(r).toEqual({
       referencePaths: [],
+      references: [],
       stylePromptSnippets: [],
       assetIds: [],
       attachments: [],
@@ -145,6 +148,12 @@ describe("resolveAssetSlots", () => {
       "/data/assets/obj-b/ref-001.png",
       "/data/assets/bg-c/ref-001.png",
       "/data/assets/style-ref/ref-001.png",
+    ]);
+    expect(r.references).toEqual([
+      { path: "/data/assets/char-a/ref-001.png", role: "character" },
+      { path: "/data/assets/obj-b/ref-001.png", role: "object" },
+      { path: "/data/assets/bg-c/ref-001.png", role: "background" },
+      { path: "/data/assets/style-ref/ref-001.png", role: "style" },
     ]);
     expect(r.attachments.map((a) => a.role)).toEqual([
       "character",
@@ -235,6 +244,38 @@ describe("capReferencePaths", () => {
     const r = capReferencePaths(["a", "b", "c", "d"], 2);
     expect(r.references).toEqual(["a", "b"]);
     expect(r.capped).toBe(2);
+  });
+});
+
+describe("capImageReferences", () => {
+  it("caps references without separating paths from roles", () => {
+    const r = capImageReferences(
+      [
+        { path: "a.png", role: "character" },
+        { path: "b.png", role: "style" },
+        { path: "c.png", role: "freeform" },
+      ],
+      2,
+    );
+    expect(r.references).toEqual([
+      { path: "a.png", role: "character" },
+      { path: "b.png", role: "style" },
+    ]);
+    expect(r.capped).toBe(2);
+  });
+});
+
+describe("appendImageReferenceInstructions", () => {
+  it("numbers prompt instructions in the same order as attached images", () => {
+    const prompt = appendImageReferenceInstructions("draw a scene", [
+      { path: "/tmp/character.png", role: "character" },
+      { path: "/tmp/style.webp", role: "style" },
+    ]);
+    expect(prompt).toContain("draw a scene");
+    expect(prompt).toContain("Reference image 1: role=character; source=character.png");
+    expect(prompt).toContain("attached image 1");
+    expect(prompt).toContain("Reference image 2: role=style; source=style.webp");
+    expect(prompt).toContain("attached image 2");
   });
 });
 

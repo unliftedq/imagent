@@ -1,4 +1,5 @@
 import {
+  appendImageReferenceInstructions,
   ProviderError,
   ProviderRequestError,
   ProviderResponseError,
@@ -15,6 +16,7 @@ import {
 } from "@imagent/core";
 import { GoogleGenAI } from "@google/genai";
 import { aggregateCapabilities, decodeBase64, testFailureFromError } from "../openai/image.js";
+import { loadImageReferences } from "../reference-images.js";
 
 /** Canonical Google generative-language base URL (used as fallback HttpOptions). */
 export const DEFAULT_GOOGLE_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
@@ -174,9 +176,10 @@ export class GoogleImageProvider implements ImageProvider {
 
     let response: Awaited<ReturnType<NonNullable<GoogleGenAIClientLike["models"]["generateContent"]>>>;
     try {
+      const contents = await this.buildContentParts(merged);
       response = await this.client.models.generateContent({
         model: modelId,
-        contents: merged.prompt,
+        contents,
         config,
       });
     } catch (err) {
@@ -202,6 +205,25 @@ export class GoogleImageProvider implements ImageProvider {
       });
     }
     return { outputs };
+  }
+
+  private async buildContentParts(merged: ImageRequest): Promise<unknown> {
+    if (merged.references.length === 0) return merged.prompt;
+    const loaded = await loadImageReferences(merged.references, this.id);
+    return [
+      {
+        role: "user",
+        parts: [
+          { text: appendImageReferenceInstructions(merged.prompt, merged.references) },
+          ...loaded.map((ref) => ({
+            inlineData: {
+              mimeType: ref.mimeType,
+              data: ref.base64,
+            },
+          })),
+        ],
+      },
+    ];
   }
 
   /**

@@ -103,13 +103,22 @@ export class AzureOpenAIImageProvider implements ImageProvider {
     const merged = applyImageDefaults(req, model);
     validateImageRequestAgainstModel(this.id, merged, model);
 
-    const body = buildOpenAIImageBody(merged, model);
+    const body = await buildOpenAIImageBody(merged, model, this.id);
     const opts: { signal?: AbortSignal } = {};
     if (signal) opts.signal = signal;
 
     let response: { data?: Array<{ b64_json?: string; url?: string; revised_prompt?: string }> };
     try {
-      response = await this.client.images.generate(body, opts);
+      if (merged.references.length > 0) {
+        if (!this.client.images.edit) {
+          throw new ProviderRequestError(`${this.id} SDK client does not expose images.edit`, {
+            vendorId: this.id,
+          });
+        }
+        response = await this.client.images.edit(body, opts);
+      } else {
+        response = await this.client.images.generate(body, opts);
+      }
     } catch (err) {
       throw rethrowOpenAIError(err, this.id);
     }
