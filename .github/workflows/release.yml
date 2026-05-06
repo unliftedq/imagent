@@ -132,5 +132,6 @@ jobs:
           if npm view "@imagent/cli@${package_version}" version >/dev/null 2>&1; then
             echo "@imagent/cli@${package_version} is already published; skipping npm publish."
           else
+            # Uses npm Trusted Publishing via GitHub OIDC; no registry token is required.
             npm publish --access public --provenance
           fi
