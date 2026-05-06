@@ -1,8 +1,6 @@
+import { GoogleGenAI } from "@google/genai";
 import {
   appendImageReferenceInstructions,
-  ProviderError,
-  ProviderRequestError,
-  ProviderResponseError,
   applyImageDefaults,
   type ImageCapabilities,
   type ImageGenerationResult,
@@ -11,10 +9,12 @@ import {
   type ImageProvider,
   type ImageRequest,
   type Logger,
+  ProviderError,
+  ProviderRequestError,
+  ProviderResponseError,
   type ProviderTestResult,
   validateImageRequestAgainstModel,
 } from "@imagent/core";
-import { GoogleGenAI } from "@google/genai";
 import { aggregateCapabilities, decodeBase64, testFailureFromError } from "../openai/image.js";
 import { loadImageReferences } from "../reference-images.js";
 
@@ -40,7 +40,9 @@ export interface GoogleGenAIClientLike {
       config?: Record<string, unknown>;
     }) => Promise<{
       candidates?: Array<{
-        content?: { parts?: Array<{ inlineData?: { data?: string; mimeType?: string }; text?: string }> };
+        content?: {
+          parts?: Array<{ inlineData?: { data?: string; mimeType?: string }; text?: string }>;
+        };
       }>;
     }>;
     list?: (params?: Record<string, unknown>) => Promise<unknown>;
@@ -128,7 +130,9 @@ export class GoogleImageProvider implements ImageProvider {
     if (merged.seed !== undefined) config.seed = merged.seed;
     if (signal) config.abortSignal = signal;
 
-    let response: Awaited<ReturnType<NonNullable<GoogleGenAIClientLike["models"]["generateImages"]>>>;
+    let response: Awaited<
+      ReturnType<NonNullable<GoogleGenAIClientLike["models"]["generateImages"]>>
+    >;
     try {
       response = await this.client.models.generateImages({
         model: modelId,
@@ -174,7 +178,9 @@ export class GoogleImageProvider implements ImageProvider {
     if (signal) config.abortSignal = signal;
     if (merged.aspectRatio) config.imageConfig = { aspectRatio: merged.aspectRatio };
 
-    let response: Awaited<ReturnType<NonNullable<GoogleGenAIClientLike["models"]["generateContent"]>>>;
+    let response: Awaited<
+      ReturnType<NonNullable<GoogleGenAIClientLike["models"]["generateContent"]>>
+    >;
     try {
       const contents = await this.buildContentParts(merged);
       response = await this.client.models.generateContent({
@@ -240,7 +246,9 @@ export class GoogleImageProvider implements ImageProvider {
         return { ok: false, reason: "model list returned no entries" };
       }
       const configured = [...this.models.keys()];
-      const matched = configured.find((id) => names.some((n) => n === id || n.endsWith(`/${id}`) || n.endsWith(id)));
+      const matched = configured.find((id) =>
+        names.some((n) => n === id || n.endsWith(`/${id}`) || n.endsWith(id)),
+      );
       const out: ProviderTestResult = matched
         ? { ok: true, latencyMs, sampleModelId: matched }
         : { ok: true, latencyMs };

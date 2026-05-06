@@ -164,59 +164,45 @@ describe("resolveAssetSlots", () => {
   });
 
   it("style with refs and supportsReferences=true → uses refs (no snippet appended)", () => {
-    const r = resolveAssetSlots(
-      { style: ["style-ref"] },
-      lookup,
-      abs,
-      { supportsReferences: true },
-    );
+    const r = resolveAssetSlots({ style: ["style-ref"] }, lookup, abs, {
+      supportsReferences: true,
+    });
     expect(r.referencePaths).toEqual(["/data/assets/style-ref/ref-001.png"]);
     expect(r.stylePromptSnippets).toEqual([]);
     expect(r.attachments).toEqual([{ assetId: "style-ref", role: "style" }]);
   });
 
   it("style with refs and supportsReferences=false → appends snippet", () => {
-    const r = resolveAssetSlots(
-      { style: ["style-ref"] },
-      lookup,
-      abs,
-      { supportsReferences: false },
-    );
+    const r = resolveAssetSlots({ style: ["style-ref"] }, lookup, abs, {
+      supportsReferences: false,
+    });
     expect(r.referencePaths).toEqual([]);
     expect(r.stylePromptSnippets).toEqual(["in the style of Studio Ghibli"]);
     expect(r.attachments).toEqual([{ assetId: "style-ref", role: "style" }]);
   });
 
   it("style with snippet only → always appends snippet", () => {
-    const r = resolveAssetSlots(
-      { style: ["style-only"] },
-      lookup,
-      abs,
-      { supportsReferences: true },
-    );
+    const r = resolveAssetSlots({ style: ["style-only"] }, lookup, abs, {
+      supportsReferences: true,
+    });
     expect(r.referencePaths).toEqual([]);
     expect(r.stylePromptSnippets).toEqual(["soft pastels"]);
   });
 
   it("alwaysAppendStyleSnippets=true with refs and preferStyleRefOverSnippet=false → both", () => {
-    const r = resolveAssetSlots(
-      { style: ["style-ref"] },
-      lookup,
-      abs,
-      {
-        supportsReferences: true,
-        alwaysAppendStyleSnippets: true,
-        preferStyleRefOverSnippet: false,
-      },
-    );
+    const r = resolveAssetSlots({ style: ["style-ref"] }, lookup, abs, {
+      supportsReferences: true,
+      alwaysAppendStyleSnippets: true,
+      preferStyleRefOverSnippet: false,
+    });
     expect(r.referencePaths).toEqual(["/data/assets/style-ref/ref-001.png"]);
     expect(r.stylePromptSnippets).toEqual(["in the style of Studio Ghibli"]);
   });
 
   it("missing asset id → throws", () => {
-    expect(() =>
-      resolveAssetSlots({ character: ["does-not-exist"] }, lookup, abs),
-    ).toThrow(/not found/);
+    expect(() => resolveAssetSlots({ character: ["does-not-exist"] }, lookup, abs)).toThrow(
+      /not found/,
+    );
   });
 
   it("kind mismatch → throws", () => {
@@ -289,9 +275,9 @@ describe("appendStylePromptSnippets", () => {
   });
 
   it("multiple snippets → joined with commas", () => {
-    expect(
-      appendStylePromptSnippets("a cat", ["pastel", "studio ghibli"]),
-    ).toBe("a cat, pastel, studio ghibli");
+    expect(appendStylePromptSnippets("a cat", ["pastel", "studio ghibli"])).toBe(
+      "a cat, pastel, studio ghibli",
+    );
   });
 
   it("empty prompt → snippets become the whole prompt", () => {

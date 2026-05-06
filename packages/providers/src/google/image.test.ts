@@ -1,10 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
-import { ProviderError, type ImageRequest } from "@imagent/core";
-import { GoogleImageProvider, type GoogleGenAIClientLike } from "./image.js";
-import { GOOGLE_IMAGE_MODELS } from "../catalog/test-fixtures.js";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { type ImageRequest, ProviderError } from "@imagent/core";
+import { describe, expect, it, vi } from "vitest";
+import { GOOGLE_IMAGE_MODELS } from "../catalog/test-fixtures.js";
+import { type GoogleGenAIClientLike, GoogleImageProvider } from "./image.js";
 
 const PNG_B64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkAAIAAAoAAv/lxKUAAAAASUVORK5CYII=";
@@ -63,7 +63,8 @@ describe("GoogleImageProvider", () => {
     expect(r.outputs[0]?.mimeType).toBe("image/png");
     expect(client.models.generateContent).toHaveBeenCalledTimes(1);
     expect(client.models.generateImages).not.toHaveBeenCalled();
-    const [params] = client.models.generateContent.mock.calls[0]!;
+    const [params] = client.models.generateContent.mock.calls[0] ?? [];
+    expect(params).toBeDefined();
     expect(params).toMatchObject({
       model: "gemini-2.5-flash-image",
       contents: baseRequest.prompt,
@@ -95,7 +96,9 @@ describe("GoogleImageProvider", () => {
       await writeFile(refB, Buffer.from(PNG_B64, "base64"));
       const client = makeFakeClient();
       client.models.generateContent.mockResolvedValue({
-        candidates: [{ content: { parts: [{ inlineData: { data: PNG_B64, mimeType: "image/png" } }] } }],
+        candidates: [
+          { content: { parts: [{ inlineData: { data: PNG_B64, mimeType: "image/png" } }] } },
+        ],
       });
       const p = makeProvider(client);
 
@@ -107,9 +110,14 @@ describe("GoogleImageProvider", () => {
         ],
       });
 
-      const [params] = client.models.generateContent.mock.calls[0]!;
-      const contents = params.contents as Array<{ parts: Array<{ text?: string; inlineData?: unknown }> }>;
-      expect(contents[0]?.parts[0]?.text).toContain("Reference image 1: role=object; source=object.png");
+      const [params] = client.models.generateContent.mock.calls[0] ?? [];
+      expect(params).toBeDefined();
+      const contents = params.contents as Array<{
+        parts: Array<{ text?: string; inlineData?: unknown }>;
+      }>;
+      expect(contents[0]?.parts[0]?.text).toContain(
+        "Reference image 1: role=object; source=object.png",
+      );
       expect(contents[0]?.parts[0]?.text).toContain(
         "Reference image 2: role=background; source=background.png",
       );

@@ -20,7 +20,9 @@ export async function loadImageReferences(
   for (const reference of references) {
     try {
       const buf = await fs.readFile(reference.path);
-      const bytes = new Uint8Array(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+      const bytes = new Uint8Array(
+        buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength),
+      );
       loaded.push({
         reference,
         filename: path.basename(reference.path) || "reference.png",

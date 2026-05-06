@@ -1,7 +1,4 @@
 import {
-  ProviderError,
-  ProviderRequestError,
-  ProviderResponseError,
   applyImageDefaults,
   type ImageCapabilities,
   type ImageGenerationResult,
@@ -10,6 +7,9 @@ import {
   type ImageProvider,
   type ImageRequest,
   type Logger,
+  ProviderError,
+  ProviderRequestError,
+  ProviderResponseError,
   type ProviderTestResult,
   validateImageRequestAgainstModel,
 } from "@imagent/core";
@@ -19,10 +19,10 @@ import {
   buildOpenAIImageBody,
   decodeBase64,
   listModelIds,
+  type OpenAIClientLike,
   parseSize,
   rethrowOpenAIError,
   testFailureFromError,
-  type OpenAIClientLike,
 } from "../openai/image.js";
 
 /**

@@ -1,9 +1,6 @@
+import { createXai } from "@ai-sdk/xai";
 import {
   appendImageReferenceInstructions,
-  ProviderError,
-  ProviderHttpError,
-  ProviderRequestError,
-  ProviderResponseError,
   applyImageDefaults,
   type ImageCapabilities,
   type ImageGenerationResult,
@@ -12,17 +9,16 @@ import {
   type ImageProvider,
   type ImageRequest,
   type Logger,
+  ProviderError,
+  ProviderHttpError,
+  ProviderRequestError,
+  ProviderResponseError,
   type ProviderTestResult,
   validateImageRequestAgainstModel,
 } from "@imagent/core";
-import { createXai } from "@ai-sdk/xai";
 import { generateImage, type ImageModel } from "ai";
 import { createHttpClient, type HttpClient } from "../http/index.js";
-import {
-  aggregateCapabilities,
-  parseSize,
-  testFailureFromError,
-} from "../openai/image.js";
+import { aggregateCapabilities, parseSize, testFailureFromError } from "../openai/image.js";
 import { imageDataUrl, loadImageReferences } from "../reference-images.js";
 
 /** Canonical xAI base URL. OpenAI-compatible. */

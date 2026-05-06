@@ -20,6 +20,7 @@ import type {
   VideoRequest,
 } from "@imagent/core";
 import {
+  type AssetSlotResolution,
   appendStylePromptSnippets,
   capImageReferences,
   capReferencePaths,
@@ -464,7 +465,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       const maxRefs = resolvedModel?.capabilities?.maxReferences;
       const supportsRefs = (maxRefs ?? Infinity) > 0;
 
-      let resolution;
+      let resolution: AssetSlotResolution;
       try {
         resolution = resolveAssetSlots(
           slotInputs,
@@ -1056,7 +1057,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       // capping to the provider impl + UI-side hints.
       const maxRefs: number | undefined = undefined;
 
-      let resolution;
+      let resolution: AssetSlotResolution;
       try {
         resolution = resolveAssetSlots(
           slotInputs,
