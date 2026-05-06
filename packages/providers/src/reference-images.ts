@@ -24,10 +24,9 @@ export async function loadImageReferences(
         buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength),
       );
       const mimeType = guessImageMimeType(reference.path, bytes);
-      const filename = path.basename(reference.path);
       loaded.push({
         reference,
-        filename: filename.length > 0 ? filename : fallbackFilenameForMime(mimeType),
+        filename: referenceFilename(reference.path, mimeType),
         mimeType,
         bytes,
         base64: Buffer.from(bytes).toString("base64"),
@@ -80,6 +79,11 @@ export function guessImageMimeType(filePath: string, bytes?: Uint8Array): string
       }
       return "image/png";
   }
+}
+
+export function referenceFilename(filePath: string, mimeType: string): string {
+  const filename = filePath.split(/[\\/]/).filter(Boolean).at(-1) ?? "";
+  return filename.length > 0 ? filename : fallbackFilenameForMime(mimeType);
 }
 
 function fallbackFilenameForMime(mimeType: string): string {

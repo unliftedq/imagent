@@ -216,6 +216,8 @@ export async function buildOpenAIImageBody(
   if (raw.style && caps?.supportsStyleRef) body.style = raw.style;
   if (req.references.length > 0) {
     const references = await loadImageReferences(req.references, vendorId);
+    // OpenAI's images.edit request uses the singular `image` field; the SDK
+    // accepts an array of Uploadables there for multi-image reference edits.
     body.image = await openAIReferenceFiles(references);
   }
   return body;
