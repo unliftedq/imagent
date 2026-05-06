@@ -40,7 +40,7 @@ export function registerVideoCommand(program: Command): void {
     .option("--model <id>", "Model id within the chosen provider")
     .option(
       "-o, --option <key=value>",
-      "Model capability option (repeatable; e.g. durationSec=5, fps=24, resolution=720p, aspectRatio=16:9, firstFrame=path)",
+      "Model capability option (repeatable; e.g. durationSec=5, fps=24, resolution=720p, firstFrame=path)",
       collect,
       [],
     )
@@ -240,7 +240,7 @@ function supportedVideoOptions(model: VideoModelDef): string[] {
       "negativePrompt",
     ];
   }
-  const keys = ["aspectRatio", "negativePrompt"];
+  const keys: string[] = [];
   if (caps.durationsSec || caps.maxDurationSec) keys.push("durationSec");
   if (caps.fpsOptions && caps.fpsOptions.length > 0) keys.push("fps");
   if (caps.resolutions && caps.resolutions.length > 0) keys.push("resolution");
