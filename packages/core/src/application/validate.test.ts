@@ -238,9 +238,12 @@ describe("validateVideoRequestAgainstModel", () => {
 
 describe("apply defaults", () => {
   it("fills missing image fields from model.defaults", () => {
-    const out = applyImageDefaults(imageRequest({}), imageModel);
+    const out = applyImageDefaults(imageRequest({ count: undefined }), {
+      ...imageModel,
+      defaults: { ...imageModel.defaults, count: 3 },
+    });
     expect(out.size).toBe("1024x1024");
-    expect(out.count).toBe(1);
+    expect(out.count).toBe(3);
   });
 
   it("preserves user-provided fields", () => {

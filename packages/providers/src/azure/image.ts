@@ -30,7 +30,7 @@ import {
   testFailureFromError,
 } from "../openai/image.js";
 import { loadImageReferences } from "../reference-images.js";
-import { azureModelFamily, type AzureModelFamily, FOUNDRY_FLUX_MODELS } from "./families.js";
+import { type AzureModelFamily, azureModelFamily, FOUNDRY_FLUX_MODELS } from "./families.js";
 
 export interface AzureImageProviderOptions {
   endpoint: string;
@@ -524,7 +524,12 @@ export class AzureImageProvider implements ImageProvider {
           ],
         };
       }
-      if (s === "Error" || s === "Failed" || s === "Content Moderated" || s === "Request Moderated") {
+      if (
+        s === "Error" ||
+        s === "Failed" ||
+        s === "Content Moderated" ||
+        s === "Request Moderated"
+      ) {
         throw new ProviderError(`Azure FLUX job ended in state '${s}': ${status.error ?? ""}`, {
           vendorId: this.id,
         });
@@ -549,7 +554,7 @@ export class AzureImageProvider implements ImageProvider {
     if (req.aspectRatio) out.aspect_ratio = req.aspectRatio;
     if (req.outputFormat) out.output_format = req.outputFormat;
     if (req.seed !== undefined) out.seed = req.seed;
-    if (req.count > 1) out.num_images = req.count;
+    if (req.count !== undefined && req.count > 1) out.num_images = req.count;
     if (req.references.length > 0) {
       const refs = await loadImageReferences(req.references, this.id);
       // FLUX.2 multi-reference shape: `input_image`, `input_image_2`,
@@ -564,7 +569,7 @@ export class AzureImageProvider implements ImageProvider {
   }
 }
 
-export { azureModelFamily, type AzureModelFamily, FOUNDRY_FLUX_MODELS } from "./families.js";
+export { type AzureModelFamily, azureModelFamily, FOUNDRY_FLUX_MODELS } from "./families.js";
 
 async function defaultSleep(ms: number, signal?: AbortSignal): Promise<void> {
   await new Promise<void>((resolve, reject) => {

@@ -150,11 +150,11 @@ async function runGenerate(prompt: string, options: GenerateOptions): Promise<vo
       ...(count !== undefined ? { count } : {}),
       references: cappedRefs,
       assetIds: slots.assetIds,
-    } satisfies Omit<ImageRequest, "count"> & { count?: ImageRequest["count"] };
+    } satisfies ImageRequest;
 
     const intent: GenerationIntent = {
       kind: "image",
-      request: request as ImageRequest,
+      request,
     };
 
     const completed = new Promise<Job>((resolve, reject) => {

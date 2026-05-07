@@ -23,7 +23,7 @@ export const ImageRequestSchema = z.object({
    * resolved model's `capabilities.outputFormats` list. Required when the
    * provider uses the newer `output_format` parameter (gpt-image-*). */
   outputFormat: z.string().optional(),
-  count: z.number().int().min(1).default(1),
+  count: z.number().int().min(1).optional(),
   seed: z.number().int().optional(),
   references: z.array(ImageReferenceSchema).default([]),
   /** Asset ids to record on the resulting gallery_item via gallery_item_assets. */

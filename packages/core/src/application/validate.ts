@@ -20,7 +20,7 @@ export function validateImageRequestAgainstModel(
   const caps = model.capabilities;
   if (!caps) return; // unknown caps = strict mode trusts the user
 
-  if (caps.maxOutputs && req.count > caps.maxOutputs) {
+  if (caps.maxOutputs && req.count !== undefined && req.count > caps.maxOutputs) {
     throw new ProviderRequestError(
       `model ${model.id} supports at most ${caps.maxOutputs} outputs (got ${req.count})`,
       { vendorId },
@@ -197,7 +197,10 @@ export function validateVideoRequestAgainstModel(
  * Apply the model's `defaults` to fields the user left blank. Returns a new
  * object — never mutates the input.
  */
-export function applyImageDefaults(req: ImageRequest, model: ImageModelDef): ImageRequest {
+export function applyImageDefaults(
+  req: ImageRequest,
+  model: ImageModelDef,
+): ImageRequest & { count: number } {
   const d = (model.defaults ?? {}) as {
     size?: string;
     aspectRatio?: string;
@@ -211,7 +214,7 @@ export function applyImageDefaults(req: ImageRequest, model: ImageModelDef): Ima
     aspectRatio: req.aspectRatio ?? d.aspectRatio,
     quality: req.quality ?? d.quality,
     outputFormat: req.outputFormat ?? d.outputFormat,
-    count: req.count || d.count || 1,
+    count: req.count ?? d.count ?? 1,
   };
 }
 
