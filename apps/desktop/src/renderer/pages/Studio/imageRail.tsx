@@ -1,6 +1,6 @@
 import type { ImageModelDef, ImageRequest } from "@imagent/core";
 import type { ProviderId } from "@imagent/ipc";
-import { Button, Icons, Input, Select } from "@imagent/ui";
+import { Button, Icons, Input, Popover, Select } from "@imagent/ui";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api.js";
 import { useAssetsStore } from "../../state/useAssetsStore.js";
@@ -18,7 +18,27 @@ import {
 import { ReferencePicker } from "./referencePicker.js";
 import { pruneReferenceRoles } from "./utils.js";
 
-const CUSTOM_SIZE_SELECT_VALUE = "__custom_size__";
+const CUSTOM_SIZE_DEFAULT = 1024;
+const CUSTOM_SIZE_MIN = 256;
+const CUSTOM_SIZE_MAX = 4096;
+const CUSTOM_SIZE_STEP = 64;
+
+function clampSliderSize(value: number): number {
+  return Math.min(CUSTOM_SIZE_MAX, Math.max(CUSTOM_SIZE_MIN, value));
+}
+
+function parseSizeParts(size: string | undefined): { width: string; height: string } {
+  const [width = "", height = ""] = (size ?? "").split("x", 2);
+  return { width, height };
+}
+
+function parseCompleteSize(size: string | undefined): { width: number; height: number } | null {
+  const match = /^(\d+)x(\d+)$/.exec(size ?? "");
+  if (!match) return null;
+  const [, width, height] = match;
+  if (!width || !height) return null;
+  return { width: Number.parseInt(width, 10), height: Number.parseInt(height, 10) };
+}
 
 export function ImageRail() {
   const draft = useUIStore((state) => state.studioDraft.image);
@@ -42,6 +62,7 @@ export function ImageRail() {
   const [modelsByProvider, setModelsByProvider] = useState<Record<string, ImageModelDef[]>>({});
   const [submitting, setSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [sizePopoverOpen, setSizePopoverOpen] = useState(false);
   const { favoriteKeys, toggleFavorite } = useModelFavorites();
 
   const configuredProviders = useMemo(
@@ -130,6 +151,14 @@ export function ImageRail() {
   const sizeOptions = useMemo(() => caps?.sizes ?? [], [caps?.sizes]);
   const currentFixedSize = draft.size && sizeOptions.includes(draft.size) ? draft.size : undefined;
   const customSizeValue = draft.size && !currentFixedSize ? draft.size : "";
+  const customSizeParts = parseSizeParts(customSizeValue);
+  const parsedCustomSize = parseCompleteSize(customSizeValue);
+  const fallbackCustomSize = parsedCustomSize ??
+    parseCompleteSize(currentFixedSize) ?? {
+      width: CUSTOM_SIZE_DEFAULT,
+      height: CUSTOM_SIZE_DEFAULT,
+    };
+  const isCustomSizeSelected = supportsCustomSize && customSizeValue.length > 0;
 
   useEffect(() => {
     if (sizeOptions.length === 0) return;
@@ -276,6 +305,24 @@ export function ImageRail() {
 
   const modelOptions = createUnifiedModelOptions(configuredProviders, modelsByProvider);
   const outputMax = Math.max(1, caps?.maxOutputs ?? 1);
+  const sizeTriggerLabel = isCustomSizeSelected
+    ? parsedCustomSize
+      ? `Custom ${parsedCustomSize.width}×${parsedCustomSize.height}`
+      : "Custom"
+    : (currentFixedSize ?? sizeOptions[0] ?? "Size");
+  const setCustomSizeDimension = (dimension: "width" | "height", value: string): void => {
+    const nextWidth = dimension === "width" ? value : customSizeParts.width;
+    const nextHeight = dimension === "height" ? value : customSizeParts.height;
+    setDraft({ size: `${nextWidth}x${nextHeight}` });
+  };
+  const chooseCustomSize = (): void => {
+    const baseSize = parseCompleteSize(customSizeValue) ??
+      parseCompleteSize(draft.size) ?? {
+        width: CUSTOM_SIZE_DEFAULT,
+        height: CUSTOM_SIZE_DEFAULT,
+      };
+    setDraft({ size: `${baseSize.width}x${baseSize.height}` });
+  };
 
   return (
     <ChatComposerShell
@@ -318,52 +365,87 @@ export function ImageRail() {
         onChange={(next) => setDraft({ providerId: next.providerId, modelId: next.modelId })}
       />
 
-      {sizeOptions.length > 0 ? (
-        <Select.Root
-          value={
-            customSizeValue && supportsCustomSize
-              ? CUSTOM_SIZE_SELECT_VALUE
-              : (currentFixedSize ?? sizeOptions[0])
-          }
-          onValueChange={(value) => {
-            if (value !== CUSTOM_SIZE_SELECT_VALUE) setDraft({ size: value });
-          }}
-        >
-          <ToolbarSelectTrigger
-            ariaLabel="Size"
-            icon={<Icons.FrameCorners weight="duotone" className="size-3.5" />}
-            className="h-8 w-[132px] rounded-(--radius-pill) bg-(--bg) px-3 py-0 text-[12px]"
-          />
-          <Select.Content>
-            {customSizeValue && supportsCustomSize ? (
-              <Select.Item value={CUSTOM_SIZE_SELECT_VALUE}>Custom</Select.Item>
-            ) : null}
-            {sizeOptions.map((size) => (
-              <Select.Item key={size} value={size}>
-                {size}
-              </Select.Item>
-            ))}
-          </Select.Content>
-        </Select.Root>
-      ) : null}
+      {sizeOptions.length > 0 || supportsCustomSize ? (
+        <Popover.Root open={sizePopoverOpen} onOpenChange={setSizePopoverOpen}>
+          <Popover.Trigger asChild>
+            <button
+              type="button"
+              aria-label="Size"
+              className={
+                "inline-flex h-8 w-[148px] items-center gap-1.5 rounded-(--radius-pill) " +
+                "border border-(--border) bg-(--bg) px-3 text-[12px] text-(--text) " +
+                "transition-colors duration-(--motion-fast) hover:border-(--text) " +
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring)"
+              }
+            >
+              <Icons.FrameCorners
+                weight="duotone"
+                className="size-3.5 shrink-0 text-(--text-muted)"
+              />
+              <span className="min-w-0 truncate">{sizeTriggerLabel}</span>
+            </button>
+          </Popover.Trigger>
+          <Popover.Content className="w-[320px] p-2">
+            <div className="flex flex-col gap-2">
+              {sizeOptions.length > 0 ? (
+                <div className="grid grid-cols-2 gap-1">
+                  {sizeOptions.map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => {
+                        setDraft({ size });
+                        setSizePopoverOpen(false);
+                      }}
+                      className={
+                        "rounded-(--radius-sm) px-2.5 py-2 text-left text-[12px] " +
+                        "transition-colors hover:bg-(--surface) " +
+                        (draft.size === size
+                          ? "bg-(--accent-soft) font-semibold text-(--accent)"
+                          : "text-(--text)")
+                      }
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
 
-      {supportsCustomSize ? (
-        <div className="relative">
-          <Icons.FrameCorners
-            weight="duotone"
-            className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-(--text-muted)"
-          />
-          <Input
-            aria-label="Custom size"
-            value={customSizeValue}
-            onChange={(event) => {
-              const nextSize = event.target.value;
-              setDraft({ size: nextSize.trim().length > 0 ? nextSize : undefined });
-            }}
-            placeholder="WIDTHxHEIGHT"
-            className="h-8 w-[144px] rounded-(--radius-pill) py-0 pl-8 pr-3 text-[12px]"
-          />
-        </div>
+              {supportsCustomSize ? (
+                <button
+                  type="button"
+                  onClick={chooseCustomSize}
+                  className={
+                    "rounded-(--radius-sm) px-2.5 py-2 text-left text-[12px] transition-colors " +
+                    "hover:bg-(--surface) " +
+                    (isCustomSizeSelected
+                      ? "bg-(--accent-soft) font-semibold text-(--accent)"
+                      : "text-(--text)")
+                  }
+                >
+                  Custom
+                </button>
+              ) : null}
+
+              {isCustomSizeSelected ? (
+                <div className="mt-1 space-y-3 border-t border-(--border-faint) pt-3">
+                  <CustomSizeDimensionControl
+                    label="Width"
+                    value={customSizeParts.width}
+                    sliderValue={clampSliderSize(fallbackCustomSize.width)}
+                    onValueChange={(value) => setCustomSizeDimension("width", value)}
+                  />
+                  <CustomSizeDimensionControl
+                    label="Height"
+                    value={customSizeParts.height}
+                    sliderValue={clampSliderSize(fallbackCustomSize.height)}
+                    onValueChange={(value) => setCustomSizeDimension("height", value)}
+                  />
+                </div>
+              ) : null}
+            </div>
+          </Popover.Content>
+        </Popover.Root>
       ) : null}
 
       {caps?.aspectRatios && caps.aspectRatios.length > 0 ? (
@@ -446,5 +528,43 @@ export function ImageRail() {
         </Select.Root>
       ) : null}
     </ChatComposerShell>
+  );
+}
+
+function CustomSizeDimensionControl({
+  label,
+  value,
+  sliderValue,
+  onValueChange,
+}: {
+  label: "Width" | "Height";
+  value: string;
+  sliderValue: number;
+  onValueChange: (value: string) => void;
+}) {
+  return (
+    <label className="grid gap-1.5">
+      <span className="text-[11px] font-semibold text-(--text-muted)">{label}</span>
+      <div className="grid grid-cols-[84px_1fr] items-center gap-2">
+        <Input
+          aria-label={`Custom size ${label.toLowerCase()}`}
+          type="number"
+          min={1}
+          step={1}
+          value={value}
+          onChange={(event) => onValueChange(event.target.value)}
+          className="h-8 rounded-(--radius-sm) px-2 py-0 text-[12px]"
+        />
+        <input
+          type="range"
+          min={CUSTOM_SIZE_MIN}
+          max={CUSTOM_SIZE_MAX}
+          step={CUSTOM_SIZE_STEP}
+          value={sliderValue}
+          onChange={(event) => onValueChange(event.target.value)}
+          className="w-full accent-(--accent)"
+        />
+      </div>
+    </label>
   );
 }
