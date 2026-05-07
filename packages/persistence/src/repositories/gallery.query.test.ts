@@ -166,6 +166,20 @@ describe("GalleryRepository.query", () => {
     }
   });
 
+  it("search matches Chinese prompt substrings", () => {
+    const db = openDatabase(dbPath);
+    try {
+      const repo = new GalleryRepository(db);
+      repo.create(makeItem("cat", { prompt: "一只橘猫坐在窗台上" }));
+      repo.create(makeItem("dog", { prompt: "一只小狗在草地上奔跑" }));
+      const r = repo.query({ search: "猫", limit: 50, offset: 0 });
+      expect(r.total).toBe(1);
+      expect(r.items.map((it) => it.id)).toEqual(["cat"]);
+    } finally {
+      db.close();
+    }
+  });
+
   it("filters by parentId for lineage queries", () => {
     const db = openDatabase(dbPath);
     try {

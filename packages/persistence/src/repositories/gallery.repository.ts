@@ -59,6 +59,10 @@ function ftsPhrase(raw: string): string {
   return tokens.map((t) => `"${t.replace(/"/g, '""')}"`).join(" ");
 }
 
+function likePattern(raw: string): string {
+  return `%${raw.replace(/[\\%_]/g, (match) => `\\${match}`)}%`;
+}
+
 export class GalleryRepository {
   constructor(private readonly db: DatabaseType) {}
 
@@ -91,15 +95,30 @@ export class GalleryRepository {
     if (query.search && query.search.trim().length > 0) {
       const raw = query.search.trim();
       // Prompt + negative_prompt go through FTS5 for tokenized matching.
-      // File path falls back to LIKE — FTS doesn't index file names and
-      // users routinely paste in a basename like `0a1f...png`.
+      // LIKE fallbacks keep substring, path, and CJK searches intuitive —
+      // FTS5's default tokenizer won't reliably match a Chinese character
+      // like `猫` inside a longer prompt.
       // Wrap the FTS query as a quoted phrase so user input containing
       // punctuation (`.`, `-`, `/`) doesn't blow up FTS5's tokenizer.
       const ftsQuery = ftsPhrase(raw);
+      const likeQuery = likePattern(raw);
       where.push(
-        "(g.id IN (SELECT g2.id FROM gallery_items g2 JOIN gallery_items_fts f2 ON g2.rowid = f2.rowid WHERE f2.gallery_items_fts MATCH ?) OR g.rel_path LIKE ?)",
+        `(
+          g.id IN (
+            SELECT g2.id
+            FROM gallery_items g2
+            JOIN gallery_items_fts f2 ON g2.rowid = f2.rowid
+            WHERE f2.gallery_items_fts MATCH ?
+          )
+          OR g.prompt LIKE ? ESCAPE '\\'
+          OR COALESCE(g.negative_prompt, '') LIKE ? ESCAPE '\\'
+          OR g.rel_path LIKE ? ESCAPE '\\'
+          OR COALESCE(g.thumb_path, '') LIKE ? ESCAPE '\\'
+          OR g.provider_id LIKE ? ESCAPE '\\'
+          OR g.model LIKE ? ESCAPE '\\'
+        )`,
       );
-      params.push(ftsQuery, `%${raw}%`);
+      params.push(ftsQuery, likeQuery, likeQuery, likeQuery, likeQuery, likeQuery, likeQuery);
     }
     const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
     const totalRow = this.db
