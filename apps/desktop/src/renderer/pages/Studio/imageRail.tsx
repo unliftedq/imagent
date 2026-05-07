@@ -1,6 +1,6 @@
 import type { ImageModelDef, ImageRequest } from "@imagent/core";
 import type { ProviderId } from "@imagent/ipc";
-import { Button, Icons, Select } from "@imagent/ui";
+import { Button, Icons, Input, Select } from "@imagent/ui";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api.js";
 import { useAssetsStore } from "../../state/useAssetsStore.js";
@@ -17,6 +17,8 @@ import {
 } from "./modelPicker.js";
 import { ReferencePicker } from "./referencePicker.js";
 import { pruneReferenceRoles } from "./utils.js";
+
+const CUSTOM_SIZE_SELECT_VALUE = "__custom_size__";
 
 export function ImageRail() {
   const draft = useUIStore((state) => state.studioDraft.image);
@@ -124,12 +126,19 @@ export function ImageRail() {
     [modelsByProvider, draft.providerId, draft.modelId],
   );
   const caps = selectedModel?.capabilities;
+  const supportsCustomSize = caps?.supportsArbitrarySize === true;
+  const sizeOptions = caps?.sizes ?? [];
+  const selectedFixedSize = draft.size && sizeOptions.includes(draft.size) ? draft.size : undefined;
+  const customSizeValue = draft.size && !selectedFixedSize ? draft.size : "";
 
   useEffect(() => {
-    if (!caps?.sizes || caps.sizes.length === 0) return;
-    if (draft.size && caps.sizes.includes(draft.size)) return;
-    setDraft({ size: caps.sizes[0] });
-  }, [caps?.sizes, draft.size, setDraft]);
+    if (sizeOptions.length === 0) return;
+    if (draft.size) {
+      if (sizeOptions.includes(draft.size)) return;
+      if (supportsCustomSize) return;
+    }
+    setDraft({ size: sizeOptions[0] });
+  }, [draft.size, setDraft, sizeOptions, supportsCustomSize]);
 
   useEffect(() => {
     const supported = caps?.qualities;
@@ -170,6 +179,15 @@ export function ImageRail() {
     }
     if (caps?.maxOutputs && typeof draft.count === "number" && draft.count > caps.maxOutputs) {
       setValidationError(`Model accepts at most ${caps.maxOutputs} outputs (got ${draft.count}).`);
+      return;
+    }
+    if (
+      draft.size &&
+      supportsCustomSize &&
+      !sizeOptions.includes(draft.size) &&
+      !/^\d+x\d+$/.test(draft.size)
+    ) {
+      setValidationError("Custom size must use WIDTHxHEIGHT format, for example 1024x768.");
       return;
     }
 
@@ -298,10 +316,16 @@ export function ImageRail() {
         onChange={(next) => setDraft({ providerId: next.providerId, modelId: next.modelId })}
       />
 
-      {caps?.sizes && caps.sizes.length > 0 ? (
+      {sizeOptions.length > 0 ? (
         <Select.Root
-          value={draft.size ?? caps.sizes[0]}
-          onValueChange={(value) => setDraft({ size: value })}
+          value={
+            customSizeValue && supportsCustomSize
+              ? CUSTOM_SIZE_SELECT_VALUE
+              : (selectedFixedSize ?? sizeOptions[0])
+          }
+          onValueChange={(value) => {
+            if (value !== CUSTOM_SIZE_SELECT_VALUE) setDraft({ size: value });
+          }}
         >
           <ToolbarSelectTrigger
             ariaLabel="Size"
@@ -309,13 +333,32 @@ export function ImageRail() {
             className="h-8 w-[132px] rounded-(--radius-pill) bg-(--bg) px-3 py-0 text-[12px]"
           />
           <Select.Content>
-            {caps.sizes.map((size) => (
+            {customSizeValue && supportsCustomSize ? (
+              <Select.Item value={CUSTOM_SIZE_SELECT_VALUE}>Custom</Select.Item>
+            ) : null}
+            {sizeOptions.map((size) => (
               <Select.Item key={size} value={size}>
                 {size}
               </Select.Item>
             ))}
           </Select.Content>
         </Select.Root>
+      ) : null}
+
+      {supportsCustomSize ? (
+        <div className="relative">
+          <Icons.FrameCorners
+            weight="duotone"
+            className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-(--text-muted)"
+          />
+          <Input
+            aria-label="Custom size"
+            value={customSizeValue}
+            onChange={(event) => setDraft({ size: event.target.value.trim() || undefined })}
+            placeholder="WIDTHxHEIGHT"
+            className="h-8 w-[144px] rounded-(--radius-pill) py-0 pl-8 pr-3 text-[12px]"
+          />
+        </div>
       ) : null}
 
       {caps?.aspectRatios && caps.aspectRatios.length > 0 ? (
