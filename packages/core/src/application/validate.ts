@@ -27,17 +27,22 @@ export function validateImageRequestAgainstModel(
     );
   }
 
-  if (
-    req.size &&
-    !caps.supportsArbitrarySize &&
-    caps.sizes &&
-    caps.sizes.length > 0 &&
-    !caps.sizes.includes(req.size)
-  ) {
-    throw new ProviderRequestError(
-      `model ${model.id} does not support size '${req.size}'. Supported: ${caps.sizes.join(", ")}`,
-      { vendorId },
-    );
+  if (req.size) {
+    const supportedSizes = caps.sizes ?? [];
+    const isListedSize = supportedSizes.includes(req.size);
+    const isArbitrarySize = caps.supportsArbitrarySize === true && /^\d+x\d+$/.test(req.size);
+    if (supportedSizes.length > 0 && !isListedSize && !isArbitrarySize) {
+      throw new ProviderRequestError(
+        `model ${model.id} does not support size '${req.size}'. Supported: ${supportedSizes.join(", ")}`,
+        { vendorId },
+      );
+    }
+    if (supportedSizes.length === 0 && caps.supportsArbitrarySize === true && !isArbitrarySize) {
+      throw new ProviderRequestError(
+        `model ${model.id} does not support size '${req.size}'. Use WIDTHxHEIGHT format`,
+        { vendorId },
+      );
+    }
   }
 
   if (

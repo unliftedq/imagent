@@ -339,7 +339,7 @@
           "supportsFirstFrame": true,
           "supportsLastFrame": true,
           "supportsRefImages": false,
-          "aspectRatios": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive"],
+          "aspectRatios": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"],
           "maxReferenceSizeMb": 30
         },
         "defaults": {
@@ -359,7 +359,7 @@
           "supportsFirstFrame": false,
           "supportsLastFrame": false,
           "supportsRefImages": false,
-          "aspectRatios": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive"]
+          "aspectRatios": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"]
         },
         "defaults": {
           "durationSec": 5,
@@ -378,7 +378,7 @@
           "supportsFirstFrame": true,
           "supportsLastFrame": true,
           "supportsRefImages": true,
-          "aspectRatios": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive"],
+          "aspectRatios": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"],
           "maxReferenceSizeMb": 30,
           "maxReferences": 4
         },
@@ -399,7 +399,7 @@
           "supportsFirstFrame": true,
           "supportsLastFrame": true,
           "supportsRefImages": false,
-          "aspectRatios": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive"],
+          "aspectRatios": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"],
           "maxReferenceSizeMb": 30
         },
         "defaults": {
@@ -419,7 +419,7 @@
           "supportsFirstFrame": true,
           "supportsLastFrame": true,
           "supportsRefImages": true,
-          "aspectRatios": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive"],
+          "aspectRatios": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"],
           "maxReferenceSizeMb": 30
         },
         "defaults": {
@@ -439,7 +439,7 @@
           "supportsFirstFrame": true,
           "supportsLastFrame": true,
           "supportsRefImages": true,
-          "aspectRatios": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive"],
+          "aspectRatios": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"],
           "maxReferenceSizeMb": 30
         },
         "defaults": {
