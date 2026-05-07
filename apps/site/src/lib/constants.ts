@@ -5,6 +5,7 @@ export const docOrder = [
   "installation",
   "cli",
   "providers",
+  "models",
   "configuration",
   "updates",
   "best-practices",
