@@ -128,8 +128,8 @@ export function ImageRail() {
   const caps = selectedModel?.capabilities;
   const supportsCustomSize = caps?.supportsArbitrarySize === true;
   const sizeOptions = useMemo(() => caps?.sizes ?? [], [caps?.sizes]);
-  const selectedFixedSize = draft.size && sizeOptions.includes(draft.size) ? draft.size : undefined;
-  const customSizeValue = draft.size && !selectedFixedSize ? draft.size : "";
+  const currentFixedSize = draft.size && sizeOptions.includes(draft.size) ? draft.size : undefined;
+  const customSizeValue = draft.size && !currentFixedSize ? draft.size : "";
 
   useEffect(() => {
     if (sizeOptions.length === 0) return;
@@ -169,7 +169,8 @@ export function ImageRail() {
 
   const generate = async (): Promise<void> => {
     setValidationError(null);
-    const normalizedSize = draft.size?.trim() || undefined;
+    const trimmedSize = draft.size?.trim();
+    const normalizedSize = trimmedSize && trimmedSize.length > 0 ? trimmedSize : undefined;
     if (!draft.prompt.trim()) {
       setValidationError("Prompt is required.");
       return;
@@ -322,7 +323,7 @@ export function ImageRail() {
           value={
             customSizeValue && supportsCustomSize
               ? CUSTOM_SIZE_SELECT_VALUE
-              : (selectedFixedSize ?? sizeOptions[0])
+              : (currentFixedSize ?? sizeOptions[0])
           }
           onValueChange={(value) => {
             if (value !== CUSTOM_SIZE_SELECT_VALUE) setDraft({ size: value });
@@ -355,7 +356,10 @@ export function ImageRail() {
           <Input
             aria-label="Custom size"
             value={customSizeValue}
-            onChange={(event) => setDraft({ size: event.target.value || undefined })}
+            onChange={(event) => {
+              const nextSize = event.target.value;
+              setDraft({ size: nextSize.trim().length > 0 ? nextSize : undefined });
+            }}
             placeholder="WIDTHxHEIGHT"
             className="h-8 w-[144px] rounded-(--radius-pill) py-0 pl-8 pr-3 text-[12px]"
           />
