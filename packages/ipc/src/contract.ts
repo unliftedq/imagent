@@ -132,96 +132,64 @@ export const ProviderTestResultSchema = z.union([
 export type ProviderTestResult = z.infer<typeof ProviderTestResultSchema>;
 
 /**
- * Provider preferences block — non-secret per-provider config. After the
- * "users only fill in the minimum required to authenticate" reshape, the
- * catalog is the canonical model/provider-offering list for every well-known
- * provider; Azure deployment names live in the catalog provider offering layer.
- *
- * Each provider keeps an explicit slot (even when empty) so future settings
- * have a stable home. Mirrors `config.providers` in shape.
+ * Provider preferences block — non-secret per-provider config. The catalog
+ * holds canonical (bundled) provider offerings; this payload carries the
+ * per-user overlay merged on top at runtime: Azure / ByteDance endpoint URLs,
+ * custom OpenAI-compatible base URLs, deployment / model id mappings, and
+ * optional displayName overrides. Schema mirrors `config.providers` in shape.
  */
+const IpcProviderRoutingSchema = z.object({
+  displayName: z.string().optional(),
+  endpoint: z.string().optional(),
+  baseUrl: z.string().optional(),
+  image: z.array(IpcImageProviderModelSchema).optional(),
+  video: z.array(IpcVideoProviderModelSchema).optional(),
+});
+export type ProviderRoutingPayload = z.infer<typeof IpcProviderRoutingSchema>;
+
 export const ProviderPreferencesPayloadSchema = z.object({
-  openai: z.object({}),
-  "azure-openai": z.object({}),
-  google: z.object({}),
-  "flux-bfl": z.object({}),
-  bytedance: z.object({}),
-  xai: z.object({}),
+  openai: IpcProviderRoutingSchema,
+  "azure-openai": IpcProviderRoutingSchema,
+  google: IpcProviderRoutingSchema,
+  "flux-bfl": IpcProviderRoutingSchema,
+  bytedance: IpcProviderRoutingSchema,
+  xai: IpcProviderRoutingSchema,
+  customOpenAI: z.record(ProviderIdSchema, IpcProviderRoutingSchema),
 });
 export type ProviderPreferencesPayload = z.infer<typeof ProviderPreferencesPayloadSchema>;
 
 /**
  * Secrets payload returned to the renderer is **always masked** (first 4 +
- * last 4 chars only). Writing accepts the plaintext; the renderer never
- * reads back its own writes.
+ * last 4 chars only). Only carries `apiKey` fields — non-sensitive routing
+ * (endpoint, baseUrl, custom OpenAI base URLs) lives in
+ * {@link ProviderPreferencesPayloadSchema}.
  */
+const MaskedKey = z.object({ apiKey: z.string().nullable() });
 export const MaskedSecretsSchema = z.object({
-  openai: z.object({ apiKey: z.string().nullable() }).optional(),
-  "azure-openai": z
-    .object({
-      endpoint: z.string().nullable(),
-      apiKey: z.string().nullable(),
-    })
-    .optional(),
-  google: z.object({ apiKey: z.string().nullable() }).optional(),
-  "flux-bfl": z.object({ apiKey: z.string().nullable() }).optional(),
-  bytedance: z
-    .object({
-      endpoint: z.string().nullable(),
-      apiKey: z.string().nullable(),
-    })
-    .optional(),
-  xai: z.object({ apiKey: z.string().nullable() }).optional(),
-  customOpenAI: z
-    .record(
-      ProviderIdSchema,
-      z.object({
-        baseUrl: z.string().nullable(),
-        apiKey: z.string().nullable(),
-      }),
-    )
-    .optional(),
+  openai: MaskedKey.optional(),
+  "azure-openai": MaskedKey.optional(),
+  google: MaskedKey.optional(),
+  "flux-bfl": MaskedKey.optional(),
+  bytedance: MaskedKey.optional(),
+  xai: MaskedKey.optional(),
+  customOpenAI: z.record(ProviderIdSchema, MaskedKey).optional(),
 });
 export type MaskedSecrets = z.infer<typeof MaskedSecretsSchema>;
 
-/** Plaintext secrets the renderer is allowed to write. */
+/**
+ * Plaintext secrets the renderer is allowed to write. Same shape as
+ * {@link MaskedSecretsSchema} but with non-empty strings — apiKey only.
+ */
+const WriteKey = z.object({ apiKey: z.string().min(1) }).partial();
 export const SecretsWriteSchema = z.object({
-  openai: z
-    .object({ apiKey: z.string().min(1) })
-    .partial()
-    .optional(),
-  "azure-openai": z
-    .object({
-      endpoint: z.string().min(1).optional(),
-      apiKey: z.string().min(1).optional(),
-    })
-    .optional(),
-  google: z
-    .object({ apiKey: z.string().min(1) })
-    .partial()
-    .optional(),
-  "flux-bfl": z
-    .object({ apiKey: z.string().min(1) })
-    .partial()
-    .optional(),
-  bytedance: z
-    .object({
-      endpoint: z.string().min(1).optional(),
-      apiKey: z.string().min(1).optional(),
-    })
-    .optional(),
-  xai: z
-    .object({ apiKey: z.string().min(1) })
-    .partial()
-    .optional(),
+  openai: WriteKey.optional(),
+  "azure-openai": WriteKey.optional(),
+  google: WriteKey.optional(),
+  "flux-bfl": WriteKey.optional(),
+  bytedance: WriteKey.optional(),
+  xai: WriteKey.optional(),
   customOpenAI: z
-    .record(
-      ProviderIdSchema,
-      z.object({
-        baseUrl: z.string().min(1),
-        apiKey: z.string().min(1).optional(),
-      }),
-    )
+    .record(ProviderIdSchema, z.object({ apiKey: z.string().min(1) }))
     .optional(),
 });
 export type SecretsWrite = z.infer<typeof SecretsWriteSchema>;

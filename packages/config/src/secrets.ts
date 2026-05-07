@@ -1,9 +1,19 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { type ProviderSecrets, ProviderSecretsSchema } from "./schema.js";
+import {
+  type ProviderPreferences,
+  ProviderPreferencesSchema,
+  type ProviderRouting,
+  type ProviderSecrets,
+  ProviderSecretsSchema,
+} from "./schema.js";
 import type { DeepPartial, SecretsStore } from "./store.js";
 
-/** Env var names per architecture.md / .env.example. */
+/**
+ * Env var names per architecture.md / .env.example. `apiKey` env vars become
+ * an in-memory secrets layer; `endpoint` env vars overlay the **routing**
+ * (preferences) — they're URLs, not secrets.
+ */
 const ENV_KEYS = {
   openai: { apiKey: "OPENAI_API_KEY" },
   "azure-openai": {
@@ -60,9 +70,8 @@ async function writeSecretsFile(filePath: string, secrets: ProviderSecrets): Pro
 }
 
 /**
- * Reads secrets from the documented env vars. Only fields actually present
- * in the env are populated — partial provider records are dropped so the
- * resulting shape passes ProviderSecretsSchema.
+ * Reads provider apiKeys from the documented env vars. Endpoint env vars are
+ * routing — see {@link envProviderRoutingOverlay} — and don't appear here.
  */
 export function createEnvSecretsStore(env: NodeJS.ProcessEnv): SecretsStore {
   return {
@@ -72,13 +81,7 @@ export function createEnvSecretsStore(env: NodeJS.ProcessEnv): SecretsStore {
       if (openaiKey) out.openai = { apiKey: openaiKey };
 
       const azureKey = env[ENV_KEYS["azure-openai"].apiKey];
-      const azureEndpoint = env[ENV_KEYS["azure-openai"].endpoint];
-      if (azureKey && azureEndpoint) {
-        out["azure-openai"] = {
-          apiKey: azureKey,
-          endpoint: azureEndpoint,
-        };
-      }
+      if (azureKey) out["azure-openai"] = { apiKey: azureKey };
 
       const googleKey = env[ENV_KEYS.google.apiKey];
       if (googleKey) out.google = { apiKey: googleKey };
@@ -87,13 +90,7 @@ export function createEnvSecretsStore(env: NodeJS.ProcessEnv): SecretsStore {
       if (fluxKey) out["flux-bfl"] = { apiKey: fluxKey };
 
       const bdKey = env[ENV_KEYS.bytedance.apiKey];
-      const bdEndpoint = env[ENV_KEYS.bytedance.endpoint];
-      if (bdKey && bdEndpoint) {
-        out.bytedance = {
-          apiKey: bdKey,
-          endpoint: bdEndpoint,
-        };
-      }
+      if (bdKey) out.bytedance = { apiKey: bdKey };
 
       const xaiKey = env[ENV_KEYS.xai.apiKey];
       if (xaiKey) out.xai = { apiKey: xaiKey };
@@ -103,6 +100,35 @@ export function createEnvSecretsStore(env: NodeJS.ProcessEnv): SecretsStore {
       throw new Error("Env secrets store is read-only");
     },
   };
+}
+
+/**
+ * Read endpoint-style env vars and overlay them on top of `prefs`. Returns
+ * a fresh `ProviderPreferences`. Used by the CLI runtime so users can run
+ * `AZURE_OPENAI_ENDPOINT=... imagent image ...` without mutating config.json.
+ *
+ * Env-supplied values win over the file. No-op when no relevant vars are set.
+ */
+export function envProviderRoutingOverlay(
+  env: NodeJS.ProcessEnv,
+  prefs: ProviderPreferences,
+): ProviderPreferences {
+  const azureEndpoint = env[ENV_KEYS["azure-openai"].endpoint];
+  const bdEndpoint = env[ENV_KEYS.bytedance.endpoint];
+  if (!azureEndpoint && !bdEndpoint) return prefs;
+
+  const next: ProviderPreferences = {
+    ...prefs,
+    "azure-openai": { ...(prefs["azure-openai"] ?? {}) },
+    bytedance: { ...(prefs.bytedance ?? {}) },
+  };
+  if (azureEndpoint) {
+    (next["azure-openai"] as ProviderRouting).endpoint = azureEndpoint;
+  }
+  if (bdEndpoint) {
+    (next.bytedance as ProviderRouting).endpoint = bdEndpoint;
+  }
+  return ProviderPreferencesSchema.parse(next);
 }
 
 /**

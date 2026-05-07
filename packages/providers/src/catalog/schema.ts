@@ -1,32 +1,25 @@
 import { z } from "zod";
 import {
-  ImageModelCapsOverrideSchema,
   ImageModelDefSchema,
-  VideoModelCapsOverrideSchema,
+  ImageProviderModelSchema,
   VideoModelDefSchema,
+  VideoProviderModelSchema,
+  type ImageProviderModel,
+  type VideoProviderModel,
 } from "@imagent/core";
 
-export const ImageProviderModelSchema = z.object({
-  /** Provider-facing model id, deployment name, or route name. */
-  id: z.string(),
-  /** Canonical model id in `models.image`. */
-  modelId: z.string(),
-  displayName: z.string().optional(),
-  capabilities: ImageModelCapsOverrideSchema.optional(),
-  defaults: z.record(z.string(), z.unknown()).optional(),
-});
-export type ImageProviderModel = z.infer<typeof ImageProviderModelSchema>;
-
-export const VideoProviderModelSchema = z.object({
-  /** Provider-facing model id, deployment name, or route name. */
-  id: z.string(),
-  /** Canonical model id in `models.video`. */
-  modelId: z.string(),
-  displayName: z.string().optional(),
-  capabilities: VideoModelCapsOverrideSchema.optional(),
-  defaults: z.record(z.string(), z.unknown()).optional(),
-});
-export type VideoProviderModel = z.infer<typeof VideoProviderModelSchema>;
+/**
+ * Re-export the canonical offering schemas from core so consumers that import
+ * via @imagent/providers keep working. The single source of truth lives in
+ * `@imagent/core/domain/model.ts` because both the catalog and per-user
+ * `config.providers.<id>` overlays use the same shape.
+ */
+export {
+  ImageProviderModelSchema,
+  VideoProviderModelSchema,
+  type ImageProviderModel,
+  type VideoProviderModel,
+};
 
 export const ProviderCatalogSchema = z.object({
   displayName: z.string().optional(),
@@ -39,11 +32,14 @@ export type ProviderCatalog = z.infer<typeof ProviderCatalogSchema>;
  * JSON catalog schema. v2 separates model identity from provider routing:
  *
  * - `models.image/video` describe canonical models and their capabilities.
- * - `providers.<providerId>.image/video` describe provider-facing offerings.
+ * - `providers.<providerId>.image/video` describe **canonical** provider-facing
+ *   offerings (the bundled defaults: OpenAI's gpt-image-2, Google's Veo, …).
  *
- * That lets one canonical model be exposed by several providers, and lets
- * deployment-based providers such as Azure OpenAI use arbitrary deployment
- * names while still inheriting the correct model capabilities.
+ * Per-user routing — Azure deployment names, custom OpenAI-compatible model
+ * lists — lives in `config.providers.<providerId>` (see
+ * `@imagent/config#ProviderPreferencesSchema`). At runtime the registry
+ * merges the catalog list with the config overlay; config wins on `id`
+ * collisions.
  */
 export const ModelCatalogSchema = z
   .object({

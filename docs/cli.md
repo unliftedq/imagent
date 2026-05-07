@@ -8,8 +8,9 @@ description: Use IMAGENT from scripts for provider setup, generation jobs, galle
 
 ```text
 imagent doctor
-imagent config {get|set|path}
-imagent catalog {path|show|reset}
+imagent models [--kind image|video] [--provider <id>] [--configured] [--json]
+imagent options --provider <id> --model <id> [--kind image|video] [--json]
+imagent config {get|set|path|reset}
 imagent image <prompt>
 imagent video <prompt>
 imagent asset {add|list|show|rm}
@@ -24,7 +25,27 @@ imagent mcp
 imagent doctor
 ```
 
-`doctor` verifies the workspace, database, FTS tables, config file, and configured provider count. It does not perform provider network calls.
+`doctor` verifies the workspace, database, FTS tables, and config file, and prints each catalog provider with the concrete image/video models it would expose plus a configured/missing-credentials marker. It does not perform provider network calls.
+
+### Discovery commands
+
+List every provider/model pair the catalog advertises:
+
+```bash
+imagent models
+imagent models --kind image
+imagent models --provider openai --json
+imagent models --configured           # only providers with credentials
+```
+
+Inspect the request options, defaults, and reference limits for a specific model:
+
+```bash
+imagent options --provider openai --model gpt-image-2
+imagent options --provider google --model veo-3.0-generate-001 --kind video --json
+```
+
+Use `imagent options` before crafting an `imagent image` or `imagent video` invocation — it lists the exact `--option key=value` pairs and allowed values for that model.
 
 ### Configuration commands
 
@@ -50,16 +71,16 @@ imagent config get openai.apiKey
 
 The CLI config command writes secrets only. General app preferences such as theme, default output directory, default provider, and concurrency are managed by the desktop **Settings** page or by carefully editing the local workspace `config.json` file.
 
-### Catalog commands
+Reset a state file when you need to start clean:
 
 ```bash
-imagent catalog path
-imagent catalog show --provider google
-imagent catalog show --kind image
-imagent catalog reset --force
+imagent config reset catalog          # restore the bundled-default model catalog
+imagent config reset secrets          # clear all stored credentials
+imagent config reset config           # restore default preferences
+imagent config reset catalog --force  # skip the y/N prompt
 ```
 
-The catalog defines supported models, model capabilities, and provider-facing model IDs or deployment names. Azure OpenAI deployment names and custom provider model mappings belong in the local workspace `catalog.json` file, not in `config.json`.
+The catalog defines supported models, model capabilities, and provider-facing model IDs or deployment names. Azure OpenAI deployment names and custom provider model mappings live in the local workspace `catalog.json` — edit it directly when you need to add a deployment or override capabilities, and use `imagent models` / `imagent options` to inspect the result.
 
 ### Image generation
 
@@ -131,7 +152,7 @@ Select provider, model, and options:
 imagent video "a crane shot over a futuristic coastline" \
   --provider google \
   --model veo-3.0-generate-001 \
-  --option duration=8 \
+  --option durationSec=8 \
   --option resolution=720p \
   --wait
 ```

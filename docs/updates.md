@@ -52,28 +52,29 @@ Run `rebuild` again after dependency or Electron changes so native modules match
 
 The runtime model catalog is stored in the local workspace `catalog.json` file. On first run, imagent seeds it from the bundled default catalog. After that, the user file is authoritative.
 
-Show the active catalog path:
+Show the active catalog path (printed alongside config.json and secrets.json):
 
 ```bash
-imagent catalog path
+imagent config path
 ```
 
 Inspect models and provider mappings:
 
 ```bash
-imagent catalog show
-imagent catalog show --provider openai
-imagent catalog show --kind video
+imagent models
+imagent models --provider openai
+imagent models --kind video
+imagent options --provider openai --model gpt-image-2
 ```
 
 Reset the user catalog to the bundled default:
 
 ```bash
-imagent catalog reset
+imagent config reset catalog
 ```
 
 Use `--force` to skip the confirmation prompt:
 
 ```bash
-imagent catalog reset --force
+imagent config reset catalog --force
 ```

@@ -488,21 +488,7 @@
       ]
     },
     "azure-openai": {
-      "displayName": "Azure",
-      "image": [
-        {
-          "id": "gpt-image-2",
-          "modelId": "gpt-image-2"
-        },
-        {
-          "id": "gpt-image-1.5",
-          "modelId": "gpt-image-1.5"
-        },
-        {
-          "id": "gpt-image-1-mini",
-          "modelId": "gpt-image-1-mini"
-        }
-      ]
+      "displayName": "Azure"
     },
     "google": {
       "displayName": "Google AI Studio",

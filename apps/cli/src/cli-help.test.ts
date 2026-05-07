@@ -28,9 +28,37 @@ describe("CLI --help", () => {
   it("root --help exits 0 and lists every command", () => {
     const r = runCli(["--help"]);
     expect(r.status).toBe(0);
-    for (const cmd of ["doctor", "image", "config", "asset", "gallery", "video", "job", "mcp"]) {
+    for (const cmd of [
+      "doctor",
+      "models",
+      "options",
+      "image",
+      "config",
+      "asset",
+      "gallery",
+      "video",
+      "job",
+      "mcp",
+    ]) {
       expect(r.stdout).toContain(cmd);
     }
+    // The standalone `catalog` command was folded into `config reset catalog`.
+    // Match commander's "Commands:" listing format: two leading spaces, a name,
+    // then padding before the description.
+    expect(r.stdout).not.toMatch(/^ {2}catalog(?:\s|\[)/m);
+  });
+
+  it("config --help advertises the reset subcommand with all targets", () => {
+    const r = runCli(["config", "--help"]);
+    expect(r.status, `stderr:\n${r.stderr}`).toBe(0);
+    expect(r.stdout).toMatch(/reset[^\n]*<target>/);
+  });
+
+  it("config reset --help mentions catalog and secrets", () => {
+    const r = runCli(["config", "reset", "--help"]);
+    expect(r.status, `stderr:\n${r.stderr}`).toBe(0);
+    expect(r.stdout).toContain("catalog");
+    expect(r.stdout).toContain("secrets");
   });
 
   for (const sub of [
@@ -41,6 +69,8 @@ describe("CLI --help", () => {
     ["image", "--help"],
     ["video", "--help"],
     ["mcp", "--help"],
+    ["models", "--help"],
+    ["options", "--help"],
     ["asset", "add", "--help"],
     ["gallery", "ls", "--help"],
     ["job", "ls", "--help"],
@@ -119,6 +149,8 @@ describe("CLI MCP server", () => {
       expect(listResult).toMatchObject({
         tools: expect.arrayContaining([
           expect.objectContaining({ name: "imagent_doctor" }),
+          expect.objectContaining({ name: "imagent_models" }),
+          expect.objectContaining({ name: "imagent_options" }),
           expect.objectContaining({
             name: "imagent_image",
             description: expect.stringContaining("--option key=value"),
@@ -128,12 +160,12 @@ describe("CLI MCP server", () => {
             description: expect.stringContaining("--out <dir>"),
           }),
           expect.objectContaining({ name: "imagent_config" }),
-          expect.objectContaining({ name: "imagent_catalog" }),
           expect.objectContaining({ name: "imagent_asset" }),
           expect.objectContaining({ name: "imagent_gallery" }),
           expect.objectContaining({ name: "imagent_job" }),
         ]),
       });
+      expect(listResult.tools?.map((tool) => tool.name)).not.toContain("imagent_catalog");
       expect(listResult.tools?.map((tool) => tool.name)).not.toContain("imagent_cli");
       const imageTool = listResult.tools?.find((tool) => tool.name === "imagent_image");
       const videoTool = listResult.tools?.find((tool) => tool.name === "imagent_video");

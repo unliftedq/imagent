@@ -39,10 +39,11 @@ imagent video "a slow camera move through a neon city" --provider bytedance --wa
 
 ```text
 imagent doctor
-imagent config {get|set|path}
-imagent catalog {path|show|reset}
-imagent image "<prompt>" [--provider <id>] [--model <id>] [--count <n>] [--out <dir>]
-imagent video "<prompt>" [--provider <id>] [--model <id>] [--duration <sec>] [--wait]
+imagent models [--kind image|video] [--provider <id>] [--configured]
+imagent options --provider <id> --model <id> [--kind image|video]
+imagent config {get|set|path|reset <catalog|secrets|config>}
+imagent image "<prompt>" [--provider <id>] [--model <id>] [--option k=v ...] [--out <dir>]
+imagent video "<prompt>" [--provider <id>] [--model <id>] [--option k=v ...] [--wait]
 imagent asset {add|list|show|rm}
 imagent gallery {ls|show|remix|rm|favorite}
 imagent job {ls|status|cancel|watch}
@@ -57,11 +58,18 @@ Configuration files live under `~/.imagent/` by default:
 - `secrets.json`: provider keys and endpoint settings, written with `chmod 600` by default.
 - `catalog.json`: available providers, models, and capability catalog.
 
-Show the active paths:
+Show the active paths (config.json, catalog.json, and secrets.json):
 
 ```bash
 imagent config path
-imagent catalog path
+```
+
+Reset a state file when you need to start clean (`--force` skips the y/N prompt):
+
+```bash
+imagent config reset catalog --force   # bundled-default model catalog
+imagent config reset secrets           # clear all stored credentials
+imagent config reset config            # restore default preferences
 ```
 
 Environment variables can override matching secrets for one-off runs, for example:
@@ -70,14 +78,24 @@ Environment variables can override matching secrets for one-off runs, for exampl
 OPENAI_API_KEY=sk-... imagent image "minimal product photo"
 ```
 
+## Discovering providers, models, and options
+
+```bash
+imagent doctor                                 # what's configured + which models would be exposed
+imagent models --kind image --configured       # provider × model inventory (filterable)
+imagent options --provider openai --model gpt-image-2  # model's exact request options + defaults
+```
+
+`imagent options` is the canonical way to learn which `--option key=value` pairs (e.g. `size`, `quality`, `aspectRatio`, `durationSec`) a given model accepts before invoking `imagent image|video`.
+
 ## Image generation
 
 ```bash
 imagent image "prompt" \
   --provider openai \
-  --model gpt-image-1 \
-  --count 2 \
-  --aspect 1:1 \
+  --model gpt-image-2 \
+  --option size=1024x1024 \
+  --option count=2 \
   --character hero \
   --style watercolor \
   --out ./outputs
@@ -85,26 +103,25 @@ imagent image "prompt" \
 
 Common options:
 
-- `--provider`, `--model`: choose the provider and model.
-- `--count`: set the number of outputs.
-- `--size`, `--aspect`, `--seed`, `--negative`: model-specific generation parameters.
+- `--provider`, `--model`: choose the provider and model (see `imagent models`).
+- `--option key=value` (repeatable): model capability options like `size`, `aspectRatio`, `quality`, `outputFormat`, `count`, `seed`, `negativePrompt`. Run `imagent options --provider <id> --model <id>` for the exact list.
 - `--ref`: attach one or more reference images.
-- `--character`, `--object`, `--background`, `--style`: attach registered assets.
-- `--out`: override the default output directory.
+- `--character`, `--object`, `--background`, `--style`: attach registered assets by slug.
+- `--out`: copy the completed result to a local directory (the gallery copy is always retained).
 
 ## Video generation
 
 ```bash
 imagent video "prompt" \
   --provider bytedance \
-  --model seedance-1.0-pro \
-  --duration 5 \
-  --aspect 16:9 \
+  --model doubao-seedance-1-0-pro-250528 \
+  --option durationSec=5 \
+  --option aspectRatio=16:9 \
   --ref ./first-frame.png \
   --wait
 ```
 
-`--wait` blocks the command and streams job progress. Without it, the job can be followed later with `imagent job watch <jobId>`.
+`--wait` blocks the command and streams job progress. Without it, the job runs in the background and can be followed later with `imagent job watch <jobId>`.
 
 ## Asset and result management
 

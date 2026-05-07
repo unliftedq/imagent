@@ -17,6 +17,8 @@ import {
   createImageRegistry,
   createVideoRegistry,
   loadCatalog,
+  migrateProviderRouting,
+  saveCatalog,
   type ImageRegistry,
   type ModelCatalog,
   type VideoRegistry,
@@ -88,8 +90,26 @@ export async function bootstrapRuntime(deps: BootstrapDeps): Promise<RuntimeServ
   const repopulate = async (): Promise<void> => {
     catalog = await loadCatalog({ path: catalogPath, logger });
     const snap = await loadSnapshot(configStore, secretsStore);
-    const nextImage = createImageRegistry(snap.secrets, snap.preferences, catalog);
-    const nextVideo = createVideoRegistry(snap.secrets, snap.preferences, catalog);
+
+    // Idempotent migration: pull per-user provider routing (Azure
+    // deployments, custom OpenAI providers) out of the catalog and into
+    // config.providers. After it runs once, the user catalog has no Azure
+    // offerings and re-runs are no-ops.
+    const config = await configStore.loadConfig();
+    const migration = migrateProviderRouting(catalog, config);
+    let preferences = snap.preferences;
+    if (migration.migrated) {
+      catalog = migration.catalog;
+      const saved = await configStore.saveConfig(migration.config);
+      preferences = saved.providers;
+      await saveCatalog(catalog, { path: catalogPath });
+      logger.info("[runtime] migrated provider routing → config", {
+        moved: migration.movedByProvider,
+      });
+    }
+
+    const nextImage = createImageRegistry(snap.secrets, preferences, catalog);
+    const nextVideo = createVideoRegistry(snap.secrets, preferences, catalog);
     imageRegistry.clear();
     for (const [k, v] of nextImage) {
       (imageRegistry as Map<string, unknown>).set(k, v);

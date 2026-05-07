@@ -3,7 +3,11 @@ import type { ImageProvider, VideoModelDef, VideoProvider } from "@imagent/core"
 import { AzureOpenAIImageProvider } from "./azure/image.js";
 import { ByteDanceImageProvider } from "./bytedance/image.js";
 import { ByteDanceVideoProvider } from "./bytedance/video.js";
-import { resolveImageProviderModels, resolveVideoProviderModels } from "./catalog/resolve.js";
+import {
+  effectiveProviderDisplayName,
+  resolveImageProviderModels,
+  resolveVideoProviderModels,
+} from "./catalog/resolve.js";
 import type { ModelCatalog } from "./catalog/schema.js";
 import { FluxImageProvider } from "./flux/image.js";
 import { GoogleImageProvider } from "./google/image.js";
@@ -15,12 +19,22 @@ import { XaiVideoProvider } from "./xai/video.js";
 export type ImageRegistry = ReadonlyMap<string, ImageProvider>;
 export type VideoRegistry = ReadonlyMap<string, VideoProvider>;
 
+const BUILT_IN_PROVIDER_IDS = [
+  "openai",
+  "azure-openai",
+  "google",
+  "flux-bfl",
+  "bytedance",
+  "xai",
+] as const;
+
 /**
- * Build the image-provider registry. The catalog separates canonical model
- * definitions from provider-facing offerings; the registry resolves each
- * provider's offerings into the concrete model map its implementation needs.
+ * Build the image-provider registry. Effective offerings = catalog (canonical)
+ * merged with `prefs.providers.<id>` (per-user overlay, e.g. Azure deployment
+ * names, custom OpenAI-compatible model lists). Config wins on `id`
+ * collisions; see `effectiveImageOfferings` for the merge semantics.
  *
- * Each provider is **its own class** with its own SDK client (Phase 3b):
+ * Each provider is **its own class** with its own SDK client:
  *   - OpenAI / Azure / xAI / ByteDance image → `openai` SDK.
  *   - Google image / video → `@google/genai` SDK.
  *   - Flux + ByteDance Seedance + xAI video → raw HTTP (no usable SDK).
@@ -28,11 +42,12 @@ export type VideoRegistry = ReadonlyMap<string, VideoProvider>;
  * Providers without configured secrets are skipped silently — `imagent
  * doctor` reports the gap.
  *
- * Keys: `"openai" | "azure-openai" | "google" | "flux-bfl" | "bytedance" | "xai"`.
+ * Built-in keys: `"openai" | "azure-openai" | "google" | "flux-bfl" | "bytedance" | "xai"`.
+ * Custom OpenAI-compatible providers are keyed by their declared id.
  */
 export function createImageRegistry(
   secrets: ProviderSecrets,
-  _prefs: ProviderPreferences,
+  prefs: ProviderPreferences,
   catalog: ModelCatalog,
 ): ImageRegistry {
   const out = new Map<string, ImageProvider>();
@@ -40,19 +55,21 @@ export function createImageRegistry(
   if (secrets.openai) {
     const openaiOpts: ConstructorParameters<typeof OpenAIImageProvider>[0] = {
       apiKey: secrets.openai.apiKey,
-      models: mapFromList(resolveImageProviderModels(catalog, "openai")),
+      models: mapFromList(resolveImageProviderModels(catalog, "openai", prefs)),
     };
-    if (secrets.openai.baseUrl) openaiOpts.baseUrl = secrets.openai.baseUrl;
+    const baseUrl = prefs.openai?.baseUrl;
+    if (baseUrl) openaiOpts.baseUrl = baseUrl;
     out.set("openai", new OpenAIImageProvider(openaiOpts));
   }
 
-  if (hasEndpointKeyPair(secrets["azure-openai"])) {
+  const azureEndpoint = prefs["azure-openai"]?.endpoint;
+  if (secrets["azure-openai"]?.apiKey && azureEndpoint) {
     out.set(
       "azure-openai",
       new AzureOpenAIImageProvider({
-        endpoint: secrets["azure-openai"].endpoint,
+        endpoint: azureEndpoint,
         apiKey: secrets["azure-openai"].apiKey,
-        models: mapFromList(resolveImageProviderModels(catalog, "azure-openai")),
+        models: mapFromList(resolveImageProviderModels(catalog, "azure-openai", prefs)),
       }),
     );
   }
@@ -60,26 +77,29 @@ export function createImageRegistry(
   if (secrets.google) {
     const googleOpts: ConstructorParameters<typeof GoogleImageProvider>[0] = {
       apiKey: secrets.google.apiKey,
-      models: mapFromList(resolveImageProviderModels(catalog, "google")),
+      models: mapFromList(resolveImageProviderModels(catalog, "google", prefs)),
     };
-    if (secrets.google.baseUrl) googleOpts.baseUrl = secrets.google.baseUrl;
+    const baseUrl = prefs.google?.baseUrl;
+    if (baseUrl) googleOpts.baseUrl = baseUrl;
     out.set("google", new GoogleImageProvider(googleOpts));
   }
 
   if (secrets["flux-bfl"]) {
     const fluxOpts: ConstructorParameters<typeof FluxImageProvider>[0] = {
       apiKey: secrets["flux-bfl"].apiKey,
-      models: mapFromList(resolveImageProviderModels(catalog, "flux-bfl")),
+      models: mapFromList(resolveImageProviderModels(catalog, "flux-bfl", prefs)),
     };
-    if (secrets["flux-bfl"].baseUrl) fluxOpts.baseUrl = secrets["flux-bfl"].baseUrl;
+    const baseUrl = prefs["flux-bfl"]?.baseUrl;
+    if (baseUrl) fluxOpts.baseUrl = baseUrl;
     out.set("flux-bfl", new FluxImageProvider(fluxOpts));
   }
 
-  if (hasEndpointKeyPair(secrets.bytedance)) {
+  const bdEndpoint = prefs.bytedance?.endpoint;
+  if (secrets.bytedance?.apiKey && bdEndpoint) {
     const bdOpts: ConstructorParameters<typeof ByteDanceImageProvider>[0] = {
       apiKey: secrets.bytedance.apiKey,
-      endpoint: secrets.bytedance.endpoint,
-      models: mapFromList(resolveImageProviderModels(catalog, "bytedance")),
+      endpoint: bdEndpoint,
+      models: mapFromList(resolveImageProviderModels(catalog, "bytedance", prefs)),
     };
     out.set("bytedance", new ByteDanceImageProvider(bdOpts));
   }
@@ -87,23 +107,31 @@ export function createImageRegistry(
   if (secrets.xai) {
     const xaiOpts: ConstructorParameters<typeof XaiImageProvider>[0] = {
       apiKey: secrets.xai.apiKey,
-      models: mapFromList(resolveImageProviderModels(catalog, "xai")),
+      models: mapFromList(resolveImageProviderModels(catalog, "xai", prefs)),
     };
-    if (secrets.xai.baseUrl) xaiOpts.baseUrl = secrets.xai.baseUrl;
+    const baseUrl = prefs.xai?.baseUrl;
+    if (baseUrl) xaiOpts.baseUrl = baseUrl;
     out.set("xai", new XaiImageProvider(xaiOpts));
   }
 
-  for (const [providerId, customSecrets] of Object.entries(secrets.customOpenAI ?? {})) {
+  // Custom OpenAI-compatible providers: routing in prefs (baseUrl required),
+  // credentials in secrets. We skip entries that don't have both a baseUrl
+  // and an offering list — without those there's nothing to dispatch to.
+  const customRoutes = prefs.customOpenAI ?? {};
+  for (const [providerId, routing] of Object.entries(customRoutes)) {
     if (out.has(providerId)) continue;
-    const models = resolveImageProviderModels(catalog, providerId);
+    const baseUrl = routing.baseUrl;
+    if (!baseUrl) continue;
+    const models = resolveImageProviderModels(catalog, providerId, prefs);
     if (models.length === 0) continue;
+    const customSecrets = secrets.customOpenAI?.[providerId];
     out.set(
       providerId,
       new OpenAIImageProvider({
         providerId,
-        displayName: catalog.providers[providerId]?.displayName ?? providerId,
-        apiKey: customSecrets.apiKey ?? "imagent-no-api-key",
-        baseUrl: customSecrets.baseUrl,
+        displayName: effectiveProviderDisplayName(catalog, prefs, providerId),
+        apiKey: customSecrets?.apiKey ?? "imagent-no-api-key",
+        baseUrl,
         models: mapFromList(models),
       }),
     );
@@ -113,8 +141,7 @@ export function createImageRegistry(
 }
 
 /**
- * Video registry. Phase 3a wires real raw-HTTP implementations for all three
- * vendors:
+ * Video registry. Wires raw-HTTP implementations for all video vendors:
  *   - ByteDance (Seedance) — Ark `contents/generations/tasks` long-poll.
  *   - Google (Veo) — Gemini `predictLongRunning` long operation.
  *   - xAI (Grok Imagine Video) — `/v1/videos/generations` + `/v1/videos/{id}`.
@@ -123,16 +150,17 @@ export function createImageRegistry(
  */
 export function createVideoRegistry(
   secrets: ProviderSecrets,
-  _prefs: ProviderPreferences,
+  prefs: ProviderPreferences,
   catalog: ModelCatalog,
 ): VideoRegistry {
   const out = new Map<string, VideoProvider>();
 
-  if (hasEndpointKeyPair(secrets.bytedance)) {
+  const bdEndpoint = prefs.bytedance?.endpoint;
+  if (secrets.bytedance?.apiKey && bdEndpoint) {
     const opts: ConstructorParameters<typeof ByteDanceVideoProvider>[0] = {
       apiKey: secrets.bytedance.apiKey,
-      endpoint: secrets.bytedance.endpoint,
-      models: mapFromList(resolveVideoProviderModels(catalog, "bytedance")),
+      endpoint: bdEndpoint,
+      models: mapFromList(resolveVideoProviderModels(catalog, "bytedance", prefs)),
     };
     out.set("bytedance", new ByteDanceVideoProvider(opts));
   }
@@ -140,18 +168,20 @@ export function createVideoRegistry(
   if (secrets.google) {
     const googleOpts: ConstructorParameters<typeof GoogleVideoProvider>[0] = {
       apiKey: secrets.google.apiKey,
-      models: mapFromList(resolveVideoProviderModels(catalog, "google")),
+      models: mapFromList(resolveVideoProviderModels(catalog, "google", prefs)),
     };
-    if (secrets.google.baseUrl) googleOpts.baseUrl = secrets.google.baseUrl;
+    const baseUrl = prefs.google?.baseUrl;
+    if (baseUrl) googleOpts.baseUrl = baseUrl;
     out.set("google", new GoogleVideoProvider(googleOpts));
   }
 
   if (secrets.xai) {
     const xaiOpts: ConstructorParameters<typeof XaiVideoProvider>[0] = {
       apiKey: secrets.xai.apiKey,
-      models: mapFromList(resolveVideoProviderModels(catalog, "xai")),
+      models: mapFromList(resolveVideoProviderModels(catalog, "xai", prefs)),
     };
-    if (secrets.xai.baseUrl) xaiOpts.baseUrl = secrets.xai.baseUrl;
+    const baseUrl = prefs.xai?.baseUrl;
+    if (baseUrl) xaiOpts.baseUrl = baseUrl;
     out.set("xai", new XaiVideoProvider(xaiOpts));
   }
 
@@ -159,35 +189,36 @@ export function createVideoRegistry(
 }
 
 /**
- * Distinct vendor-secret count. Configuring `bytedance.apiKey` increments
- * by 1 even though it unlocks both image + video; `xai.apiKey` increments
- * by 1 too. Used by `imagent doctor` to render "Providers: X / 6 configured".
+ * Distinct vendor count for `imagent doctor`'s "Providers: X / 6 configured"
+ * line. A vendor is "configured" when it has both the credentials it needs
+ * (apiKey from secrets) and any required routing (endpoint URL from prefs,
+ * for vendors that demand one). Custom OpenAI-compatible providers count
+ * once they have `prefs.customOpenAI.<id>.baseUrl` defined.
  */
-export function configuredProviderCount(secrets: ProviderSecrets): number {
+export function configuredProviderCount(
+  secrets: ProviderSecrets,
+  prefs?: ProviderPreferences,
+): number {
   let n = 0;
   if (secrets.openai) n += 1;
-  if (hasEndpointKeyPair(secrets["azure-openai"])) n += 1;
+  if (secrets["azure-openai"]?.apiKey && prefs?.["azure-openai"]?.endpoint) n += 1;
   if (secrets.google) n += 1;
   if (secrets["flux-bfl"]) n += 1;
-  if (hasEndpointKeyPair(secrets.bytedance)) n += 1;
+  if (secrets.bytedance?.apiKey && prefs?.bytedance?.endpoint) n += 1;
   if (secrets.xai) n += 1;
-  n += Object.keys(secrets.customOpenAI ?? {}).length;
+  for (const routing of Object.values(prefs?.customOpenAI ?? {})) {
+    if (routing.baseUrl) n += 1;
+  }
   return n;
 }
 
-/** Total distinct vendor count across all registries. Six providers. */
-export const TOTAL_PROVIDER_COUNT = 6;
+/** Total distinct vendor count across the built-in registries. */
+export const TOTAL_PROVIDER_COUNT = BUILT_IN_PROVIDER_IDS.length;
 
 // --- internal helpers ---------------------------------------------------
 
 function mapFromList<T extends { id: string }>(list: readonly T[]): ReadonlyMap<string, T> {
   return new Map(list.map((item) => [item.id, item]));
-}
-
-function hasEndpointKeyPair(
-  secrets: { endpoint?: string; apiKey?: string } | undefined,
-): secrets is { endpoint: string; apiKey: string } {
-  return Boolean(secrets?.endpoint && secrets.apiKey);
 }
 
 export {
@@ -198,6 +229,9 @@ export {
   saveCatalog,
 } from "./catalog/loader.js";
 export {
+  effectiveImageOfferings,
+  effectiveProviderDisplayName,
+  effectiveVideoOfferings,
   resolveImageProviderModel,
   resolveImageProviderModels,
   resolveVideoProviderModel,
@@ -211,6 +245,7 @@ export {
   type ProviderCatalog,
   type VideoProviderModel,
 } from "./catalog/schema.js";
+export { BUILT_IN_PROVIDER_IDS };
 
 // Re-export VideoModelDef helpers so other internal code can resolve types.
 export type { VideoModelDef };

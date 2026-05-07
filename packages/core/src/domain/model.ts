@@ -96,3 +96,31 @@ export const VideoModelDefSchema = z.object({
   defaults: z.record(z.string(), z.unknown()).optional(),
 });
 export type VideoModelDef = z.infer<typeof VideoModelDefSchema>;
+
+/**
+ * Provider-facing offering. The same shape is used by:
+ *   - `catalog.providers.<id>.image/video[]` (canonical, shipped/bundled)
+ *   - `config.providers.<id>.image/video[]` (per-user overlay, e.g. Azure
+ *     deployments, custom OpenAI-compatible providers)
+ *
+ * Resolution merges both lists at runtime: config overlays catalog, deduped by
+ * `id`. `modelId` references a key in `catalog.models.image/video`, whose
+ * capabilities and defaults the offering inherits and may override.
+ */
+export const ImageProviderModelSchema = z.object({
+  id: z.string(),
+  modelId: z.string(),
+  displayName: z.string().optional(),
+  capabilities: ImageModelCapsOverrideSchema.optional(),
+  defaults: z.record(z.string(), z.unknown()).optional(),
+});
+export type ImageProviderModel = z.infer<typeof ImageProviderModelSchema>;
+
+export const VideoProviderModelSchema = z.object({
+  id: z.string(),
+  modelId: z.string(),
+  displayName: z.string().optional(),
+  capabilities: VideoModelCapsOverrideSchema.optional(),
+  defaults: z.record(z.string(), z.unknown()).optional(),
+});
+export type VideoProviderModel = z.infer<typeof VideoProviderModelSchema>;

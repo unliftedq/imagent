@@ -9,20 +9,29 @@ import {
   BUILT_IN_IDS,
   BUILT_IN_PROVIDERS,
   buildSecretsPatch,
-  catalogWithMappings,
   emptyModalState,
   formFromCustom,
   formFromProvider,
   imageModelsForSelect,
   maskForModal,
+  prefsWithMappings,
   validateModal,
   type ActiveModal,
   type ModalState,
 } from "./definitions.js";
 
 export function ProvidersPage() {
-  const { summaries, secrets, testResults, testing, refresh, saveSecrets, testProvider } =
-    useConfigStore();
+  const {
+    providerPrefs,
+    summaries,
+    secrets,
+    testResults,
+    testing,
+    refresh,
+    saveProviderPrefs,
+    saveSecrets,
+    testProvider,
+  } = useConfigStore();
   const pushToast = useUIStore((s) => s.pushToast);
 
   const [catalog, setCatalog] = useState<ModelCatalogPayload | null>(null);
@@ -39,26 +48,27 @@ export function ProvidersPage() {
   const imageModelOptions = useMemo(() => imageModelsForSelect(catalog), [catalog]);
   const customProviderIds = useMemo(() => {
     const ids = new Set<string>();
+    for (const id of Object.keys(providerPrefs?.customOpenAI ?? {})) ids.add(id);
     for (const id of Object.keys(catalog?.providers ?? {})) {
       if (!BUILT_IN_IDS.has(id)) ids.add(id);
     }
     for (const id of Object.keys(secrets.customOpenAI ?? {})) ids.add(id);
     return [...ids].sort();
-  }, [catalog, secrets.customOpenAI]);
+  }, [providerPrefs?.customOpenAI, catalog, secrets.customOpenAI]);
 
   function openBuiltIn(id: string) {
     const provider = BUILT_IN_PROVIDERS.find((p) => p.id === id);
-    setForm(formFromProvider(id, provider?.name ?? id, catalog, secrets));
+    setForm(formFromProvider(id, provider?.name ?? id, catalog, providerPrefs, secrets));
     setActiveModal({ kind: "built-in", id });
   }
 
   function openCustom(id: string | null) {
-    setForm(formFromCustom(id, catalog, secrets));
+    setForm(formFromCustom(id, catalog, providerPrefs, secrets));
     setActiveModal({ kind: "custom", id });
   }
 
   async function saveActiveModal() {
-    if (!activeModal || !catalog) return;
+    if (!activeModal || !catalog || !providerPrefs) return;
     const validation = validateModal(activeModal, form, secrets);
     if (validation) {
       pushToast({
@@ -76,12 +86,12 @@ export function ProvidersPage() {
         await saveSecrets(secretsPatch);
       }
 
-      if (activeModal.id === "azure-openai" || activeModal.kind === "custom") {
-        const nextCatalog = catalogWithMappings(catalog, activeModal, form);
-        const saved = await api["catalog.set"](nextCatalog);
-        setCatalog(saved);
-        await refresh();
-      }
+      // Routing now lives entirely in providers.config — endpoint, baseUrl,
+      // and (for Azure / custom) deployment mappings. Always save prefs so a
+      // ByteDance endpoint edit or a custom-provider baseUrl change isn't
+      // dropped.
+      const nextPrefs = prefsWithMappings(providerPrefs, activeModal, form);
+      await saveProviderPrefs(nextPrefs);
 
       pushToast({
         title: activeModal.kind === "custom" ? "Custom provider saved" : "Provider saved",

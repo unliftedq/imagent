@@ -35,11 +35,19 @@ interface AssetListOptions {
 export function registerAssetCommands(program: Command): void {
   const asset = program
     .command("asset")
-    .description("Manage Characters / Objects / Backgrounds / Styles");
+    .description(
+      [
+        "Manage reusable generation assets: characters, objects, backgrounds, and styles.",
+        "",
+        "Assets are referenced by slug from `imagent image|video --character/--object/--background/--style <slug>`. Add a few here, then attach them to prompts to keep references consistent across runs.",
+      ].join("\n"),
+    );
 
   asset
     .command("add <kind>")
-    .description("Add a new asset (character|object|background|style)")
+    .description(
+      "Add a new asset. <kind> must be one of: character | object | background | style.",
+    )
     .requiredOption("--name <name>", "Display name")
     .option("--description <text>", "Optional description")
     .option("--prompt <snippet>", "Prompt snippet (style only)")
@@ -55,7 +63,7 @@ export function registerAssetCommands(program: Command): void {
 
   asset
     .command("list")
-    .description("List assets with their reference status")
+    .description("List stored assets with their slug, kind, and reference status")
     .option("--kind <kind>", "Filter by kind")
     .option("--search <query>", "FTS5 search across name/description/prompt")
     .option("--limit <n>", "Maximum rows to print")

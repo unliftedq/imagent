@@ -42,7 +42,13 @@ interface GalleryRemixOptions {
 export function registerGalleryCommands(program: Command): void {
   const gallery = program
     .command("gallery")
-    .description("Browse, remix, and curate prior generations");
+    .description(
+      [
+        "Browse, remix, and curate prior generations stored in the local gallery (under ~/.imagent/data/gallery).",
+        "",
+        "Use `gallery ls` to find item ids, `gallery show <id>` for full lineage and attached assets, and `gallery remix <id>` to spawn a new generation that links back to the parent via parent_id.",
+      ].join("\n"),
+    );
 
   gallery
     .command("ls")
