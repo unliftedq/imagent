@@ -186,7 +186,7 @@ async function migrateLegacySecretsRoutingFromDisk(
   if (!migration.migrated) return config;
 
   const savedConfig = await deps.configStore.saveConfig(migration.config);
-  await writeCleanSecretsFile(secretsPath, migration.secrets);
+  await writeCleanSecretsFile(secretsPath, migration.secrets, deps.logger);
   deps.logger.info("[runtime] migrated legacy secrets routing → config");
   return savedConfig;
 }
@@ -194,6 +194,7 @@ async function migrateLegacySecretsRoutingFromDisk(
 async function writeCleanSecretsFile(
   filePath: string,
   secrets: Awaited<ReturnType<SecretsStore["loadSecrets"]>>,
+  logger: Logger,
 ): Promise<void> {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, JSON.stringify(secrets, null, 2), "utf8");
@@ -204,5 +205,6 @@ async function writeCleanSecretsFile(
     if (code !== "EPERM" && code !== "ENOSYS" && code !== "ENOTSUP") {
       throw err;
     }
+    logger.warn("[runtime] could not chmod migrated secrets.json", { path: filePath, code });
   }
 }
