@@ -9,6 +9,8 @@ import { loadCatalog } from "@imagent/providers";
 import chalk from "chalk";
 import type { Command } from "commander";
 
+import { registerConfigModelCommands } from "./discovery.js";
+
 /**
  * `imagent config set <vendor>.<key> <value>`
  * `imagent config get <vendor>.<key>`
@@ -32,6 +34,8 @@ export function registerConfigCommand(program: Command): void {
   const config = program
     .command("config")
     .description("Inspect and edit ~/.imagent/config.json and secrets.json");
+
+  registerConfigModelCommands(config);
 
   config
     .command("set <key> <value>")

@@ -25,9 +25,8 @@ async function main(): Promise<void> {
       `
 
 Agent discovery:
-  $ imagent providers  # provider availability without secret values
-  $ imagent models --provider openai  # provider-facing model ids
-  $ imagent options --model gpt-image-2 --json
+  $ imagent config models  # providers and provider-facing model ids
+  $ imagent options --provider openai --model gpt-image-2 --json
 
 Generation options are passed with repeatable --option key=value flags.
 `,

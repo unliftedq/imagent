@@ -33,8 +33,6 @@ describe("CLI --help", () => {
       "image",
       "config",
       "catalog",
-      "providers",
-      "models",
       "options",
       "asset",
       "gallery",
@@ -55,10 +53,9 @@ describe("CLI --help", () => {
     ["image", "--help"],
     ["video", "--help"],
     ["mcp", "--help"],
-    ["providers", "--help"],
-    ["models", "--help"],
     ["options", "--help"],
     ["capabilities", "--help"],
+    ["config", "models", "--help"],
     ["asset", "add", "--help"],
     ["gallery", "ls", "--help"],
     ["job", "ls", "--help"],
@@ -86,32 +83,24 @@ describe("CLI --help", () => {
     expect(video.stdout).not.toContain("--resolution");
   });
 
-  it("discovery commands expose providers, models, and model options", () => {
-    const providers = runCli(["providers", "--json"]);
-    expect(providers.status, `stderr:\n${providers.stderr}`).toBe(0);
-    const providerPayload = JSON.parse(providers.stdout) as Array<{
+  it("discovery commands expose provider models and model options", () => {
+    const providerModels = runCli(["config", "models", "--json"]);
+    expect(providerModels.status, `stderr:\n${providerModels.stderr}`).toBe(0);
+    const providerPayload = JSON.parse(providerModels.stdout) as Array<{
       id: string;
-      modelCount: { image?: number; video?: number };
+      models: { image?: string[]; video?: string[] };
     }>;
     expect(providerPayload).toContainEqual(
       expect.objectContaining({
         id: "openai",
-        modelCount: expect.objectContaining({ image: expect.any(Number) }),
+        models: expect.objectContaining({ image: expect.arrayContaining(["gpt-image-2"]) }),
       }),
     );
 
-    const models = runCli(["models", "--provider", "openai", "--json"]);
-    expect(models.status, `stderr:\n${models.stderr}`).toBe(0);
-    const modelPayload = JSON.parse(models.stdout) as Array<{
-      id: string;
-      options: Array<{ key: string }>;
-    }>;
-    expect(modelPayload).toContainEqual(
-      expect.objectContaining({
-        id: "gpt-image-2",
-        options: expect.arrayContaining([expect.objectContaining({ key: "quality" })]),
-      }),
-    );
+    const textModels = runCli(["config", "models", "--provider", "openai"]);
+    expect(textModels.status, `stderr:\n${textModels.stderr}`).toBe(0);
+    expect(textModels.stdout).toContain("openai | image");
+    expect(textModels.stdout).toContain("gpt-image-2");
 
     const options = runCli(["options", "--provider", "openai", "--model", "gpt-image-2"]);
     expect(options.status, `stderr:\n${options.stderr}`).toBe(0);
@@ -137,6 +126,17 @@ describe("CLI --help", () => {
         values: expect.arrayContaining(["16:9"]),
       }),
     );
+
+    const missingFilter = runCli(["options", "--provider", "openai"]);
+    expect(missingFilter.status).not.toBe(0);
+    expect(missingFilter.stderr).toContain("required option '--model <id>' not specified");
+  });
+
+  it("doctor lists configured provider/model details", () => {
+    const r = runCli(["doctor"]);
+    expect(r.status, `stderr:\n${r.stderr}`).toBe(0);
+    expect(r.stdout).toContain("Providers:");
+    expect(r.stdout).toContain("none configured");
   });
 });
 
@@ -200,8 +200,6 @@ describe("CLI MCP server", () => {
           }),
           expect.objectContaining({ name: "imagent_config" }),
           expect.objectContaining({ name: "imagent_catalog" }),
-          expect.objectContaining({ name: "imagent_providers" }),
-          expect.objectContaining({ name: "imagent_models" }),
           expect.objectContaining({ name: "imagent_options" }),
           expect.objectContaining({ name: "imagent_asset" }),
           expect.objectContaining({ name: "imagent_gallery" }),
@@ -209,6 +207,8 @@ describe("CLI MCP server", () => {
         ]),
       });
       expect(listResult.tools?.map((tool) => tool.name)).not.toContain("imagent_cli");
+      expect(listResult.tools?.map((tool) => tool.name)).not.toContain("imagent_providers");
+      expect(listResult.tools?.map((tool) => tool.name)).not.toContain("imagent_models");
       const imageTool = listResult.tools?.find((tool) => tool.name === "imagent_image");
       const videoTool = listResult.tools?.find((tool) => tool.name === "imagent_video");
       expect(imageTool?.description).toContain("--out <dir>");

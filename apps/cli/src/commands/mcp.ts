@@ -73,7 +73,7 @@ const MCP_TOOLS: McpTool[] = [
   subcommandTool(
     "imagent_doctor",
     "doctor",
-    'Check whether imagent is ready to run. Verifies the data directory, database/FTS setup, config files, and configured provider count. Pass args after `imagent doctor`, for example [] or ["--help"].',
+    'Check whether imagent is ready to run. Verifies the data directory, database/FTS setup, config files, configured provider count, and configured provider/model details. Pass args after `imagent doctor`, for example [] or ["--help"].',
   ),
   subcommandTool(
     "imagent_image",
@@ -88,7 +88,7 @@ const MCP_TOOLS: McpTool[] = [
   subcommandTool(
     "imagent_config",
     "config",
-    'Inspect or edit local provider secrets and config paths. Use to set/get API keys, endpoints, or base URLs for openai, azure-openai, google, flux-bfl, bytedance, and xai, or to locate config files. Pass args after `imagent config`, for example ["set", "openai.apiKey", "sk-..."] or ["path"].',
+    'Inspect local provider/model availability and edit provider secrets. Use config models to list providers and provider-facing model ids, set/get API keys, endpoints, or base URLs, or locate config files. Pass args after `imagent config`, for example ["models"], ["set", "openai.apiKey", "sk-..."], or ["path"].',
   ),
   subcommandTool(
     "imagent_catalog",
@@ -96,19 +96,9 @@ const MCP_TOOLS: McpTool[] = [
     'Inspect and manage the local model catalog at ~/.imagent/catalog.json. Use to find the catalog path, show available image/video models filtered by provider or kind, or reset the catalog to bundled defaults. Pass args after `imagent catalog`, for example ["show", "--kind", "image"] or ["reset", "--force"].',
   ),
   subcommandTool(
-    "imagent_providers",
-    "providers",
-    'List provider availability without exposing secret values. Use to discover configured and unconfigured image/video providers and model counts. Pass args after `imagent providers`, for example ["--kind", "image"] or ["--json"].',
-  ),
-  subcommandTool(
-    "imagent_models",
-    "models",
-    'List provider-facing model ids from the active catalog with configured status, defaults, capabilities, and option keys. Pass args after `imagent models`, for example ["--provider", "openai"] or ["--kind", "video", "--json"].',
-  ),
-  subcommandTool(
     "imagent_options",
     "options",
-    'Show accepted repeatable `--option key=value` parameters, aliases, values, defaults, and reference limits for catalog models. Pass args after `imagent options`, for example ["--provider", "openai", "--model", "gpt-image-2"] or ["--kind", "video", "--json"].',
+    'Show accepted repeatable `--option key=value` parameters, aliases, values, defaults, and reference limits for one provider/model. Pass args after `imagent options` with both --provider and --model, for example ["--provider", "openai", "--model", "gpt-image-2"] or ["--provider", "bytedance", "--model", "doubao-seedance-1-0-pro-250528", "--json"].',
   ),
   subcommandTool(
     "imagent_asset",

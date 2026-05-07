@@ -39,11 +39,9 @@ imagent video "a slow camera move through a neon city" --provider bytedance --wa
 
 ```text
 imagent doctor
-imagent config {get|set|path}
+imagent config {models|get|set|path}
 imagent catalog {path|show|reset}
-imagent providers [--kind image|video] [--json]
-imagent models [--provider <id>] [--kind image|video] [--json]
-imagent options [--provider <id>] [--model <id>] [--kind image|video] [--json]
+imagent options --provider <id> --model <id> [--kind image|video] [--json]
 imagent image "<prompt>" [--provider <id>] [--model <id>] [--option <key=value>] [--out <dir>]
 imagent video "<prompt>" [--provider <id>] [--model <id>] [--option <key=value>] [--wait]
 imagent asset {add|list|show|rm}
@@ -76,8 +74,8 @@ OPENAI_API_KEY=sk-... imagent image "minimal product photo"
 Discover providers, model ids, and exact model options without reading the underlying catalog files:
 
 ```bash
-imagent providers --json
-imagent models --provider openai
+imagent config models --json
+imagent config models --provider openai
 imagent options --provider openai --model gpt-image-2
 ```
 

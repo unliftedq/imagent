@@ -1,15 +1,16 @@
+import { createFileConfigStore } from "@imagent/config";
 import {
-  createEnvSecretsStore,
-  createFileConfigStore,
-  createFileSecretsStore,
-  mergeSecrets,
-  type ProviderSecrets,
-} from "@imagent/config";
-import { countFtsTables, createPathResolver, ensureDataDir, openDatabase } from "@imagent/persistence";
-import { TOTAL_PROVIDER_COUNT, configuredProviderCount } from "@imagent/providers";
+  countFtsTables,
+  createPathResolver,
+  ensureDataDir,
+  openDatabase,
+} from "@imagent/persistence";
+import { configuredProviderCount, TOTAL_PROVIDER_COUNT } from "@imagent/providers";
 import chalk from "chalk";
 
 import { CLI_VERSION } from "../version.js";
+import { listProviderModels } from "./discovery.js";
+import { loadCliRuntime } from "./runtime.js";
 
 /**
  * `imagent doctor` — first-run friendly health check. Creates the data dir,
@@ -32,10 +33,9 @@ export async function runDoctor(): Promise<void> {
   await configStore.loadConfig(); // creates with defaults if missing
   const configLabel = configExistedBefore ? "loaded" : "defaults";
 
-  const fileSecrets = await createFileSecretsStore(resolver.secretsFile()).loadSecrets();
-  const envSecrets = await createEnvSecretsStore(process.env).loadSecrets();
-  const secrets: ProviderSecrets = mergeSecrets(fileSecrets, envSecrets);
-  const configured = configuredProviderCount(secrets);
+  const runtime = await loadCliRuntime();
+  const configured = configuredProviderCount(runtime.secrets);
+  const configuredProviders = listProviderModels(runtime, { configuredOnly: true });
 
   // ----- print --------------------------------------------------------
   process.stdout.write(`${chalk.bold(`imagent v${CLI_VERSION}`)}\n`);
@@ -44,6 +44,15 @@ export async function runDoctor(): Promise<void> {
   process.stdout.write(
     `${chalk.dim("Providers: ")}${configured} / ${TOTAL_PROVIDER_COUNT} configured\n`,
   );
+  for (const provider of configuredProviders) {
+    const groups: string[] = [];
+    if (provider.models.image) groups.push(`image: ${provider.models.image.join(", ")}`);
+    if (provider.models.video) groups.push(`video: ${provider.models.video.join(", ")}`);
+    process.stdout.write(`${chalk.dim("  - ")}${provider.id} | ${groups.join("; ")}\n`);
+  }
+  if (configuredProviders.length === 0) {
+    process.stdout.write(`${chalk.dim("  - none configured")}\n`);
+  }
 }
 
 function ftsBadge(status: string): string {

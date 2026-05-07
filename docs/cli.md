@@ -8,11 +8,9 @@ description: Use IMAGENT from scripts for provider setup, generation jobs, galle
 
 ```text
 imagent doctor
-imagent config {get|set|path}
+imagent config {models|get|set|path}
 imagent catalog {path|show|reset}
-imagent providers [--kind image|video] [--json]
-imagent models [--provider <id>] [--kind image|video] [--json]
-imagent options [--provider <id>] [--model <id>] [--kind image|video] [--json]
+imagent options --provider <id> --model <id> [--kind image|video] [--json]
 imagent image <prompt>
 imagent video <prompt>
 imagent asset {add|list|show|rm}
@@ -27,7 +25,7 @@ imagent mcp
 imagent doctor
 ```
 
-`doctor` verifies the workspace, database, FTS tables, config file, and configured provider count. It does not perform provider network calls.
+`doctor` verifies the workspace, database, FTS tables, config file, configured provider count, and configured provider/model details. It does not perform provider network calls.
 
 ### Configuration commands
 
@@ -51,6 +49,14 @@ imagent config get
 imagent config get openai.apiKey
 ```
 
+List providers with their provider-facing model IDs:
+
+```bash
+imagent config models
+imagent config models --provider openai
+imagent config models --configured --json
+```
+
 The CLI config command writes secrets only. General app preferences such as theme, default output directory, default provider, and concurrency are managed by the desktop **Settings** page or by carefully editing the local workspace `config.json` file.
 
 ### Catalog commands
@@ -69,17 +75,14 @@ The catalog defines supported models, model capabilities, and provider-facing mo
 Use these commands from scripts or agents before generation. They read the active catalog and configuration status, but never print secret values.
 
 ```bash
-imagent providers
-imagent providers --kind image --json
-imagent models --provider openai
-imagent models --kind video --json
+imagent config models
+imagent config models --kind image --json
 imagent options --provider openai --model gpt-image-2
-imagent options --kind video --json
+imagent options --provider bytedance --model doubao-seedance-1-0-pro-250528 --json
 ```
 
-- `providers` reports provider ids, image/video support, model counts, and whether each provider is configured.
-- `models` reports provider-facing model ids, display names, defaults, capabilities, and supported option keys.
-- `options` reports exact repeatable `--option key=value` parameters, aliases, allowed values, defaults, and reference limits. It also has a `capabilities` alias for agents that prefer that term.
+- `config models` reports provider ids, image/video model IDs, and whether each provider/kind is configured.
+- `options` requires both `--provider` and `--model`, then reports exact repeatable `--option key=value` parameters, aliases, allowed values, defaults, and reference limits. It also has a `capabilities` alias for agents that prefer that term.
 
 ### Image generation
 

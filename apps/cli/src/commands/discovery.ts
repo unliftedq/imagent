@@ -25,12 +25,11 @@ interface OptionsOptions extends FilterOptions {
   model?: string;
 }
 
-interface ProviderSummary {
+export interface ProviderModelsSummary {
   id: string;
   displayName: string;
-  kinds: ModelKind[];
   configured: Partial<Record<ModelKind, boolean>>;
-  modelCount: Partial<Record<ModelKind, number>>;
+  models: Partial<Record<ModelKind, string[]>>;
 }
 
 interface ModelSummary {
@@ -47,49 +46,12 @@ interface ModelSummary {
 
 export function registerDiscoveryCommands(program: Command): void {
   program
-    .command("providers")
-    .description("List provider availability without exposing secrets")
-    .option("--kind <kind>", "Filter by kind: image or video")
-    .option("--json", "Print machine-readable JSON")
-    .addHelpText(
-      "after",
-      `
-
-Examples:
-  $ imagent providers
-  $ imagent providers --kind image --json
-`,
-    )
-    .action(async (options: FilterOptions) => {
-      await runDiscovery("providers", options);
-    });
-
-  program
-    .command("models")
-    .description("List provider-facing models and their configured status")
-    .option("--provider <id>", "Filter to one provider id")
-    .option("--kind <kind>", "Filter by kind: image or video")
-    .option("--json", "Print machine-readable JSON")
-    .addHelpText(
-      "after",
-      `
-
-Examples:
-  $ imagent models --provider openai
-  $ imagent models --kind video --json
-`,
-    )
-    .action(async (options: FilterOptions) => {
-      await runDiscovery("models", options);
-    });
-
-  program
     .command("options")
     .alias("capabilities")
-    .description("Show supported --option key=value parameters for models")
-    .option("--provider <id>", "Filter to one provider id")
+    .description("Show supported --option key=value parameters for one provider/model")
+    .requiredOption("--provider <id>", "Provider id")
+    .requiredOption("--model <id>", "Provider-facing model id")
     .option("--kind <kind>", "Filter by kind: image or video")
-    .option("--model <id>", "Filter to one provider-facing model id")
     .option("--json", "Print machine-readable JSON")
     .addHelpText(
       "after",
@@ -97,7 +59,7 @@ Examples:
 
 Examples:
   $ imagent options --provider openai --model gpt-image-2
-  $ imagent capabilities --kind video --json
+  $ imagent capabilities --provider bytedance --model doubao-seedance-1-0-pro-250528 --json
 
 Use these keys with generation commands, for example:
   $ imagent image "prompt" --provider openai --option quality=high
@@ -108,27 +70,48 @@ Use these keys with generation commands, for example:
     });
 }
 
-async function runDiscovery(
-  mode: "providers" | "models" | "options",
-  options: FilterOptions | OptionsOptions,
-): Promise<void> {
+export function registerConfigModelCommands(config: Command): void {
+  config
+    .command("models")
+    .alias("providers")
+    .description("List providers with their available provider-facing models")
+    .option("--provider <id>", "Filter to one provider id")
+    .option("--kind <kind>", "Filter by kind: image or video")
+    .option("--configured", "Show only configured provider/kind entries", false)
+    .option("--json", "Print machine-readable JSON")
+    .addHelpText(
+      "after",
+      `
+
+Examples:
+  $ imagent config models
+  $ imagent config models --provider openai
+  $ imagent config models --configured --json
+`,
+    )
+    .action(async (options: FilterOptions & { configured?: boolean }) => {
+      try {
+        const runtime = await loadCliRuntime();
+        const kind = parseKind(options.kind);
+        const summaries = listProviderModels(runtime, {
+          kind,
+          provider: options.provider,
+          configuredOnly: options.configured,
+        });
+        writeOutput(summaries, formatProviderModels(summaries), options.json);
+      } catch (err) {
+        process.stderr.write(`config models failed: ${(err as Error).message}\n`);
+        process.exitCode = 1;
+      }
+    });
+}
+
+async function runDiscovery(mode: "options", options: OptionsOptions): Promise<void> {
   try {
     const runtime = await loadCliRuntime();
     const kind = parseKind(options.kind);
-    if (mode === "providers") {
-      const providers = listProviders(runtime, kind);
-      writeOutput(providers, formatProviders(providers), options.json);
-      return;
-    }
-
     const models = listModels(runtime, kind, options.provider);
-    if (mode === "models") {
-      writeOutput(models, formatModels(models), options.json);
-      return;
-    }
-
-    const modelFilter = "model" in options ? options.model : undefined;
-    const filtered = modelFilter ? models.filter((model) => model.id === modelFilter) : models;
+    const filtered = models.filter((model) => model.id === options.model);
     writeOutput(filtered, formatOptions(filtered), options.json);
   } catch (err) {
     process.stderr.write(`${mode} failed: ${(err as Error).message}\n`);
@@ -136,29 +119,41 @@ async function runDiscovery(
   }
 }
 
-function listProviders(runtime: CliRuntime, kind: ModelKind | undefined): ProviderSummary[] {
-  const out: ProviderSummary[] = [];
+export function listProviderModels(
+  runtime: CliRuntime,
+  options: { kind?: ModelKind; provider?: string; configuredOnly?: boolean } = {},
+): ProviderModelsSummary[] {
+  const out: ProviderModelsSummary[] = [];
   for (const [id, provider] of Object.entries(runtime.catalog.providers)) {
-    const imageCount = provider.image?.length ?? 0;
-    const videoCount = provider.video?.length ?? 0;
-    const kinds = [
-      ...(imageCount > 0 ? (["image"] as const) : []),
-      ...(videoCount > 0 ? (["video"] as const) : []),
-    ].filter((candidate) => !kind || candidate === kind);
-    if (kinds.length === 0) continue;
-    out.push({
+    if (options.provider && id !== options.provider) continue;
+    const imageConfigured = runtime.imageRegistry.has(id);
+    const videoConfigured = runtime.videoRegistry.has(id);
+    const imageModels =
+      (!options.kind || options.kind === "image") &&
+      (!options.configuredOnly || imageConfigured) &&
+      provider.image
+        ? provider.image.map((model) => model.id)
+        : undefined;
+    const videoModels =
+      (!options.kind || options.kind === "video") &&
+      (!options.configuredOnly || videoConfigured) &&
+      provider.video
+        ? provider.video.map((model) => model.id)
+        : undefined;
+    if (!imageModels && !videoModels) continue;
+    const summary: ProviderModelsSummary = {
       id,
       displayName: provider.displayName ?? id,
-      kinds,
       configured: {
-        ...(imageCount > 0 ? { image: runtime.imageRegistry.has(id) } : {}),
-        ...(videoCount > 0 ? { video: runtime.videoRegistry.has(id) } : {}),
+        ...(provider.image ? { image: imageConfigured } : {}),
+        ...(provider.video ? { video: videoConfigured } : {}),
       },
-      modelCount: {
-        ...(imageCount > 0 ? { image: imageCount } : {}),
-        ...(videoCount > 0 ? { video: videoCount } : {}),
+      models: {
+        ...(imageModels ? { image: imageModels } : {}),
+        ...(videoModels ? { video: videoModels } : {}),
       },
-    });
+    };
+    out.push(summary);
   }
   return out.sort((a, b) => a.id.localeCompare(b.id));
 }
@@ -238,47 +233,25 @@ function writeOutput(data: unknown, text: string, json = false): void {
   process.stdout.write(json ? `${JSON.stringify(data, null, 2)}\n` : text);
 }
 
-function formatProviders(providers: ProviderSummary[]): string {
-  if (providers.length === 0) return "No providers matched.\n";
-  const lines = ["Providers:"];
+export function formatProviderModels(providers: ProviderModelsSummary[]): string {
+  if (providers.length === 0) return "No provider models matched.\n";
+  const lines = ["Provider models:"];
   for (const provider of providers) {
-    const kinds = provider.kinds
-      .map(
-        (kind) =>
-          `${kind}:${provider.configured[kind] ? "configured" : "not-configured"}(${provider.modelCount[kind] ?? 0} models)`,
-      )
-      .join(", ");
-    lines.push(`  ${chalk.bold(provider.id)} — ${provider.displayName} [${kinds}]`);
-  }
-  lines.push("");
-  lines.push(
-    chalk.dim(
-      "Use `imagent models --provider <id>` and `imagent options --provider <id> --model <id>`.",
-    ),
-  );
-  return `${lines.join("\n")}\n`;
-}
-
-function formatModels(models: ModelSummary[]): string {
-  if (models.length === 0) return "No models matched.\n";
-  const lines = ["Models:"];
-  for (const model of models) {
-    lines.push(
-      `  ${chalk.bold(`${model.provider}/${model.kind}/${model.id}`)} ` +
-        `${model.configured ? chalk.green("configured") : chalk.yellow("not-configured")}`,
-    );
-    if (model.displayName) lines.push(`    name: ${model.displayName}`);
-    if (model.canonicalModelId && model.canonicalModelId !== model.id) {
-      lines.push(`    canonical: ${model.canonicalModelId}`);
+    const groups: string[] = [];
+    if (provider.models.image) {
+      groups.push(
+        `image ${statusBadge(provider.configured.image)}: ${provider.models.image.join(", ")}`,
+      );
     }
-    lines.push(`    options: ${model.options.map((option) => option.key).join(", ") || "(none)"}`);
+    if (provider.models.video) {
+      groups.push(
+        `video ${statusBadge(provider.configured.video)}: ${provider.models.video.join(", ")}`,
+      );
+    }
+    lines.push(`  ${chalk.bold(provider.id)} | ${groups.join("; ")}`);
   }
   lines.push("");
-  lines.push(
-    chalk.dim(
-      "Use `imagent options --provider <id> --model <id>` for accepted values and defaults.",
-    ),
-  );
+  lines.push(chalk.dim("Use `imagent options --provider <id> --model <id>` for option values."));
   return `${lines.join("\n")}\n`;
 }
 
@@ -316,4 +289,8 @@ function referenceLimitLabel(caps: Record<string, unknown> | undefined): string 
   if (typeof caps.maxReferences === "number") return `${caps.maxReferences}`;
   if (caps.supportsRefImages === false) return "0";
   return undefined;
+}
+
+function statusBadge(configured: boolean | undefined): string {
+  return configured ? chalk.green("configured") : chalk.yellow("not-configured");
 }
