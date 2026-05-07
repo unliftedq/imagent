@@ -50,9 +50,9 @@ export const BUILT_IN_PROVIDERS: readonly BuiltInProvider[] = [
     icon: Icons.OpenAiLogo,
   },
   {
-    id: "azure-openai",
-    name: "Azure OpenAI",
-    description: "Azure deployments mapped to canonical image models.",
+    id: "azure",
+    name: "Azure",
+    description: "Azure Foundry deployments — GPT Image, MAI Image, and FLUX families on one resource.",
     icon: AzureBrandIcon,
     iconClassName: "text-[#0078D4]",
     endpointLabel: "Endpoint",
@@ -236,7 +236,7 @@ export function formFromProvider(
     endpoint: routing?.endpoint ?? "",
     baseUrl: routing?.baseUrl ?? "",
     apiKey: "",
-    mappings: id === "azure-openai" ? mappingsForBuiltIn(prefs, catalog, id) : [],
+    mappings: id === "azure" ? mappingsForBuiltIn(prefs, catalog, id) : [],
   };
 }
 
@@ -285,18 +285,8 @@ function mappingsForBuiltIn(
   providerId: string,
 ): MappingRowState[] {
   const fromPrefs = readRouting(prefs, providerId)?.image ?? [];
-  // Migration grace: surface any leftover catalog offerings until the next
-  // refresh re-reads from disk after `migrateProviderRouting` ran.
-  const fromCatalog = catalog?.providers[providerId]?.image ?? [];
-  const seen = new Set<string>();
-  const merged: typeof fromPrefs = [];
-  for (const row of [...fromPrefs, ...fromCatalog]) {
-    if (seen.has(row.id)) continue;
-    seen.add(row.id);
-    merged.push(row);
-  }
-  if (merged.length === 0) return [mappingRow("", firstImageModelId(catalog))];
-  return merged.map((row) => ({
+  if (fromPrefs.length === 0) return [mappingRow("", firstImageModelId(catalog))];
+  return fromPrefs.map((row) => ({
     clientId: mappingClientId(),
     id: row.id,
     modelId: row.modelId,
@@ -361,7 +351,7 @@ export function validateModal(
     if (!form.baseUrl.trim()) return "Base URL is required.";
   }
 
-  if (activeModal.id === "azure-openai" && !form.endpoint.trim()) {
+  if (activeModal.id === "azure" && !form.endpoint.trim()) {
     return "Azure endpoint is required.";
   }
   if (activeModal.id === "bytedance" && !form.endpoint.trim()) {
@@ -372,7 +362,7 @@ export function validateModal(
   const keyRequired = activeModal.kind !== "custom";
   if (keyRequired && !masked && !form.apiKey.trim()) return "API key is required.";
 
-  if (activeModal.id === "azure-openai" || activeModal.kind === "custom") {
+  if (activeModal.id === "azure" || activeModal.kind === "custom") {
     const usable = form.mappings.filter((row) => row.id.trim() && row.modelId.trim());
     if (usable.length === 0) return "Add at least one model mapping.";
   }
@@ -404,8 +394,8 @@ export function buildSecretsPatch(activeModal: ActiveModal, form: ModalState): S
     case "xai":
       patch.xai = { apiKey };
       break;
-    case "azure-openai":
-      patch["azure-openai"] = { apiKey };
+    case "azure":
+      patch["azure"] = { apiKey };
       break;
     case "bytedance":
       patch.bytedance = { apiKey };
@@ -455,7 +445,7 @@ export function prefsWithMappings(
       ...existing,
       ...(endpoint ? { endpoint } : {}),
       ...(baseUrl ? { baseUrl } : {}),
-      ...(activeModal.id === "azure-openai"
+      ...(activeModal.id === "azure"
         ? image.length > 0
           ? { image }
           : { image: [] }
@@ -484,8 +474,8 @@ export function maskForModal(
   switch (activeModal.id) {
     case "openai":
       return secrets.openai?.apiKey ?? null;
-    case "azure-openai":
-      return secrets["azure-openai"]?.apiKey ?? null;
+    case "azure":
+      return secrets["azure"]?.apiKey ?? null;
     case "google":
       return secrets.google?.apiKey ?? null;
     case "flux-bfl":

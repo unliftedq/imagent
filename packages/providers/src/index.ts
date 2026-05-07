@@ -32,12 +32,6 @@ export {
   resolveVideoProviderModels,
 } from "./catalog/resolve.js";
 export {
-  migrateLegacySecretsRouting,
-  migrateProviderRouting,
-  type MigrationResult,
-  type SecretsMigrationResult,
-} from "./catalog/migrate.js";
-export {
   loadCatalog,
   saveCatalog,
   getBundledCatalog,

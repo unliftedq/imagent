@@ -7,7 +7,7 @@ import { createImageRegistry, createVideoRegistry } from "./registry.js";
 function emptyPrefs(): ProviderPreferences {
   return {
     openai: {},
-    "azure-openai": {},
+    "azure": {},
     google: {},
     "flux-bfl": {},
     bytedance: {},
@@ -26,7 +26,7 @@ function bytedancePrefs(): ProviderPreferences {
 function azurePrefs(): ProviderPreferences {
   return {
     ...emptyPrefs(),
-    "azure-openai": { endpoint: "https://r.openai.azure.com" },
+    "azure": { endpoint: "https://r.openai.azure.com" },
   };
 }
 
@@ -59,12 +59,12 @@ describe("createImageRegistry (catalog-driven)", () => {
 
   it("Azure: deployment names resolve against canonical model capabilities", () => {
     const secrets: ProviderSecrets = {
-      "azure-openai": { apiKey: "k" },
+      "azure": { apiKey: "k" },
     };
     const catalog = buildTestCatalog();
     const reg = createImageRegistry(secrets, azurePrefs(), catalog);
 
-    const azure = reg.get("azure-openai")!;
+    const azure = reg.get("azure")!;
     expect([...azure.models.keys()]).toEqual(["azure-prod-gpt-image-2"]);
     const deployment = azure.models.get("azure-prod-gpt-image-2")!;
     expect(deployment.baseModelId).toBe("gpt-image-2");
@@ -74,15 +74,15 @@ describe("createImageRegistry (catalog-driven)", () => {
   });
 
   it("Azure without endpoint in prefs → not registered (apiKey alone is insufficient)", () => {
-    const secrets: ProviderSecrets = { "azure-openai": { apiKey: "k" } };
+    const secrets: ProviderSecrets = { "azure": { apiKey: "k" } };
     const reg = createImageRegistry(secrets, emptyPrefs(), buildTestCatalog());
-    expect(reg.has("azure-openai")).toBe(false);
+    expect(reg.has("azure")).toBe(false);
   });
 
   it("provider image offerings can override capabilities and defaults", () => {
-    const secrets: ProviderSecrets = { "azure-openai": { apiKey: "k" } };
+    const secrets: ProviderSecrets = { "azure": { apiKey: "k" } };
     const catalog = buildTestCatalog();
-    catalog.providers["azure-openai"]!.image = [
+    catalog.providers["azure"]!.image = [
       {
         id: "azure-low-output",
         modelId: "gpt-image-2",
@@ -93,7 +93,7 @@ describe("createImageRegistry (catalog-driven)", () => {
     const parsed = ModelCatalogSchema.parse(catalog);
     const reg = createImageRegistry(secrets, azurePrefs(), parsed);
 
-    const model = reg.get("azure-openai")!.models.get("azure-low-output")!;
+    const model = reg.get("azure")!.models.get("azure-low-output")!;
     expect(model.capabilities?.maxOutputs).toBe(1);
     expect(model.capabilities?.supportsStyleRef).toBe(true);
     expect(model.defaults?.quality).toBe("low");

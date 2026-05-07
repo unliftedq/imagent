@@ -149,7 +149,7 @@ export type ProviderRoutingPayload = z.infer<typeof IpcProviderRoutingSchema>;
 
 export const ProviderPreferencesPayloadSchema = z.object({
   openai: IpcProviderRoutingSchema,
-  "azure-openai": IpcProviderRoutingSchema,
+  "azure": IpcProviderRoutingSchema,
   google: IpcProviderRoutingSchema,
   "flux-bfl": IpcProviderRoutingSchema,
   bytedance: IpcProviderRoutingSchema,
@@ -167,7 +167,7 @@ export type ProviderPreferencesPayload = z.infer<typeof ProviderPreferencesPaylo
 const MaskedKey = z.object({ apiKey: z.string().nullable() });
 export const MaskedSecretsSchema = z.object({
   openai: MaskedKey.optional(),
-  "azure-openai": MaskedKey.optional(),
+  "azure": MaskedKey.optional(),
   google: MaskedKey.optional(),
   "flux-bfl": MaskedKey.optional(),
   bytedance: MaskedKey.optional(),
@@ -183,7 +183,7 @@ export type MaskedSecrets = z.infer<typeof MaskedSecretsSchema>;
 const WriteKey = z.object({ apiKey: z.string().min(1) }).partial();
 export const SecretsWriteSchema = z.object({
   openai: WriteKey.optional(),
-  "azure-openai": WriteKey.optional(),
+  "azure": WriteKey.optional(),
   google: WriteKey.optional(),
   "flux-bfl": WriteKey.optional(),
   bytedance: WriteKey.optional(),
@@ -367,7 +367,7 @@ export const contract = {
   /**
    * Unified, multi-provider catalog view for the Models page. One row per
    * logical model id — when several providers ship the same id (e.g.
-   * `gpt-image-2` from both `openai` and `azure-openai`), they're merged
+   * `gpt-image-2` from both `openai` and `azure`), they're merged
    * into a single entry with `providers[]` listing each routable source and
    * whether that source is currently configured (auth saved).
    */

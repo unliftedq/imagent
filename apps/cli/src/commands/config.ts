@@ -29,7 +29,7 @@ import { loadCliRuntime } from "./runtime.js";
  *
  * Recognised paths:
  *   - `<vendor>.apiKey`
- *   - `azure-openai.endpoint`
+ *   - `azure.endpoint`
  *   - `bytedance.endpoint`
  *   - any `<vendor>.baseUrl` (advanced override)
  *
@@ -48,8 +48,8 @@ export function registerConfigCommand(program: Command): void {
       [
         "Inspect and edit local provider credentials in ~/.imagent/secrets.json (and the preferences file at ~/.imagent/config.json).",
         "",
-        "Recognised dotted keys: <vendor>.apiKey, azure-openai.endpoint, bytedance.endpoint, <vendor>.baseUrl.",
-        "Vendors: openai | azure-openai | google | flux-bfl | bytedance | xai.",
+        "Recognised dotted keys: <vendor>.apiKey, azure.endpoint, bytedance.endpoint, <vendor>.baseUrl.",
+        "Vendors: openai | azure | google | flux-bfl | bytedance | xai.",
         "Use `imagent models` and `imagent options` to inspect the model catalog instead of reading catalog.json by hand.",
       ].join("\n"),
     );
@@ -57,7 +57,7 @@ export function registerConfigCommand(program: Command): void {
   config
     .command("set <key> <value>")
     .description(
-      "Set a secret. Examples: `imagent config set openai.apiKey sk-...`, `imagent config set azure-openai.endpoint https://...`, `imagent config set bytedance.endpoint https://ark.cn-beijing.volces.com`.",
+      "Set a secret. Examples: `imagent config set openai.apiKey sk-...`, `imagent config set azure.endpoint https://...`, `imagent config set bytedance.endpoint https://ark.cn-beijing.volces.com`.",
     )
     .action(async (key: string, value: string) => {
       try {
@@ -125,7 +125,7 @@ export function registerConfigCommand(program: Command): void {
   provider
     .command("add <provider> <id>")
     .description(
-      "Register an offering. <provider> is `azure-openai` or a custom provider id; <id> is the deployment/model id the provider exposes. Pass --model <canonical-id> to bind it to a catalog model.",
+      "Register an offering. <provider> is `azure` or a custom provider id; <id> is the deployment/model id the provider exposes. Pass --model <canonical-id> to bind it to a catalog model.",
     )
     .requiredOption(
       "--model <canonical-id>",
@@ -186,7 +186,7 @@ export function registerConfigCommand(program: Command): void {
     });
 }
 
-const VENDOR_KEYS = ["openai", "azure-openai", "google", "flux-bfl", "bytedance", "xai"] as const;
+const VENDOR_KEYS = ["openai", "azure", "google", "flux-bfl", "bytedance", "xai"] as const;
 type VendorId = (typeof VENDOR_KEYS)[number];
 
 const RESET_TARGETS = ["catalog", "secrets", "config"] as const;
@@ -203,7 +203,7 @@ interface FieldDef {
 }
 const ALLOWED_FIELDS: Record<VendorId, Record<string, FieldDef>> = {
   openai: { apiKey: { store: "secrets" }, baseUrl: { store: "config" } },
-  "azure-openai": { apiKey: { store: "secrets" }, endpoint: { store: "config" } },
+  "azure": { apiKey: { store: "secrets" }, endpoint: { store: "config" } },
   google: { apiKey: { store: "secrets" }, baseUrl: { store: "config" } },
   "flux-bfl": { apiKey: { store: "secrets" }, baseUrl: { store: "config" } },
   bytedance: { apiKey: { store: "secrets" }, endpoint: { store: "config" } },
@@ -386,7 +386,7 @@ interface ProviderAddOptions {
 
 const BUILT_IN_ROUTING_IDS = new Set<string>([
   "openai",
-  "azure-openai",
+  "azure",
   "google",
   "flux-bfl",
   "bytedance",

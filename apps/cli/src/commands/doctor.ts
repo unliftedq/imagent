@@ -67,8 +67,8 @@ export async function runDoctor(): Promise<void> {
 
     if (imageOfferings.length === 0 && videoOfferings.length === 0) {
       const hint =
-        providerId === "azure-openai"
-          ? `(no deployments — run \`imagent config provider add azure-openai <deployment-id> --model <canonical>\`)`
+        providerId === "azure"
+          ? `(no deployments — run \`imagent config provider add azure <deployment-id> --model <canonical>\`)`
           : "(no offerings)";
       process.stdout.write(`  ${chalk.dim(hint)}\n`);
       if (!isConfigured) {
@@ -106,8 +106,8 @@ function ftsBadge(status: string): string {
 
 function secretHintFor(providerId: string): string {
   switch (providerId) {
-    case "azure-openai":
-      return "azure-openai.endpoint <url> && imagent config set azure-openai.apiKey <key>";
+    case "azure":
+      return "azure.endpoint <url> && imagent config set azure.apiKey <key>";
     case "bytedance":
       return "bytedance.endpoint <url> && imagent config set bytedance.apiKey <key>";
     default:

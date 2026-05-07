@@ -54,7 +54,7 @@ Two ports in `packages/core/src/ports/`. **No fake unification** — image is sy
 ```ts
 // packages/core/src/ports/image-provider.ts
 export interface ImageProvider {
-  readonly id: string;                      // "openai" | "azure-openai" | "google" | "flux-bfl" | "bytedance" | "xai"
+  readonly id: string;                      // "openai" | "azure" | "google" | "flux-bfl" | "bytedance" | "xai"
   readonly displayName: string;
   readonly capabilities: ImageCapabilities; // sizes, max refs, supports style ref
   generate(req: ImageRequest, signal?: AbortSignal): Promise<ImageGenerationResult>;
@@ -94,7 +94,7 @@ Because every state transition is in SQLite (`jobs` table), the runner can resum
 
 `packages/providers/src/registry.ts` exports two factories:
 ```
-createImageRegistry(secrets, settings) -> { openai, "azure-openai", google, "flux-bfl", bytedance, xai }
+createImageRegistry(secrets, settings) -> { openai, "azure", google, "flux-bfl", bytedance, xai }
 createVideoRegistry(secrets, settings) -> { bytedance }                                   // v1 (same vendor id, video port)
 ```
 
@@ -119,7 +119,7 @@ Catalog v2 separates model identity from provider routing:
     "openai": {
       "image": [{ "id": "gpt-image-2", "modelId": "gpt-image-2" }]
     },
-    "azure-openai": {
+    "azure": {
       "image": [{ "id": "my-prod-deployment", "modelId": "gpt-image-2" }]
     }
   }
@@ -239,7 +239,7 @@ CREATE TABLE gallery_items (
   parent_id        TEXT REFERENCES gallery_items(id) ON DELETE SET NULL,  -- remix lineage
   prompt           TEXT NOT NULL,
   negative_prompt  TEXT,
-  provider_id      TEXT NOT NULL,            -- "openai" | "azure-openai" | "google" | "flux-bfl" | "bytedance" | "xai"
+  provider_id      TEXT NOT NULL,            -- "openai" | "azure" | "google" | "flux-bfl" | "bytedance" | "xai"
   model            TEXT NOT NULL,
   params_json      TEXT NOT NULL,            -- aspect, size, fps, duration, count, seed, raw provider params
   rel_path         TEXT NOT NULL,            -- output file under ~/.imagent/gallery/
@@ -342,7 +342,7 @@ Workspace state is deliberately **not** in `config.json` — prompt drafts churn
 export const ProviderSecretsSchema = z.object({
   openai:         z.object({ apiKey: z.string(),
                              baseUrl: z.string().optional() }).optional(),
-  "azure-openai": z.object({ endpoint: z.string(), apiKey: z.string(),
+  "azure": z.object({ endpoint: z.string(), apiKey: z.string(),
                              apiVersion: z.string().default("2024-10-21") }).optional(),
   google:         z.object({ apiKey: z.string(),
                              baseUrl: z.string().optional() }).optional(),
@@ -359,7 +359,7 @@ export const ProviderSecretsSchema = z.object({
 // needs non-secret runtime knobs.
 export const ProviderPreferencesSchema = z.object({
   openai:         z.object({}).default({}),
-  "azure-openai": z.object({}).default({}),
+  "azure": z.object({}).default({}),
   google:         z.object({}).default({}),
   "flux-bfl":     z.object({}).default({}),
   bytedance:      z.object({}).default({}),

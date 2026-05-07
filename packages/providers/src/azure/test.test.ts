@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { AzureOpenAIImageProvider } from "./image.js";
+import { AzureImageProvider } from "./image.js";
 
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -9,7 +9,7 @@ function jsonResponse(status: number, body: unknown): Response {
 }
 
 function makeProvider(fetcher: typeof fetch) {
-  return new AzureOpenAIImageProvider({
+  return new AzureImageProvider({
     endpoint: "https://my-resource.openai.azure.com",
     apiKey: "azure-key",
     models: new Map([["my-deployment", { id: "my-deployment" }]]),
@@ -17,7 +17,7 @@ function makeProvider(fetcher: typeof fetch) {
   });
 }
 
-describe("AzureOpenAIImageProvider.test()", () => {
+describe("AzureImageProvider.test()", () => {
   it("happy auth: 200 + matching deployment present", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse(200, {
@@ -30,7 +30,7 @@ describe("AzureOpenAIImageProvider.test()", () => {
     const [url, init] = fetchMock.mock.calls[0]!;
     expect(url).toBe("https://my-resource.openai.azure.com/openai/v1/models");
     expect((init as RequestInit).headers as Record<string, string>).toMatchObject({
-      Authorization: "Bearer azure-key",
+      "api-key": "azure-key",
     });
   });
 

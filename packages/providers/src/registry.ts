@@ -1,6 +1,6 @@
 import type { ProviderPreferences, ProviderSecrets } from "@imagent/config";
 import type { ImageProvider, VideoModelDef, VideoProvider } from "@imagent/core";
-import { AzureOpenAIImageProvider } from "./azure/image.js";
+import { AzureImageProvider } from "./azure/image.js";
 import { ByteDanceImageProvider } from "./bytedance/image.js";
 import { ByteDanceVideoProvider } from "./bytedance/video.js";
 import {
@@ -21,7 +21,7 @@ export type VideoRegistry = ReadonlyMap<string, VideoProvider>;
 
 const BUILT_IN_PROVIDER_IDS = [
   "openai",
-  "azure-openai",
+  "azure",
   "google",
   "flux-bfl",
   "bytedance",
@@ -42,7 +42,7 @@ const BUILT_IN_PROVIDER_IDS = [
  * Providers without configured secrets are skipped silently — `imagent
  * doctor` reports the gap.
  *
- * Built-in keys: `"openai" | "azure-openai" | "google" | "flux-bfl" | "bytedance" | "xai"`.
+ * Built-in keys: `"openai" | "azure" | "google" | "flux-bfl" | "bytedance" | "xai"`.
  * Custom OpenAI-compatible providers are keyed by their declared id.
  */
 export function createImageRegistry(
@@ -62,14 +62,14 @@ export function createImageRegistry(
     out.set("openai", new OpenAIImageProvider(openaiOpts));
   }
 
-  const azureEndpoint = prefs["azure-openai"]?.endpoint;
-  if (secrets["azure-openai"]?.apiKey && azureEndpoint) {
+  const azureEndpoint = prefs.azure?.endpoint;
+  if (secrets.azure?.apiKey && azureEndpoint) {
     out.set(
-      "azure-openai",
-      new AzureOpenAIImageProvider({
+      "azure",
+      new AzureImageProvider({
         endpoint: azureEndpoint,
-        apiKey: secrets["azure-openai"].apiKey,
-        models: mapFromList(resolveImageProviderModels(catalog, "azure-openai", prefs)),
+        apiKey: secrets.azure.apiKey,
+        models: mapFromList(resolveImageProviderModels(catalog, "azure", prefs)),
       }),
     );
   }
@@ -201,7 +201,7 @@ export function configuredProviderCount(
 ): number {
   let n = 0;
   if (secrets.openai) n += 1;
-  if (secrets["azure-openai"]?.apiKey && prefs?.["azure-openai"]?.endpoint) n += 1;
+  if (secrets.azure?.apiKey && prefs?.azure?.endpoint) n += 1;
   if (secrets.google) n += 1;
   if (secrets["flux-bfl"]) n += 1;
   if (secrets.bytedance?.apiKey && prefs?.bytedance?.endpoint) n += 1;

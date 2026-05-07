@@ -16,9 +16,9 @@ import type { DeepPartial, SecretsStore } from "./store.js";
  */
 const ENV_KEYS = {
   openai: { apiKey: "OPENAI_API_KEY" },
-  "azure-openai": {
-    apiKey: "AZURE_OPENAI_API_KEY",
-    endpoint: "AZURE_OPENAI_ENDPOINT",
+  azure: {
+    apiKey: "AZURE_API_KEY",
+    endpoint: "AZURE_ENDPOINT",
   },
   google: { apiKey: "GOOGLE_API_KEY" },
   "flux-bfl": { apiKey: "FLUX_BFL_API_KEY" },
@@ -80,8 +80,8 @@ export function createEnvSecretsStore(env: NodeJS.ProcessEnv): SecretsStore {
       const openaiKey = env[ENV_KEYS.openai.apiKey];
       if (openaiKey) out.openai = { apiKey: openaiKey };
 
-      const azureKey = env[ENV_KEYS["azure-openai"].apiKey];
-      if (azureKey) out["azure-openai"] = { apiKey: azureKey };
+      const azureKey = env[ENV_KEYS.azure.apiKey];
+      if (azureKey) out.azure = { apiKey: azureKey };
 
       const googleKey = env[ENV_KEYS.google.apiKey];
       if (googleKey) out.google = { apiKey: googleKey };
@@ -105,7 +105,7 @@ export function createEnvSecretsStore(env: NodeJS.ProcessEnv): SecretsStore {
 /**
  * Read endpoint-style env vars and overlay them on top of `prefs`. Returns
  * a fresh `ProviderPreferences`. Used by the CLI runtime so users can run
- * `AZURE_OPENAI_ENDPOINT=... imagent image ...` without mutating config.json.
+ * `AZURE_ENDPOINT=... imagent image ...` without mutating config.json.
  *
  * Env-supplied values win over the file. No-op when no relevant vars are set.
  */
@@ -113,17 +113,17 @@ export function envProviderRoutingOverlay(
   env: NodeJS.ProcessEnv,
   prefs: ProviderPreferences,
 ): ProviderPreferences {
-  const azureEndpoint = env[ENV_KEYS["azure-openai"].endpoint];
+  const azureEndpoint = env[ENV_KEYS.azure.endpoint];
   const bdEndpoint = env[ENV_KEYS.bytedance.endpoint];
   if (!azureEndpoint && !bdEndpoint) return prefs;
 
   const next: ProviderPreferences = {
     ...prefs,
-    "azure-openai": { ...(prefs["azure-openai"] ?? {}) },
+    azure: { ...(prefs.azure ?? {}) },
     bytedance: { ...(prefs.bytedance ?? {}) },
   };
   if (azureEndpoint) {
-    (next["azure-openai"] as ProviderRouting).endpoint = azureEndpoint;
+    (next.azure as ProviderRouting).endpoint = azureEndpoint;
   }
   if (bdEndpoint) {
     (next.bytedance as ProviderRouting).endpoint = bdEndpoint;
