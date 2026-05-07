@@ -8,7 +8,7 @@ import {
   describeVideoOptions,
   type OptionDescriptor,
 } from "./model-options.js";
-import { loadCliRuntime, type CliRuntime } from "./runtime.js";
+import { type CliRuntime, loadCliRuntime } from "./runtime.js";
 
 type ModelKind = "image" | "video";
 
