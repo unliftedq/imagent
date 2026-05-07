@@ -303,14 +303,15 @@ function formatOptions(models: ModelSummary[]): string {
       lines.push(`    --option ${parts.join("; ")}`);
       lines.push(`      ${option.description}`);
     }
-    const caps = model.capabilities ?? {};
-    const referenceLimit =
-      typeof caps.maxReferences === "number"
-        ? `${caps.maxReferences}`
-        : caps.supportsRefImages === false
-          ? "0"
-          : undefined;
+    const referenceLimit = referenceLimitLabel(model.capabilities);
     if (referenceLimit) lines.push(`    references: max ${referenceLimit}`);
   }
   return `${lines.join("\n")}\n`;
+}
+
+function referenceLimitLabel(caps: Record<string, unknown> | undefined): string | undefined {
+  if (!caps) return undefined;
+  if (typeof caps.maxReferences === "number") return `${caps.maxReferences}`;
+  if (caps.supportsRefImages === false) return "0";
+  return undefined;
 }
