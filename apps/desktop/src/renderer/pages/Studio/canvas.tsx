@@ -27,12 +27,14 @@ export function CanvasArea({ mode }: { mode: StudioMode }) {
     };
   }, []);
 
-  const recent = useMemo(() => items.find((item) => item.kind === mode) ?? null, [items, mode]);
   const pinned = useMemo(
-    () => (pinnedId ? items.find((item) => item.id === pinnedId) ?? null : null),
-    [items, pinnedId],
+    () => {
+      const item = pinnedId ? items.find((candidate) => candidate.id === pinnedId) ?? null : null;
+      return item?.kind === mode ? item : null;
+    },
+    [items, pinnedId, mode],
   );
-  const display = pinned ?? recent;
+  const display = pinned;
 
   const activeJob = activeJobId && activeJobId !== "__pending__" ? (jobs[activeJobId] ?? null) : null;
   const submitting = activeJobId === "__pending__";

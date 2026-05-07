@@ -1461,6 +1461,13 @@ function buildUnifiedModelList(
         }>;
       }
     >();
+    for (const model of Object.values(canonicalModels)) {
+      grouped.set(model.id, {
+        id: model.id,
+        displayName: model.displayName ?? null,
+        providers: [],
+      });
+    }
     // Stable provider iteration: built-ins first in canonical order, then
     // any additional ids that appear in either the catalog or the config
     // routing overlay (sorted for determinism).

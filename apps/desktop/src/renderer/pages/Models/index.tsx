@@ -140,9 +140,22 @@ function ModelRowView({
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {row.providers.map((p) => (
-          <ProviderBadge key={`${p.providerId}:${p.modelId}`} provider={p} rowId={row.id} />
-        ))}
+        {row.providers.length > 0 ? (
+          row.providers.map((p) => (
+            <ProviderBadge key={`${p.providerId}:${p.modelId}`} provider={p} rowId={row.id} />
+          ))
+        ) : (
+          <span
+            className={
+              "inline-flex items-center gap-1.5 rounded-(--radius-pill) " +
+              "bg-(--surface) px-2.5 py-0.5 text-(length:--text-caption) " +
+              "text-(--text-muted) border border-(--border)"
+            }
+          >
+            <span className="size-1.5 rounded-(--radius-full) bg-(--text-faint)" />
+            Add provider mapping
+          </span>
+        )}
       </div>
     </li>
   );
