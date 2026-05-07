@@ -140,13 +140,14 @@ async function runGenerate(prompt: string, options: GenerateOptions): Promise<vo
       ? `${prompt} ${slots.stylePromptSnippets.join(" ")}`
       : prompt;
 
-    const count = requestOptions.count ?? modelDefaultImageCount(resolved);
+    const { count: requestedCount, ...requestOptionsWithoutCount } = requestOptions;
+    const count = requestedCount ?? modelDefaultImageCount(resolved);
     const request = {
       prompt: promptWithStyle,
       providerId,
       model,
+      ...requestOptionsWithoutCount,
       ...(count !== undefined ? { count } : {}),
-      ...requestOptions,
       references: cappedRefs,
       assetIds: slots.assetIds,
     } satisfies Omit<ImageRequest, "count"> & { count?: ImageRequest["count"] };
