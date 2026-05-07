@@ -58,9 +58,15 @@ export function registerOptionsCommand(program: Command): void {
     .description(
       "Show the request options/capabilities for a specific provider+model (use before `imagent image` / `imagent video`)",
     )
-    .requiredOption("--provider <id>", "Provider id (e.g. openai, azure, google, flux-bfl, bytedance, xai)")
+    .requiredOption(
+      "--provider <id>",
+      "Provider id (e.g. openai, azure, google, flux-bfl, bytedance, xai)",
+    )
     .requiredOption("--model <id>", "Model/offering id as it appears under that provider")
-    .option("--kind <kind>", "Disambiguate when the same id exists for both kinds: 'image' or 'video'")
+    .option(
+      "--kind <kind>",
+      "Disambiguate when the same id exists for both kinds: 'image' or 'video'",
+    )
     .option("--json", "Emit machine-readable JSON instead of the human-friendly view", false)
     .action(async (options: OptionsCommandArgs) => {
       try {
@@ -97,7 +103,11 @@ async function runModels(options: ModelsOptions): Promise<void> {
 
   for (const providerId of providerIds) {
     if (filterProvider && providerId !== filterProvider) continue;
-    const configured = isProviderConfigured(providerId, runtime.imageRegistry, runtime.videoRegistry);
+    const configured = isProviderConfigured(
+      providerId,
+      runtime.imageRegistry,
+      runtime.videoRegistry,
+    );
     if (options.configured && !configured) continue;
 
     const providerDisplay = effectiveProviderDisplayName(
@@ -342,7 +352,9 @@ async function runOptions(options: OptionsCommandArgs): Promise<void> {
     match.kind === "image"
       ? supportedImageOptionDescriptors(match.def)
       : supportedVideoOptionDescriptors(match.def);
-  process.stdout.write(`\n${chalk.cyan("request options")} ${chalk.dim("(--option key=value)")}:\n`);
+  process.stdout.write(
+    `\n${chalk.cyan("request options")} ${chalk.dim("(--option key=value)")}:\n`,
+  );
   if (descriptors.length === 0) {
     process.stdout.write(`  ${chalk.dim("(none — pass only the prompt)")}\n`);
   } else {
@@ -463,7 +475,11 @@ function supportedVideoOptionDescriptors(model: VideoModelDef): OptionDescriptor
       note: caps.maxDurationSec ? `max ${caps.maxDurationSec}s` : undefined,
     });
   } else if (caps.maxDurationSec) {
-    out.push({ key: "durationSec", default: defaults.durationSec, note: `max ${caps.maxDurationSec}s` });
+    out.push({
+      key: "durationSec",
+      default: defaults.durationSec,
+      note: `max ${caps.maxDurationSec}s`,
+    });
   }
   if (caps.fpsOptions && caps.fpsOptions.length > 0) {
     out.push({ key: "fps", allowed: caps.fpsOptions.map((n) => String(n)), default: defaults.fps });
@@ -478,15 +494,14 @@ function supportedVideoOptionDescriptors(model: VideoModelDef): OptionDescriptor
       default: defaults.aspectRatio,
     });
   }
-  if (caps.supportsFirstFrame) out.push({ key: "firstFrame", note: "path to a starting-frame image" });
+  if (caps.supportsFirstFrame)
+    out.push({ key: "firstFrame", note: "path to a starting-frame image" });
   if (caps.supportsLastFrame) out.push({ key: "lastFrame", note: "path to an ending-frame image" });
   return out;
 }
 
 function formatReferenceSummary(
-  match:
-    | { kind: "image"; def: ImageModelDef }
-    | { kind: "video"; def: VideoModelDef },
+  match: { kind: "image"; def: ImageModelDef } | { kind: "video"; def: VideoModelDef },
 ): string | undefined {
   const caps = match.def.capabilities;
   if (!caps) return undefined;
@@ -512,25 +527,22 @@ function formatReferenceSummary(
 }
 
 function formatCapabilityFlags(
-  match:
-    | { kind: "image"; def: ImageModelDef }
-    | { kind: "video"; def: VideoModelDef },
+  match: { kind: "image"; def: ImageModelDef } | { kind: "video"; def: VideoModelDef },
 ): string | undefined {
   const caps = match.def.capabilities;
   if (!caps) return undefined;
   const lines: string[] = [];
   if (match.kind === "image") {
     const ic = match.def.capabilities;
-    if (typeof ic?.maxOutputs === "number") lines.push(`  max outputs per request: ${ic.maxOutputs}`);
+    if (typeof ic?.maxOutputs === "number")
+      lines.push(`  max outputs per request: ${ic.maxOutputs}`);
   }
   return lines.length > 0 ? `${lines.join("\n")}\n` : undefined;
 }
 
 function buildExamples(
   providerId: string,
-  match:
-    | { kind: "image"; def: ImageModelDef }
-    | { kind: "video"; def: VideoModelDef },
+  match: { kind: "image"; def: ImageModelDef } | { kind: "video"; def: VideoModelDef },
 ): string[] {
   const examples: string[] = [];
   if (match.kind === "image") {

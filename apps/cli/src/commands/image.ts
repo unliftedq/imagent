@@ -66,11 +66,29 @@ export function registerImageCommand(program: Command): void {
       [],
     )
     .option("--ref <path>", "Freeform reference image path (repeatable)", collect, [])
-    .option("--character <slug>", "Attach a saved character asset by slug (repeatable; see `imagent asset list --kind character`)", collect, [])
+    .option(
+      "--character <slug>",
+      "Attach a saved character asset by slug (repeatable; see `imagent asset list --kind character`)",
+      collect,
+      [],
+    )
     .option("--object <slug>", "Attach a saved object asset by slug (repeatable)", collect, [])
-    .option("--background <slug>", "Attach a saved background asset by slug (repeatable)", collect, [])
-    .option("--style <slug>", "Attach a saved style asset by slug (repeatable; the asset's prompt_snippet is appended to the prompt)", collect, [])
-    .option("--out <dir>", "Copy the completed result to this directory after success (the gallery copy is always retained)")
+    .option(
+      "--background <slug>",
+      "Attach a saved background asset by slug (repeatable)",
+      collect,
+      [],
+    )
+    .option(
+      "--style <slug>",
+      "Attach a saved style asset by slug (repeatable; the asset's prompt_snippet is appended to the prompt)",
+      collect,
+      [],
+    )
+    .option(
+      "--out <dir>",
+      "Copy the completed result to this directory after success (the gallery copy is always retained)",
+    )
     .action(async (prompt: string, options: GenerateOptions) => {
       try {
         await runGenerate(prompt, options);
@@ -128,6 +146,7 @@ async function runGenerate(prompt: string, options: GenerateOptions): Promise<vo
         prompt: promptWithStyle,
         providerId,
         model,
+        count: requestOptions.count ?? defaultImageCount(resolved),
         ...requestOptions,
         references: cappedRefs,
         assetIds: slots.assetIds,
@@ -249,6 +268,11 @@ function parseImageOptions(values: readonly string[], model: ImageModelDef): Par
 
   if (Object.keys(raw).length > 0) out.raw = raw;
   return out;
+}
+
+function defaultImageCount(model: ImageModelDef): number {
+  const count = (model.defaults as { count?: unknown } | undefined)?.count;
+  return typeof count === "number" && Number.isInteger(count) && count > 0 ? count : 1;
 }
 
 const imageOptionAliases: Record<string, string> = {

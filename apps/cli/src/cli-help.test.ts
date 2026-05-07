@@ -106,11 +106,11 @@ describe("CLI --help", () => {
       defaults?: Record<string, unknown>;
       requestOptions?: Array<{ key: string; default?: unknown }>;
     };
-    expect(payload.defaults).toMatchObject({ size: "1024x1024", quality: "auto", count: 1 });
+    expect(payload.defaults).toMatchObject({ size: "1024x1024", quality: "medium", count: 1 });
     expect(payload.requestOptions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ key: "size", default: "1024x1024" }),
-        expect.objectContaining({ key: "quality", default: "auto" }),
+        expect.objectContaining({ key: "quality", default: "medium" }),
         expect.objectContaining({ key: "count", default: 1 }),
       ]),
     );
