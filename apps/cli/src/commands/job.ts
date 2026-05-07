@@ -27,7 +27,15 @@ const VALID_STATES: JobState[] = [
 ];
 
 export function registerJobCommands(program: Command): void {
-  const job = program.command("job").description("Inspect, cancel, or watch jobs");
+  const job = program
+    .command("job")
+    .description(
+      [
+        "Inspect, cancel, or watch generation jobs.",
+        "",
+        "Submitted video jobs run in the background; use `job watch <id>` from the same machine to resume polling. Jobs are also persisted in ~/.imagent/data/imagent.db so `job ls` and `job status` work across CLI sessions.",
+      ].join("\n"),
+    );
 
   job
     .command("status <jobId>")

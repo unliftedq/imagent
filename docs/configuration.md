@@ -10,9 +10,9 @@ By default, imagent stores all local data in a dedicated local workspace directo
 
 | Path | Purpose |
 | --- | --- |
-| `config.json` | Non-sensitive app preferences. |
-| `secrets.json` | Provider keys, endpoints, base URLs, and custom provider secrets. |
-| `catalog.json` | User-editable model catalog and provider model mappings. |
+| `config.json` | Non-sensitive app preferences and per-user provider routing (Azure / ByteDance endpoints, custom OpenAI base URLs, deployment / model id mappings). |
+| `secrets.json` | Provider API keys only (chmod 600). Non-sensitive routing lives in `config.json`. |
+| `catalog.json` | User-editable canonical model catalog (capabilities + bundled provider offerings). |
 | `studio.db` | Local SQLite database for assets, gallery, boards, jobs, and metadata. |
 | `assets/` | Copied asset reference files and thumbnails. |
 | `gallery/` | Generated image and video outputs, organized by date. |
@@ -39,11 +39,25 @@ The desktop application and CLI both use this workspace, so changes made in one 
   },
   "providers": {
     "openai": {},
-    "azure-openai": {},
+    "azure-openai": {
+      "endpoint": "https://my-resource.openai.azure.com",
+      "image": [
+        { "id": "my-deployment", "modelId": "gpt-image-2" }
+      ]
+    },
     "google": {},
     "flux-bfl": {},
-    "bytedance": {},
-    "xai": {}
+    "bytedance": {
+      "endpoint": "https://ark.cn-beijing.volces.com/api/v3"
+    },
+    "xai": {},
+    "customOpenAI": {
+      "lmstudio": {
+        "displayName": "LM Studio",
+        "baseUrl": "http://localhost:1234/v1",
+        "image": [{ "id": "my-local-model", "modelId": "gpt-image-2" }]
+      }
+    }
   }
 }
 ```
@@ -57,63 +71,61 @@ App preferences:
 - `keepPromptHistory`: whether prompt history is retained.
 - `openAfterGenerate`: whether generated files should open after generation when supported by the interface.
 
-The provider preference objects are currently reserved for future provider-specific settings. Model lists and Azure deployment names belong in `catalog.json`.
+Provider routing block (`providers.<id>`):
+
+- `endpoint` (Azure / ByteDance): resource URL the provider hits. Required for these vendors before generation will run.
+- `baseUrl`: optional override for OpenAI-compatible vendors (proxy / self-hosted). Required for `customOpenAI.<id>` entries.
+- `image[]` / `video[]`: provider-facing offerings. Each entry maps a deployment / model id (`id`) to a canonical catalog model (`modelId`); capabilities + defaults are inherited and may be overridden.
+- `displayName`: optional override for the provider's display name (mainly for custom providers).
+- `customOpenAI.<id>`: per-custom-provider routing block, plus the `apiKey` lives in `secrets.json`'s `customOpenAI.<id>`.
+
+Use `imagent config provider add|rm|list` to manage these entries from the CLI, or the desktop **Providers** page.
 
 ### `secrets.json`
 
-`secrets.json` contains provider authentication and endpoint data. Example shape:
+`secrets.json` contains provider API keys only. Endpoint URLs and base URLs are non-sensitive routing and live in `config.json` under `providers.<id>`. Example shape:
 
 ```json
 {
   "openai": { "apiKey": "sk-..." },
-  "azure-openai": {
-    "endpoint": "https://my-resource.services.ai.azure.com",
-    "apiKey": "..."
-  },
+  "azure-openai": { "apiKey": "..." },
   "google": { "apiKey": "..." },
   "flux-bfl": { "apiKey": "..." },
-  "bytedance": {
-    "endpoint": "https://ark.cn-beijing.volces.com/api/v3",
-    "apiKey": "..."
-  },
+  "bytedance": { "apiKey": "..." },
   "xai": { "apiKey": "..." },
   "customOpenAI": {
-    "my-provider": {
-      "baseUrl": "https://example.com/v1",
-      "apiKey": "..."
-    }
+    "my-provider": { "apiKey": "..." }
   }
 }
 ```
 
-Do not commit this file or paste it into issue reports. Prefer environment variables for temporary automation and CI-like runs.
+Do not commit this file or paste it into issue reports. Prefer environment variables for temporary automation and CI-like runs. The runtime auto-migrates legacy secrets.json files that still carry endpoint/baseUrl into the matching `providers.<id>` block in config.json on the next launch.
 
 ### Environment variables
 
 Supported environment variables are:
 
-| Variable | Provider field |
+| Variable | Lands in |
 | --- | --- |
-| `OPENAI_API_KEY` | `openai.apiKey` |
-| `AZURE_OPENAI_API_KEY` | `azure-openai.apiKey` |
-| `AZURE_OPENAI_ENDPOINT` | `azure-openai.endpoint` |
-| `GOOGLE_API_KEY` | `google.apiKey` |
-| `FLUX_BFL_API_KEY` | `flux-bfl.apiKey` |
-| `BYTEDANCE_API_KEY` | `bytedance.apiKey` |
-| `BYTEDANCE_ENDPOINT` | `bytedance.endpoint` |
-| `XAI_API_KEY` | `xai.apiKey` |
+| `OPENAI_API_KEY` | `secrets.openai.apiKey` |
+| `AZURE_OPENAI_API_KEY` | `secrets.azure-openai.apiKey` |
+| `AZURE_OPENAI_ENDPOINT` | `config.providers.azure-openai.endpoint` (overlay) |
+| `GOOGLE_API_KEY` | `secrets.google.apiKey` |
+| `FLUX_BFL_API_KEY` | `secrets.flux-bfl.apiKey` |
+| `BYTEDANCE_API_KEY` | `secrets.bytedance.apiKey` |
+| `BYTEDANCE_ENDPOINT` | `config.providers.bytedance.endpoint` (overlay) |
+| `XAI_API_KEY` | `secrets.xai.apiKey` |
 
-Environment secrets override file secrets for CLI runtime loading. Azure OpenAI and ByteDance environment configuration require both endpoint and API key to be present.
+API-key env vars override the file-stored secrets. Endpoint env vars overlay the file-stored routing for the duration of the CLI invocation without writing to disk.
 
 ### `catalog.json`
 
-`catalog.json` defines canonical model capabilities and provider-facing routes. It is used by both the CLI and desktop app to populate model pickers and validate generation options.
+`catalog.json` defines canonical model capabilities and bundled provider offerings. It is used by both the CLI and desktop app to populate model pickers and validate generation options.
 
 Use it to:
 
-- Add or remove model offerings.
-- Map Azure deployment names to canonical OpenAI image model definitions.
-- Configure custom OpenAI-compatible provider model IDs.
+- Review bundled provider offerings.
+- Add or adjust canonical model definitions.
 - Override model capabilities or defaults for a provider-specific route.
 
-Use `imagent catalog show` before editing and `imagent catalog reset` if you need to return to bundled defaults.
+Use `imagent config provider add|rm|list` or the desktop **Providers** page for per-user routing such as Azure deployment names and custom OpenAI-compatible provider model IDs; those entries live in `config.json` under `providers.<id>` / `providers.customOpenAI.<id>` and overlay the catalog at runtime. Use `imagent models` and `imagent options` to inspect the effective catalog, and `imagent config reset catalog` if you need to return to bundled defaults.

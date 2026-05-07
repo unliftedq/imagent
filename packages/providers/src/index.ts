@@ -23,11 +23,20 @@ export {
   type VideoProviderModel,
 } from "./catalog/schema.js";
 export {
+  effectiveImageOfferings,
+  effectiveProviderDisplayName,
+  effectiveVideoOfferings,
   resolveImageProviderModel,
   resolveImageProviderModels,
   resolveVideoProviderModel,
   resolveVideoProviderModels,
 } from "./catalog/resolve.js";
+export {
+  migrateLegacySecretsRouting,
+  migrateProviderRouting,
+  type MigrationResult,
+  type SecretsMigrationResult,
+} from "./catalog/migrate.js";
 export {
   loadCatalog,
   saveCatalog,

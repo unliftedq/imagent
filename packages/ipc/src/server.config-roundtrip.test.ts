@@ -67,25 +67,27 @@ function makeTransport(
 }
 
 // ----- payload bridge (mirrors apps/desktop/src/main/ipc-handlers.ts) -------
-function prefsPayloadFromConfig(_p: ProviderPreferences): ProviderPreferencesPayload {
+function prefsPayloadFromConfig(p: ProviderPreferences): ProviderPreferencesPayload {
   return {
-    openai: {},
-    "azure-openai": {},
-    google: {},
-    "flux-bfl": {},
-    bytedance: {},
-    xai: {},
+    openai: p.openai ?? {},
+    "azure-openai": p["azure-openai"] ?? {},
+    google: p.google ?? {},
+    "flux-bfl": p["flux-bfl"] ?? {},
+    bytedance: p.bytedance ?? {},
+    xai: p.xai ?? {},
+    customOpenAI: p.customOpenAI ?? {},
   };
 }
 
-function prefsConfigFromPayload(_payload: ProviderPreferencesPayload): ProviderPreferences {
+function prefsConfigFromPayload(payload: ProviderPreferencesPayload): ProviderPreferences {
   return {
-    openai: {},
-    "azure-openai": {},
-    google: {},
-    "flux-bfl": {},
-    bytedance: {},
-    xai: {},
+    openai: payload.openai,
+    "azure-openai": payload["azure-openai"],
+    google: payload.google,
+    "flux-bfl": payload["flux-bfl"],
+    bytedance: payload.bytedance,
+    xai: payload.xai,
+    customOpenAI: payload.customOpenAI,
   };
 }
 
@@ -98,20 +100,10 @@ function maskValue(v: string | null | undefined): string | null {
 function maskSecrets(s: ProviderSecrets): MaskedSecrets {
   const out: MaskedSecrets = {};
   if (s.openai) out.openai = { apiKey: maskValue(s.openai.apiKey) };
-  if (s["azure-openai"]) {
-    out["azure-openai"] = {
-      endpoint: s["azure-openai"].endpoint || null,
-      apiKey: maskValue(s["azure-openai"].apiKey),
-    };
-  }
+  if (s["azure-openai"]) out["azure-openai"] = { apiKey: maskValue(s["azure-openai"].apiKey) };
   if (s.google) out.google = { apiKey: maskValue(s.google.apiKey) };
   if (s["flux-bfl"]) out["flux-bfl"] = { apiKey: maskValue(s["flux-bfl"].apiKey) };
-  if (s.bytedance) {
-    out.bytedance = {
-      endpoint: s.bytedance.endpoint || null,
-      apiKey: maskValue(s.bytedance.apiKey),
-    };
-  }
+  if (s.bytedance) out.bytedance = { apiKey: maskValue(s.bytedance.apiKey) };
   if (s.xai) out.xai = { apiKey: maskValue(s.xai.apiKey) };
   return out;
 }
@@ -119,24 +111,12 @@ function maskSecrets(s: ProviderSecrets): MaskedSecrets {
 async function applySecretsWrite(store: SecretsStore, input: SecretsWrite): Promise<void> {
   const patch: Partial<ProviderSecrets> = {};
   if (input.openai?.apiKey) patch.openai = { apiKey: input.openai.apiKey };
-  if (input["azure-openai"]) {
-    const cur = (await store.loadSecrets())["azure-openai"];
-    const merged = {
-      endpoint: input["azure-openai"].endpoint ?? cur?.endpoint ?? "",
-      apiKey: input["azure-openai"].apiKey ?? cur?.apiKey ?? "",
-    };
-    if (merged.endpoint && merged.apiKey) patch["azure-openai"] = merged;
+  if (input["azure-openai"]?.apiKey) {
+    patch["azure-openai"] = { apiKey: input["azure-openai"].apiKey };
   }
   if (input.google?.apiKey) patch.google = { apiKey: input.google.apiKey };
   if (input["flux-bfl"]?.apiKey) patch["flux-bfl"] = { apiKey: input["flux-bfl"].apiKey };
-  if (input.bytedance) {
-    const cur = (await store.loadSecrets()).bytedance;
-    const merged = {
-      endpoint: input.bytedance.endpoint ?? cur?.endpoint ?? "",
-      apiKey: input.bytedance.apiKey ?? cur?.apiKey ?? "",
-    };
-    if (merged.endpoint && merged.apiKey) patch.bytedance = merged;
-  }
+  if (input.bytedance?.apiKey) patch.bytedance = { apiKey: input.bytedance.apiKey };
   if (input.xai?.apiKey) patch.xai = { apiKey: input.xai.apiKey };
   await store.saveSecrets(patch);
 }
@@ -259,59 +239,34 @@ describe("providers.secrets.set + providers.secrets.get round-trip", () => {
     expect(raw.openai?.apiKey).toBe("sk-test-12345");
   });
 
-  it("azure-openai: requires endpoint+apiKey to land in the patch", async () => {
+  it("azure-openai: persists apiKey only (endpoint moved to providers.config)", async () => {
     const client = buildClient();
     const patch: SecretsWrite = {
-      "azure-openai": {
-        endpoint: "https://r.openai.azure.com",
-        apiKey: "azure-key-123456",
-      },
+      "azure-openai": { apiKey: "azure-key-123456" },
     };
     await client["providers.secrets.set"](patch);
     const raw = await secretsStore.loadSecrets();
-    expect(raw["azure-openai"]).toEqual({
-      endpoint: "https://r.openai.azure.com",
-      apiKey: "azure-key-123456",
-    });
+    expect(raw["azure-openai"]).toEqual({ apiKey: "azure-key-123456" });
   });
 
-  it("bytedance: persists endpoint + apiKey (mirrors Azure shape)", async () => {
+  it("bytedance: persists apiKey only (endpoint moved to providers.config)", async () => {
     const client = buildClient();
     const patch: SecretsWrite = {
-      bytedance: {
-        endpoint: "https://ark.cn-beijing.volces.com/api/v3",
-        apiKey: "volc-key-12345",
-      },
+      bytedance: { apiKey: "volc-key-12345" },
     };
     await client["providers.secrets.set"](patch);
     const raw = await secretsStore.loadSecrets();
-    expect(raw.bytedance).toEqual({
-      endpoint: "https://ark.cn-beijing.volces.com/api/v3",
-      apiKey: "volc-key-12345",
-    });
+    expect(raw.bytedance).toEqual({ apiKey: "volc-key-12345" });
   });
 
-  it("azure-openai apiKey-only save (after endpoint pre-saved) merges with current", async () => {
-    // Reproduces the original silent-fail scenario: the Azure secrets handler
-    // will SKIP writing the patch unless BOTH endpoint and apiKey are present
-    // in the merged record. If a previous save already stored the endpoint,
-    // typing only the apiKey on a subsequent save MUST still persist.
-    await secretsStore.saveSecrets({
-      "azure-openai": {
-        endpoint: "https://prev.openai.azure.com",
-        apiKey: "old-key",
-      },
-    });
+  it("azure-openai apiKey can be re-saved without resending the endpoint", async () => {
+    // Pre-stored apiKey is overwritten cleanly on re-save; endpoint lives in
+    // providers.config now and is unaffected by secrets writes.
+    await secretsStore.saveSecrets({ "azure-openai": { apiKey: "old-key" } });
     const client = buildClient();
-    const patch: SecretsWrite = {
-      "azure-openai": {
-        apiKey: "new-key-shiny",
-      },
-    };
-    await client["providers.secrets.set"](patch);
+    await client["providers.secrets.set"]({ "azure-openai": { apiKey: "new-key-shiny" } });
     const raw = await secretsStore.loadSecrets();
     expect(raw["azure-openai"]?.apiKey).toBe("new-key-shiny");
-    expect(raw["azure-openai"]?.endpoint).toBe("https://prev.openai.azure.com");
   });
 });
 

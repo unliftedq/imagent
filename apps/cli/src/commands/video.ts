@@ -37,22 +37,37 @@ interface VideoOptions {
 export function registerVideoCommand(program: Command): void {
   program
     .command("video <prompt>")
-    .description("Submit a video generation job (default provider: bytedance)")
-    .option("--provider <id>", "Provider id", "bytedance")
-    .option("--model <id>", "Model id within the chosen provider")
+    .summary("Submit a video generation job from a text prompt")
+    .description(
+      [
+        "Submit a video generation job from a text prompt.",
+        "",
+        "Default provider: bytedance. Run `imagent models --kind video` to list providers/models and `imagent options --provider <id> --model <id>` for the model's exact `--option key=value` keys (durationSec, resolution, aspectRatio, fps, firstFrame, lastFrame, ...).",
+        "Without --wait/--out the job is submitted in the background; use `imagent job watch <id>` from the same machine to reattach.",
+      ].join("\n"),
+    )
+    .option(
+      "--provider <id>",
+      "Video provider id (bytedance | google | xai). See `imagent doctor`.",
+      "bytedance",
+    )
+    .option(
+      "--model <id>",
+      "Model id within the chosen provider (see `imagent models --provider <id> --kind video`)",
+    )
     .option(
       "-o, --option <key=value>",
-      "Model capability option (repeatable; e.g. durationSec=5, fps=24, resolution=720p, firstFrame=path)",
+      "Repeatable model capability option. Common keys: durationSec, fps, resolution, aspectRatio, firstFrame, lastFrame, negativePrompt. Run `imagent options --provider <id> --model <id> --kind video` for the exact list.",
       collect,
       [],
     )
-    .option("--ref <path>", "Reference image path (repeatable)", collect, [])
-    .option("--character <slug>", "Attach a character asset (repeatable)", collect, [])
-    .option("--object <slug>", "Attach an object asset (repeatable)", collect, [])
-    .option("--background <slug>", "Attach a background asset (repeatable)", collect, [])
-    .option("--style <slug>", "Attach a style asset (repeatable)", collect, [])
-    .option("--wait", "Block until job completes, printing live progress")
-    .option("--out <dir>", "Copy the completed result to this directory (waits for completion)")
+    .option("--ref <path>", "Reference image path (repeatable; only honored when the model supports refs)", collect, [])
+    .option("--character <slug>", "Attach a saved character asset by slug (repeatable)", collect, [])
+    .option("--object <slug>", "Attach a saved object asset by slug (repeatable)", collect, [])
+    .option("--background <slug>", "Attach a saved background asset by slug (repeatable)", collect, [])
+    .option("--style <slug>", "Attach a saved style asset by slug (repeatable; appends prompt_snippet)", collect, [])
+    .option("--wait", "Block until the job completes, printing live progress")
+    .option("--out <dir>", "Copy the completed result to this directory once done (implies --wait)")
     .action(async (prompt: string, options: VideoOptions) => {
       try {
         await runVideo(prompt, options);

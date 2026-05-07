@@ -73,42 +73,47 @@ const MCP_TOOLS: McpTool[] = [
   subcommandTool(
     "imagent_doctor",
     "doctor",
-    'Check whether imagent is ready to run. Verifies the data directory, database/FTS setup, config files, and configured provider count. Pass args after `imagent doctor`, for example [] or ["--help"].',
+    'Health check. Verifies the data directory, DB/FTS, config files, and lists every provider with the concrete image+video models it would expose plus whether credentials are present. Run this first to see what you can call. Args go after `imagent doctor`, e.g. [] or ["--help"].',
+  ),
+  subcommandTool(
+    "imagent_models",
+    "models",
+    'List every provider/model pair available in the catalog. Filter with --kind image|video, --provider <id>, or --configured (only providers with credentials). Add --json for machine-readable output. Use this to discover what to pass to `imagent image|video --provider <id> --model <id>`. Example args: ["--kind", "image", "--configured"] or ["--provider", "openai", "--json"].',
+  ),
+  subcommandTool(
+    "imagent_options",
+    "options",
+    'Show the request options, capabilities, defaults, and reference-image limits for a specific provider/model. Use this before calling `imagent image|video` to know exactly which `--option key=value` pairs (size, aspectRatio, quality, durationSec, ...) the model accepts and what values are valid. Add --json for machine-readable output. Required args: --provider <id> --model <id>. Example args: ["--provider", "openai", "--model", "gpt-image-2"] or ["--provider", "google", "--model", "veo-3.0-generate-001", "--kind", "video", "--json"].',
   ),
   subcommandTool(
     "imagent_image",
     "image",
-    'Generate one or more images from a text prompt. Use for text-to-image requests, provider/model overrides, model capability options via repeatable `--option key=value`, freeform references, character/object/background/style asset slots, and `--out <dir>` to copy the completed gallery result. Pass args after `imagent image`, for example ["a cinematic robot portrait", "--provider", "openai", "--option", "count=2", "--out", "./outputs"].',
+    'Generate one or more images from a text prompt. First run `imagent_models --kind image` and `imagent_options --provider <id> --model <id>` to learn which models are available and which `--option key=value` keys they accept. Supports provider/model overrides, repeatable freeform `--ref` paths, character/object/background/style asset slots by slug, and `--out <dir>` to copy the gallery result. Args go after `imagent image`, e.g. ["a cinematic robot portrait", "--provider", "openai", "--model", "gpt-image-2", "--option", "size=1024x1024", "--option", "count=2", "--out", "./outputs"].',
   ),
   subcommandTool(
     "imagent_video",
     "video",
-    'Submit or wait for a video generation job from a text prompt. Use for text-to-video requests, provider/model overrides, model capability options via repeatable `--option key=value`, reference images, asset slots, `--wait` progress streaming, and `--out <dir>` to wait for completion then copy the completed gallery result. Pass args after `imagent video`, for example ["a camera orbit around a glass sculpture", "--option", "durationSec=5", "--out", "./outputs"].',
+    'Submit or wait for a video generation job from a text prompt. First run `imagent_models --kind video` and `imagent_options --provider <id> --model <id> --kind video` to learn which models are available and which `--option key=value` keys they accept (durationSec, resolution, aspectRatio, fps, firstFrame, ...). Pass `--wait` to stream progress or `--out <dir>` to block and copy the result. Args go after `imagent video`, e.g. ["a camera orbit around a glass sculpture", "--provider", "google", "--model", "veo-3.0-generate-001", "--option", "durationSec=8", "--wait", "--out", "./outputs"].',
   ),
   subcommandTool(
     "imagent_config",
     "config",
-    'Inspect or edit local provider secrets and config paths. Use to set/get API keys, endpoints, or base URLs for openai, azure-openai, google, flux-bfl, bytedance, and xai, or to locate config files. Pass args after `imagent config`, for example ["set", "openai.apiKey", "sk-..."] or ["path"].',
-  ),
-  subcommandTool(
-    "imagent_catalog",
-    "catalog",
-    'Inspect and manage the local model catalog at ~/.imagent/catalog.json. Use to find the catalog path, show available image/video models filtered by provider or kind, or reset the catalog to bundled defaults. Pass args after `imagent catalog`, for example ["show", "--kind", "image"] or ["reset", "--force"].',
+    'Inspect, edit, or reset local provider credentials, preferences, and per-user routing. Subcommands: `set <key> <value>`, `get [key]`, `path` (locate config.json/catalog.json/secrets.json), `reset <target>` where target is `catalog` | `secrets` | `config`, and `provider <add|rm|list>` for per-user model routing (Azure deployments, custom OpenAI providers). Recognised secret keys: <vendor>.apiKey, azure-openai.endpoint, bytedance.endpoint, <vendor>.baseUrl. Vendors: openai | azure-openai | google | flux-bfl | bytedance | xai. Args go after `imagent config`, e.g. ["set", "openai.apiKey", "sk-..."], ["provider", "add", "azure-openai", "my-deployment", "--model", "gpt-image-2"], ["provider", "list"], or ["reset", "catalog", "--force"]. Use `imagent_models` / `imagent_options` to inspect what canonical model ids exist.',
   ),
   subcommandTool(
     "imagent_asset",
     "asset",
-    'Manage reusable generation assets: characters, objects, backgrounds, and styles. Use to add reference assets, list/search assets, inspect stored paths and metadata, or remove assets. Pass args after `imagent asset`, for example ["add", "character", "--name", "Ari", "--ref", "./ari.png"] or ["list", "--kind", "style"].',
+    'Manage reusable generation assets: characters, objects, backgrounds, and styles. Assets are referenced by slug from `imagent image|video --character/--object/--background/--style <slug>`. Args go after `imagent asset`, e.g. ["add", "character", "--name", "Ari", "--ref", "./ari.png"], ["list", "--kind", "style"], or ["show", "<assetId>"].',
   ),
   subcommandTool(
     "imagent_gallery",
     "gallery",
-    'Browse and curate prior generations stored in the local gallery. Use to list/filter outputs, show prompts/files/lineage/attached assets, remix an existing item, delete an item, or toggle favorites. Pass args after `imagent gallery`, for example ["ls", "--favorite"] or ["show", "<itemId>"].',
+    'Browse and curate prior generations. Args go after `imagent gallery`, e.g. ["ls", "--favorite"], ["show", "<itemId>"], ["remix", "<itemId>", "--prompt-suffix", "in pencil"], or ["rm", "<itemId>", "--force"]. Item ids are persistent and survive across CLI sessions.',
   ),
   subcommandTool(
     "imagent_job",
     "job",
-    'Inspect and control generation jobs. Use to list jobs, check status/progress, cancel queued or running work, or watch a job until completion. Pass args after `imagent job`, for example ["ls", "--state", "running"] or ["watch", "<jobId>"].',
+    'Inspect and control generation jobs. Submitted video jobs run in the background — reattach with `watch <id>` from the same machine. Args go after `imagent job`, e.g. ["ls", "--state", "running"], ["status", "<jobId>"], ["watch", "<jobId>"], or ["cancel", "<jobId>"].',
   ),
 ];
 

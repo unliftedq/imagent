@@ -1,24 +1,24 @@
+import { promises as fs } from "node:fs";
+import path from "node:path";
+import type { ConfigFile, ConfigStore, ProviderSecrets, SecretsStore } from "@imagent/config";
 import { JobRunner, type Logger } from "@imagent/core";
 import {
-  type ConfigStore,
-  type ProviderPreferences,
-  type ProviderSecrets,
-  type SecretsStore,
-} from "@imagent/config";
-import {
   BoardRepository,
+  type DatabaseType,
   GalleryRepository,
   JobRepository,
-  videoThumbnailService,
-  type DatabaseType,
   type PathResolver,
+  videoThumbnailService,
 } from "@imagent/persistence";
 import {
   createImageRegistry,
   createVideoRegistry,
-  loadCatalog,
   type ImageRegistry,
+  loadCatalog,
   type ModelCatalog,
+  migrateLegacySecretsRouting,
+  migrateProviderRouting,
+  saveCatalog,
   type VideoRegistry,
 } from "@imagent/providers";
 
@@ -70,8 +70,7 @@ export async function bootstrapRuntime(deps: BootstrapDeps): Promise<RuntimeServ
   // Files port — JobRunner only needs galleryDir/galleryItemFile/dataDir.
   const filesPort = {
     galleryDir: (date?: Date) => paths.galleryDir(date),
-    galleryItemFile: (id: string, ext: string, date?: Date) =>
-      paths.galleryItemFile(id, ext, date),
+    galleryItemFile: (id: string, ext: string, date?: Date) => paths.galleryItemFile(id, ext, date),
     dataDir: paths.dataDir,
   };
 
@@ -87,9 +86,28 @@ export async function bootstrapRuntime(deps: BootstrapDeps): Promise<RuntimeServ
 
   const repopulate = async (): Promise<void> => {
     catalog = await loadCatalog({ path: catalogPath, logger });
-    const snap = await loadSnapshot(configStore, secretsStore);
-    const nextImage = createImageRegistry(snap.secrets, snap.preferences, catalog);
-    const nextVideo = createVideoRegistry(snap.secrets, snap.preferences, catalog);
+    let config = await configStore.loadConfig();
+    config = await migrateLegacySecretsRoutingFromDisk(config, deps);
+
+    // Idempotent migration: pull per-user provider routing (Azure
+    // deployments, custom OpenAI providers) out of the catalog and into
+    // config.providers. After it runs once, the user catalog has no Azure
+    // offerings and re-runs are no-ops.
+    const migration = migrateProviderRouting(catalog, config);
+    let preferences = config.providers;
+    if (migration.migrated) {
+      catalog = migration.catalog;
+      const saved = await configStore.saveConfig(migration.config);
+      preferences = saved.providers;
+      await saveCatalog(catalog, { path: catalogPath });
+      logger.info("[runtime] migrated provider routing → config", {
+        moved: migration.movedByProvider,
+      });
+    }
+
+    const secrets = await secretsStore.loadSecrets();
+    const nextImage = createImageRegistry(secrets, preferences, catalog);
+    const nextVideo = createVideoRegistry(secrets, preferences, catalog);
     imageRegistry.clear();
     for (const [k, v] of nextImage) {
       (imageRegistry as Map<string, unknown>).set(k, v);
@@ -144,11 +162,51 @@ export async function bootstrapRuntime(deps: BootstrapDeps): Promise<RuntimeServ
   } satisfies RuntimeServices;
 }
 
-async function loadSnapshot(
-  configStore: ConfigStore,
-  secretsStore: SecretsStore,
-): Promise<{ preferences: ProviderPreferences; secrets: ProviderSecrets }> {
-  const config = await configStore.loadConfig();
-  const secrets = await secretsStore.loadSecrets();
-  return { preferences: config.providers, secrets };
+async function migrateLegacySecretsRoutingFromDisk(
+  config: ConfigFile,
+  deps: BootstrapDeps,
+): Promise<ConfigFile> {
+  const secretsPath = deps.paths.secretsFile();
+  let raw: string;
+  try {
+    raw = await fs.readFile(secretsPath, "utf8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return config;
+    throw err;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    throw new Error(`secrets.json at ${secretsPath} is not valid JSON: ${(err as Error).message}`);
+  }
+
+  const migration = migrateLegacySecretsRouting(parsed, config);
+  if (!migration.migrated) return config;
+
+  const savedConfig = await deps.configStore.saveConfig(migration.config);
+  await writeCleanSecretsFile(secretsPath, migration.secrets, deps.logger);
+  deps.logger.info("[runtime] migrated legacy secrets routing → config");
+  return savedConfig;
+}
+
+async function writeCleanSecretsFile(
+  filePath: string,
+  secrets: ProviderSecrets,
+  logger: Logger,
+): Promise<void> {
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, JSON.stringify(secrets, null, 2), "utf8");
+  try {
+    await fs.chmod(filePath, 0o600);
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code !== "EPERM" && code !== "ENOSYS" && code !== "ENOTSUP") {
+      throw new Error(`Unexpected chmod error for migrated secrets.json at ${filePath}`, {
+        cause: err,
+      });
+    }
+    logger.warn("[runtime] could not chmod migrated secrets.json", { path: filePath, code });
+  }
 }

@@ -45,11 +45,15 @@ import {
 } from "@imagent/persistence";
 import {
   configuredProviderCount as _unused,
+  effectiveImageOfferings,
+  effectiveProviderDisplayName,
+  effectiveVideoOfferings,
   type ImageRegistry,
   type ModelCatalog,
   saveCatalog,
   type VideoRegistry,
 } from "@imagent/providers";
+import type { ProviderPreferencesPayload } from "@imagent/ipc";
 import { app, type BrowserWindow, dialog, type IpcMain, shell } from "electron";
 import sharp from "sharp";
 import type { RuntimeServices } from "./job-runner-bootstrap.js";
@@ -250,6 +254,10 @@ export function setupIpc(deps: IpcDeps): IpcServer {
 
     "providers.config.set": async (input) => {
       const next = await configStore.saveConfig({ providers: prefsConfigFromPayload(input) });
+      // Routing lives here now (Azure deployments, custom OpenAI models),
+      // so a config write must rebuild the registries the same way a
+      // secrets write does.
+      await runtime.refresh();
       return prefsPayloadFromConfig(next.providers);
     },
 
@@ -259,39 +267,23 @@ export function setupIpc(deps: IpcDeps): IpcServer {
     },
 
     "providers.secrets.set": async (input) => {
-      // Map the renderer's plaintext payload into the internal patch shape.
+      // Secrets are apiKey-only after the routing split. Endpoint, baseUrl,
+      // and customOpenAI base URLs go through `providers.config.set` instead.
       const patch: Partial<ProviderSecrets> = {};
-      const currentSecrets = await secretsStore.loadSecrets();
       if (input.openai?.apiKey) patch.openai = { apiKey: input.openai.apiKey };
-      if (input["azure-openai"]) {
-        const cur = currentSecrets["azure-openai"];
-        const merged = {
-          endpoint: input["azure-openai"].endpoint ?? cur?.endpoint ?? "",
-          apiKey: input["azure-openai"].apiKey ?? cur?.apiKey ?? "",
-        };
-        if (merged.endpoint && merged.apiKey) patch["azure-openai"] = merged;
+      if (input["azure-openai"]?.apiKey) {
+        patch["azure-openai"] = { apiKey: input["azure-openai"].apiKey };
       }
       if (input.google?.apiKey) patch.google = { apiKey: input.google.apiKey };
       if (input["flux-bfl"]?.apiKey) patch["flux-bfl"] = { apiKey: input["flux-bfl"].apiKey };
-      if (input.bytedance) {
-        const cur = currentSecrets.bytedance;
-        const merged = {
-          endpoint: input.bytedance.endpoint ?? cur?.endpoint ?? "",
-          apiKey: input.bytedance.apiKey ?? cur?.apiKey ?? "",
-        };
-        if (merged.endpoint && merged.apiKey) patch.bytedance = merged;
-      }
+      if (input.bytedance?.apiKey) patch.bytedance = { apiKey: input.bytedance.apiKey };
       if (input.xai?.apiKey) patch.xai = { apiKey: input.xai.apiKey };
       if (input.customOpenAI) {
+        const currentSecrets = await secretsStore.loadSecrets();
         const nextCustom = { ...(currentSecrets.customOpenAI ?? {}) };
         for (const [providerId, block] of Object.entries(input.customOpenAI)) {
-          const current = nextCustom[providerId];
-          nextCustom[providerId] = {
-            baseUrl: block.baseUrl,
-            ...((block.apiKey ?? current?.apiKey)
-              ? { apiKey: block.apiKey ?? current?.apiKey }
-              : {}),
-          };
+          if (!block.apiKey) continue;
+          nextCustom[providerId] = { apiKey: block.apiKey };
         }
         patch.customOpenAI = nextCustom;
       }
@@ -799,8 +791,9 @@ export function setupIpc(deps: IpcDeps): IpcServer {
     },
 
     "models.list": async () => {
+      const config = await configStore.loadConfig();
       const secrets = await secretsStore.loadSecrets();
-      return buildUnifiedModelList(runtime.catalog, secrets);
+      return buildUnifiedModelList(runtime.catalog, config.providers, secrets);
     },
 
     // M6 — Assets (M8: + archive/restore + archivedOnly)
@@ -1336,7 +1329,7 @@ function providerSummaryList(
     {
       id: "azure-openai",
       displayName: "Azure",
-      configured: !!secrets["azure-openai"],
+      configured: !!(secrets["azure-openai"]?.apiKey && prefs["azure-openai"]?.endpoint),
       kinds: ["image"],
       defaultModel: firstImage("azure-openai"),
       modelIds: imageIds("azure-openai"),
@@ -1361,7 +1354,7 @@ function providerSummaryList(
     {
       id: "bytedance",
       displayName: "ByteDance",
-      configured: !!secrets.bytedance,
+      configured: !!(secrets.bytedance?.apiKey && prefs.bytedance?.endpoint),
       // ByteDance spans both kinds: Seedream image + Seedance video.
       kinds: ["image", "video"],
       defaultModel: firstImage("bytedance"),
@@ -1377,15 +1370,19 @@ function providerSummaryList(
       modelIds: [...imageIds("xai"), ...videoIds("xai")],
     },
   ];
+  // Custom OpenAI-compatible providers: routing lives in config; catalog may
+  // also hold a stale entry pre-migration. Union of both keeps the renderer
+  // working during the transition window.
   const customIds = new Set<string>([
+    ...Object.keys(prefs.customOpenAI ?? {}),
     ...Object.keys(catalog.providers),
     ...Object.keys(secrets.customOpenAI ?? {}),
   ]);
   for (const id of WELL_KNOWN_PROVIDER_IDS) customIds.delete(id);
   const custom = [...customIds].sort().map((id) => ({
     id,
-    displayName: catalog.providers[id]?.displayName ?? id,
-    configured: !!secrets.customOpenAI?.[id]?.baseUrl,
+    displayName: effectiveProviderDisplayName(catalog, prefs, id),
+    configured: !!prefs.customOpenAI?.[id]?.baseUrl,
     kinds: ["image"] as ("image" | "video")[],
     defaultModel: firstImage(id),
     modelIds: imageIds(id),
@@ -1394,12 +1391,15 @@ function providerSummaryList(
 }
 
 /**
- * Group every catalog model by `id` across providers and produce the unified
- * shape the Models page consumes — one row per logical model with a list of
- * provider sources and per-provider `configured` flags.
+ * Group every model by `id` across providers and produce the unified shape
+ * the Models page consumes — one row per logical model with a list of
+ * provider sources and per-provider `configured` flags. Per-user routing
+ * (Azure deployments, custom OpenAI models) from `prefs` is merged on top of
+ * the canonical catalog before grouping.
  */
 function buildUnifiedModelList(
   catalog: ModelCatalog,
+  prefs: ProviderPreferences,
   secrets: ProviderSecrets,
 ): {
   image: Array<{
@@ -1425,17 +1425,15 @@ function buildUnifiedModelList(
 } {
   const isProviderConfigured = (id: ProviderId): boolean => {
     if (id === "azure-openai") {
-      const b = secrets["azure-openai"];
-      return !!(b && b.endpoint && b.apiKey);
+      return !!(secrets["azure-openai"]?.apiKey && prefs["azure-openai"]?.endpoint);
     }
     if (id === "bytedance") {
-      const b = secrets.bytedance;
-      return !!(b && b.endpoint && b.apiKey);
+      return !!(secrets.bytedance?.apiKey && prefs.bytedance?.endpoint);
     }
-    const custom = secrets.customOpenAI?.[id];
+    const custom = prefs.customOpenAI?.[id];
     if (custom) return !!custom.baseUrl;
     const b = (secrets as Record<string, { apiKey?: string } | undefined>)[id];
-    return !!(b && b.apiKey);
+    return !!b?.apiKey;
   };
   const groupKind = <T extends { id: string; displayName?: string }>(
     kind: "image" | "video",
@@ -1463,18 +1461,20 @@ function buildUnifiedModelList(
         }>;
       }
     >();
-    // Stable provider iteration matches the provider summary order.
-    const providerOrder: ProviderId[] = [
-      ...WELL_KNOWN_PROVIDER_IDS,
-      ...Object.keys(catalog.providers)
-        .filter(
-          (id) => !WELL_KNOWN_PROVIDER_IDS.includes(id as (typeof WELL_KNOWN_PROVIDER_IDS)[number]),
-        )
-        .sort(),
-    ];
+    // Stable provider iteration: built-ins first in canonical order, then
+    // any additional ids that appear in either the catalog or the config
+    // routing overlay (sorted for determinism).
+    const customIds = new Set<string>([
+      ...Object.keys(catalog.providers),
+      ...Object.keys(prefs.customOpenAI ?? {}),
+    ]);
+    for (const id of WELL_KNOWN_PROVIDER_IDS) customIds.delete(id);
+    const providerOrder: ProviderId[] = [...WELL_KNOWN_PROVIDER_IDS, ...[...customIds].sort()];
     for (const providerId of providerOrder) {
-      const providerCatalog = catalog.providers[providerId];
-      const offerings = providerCatalog?.[kind] ?? [];
+      const offerings =
+        kind === "image"
+          ? effectiveImageOfferings(catalog, prefs, providerId)
+          : effectiveVideoOfferings(catalog, prefs, providerId);
       for (const offering of offerings) {
         const model = canonicalModels[offering.modelId];
         if (!model) continue;
@@ -1483,7 +1483,9 @@ function buildUnifiedModelList(
           providerId,
           modelId: offering.id,
           displayName:
-            providerCatalog?.displayName ?? PROVIDER_DISPLAY_NAMES[providerId] ?? providerId,
+            effectiveProviderDisplayName(catalog, prefs, providerId) ??
+            PROVIDER_DISPLAY_NAMES[providerId] ??
+            providerId,
           configured: isProviderConfigured(providerId),
         };
         if (existing) {
@@ -1518,37 +1520,25 @@ export function maskValue(v: string | null | undefined): string | null {
 
 function maskSecrets(s: ProviderSecrets): {
   openai?: { apiKey: string | null };
-  "azure-openai"?: { endpoint: string | null; apiKey: string | null };
+  "azure-openai"?: { apiKey: string | null };
   google?: { apiKey: string | null };
   "flux-bfl"?: { apiKey: string | null };
-  bytedance?: { endpoint: string | null; apiKey: string | null };
+  bytedance?: { apiKey: string | null };
   xai?: { apiKey: string | null };
-  customOpenAI?: Record<string, { baseUrl: string | null; apiKey: string | null }>;
+  customOpenAI?: Record<string, { apiKey: string | null }>;
 } {
   const out: Record<string, unknown> = {};
   if (s.openai) out.openai = { apiKey: maskValue(s.openai.apiKey) };
-  if (s["azure-openai"]) {
-    out["azure-openai"] = {
-      // Endpoint isn't actually a secret — surface it unmasked.
-      endpoint: s["azure-openai"].endpoint || null,
-      apiKey: maskValue(s["azure-openai"].apiKey),
-    };
-  }
+  if (s["azure-openai"]) out["azure-openai"] = { apiKey: maskValue(s["azure-openai"].apiKey) };
   if (s.google) out.google = { apiKey: maskValue(s.google.apiKey) };
   if (s["flux-bfl"]) out["flux-bfl"] = { apiKey: maskValue(s["flux-bfl"].apiKey) };
-  if (s.bytedance) {
-    out.bytedance = {
-      // Endpoint isn't a secret — surface it unmasked (mirrors Azure).
-      endpoint: s.bytedance.endpoint || null,
-      apiKey: maskValue(s.bytedance.apiKey),
-    };
-  }
+  if (s.bytedance) out.bytedance = { apiKey: maskValue(s.bytedance.apiKey) };
   if (s.xai) out.xai = { apiKey: maskValue(s.xai.apiKey) };
   if (s.customOpenAI) {
     out.customOpenAI = Object.fromEntries(
       Object.entries(s.customOpenAI).map(([id, block]) => [
         id,
-        { baseUrl: block.baseUrl || null, apiKey: maskValue(block.apiKey) },
+        { apiKey: maskValue(block.apiKey) },
       ]),
     );
   }
@@ -1557,37 +1547,29 @@ function maskSecrets(s: ProviderSecrets): {
 
 /**
  * Translate the on-disk provider prefs into the renderer-facing payload.
- * After the "minimum-auth" reshape, well-known providers carry empty slots
- * (catalog is the source of truth); only Azure OpenAI carries deployment
- * names.
+ * Per-user provider routing (Azure deployments, custom OpenAI models) is
+ * passed through verbatim; the renderer merges it with the canonical catalog.
  */
-function prefsPayloadFromConfig(_p: ProviderPreferences): {
-  openai: Record<string, never>;
-  "azure-openai": Record<string, never>;
-  google: Record<string, never>;
-  "flux-bfl": Record<string, never>;
-  bytedance: Record<string, never>;
-  xai: Record<string, never>;
-} {
+function prefsPayloadFromConfig(p: ProviderPreferences): ProviderPreferencesPayload {
   return {
-    openai: {},
-    "azure-openai": {},
-    google: {},
-    "flux-bfl": {},
-    bytedance: {},
-    xai: {},
+    openai: p.openai ?? {},
+    "azure-openai": p["azure-openai"] ?? {},
+    google: p.google ?? {},
+    "flux-bfl": p["flux-bfl"] ?? {},
+    bytedance: p.bytedance ?? {},
+    xai: p.xai ?? {},
+    customOpenAI: p.customOpenAI ?? {},
   };
 }
 
-function prefsConfigFromPayload(
-  _payload: ReturnType<typeof prefsPayloadFromConfig>,
-): ProviderPreferences {
+function prefsConfigFromPayload(payload: ProviderPreferencesPayload): ProviderPreferences {
   return {
-    openai: {},
-    "azure-openai": {},
-    google: {},
-    "flux-bfl": {},
-    bytedance: {},
-    xai: {},
+    openai: payload.openai,
+    "azure-openai": payload["azure-openai"],
+    google: payload.google,
+    "flux-bfl": payload["flux-bfl"],
+    bytedance: payload.bytedance,
+    xai: payload.xai,
+    customOpenAI: payload.customOpenAI,
   };
 }

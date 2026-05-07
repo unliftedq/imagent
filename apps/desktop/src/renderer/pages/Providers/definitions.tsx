@@ -1,4 +1,10 @@
-import type { MaskedSecrets, ModelCatalogPayload, SecretsWrite } from "@imagent/ipc";
+import type {
+  MaskedSecrets,
+  ModelCatalogPayload,
+  ProviderPreferencesPayload,
+  ProviderRoutingPayload,
+  SecretsWrite,
+} from "@imagent/ipc";
 import { Icons } from "@imagent/ui";
 import { useId } from "react";
 
@@ -218,27 +224,27 @@ export function formFromProvider(
   id: string,
   displayName: string,
   catalog: ModelCatalogPayload | null,
-  secrets: MaskedSecrets,
+  prefs: ProviderPreferencesPayload | null,
+  _secrets: MaskedSecrets,
 ): ModalState {
+  // Endpoint/baseUrl now live in providers config (non-secret), not in
+  // secrets. Read them from the prefs payload.
+  const routing = readRouting(prefs, id);
   return {
     providerId: id,
     displayName,
-    endpoint:
-      id === "azure-openai"
-        ? (secrets["azure-openai"]?.endpoint ?? "")
-        : id === "bytedance"
-          ? (secrets.bytedance?.endpoint ?? "")
-          : "",
-    baseUrl: "",
+    endpoint: routing?.endpoint ?? "",
+    baseUrl: routing?.baseUrl ?? "",
     apiKey: "",
-    mappings: id === "azure-openai" ? mappingsFromCatalog(catalog, id) : [],
+    mappings: id === "azure-openai" ? mappingsForBuiltIn(prefs, catalog, id) : [],
   };
 }
 
 export function formFromCustom(
   id: string | null,
   catalog: ModelCatalogPayload | null,
-  secrets: MaskedSecrets,
+  prefs: ProviderPreferencesPayload | null,
+  _secrets: MaskedSecrets,
 ): ModalState {
   if (!id) {
     return {
@@ -250,23 +256,70 @@ export function formFromCustom(
       mappings: [mappingRow("", firstImageModelId(catalog))],
     };
   }
+  const routing = prefs?.customOpenAI?.[id];
   return {
     providerId: id,
-    displayName: catalog?.providers[id]?.displayName ?? id,
+    displayName: routing?.displayName ?? catalog?.providers[id]?.displayName ?? id,
     endpoint: "",
-    baseUrl: secrets.customOpenAI?.[id]?.baseUrl ?? "",
+    baseUrl: routing?.baseUrl ?? "",
     apiKey: "",
-    mappings: mappingsFromCatalog(catalog, id),
+    mappings: mappingsForCustom(prefs, catalog, id),
   };
 }
 
-function mappingsFromCatalog(
+function readRouting(
+  prefs: ProviderPreferencesPayload | null,
+  providerId: string,
+): ProviderRoutingPayload | undefined {
+  if (!prefs) return undefined;
+  if (providerId === "customOpenAI") return undefined;
+  if (providerId in prefs) {
+    return (prefs as unknown as Record<string, ProviderRoutingPayload>)[providerId];
+  }
+  return prefs.customOpenAI?.[providerId];
+}
+
+function mappingsForBuiltIn(
+  prefs: ProviderPreferencesPayload | null,
   catalog: ModelCatalogPayload | null,
   providerId: string,
 ): MappingRowState[] {
-  const rows = catalog?.providers[providerId]?.image ?? [];
-  if (rows.length === 0) return [mappingRow("", firstImageModelId(catalog))];
-  return rows.map((row) => ({
+  const fromPrefs = readRouting(prefs, providerId)?.image ?? [];
+  // Migration grace: surface any leftover catalog offerings until the next
+  // refresh re-reads from disk after `migrateProviderRouting` ran.
+  const fromCatalog = catalog?.providers[providerId]?.image ?? [];
+  const seen = new Set<string>();
+  const merged: typeof fromPrefs = [];
+  for (const row of [...fromPrefs, ...fromCatalog]) {
+    if (seen.has(row.id)) continue;
+    seen.add(row.id);
+    merged.push(row);
+  }
+  if (merged.length === 0) return [mappingRow("", firstImageModelId(catalog))];
+  return merged.map((row) => ({
+    clientId: mappingClientId(),
+    id: row.id,
+    modelId: row.modelId,
+    displayName: row.displayName ?? "",
+  }));
+}
+
+function mappingsForCustom(
+  prefs: ProviderPreferencesPayload | null,
+  catalog: ModelCatalogPayload | null,
+  providerId: string,
+): MappingRowState[] {
+  const fromPrefs = prefs?.customOpenAI?.[providerId]?.image ?? [];
+  const fromCatalog = catalog?.providers[providerId]?.image ?? [];
+  const seen = new Set<string>();
+  const merged: typeof fromPrefs = [];
+  for (const row of [...fromPrefs, ...fromCatalog]) {
+    if (seen.has(row.id)) continue;
+    seen.add(row.id);
+    merged.push(row);
+  }
+  if (merged.length === 0) return [mappingRow("", firstImageModelId(catalog))];
+  return merged.map((row) => ({
     clientId: mappingClientId(),
     id: row.id,
     modelId: row.modelId,
@@ -326,46 +379,56 @@ export function validateModal(
   return null;
 }
 
+/**
+ * Build the apiKey-only secrets patch from the modal. Endpoint/baseUrl now
+ * round-trip through `prefsWithMappings` → `providers.config.set` instead.
+ */
 export function buildSecretsPatch(activeModal: ActiveModal, form: ModalState): SecretsWrite {
   const patch: SecretsWrite = {};
+  const apiKey = form.apiKey.trim();
+  if (!apiKey) return patch;
   if (activeModal.kind === "custom") {
-    patch.customOpenAI = {
-      [form.providerId]: {
-        baseUrl: form.baseUrl,
-        ...(form.apiKey.trim() ? { apiKey: form.apiKey.trim() } : {}),
-      },
-    };
+    patch.customOpenAI = { [form.providerId]: { apiKey } };
     return patch;
   }
-  if (activeModal.id === "openai" && form.apiKey.trim())
-    patch.openai = { apiKey: form.apiKey.trim() };
-  if (activeModal.id === "google" && form.apiKey.trim())
-    patch.google = { apiKey: form.apiKey.trim() };
-  if (activeModal.id === "flux-bfl" && form.apiKey.trim()) {
-    patch["flux-bfl"] = { apiKey: form.apiKey.trim() };
-  }
-  if (activeModal.id === "xai" && form.apiKey.trim()) patch.xai = { apiKey: form.apiKey.trim() };
-  if (activeModal.id === "azure-openai") {
-    patch["azure-openai"] = {
-      endpoint: form.endpoint,
-      ...(form.apiKey.trim() ? { apiKey: form.apiKey.trim() } : {}),
-    };
-  }
-  if (activeModal.id === "bytedance") {
-    patch.bytedance = {
-      endpoint: form.endpoint,
-      ...(form.apiKey.trim() ? { apiKey: form.apiKey.trim() } : {}),
-    };
+  switch (activeModal.id) {
+    case "openai":
+      patch.openai = { apiKey };
+      break;
+    case "google":
+      patch.google = { apiKey };
+      break;
+    case "flux-bfl":
+      patch["flux-bfl"] = { apiKey };
+      break;
+    case "xai":
+      patch.xai = { apiKey };
+      break;
+    case "azure-openai":
+      patch["azure-openai"] = { apiKey };
+      break;
+    case "bytedance":
+      patch.bytedance = { apiKey };
+      break;
   }
   return patch;
 }
 
-export function catalogWithMappings(
-  catalog: ModelCatalogPayload,
+/**
+ * Apply the modal's mappings + endpoint/baseUrl to the provider preferences
+ * payload. Azure / built-in providers write into `prefs[<id>]`; custom OpenAI
+ * providers write into `prefs.customOpenAI[<id>]`. The returned object is a
+ * fresh `ProviderPreferencesPayload` suitable for `providers.config.set`.
+ */
+export function prefsWithMappings(
+  prefs: ProviderPreferencesPayload,
   activeModal: ActiveModal,
   form: ModalState,
-): ModelCatalogPayload {
-  const next = JSON.parse(JSON.stringify(catalog)) as ModelCatalogPayload;
+): ProviderPreferencesPayload {
+  const next: ProviderPreferencesPayload = {
+    ...prefs,
+    customOpenAI: { ...(prefs.customOpenAI ?? {}) },
+  };
   const providerId = activeModal.kind === "custom" ? form.providerId : activeModal.id;
   const image = form.mappings
     .filter((row) => row.id.trim() && row.modelId.trim())
@@ -374,11 +437,32 @@ export function catalogWithMappings(
       modelId: row.modelId,
       ...(row.displayName.trim() ? { displayName: row.displayName.trim() } : {}),
     }));
-  next.providers[providerId] = {
-    ...(next.providers[providerId] ?? {}),
-    ...(activeModal.kind === "custom" ? { displayName: form.displayName.trim() } : {}),
-    image,
-  };
+  if (activeModal.kind === "custom") {
+    const baseUrl = form.baseUrl.trim();
+    next.customOpenAI[providerId] = {
+      displayName: form.displayName.trim(),
+      ...(baseUrl ? { baseUrl } : {}),
+      ...(image.length > 0 ? { image } : {}),
+    };
+  } else {
+    if (providerId === "customOpenAI") {
+      throw new Error("Provider id 'customOpenAI' is reserved");
+    }
+    const existing = (next as unknown as Record<string, ProviderRoutingPayload>)[providerId] ?? {};
+    const endpoint = form.endpoint.trim();
+    const baseUrl = form.baseUrl.trim();
+    const merged: ProviderRoutingPayload = {
+      ...existing,
+      ...(endpoint ? { endpoint } : {}),
+      ...(baseUrl ? { baseUrl } : {}),
+      ...(activeModal.id === "azure-openai"
+        ? image.length > 0
+          ? { image }
+          : { image: [] }
+        : {}),
+    };
+    (next as unknown as Record<string, ProviderRoutingPayload>)[providerId] = merged;
+  }
   return next;
 }
 

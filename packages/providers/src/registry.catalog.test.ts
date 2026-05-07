@@ -12,6 +12,21 @@ function emptyPrefs(): ProviderPreferences {
     "flux-bfl": {},
     bytedance: {},
     xai: {},
+    customOpenAI: {},
+  };
+}
+
+function bytedancePrefs(): ProviderPreferences {
+  return {
+    ...emptyPrefs(),
+    bytedance: { endpoint: "https://ark.cn-beijing.volces.com/api/v3" },
+  };
+}
+
+function azurePrefs(): ProviderPreferences {
+  return {
+    ...emptyPrefs(),
+    "azure-openai": { endpoint: "https://r.openai.azure.com" },
   };
 }
 
@@ -21,14 +36,11 @@ describe("createImageRegistry (catalog-driven)", () => {
       openai: { apiKey: "sk" },
       google: { apiKey: "g" },
       "flux-bfl": { apiKey: "f" },
-      bytedance: {
-        apiKey: "v",
-        endpoint: "https://ark.cn-beijing.volces.com/api/v3",
-      },
+      bytedance: { apiKey: "v" },
       xai: { apiKey: "x" },
     };
     const catalog = buildTestCatalog();
-    const reg = createImageRegistry(secrets, emptyPrefs(), catalog);
+    const reg = createImageRegistry(secrets, bytedancePrefs(), catalog);
 
     expect([...reg.keys()].sort()).toEqual(
       ["bytedance", "flux-bfl", "google", "openai", "xai"].sort(),
@@ -47,13 +59,10 @@ describe("createImageRegistry (catalog-driven)", () => {
 
   it("Azure: deployment names resolve against canonical model capabilities", () => {
     const secrets: ProviderSecrets = {
-      "azure-openai": {
-        endpoint: "https://r.openai.azure.com",
-        apiKey: "k",
-      },
+      "azure-openai": { apiKey: "k" },
     };
     const catalog = buildTestCatalog();
-    const reg = createImageRegistry(secrets, emptyPrefs(), catalog);
+    const reg = createImageRegistry(secrets, azurePrefs(), catalog);
 
     const azure = reg.get("azure-openai")!;
     expect([...azure.models.keys()]).toEqual(["azure-prod-gpt-image-2"]);
@@ -64,13 +73,14 @@ describe("createImageRegistry (catalog-driven)", () => {
     );
   });
 
+  it("Azure without endpoint in prefs → not registered (apiKey alone is insufficient)", () => {
+    const secrets: ProviderSecrets = { "azure-openai": { apiKey: "k" } };
+    const reg = createImageRegistry(secrets, emptyPrefs(), buildTestCatalog());
+    expect(reg.has("azure-openai")).toBe(false);
+  });
+
   it("provider image offerings can override capabilities and defaults", () => {
-    const secrets: ProviderSecrets = {
-      "azure-openai": {
-        endpoint: "https://r.openai.azure.com",
-        apiKey: "k",
-      },
-    };
+    const secrets: ProviderSecrets = { "azure-openai": { apiKey: "k" } };
     const catalog = buildTestCatalog();
     catalog.providers["azure-openai"]!.image = [
       {
@@ -81,7 +91,7 @@ describe("createImageRegistry (catalog-driven)", () => {
       },
     ];
     const parsed = ModelCatalogSchema.parse(catalog);
-    const reg = createImageRegistry(secrets, emptyPrefs(), parsed);
+    const reg = createImageRegistry(secrets, azurePrefs(), parsed);
 
     const model = reg.get("azure-openai")!.models.get("azure-low-output")!;
     expect(model.capabilities?.maxOutputs).toBe(1);
@@ -96,20 +106,23 @@ describe("createImageRegistry (catalog-driven)", () => {
     expect([...reg.keys()]).toEqual(["openai"]);
   });
 
-  it("registers OpenAI-compatible custom providers from secrets and catalog mappings", () => {
+  it("registers OpenAI-compatible custom providers from prefs.customOpenAI + secrets", () => {
     const catalog = buildTestCatalog();
-    catalog.providers["custom-openai"] = {
-      displayName: "Custom OpenAI",
-      image: [{ id: "custom-gpt-image", modelId: "gpt-image-2" }],
-    };
-    const parsed = ModelCatalogSchema.parse(catalog);
-    const secrets: ProviderSecrets = {
+    const prefs: ProviderPreferences = {
+      ...emptyPrefs(),
       customOpenAI: {
-        "custom-openai": { baseUrl: "https://example.test/v1" },
+        "custom-openai": {
+          displayName: "Custom OpenAI",
+          baseUrl: "https://example.test/v1",
+          image: [{ id: "custom-gpt-image", modelId: "gpt-image-2" }],
+        },
       },
     };
+    const secrets: ProviderSecrets = {
+      customOpenAI: { "custom-openai": { apiKey: "ck" } },
+    };
 
-    const reg = createImageRegistry(secrets, emptyPrefs(), parsed);
+    const reg = createImageRegistry(secrets, prefs, catalog);
     const provider = reg.get("custom-openai");
 
     expect(provider).toBeDefined();
@@ -118,6 +131,17 @@ describe("createImageRegistry (catalog-driven)", () => {
     expect(provider.displayName).toBe("Custom OpenAI");
     expect([...provider.models.keys()]).toEqual(["custom-gpt-image"]);
     expect(provider.models.get("custom-gpt-image")?.baseModelId).toBe("gpt-image-2");
+  });
+
+  it("custom OpenAI providers without baseUrl in prefs are skipped", () => {
+    const catalog = buildTestCatalog();
+    catalog.providers["custom-openai"] = {
+      displayName: "Custom OpenAI",
+      image: [{ id: "custom-gpt-image", modelId: "gpt-image-2" }],
+    };
+    // baseUrl missing on prefs side → skipped.
+    const reg = createImageRegistry({}, emptyPrefs(), ModelCatalogSchema.parse(catalog));
+    expect(reg.has("custom-openai")).toBe(false);
   });
 
   it("empty provider offerings → provider has zero models but is still registered", () => {
@@ -132,14 +156,11 @@ describe("createImageRegistry (catalog-driven)", () => {
 describe("createVideoRegistry (catalog-driven)", () => {
   it("includes ByteDance, Google, and xAI when their secrets are present", () => {
     const secrets: ProviderSecrets = {
-      bytedance: {
-        apiKey: "v",
-        endpoint: "https://ark.cn-beijing.volces.com/api/v3",
-      },
+      bytedance: { apiKey: "v" },
       google: { apiKey: "g" },
       xai: { apiKey: "x" },
     };
-    const reg = createVideoRegistry(secrets, emptyPrefs(), buildTestCatalog());
+    const reg = createVideoRegistry(secrets, bytedancePrefs(), buildTestCatalog());
     expect([...reg.keys()].sort()).toEqual(["bytedance", "google", "xai"]);
   });
 
@@ -170,6 +191,15 @@ describe("createVideoRegistry (catalog-driven)", () => {
     expect(typeof xai.fetch).toBe("function");
     expect(typeof xai.test).toBe("function");
     expect(xai.models.size).toBeGreaterThan(0);
+  });
+
+  it("ByteDance video without endpoint in prefs is skipped", () => {
+    const reg = createVideoRegistry(
+      { bytedance: { apiKey: "v" } },
+      emptyPrefs(),
+      buildTestCatalog(),
+    );
+    expect(reg.has("bytedance")).toBe(false);
   });
 
   it("provider video offerings can override capabilities and defaults", () => {
