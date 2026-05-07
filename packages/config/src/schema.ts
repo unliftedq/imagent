@@ -13,7 +13,7 @@ import { ImageProviderModelSchema, VideoProviderModelSchema } from "@imagent/cor
  */
 export const ProviderSecretsSchema = z.object({
   openai: z.object({ apiKey: z.string() }).optional(),
-  "azure-openai": z.object({ apiKey: z.string() }).optional(),
+  azure: z.object({ apiKey: z.string() }).optional(),
   google: z.object({ apiKey: z.string() }).optional(),
   "flux-bfl": z.object({ apiKey: z.string() }).optional(),
   bytedance: z.object({ apiKey: z.string() }).optional(),
@@ -42,8 +42,8 @@ export type ProviderSecrets = z.infer<typeof ProviderSecretsSchema>;
  *
  * Typical uses:
  *
- *   - Azure OpenAI deployments: `azure-openai.endpoint` plus
- *     `azure-openai.image[].id` deployment names mapped to canonical models.
+ *   - Azure Foundry deployments: `azure.endpoint` plus
+ *     `azure.image[].id` deployment names mapped to canonical models.
  *   - Custom OpenAI-compatible providers (LM Studio, Together, vLLM, …):
  *     `customOpenAI.<id>.baseUrl` + `image[]/video[]`, with the apiKey in
  *     `ProviderSecrets.customOpenAI.<id>`.
@@ -67,7 +67,7 @@ export type ProviderRouting = z.infer<typeof ProviderRoutingSchema>;
  */
 export const ProviderPreferencesSchema = z.object({
   openai: ProviderRoutingSchema.default({}),
-  "azure-openai": ProviderRoutingSchema.default({}),
+  azure: ProviderRoutingSchema.default({}),
   google: ProviderRoutingSchema.default({}),
   "flux-bfl": ProviderRoutingSchema.default({}),
   bytedance: ProviderRoutingSchema.default({}),
@@ -105,7 +105,7 @@ export const DEFAULT_CONFIG: ConfigFile = {
   app: AppPreferencesSchema.parse({}),
   providers: {
     openai: {},
-    "azure-openai": {},
+    azure: {},
     google: {},
     "flux-bfl": {},
     bytedance: {},

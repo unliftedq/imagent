@@ -40,7 +40,7 @@ export const OPENAI_IMAGE_MODELS: Record<string, ImageModelDef> = {
   },
 };
 
-export const AZURE_OPENAI_IMAGE_MODELS: Record<string, ImageModelDef> = {
+export const AZURE_IMAGE_MODELS: Record<string, ImageModelDef> = {
   "azure-prod-gpt-image-2": {
     id: "azure-prod-gpt-image-2",
     baseModelId: "gpt-image-2",
@@ -55,6 +55,38 @@ export const AZURE_OPENAI_IMAGE_MODELS: Record<string, ImageModelDef> = {
       supportsStyleRef: true,
     },
     defaults: { size: "1024x1024", quality: "auto", count: 1 },
+  },
+  "azure-prod-mai-image-2": {
+    id: "azure-prod-mai-image-2",
+    baseModelId: "MAI-Image-2",
+    displayName: "azure-prod-mai-image-2 (MAI Image 2)",
+    capabilities: {
+      sizes: ["1024x1024", "1024x768", "768x1024"],
+      supportsArbitrarySize: true,
+      outputFormats: ["png"],
+      maxReferences: 0,
+      maxOutputs: 1,
+      supportsNegativePrompt: false,
+      supportsSeed: false,
+      supportsStyleRef: false,
+    },
+    defaults: { size: "1024x1024", outputFormat: "png", count: 1 },
+  },
+  "azure-prod-flux-2-pro": {
+    id: "azure-prod-flux-2-pro",
+    baseModelId: "flux-2-pro",
+    displayName: "azure-prod-flux-2-pro (FLUX.2 [pro])",
+    capabilities: {
+      aspectRatios: ["1:1", "16:9", "9:16"],
+      sizes: ["1024x1024"],
+      supportsArbitrarySize: true,
+      maxReferences: 8,
+      maxOutputs: 1,
+      supportsNegativePrompt: false,
+      supportsSeed: true,
+      supportsStyleRef: true,
+    },
+    defaults: { size: "1024x1024", count: 1 },
   },
 };
 
@@ -209,7 +241,7 @@ export function buildTestCatalog(): ModelCatalog {
         displayName: "OpenAI",
         image: Object.keys(OPENAI_IMAGE_MODELS).map((id) => ({ id, modelId: id })),
       },
-      "azure-openai": {
+      "azure": {
         displayName: "Azure",
         image: [{ id: "azure-prod-gpt-image-2", modelId: "gpt-image-2" }],
       },

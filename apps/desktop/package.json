@@ -1,6 +1,6 @@
 {
   "name": "@imagent/studio",
-  "version": "0.0.4",
+  "version": "0.1.0",
   "private": true,
   "description": "Imagent Electron desktop application",
   "main": "dist/main/main.mjs",

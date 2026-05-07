@@ -101,7 +101,7 @@ export function ProviderConfigModal({
   const isCustom = activeModal?.kind === "custom";
   const canEditProviderId = activeModal?.kind === "custom" && activeModal.id === null;
   const usesEndpoint = builtIn?.endpointLabel !== undefined;
-  const usesMappings = activeModal?.id === "azure-openai" || isCustom;
+  const usesMappings = activeModal?.id === "azure" || isCustom;
   const title = isCustom
     ? customId
       ? "Update Custom Provider"
@@ -209,7 +209,7 @@ export function ProviderConfigModal({
 
           {usesMappings ? (
             <MappingEditor
-              label={activeModal?.id === "azure-openai" ? "Deployment mappings" : "Model mappings"}
+              label={activeModal?.id === "azure" ? "Deployment mappings" : "Model mappings"}
               mappingLabel={builtIn?.mappingLabel ?? "Provider model"}
               rows={form.mappings}
               modelOptions={imageModelOptions}

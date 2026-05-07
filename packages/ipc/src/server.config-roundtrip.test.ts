@@ -70,7 +70,7 @@ function makeTransport(
 function prefsPayloadFromConfig(p: ProviderPreferences): ProviderPreferencesPayload {
   return {
     openai: p.openai ?? {},
-    "azure-openai": p["azure-openai"] ?? {},
+    "azure": p["azure"] ?? {},
     google: p.google ?? {},
     "flux-bfl": p["flux-bfl"] ?? {},
     bytedance: p.bytedance ?? {},
@@ -82,7 +82,7 @@ function prefsPayloadFromConfig(p: ProviderPreferences): ProviderPreferencesPayl
 function prefsConfigFromPayload(payload: ProviderPreferencesPayload): ProviderPreferences {
   return {
     openai: payload.openai,
-    "azure-openai": payload["azure-openai"],
+    "azure": payload["azure"],
     google: payload.google,
     "flux-bfl": payload["flux-bfl"],
     bytedance: payload.bytedance,
@@ -100,7 +100,7 @@ function maskValue(v: string | null | undefined): string | null {
 function maskSecrets(s: ProviderSecrets): MaskedSecrets {
   const out: MaskedSecrets = {};
   if (s.openai) out.openai = { apiKey: maskValue(s.openai.apiKey) };
-  if (s["azure-openai"]) out["azure-openai"] = { apiKey: maskValue(s["azure-openai"].apiKey) };
+  if (s["azure"]) out["azure"] = { apiKey: maskValue(s["azure"].apiKey) };
   if (s.google) out.google = { apiKey: maskValue(s.google.apiKey) };
   if (s["flux-bfl"]) out["flux-bfl"] = { apiKey: maskValue(s["flux-bfl"].apiKey) };
   if (s.bytedance) out.bytedance = { apiKey: maskValue(s.bytedance.apiKey) };
@@ -111,8 +111,8 @@ function maskSecrets(s: ProviderSecrets): MaskedSecrets {
 async function applySecretsWrite(store: SecretsStore, input: SecretsWrite): Promise<void> {
   const patch: Partial<ProviderSecrets> = {};
   if (input.openai?.apiKey) patch.openai = { apiKey: input.openai.apiKey };
-  if (input["azure-openai"]?.apiKey) {
-    patch["azure-openai"] = { apiKey: input["azure-openai"].apiKey };
+  if (input["azure"]?.apiKey) {
+    patch["azure"] = { apiKey: input["azure"].apiKey };
   }
   if (input.google?.apiKey) patch.google = { apiKey: input.google.apiKey };
   if (input["flux-bfl"]?.apiKey) patch["flux-bfl"] = { apiKey: input["flux-bfl"].apiKey };
@@ -180,10 +180,10 @@ describe("providers.config.set + providers.config.get round-trip", () => {
     expect(reloaded.openai).toEqual({});
   });
 
-  it("azure-openai: empty slot round-trips (deployments removed in latest revision)", async () => {
+  it("azure: empty slot round-trips (deployments removed in latest revision)", async () => {
     const client = buildClient();
     const reloaded = await client["providers.config.get"]();
-    expect(reloaded["azure-openai"]).toEqual({});
+    expect(reloaded["azure"]).toEqual({});
   });
 
   it("google: empty slot round-trips", async () => {
@@ -239,14 +239,14 @@ describe("providers.secrets.set + providers.secrets.get round-trip", () => {
     expect(raw.openai?.apiKey).toBe("sk-test-12345");
   });
 
-  it("azure-openai: persists apiKey only (endpoint moved to providers.config)", async () => {
+  it("azure: persists apiKey only (endpoint moved to providers.config)", async () => {
     const client = buildClient();
     const patch: SecretsWrite = {
-      "azure-openai": { apiKey: "azure-key-123456" },
+      "azure": { apiKey: "azure-key-123456" },
     };
     await client["providers.secrets.set"](patch);
     const raw = await secretsStore.loadSecrets();
-    expect(raw["azure-openai"]).toEqual({ apiKey: "azure-key-123456" });
+    expect(raw["azure"]).toEqual({ apiKey: "azure-key-123456" });
   });
 
   it("bytedance: persists apiKey only (endpoint moved to providers.config)", async () => {
@@ -259,14 +259,14 @@ describe("providers.secrets.set + providers.secrets.get round-trip", () => {
     expect(raw.bytedance).toEqual({ apiKey: "volc-key-12345" });
   });
 
-  it("azure-openai apiKey can be re-saved without resending the endpoint", async () => {
+  it("azure apiKey can be re-saved without resending the endpoint", async () => {
     // Pre-stored apiKey is overwritten cleanly on re-save; endpoint lives in
     // providers.config now and is unaffected by secrets writes.
-    await secretsStore.saveSecrets({ "azure-openai": { apiKey: "old-key" } });
+    await secretsStore.saveSecrets({ "azure": { apiKey: "old-key" } });
     const client = buildClient();
-    await client["providers.secrets.set"]({ "azure-openai": { apiKey: "new-key-shiny" } });
+    await client["providers.secrets.set"]({ "azure": { apiKey: "new-key-shiny" } });
     const raw = await secretsStore.loadSecrets();
-    expect(raw["azure-openai"]?.apiKey).toBe("new-key-shiny");
+    expect(raw["azure"]?.apiKey).toBe("new-key-shiny");
   });
 });
 
@@ -274,7 +274,7 @@ describe("providers.secrets.set + providers.secrets.get round-trip", () => {
 describe("DEFAULT_CONFIG sanity", () => {
   it("contains every provider key the IPC payload expects", () => {
     expect(DEFAULT_CONFIG.providers.openai).toBeDefined();
-    expect(DEFAULT_CONFIG.providers["azure-openai"]).toBeDefined();
+    expect(DEFAULT_CONFIG.providers["azure"]).toBeDefined();
     expect(DEFAULT_CONFIG.providers.google).toBeDefined();
     expect(DEFAULT_CONFIG.providers["flux-bfl"]).toBeDefined();
     expect(DEFAULT_CONFIG.providers.bytedance).toBeDefined();

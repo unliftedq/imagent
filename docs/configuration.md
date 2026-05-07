@@ -39,7 +39,7 @@ The desktop application and CLI both use this workspace, so changes made in one 
   },
   "providers": {
     "openai": {},
-    "azure-openai": {
+    "azure": {
       "endpoint": "https://my-resource.openai.azure.com",
       "image": [
         { "id": "my-deployment", "modelId": "gpt-image-2" }
@@ -88,7 +88,7 @@ Use `imagent config provider add|rm|list` to manage these entries from the CLI, 
 ```json
 {
   "openai": { "apiKey": "sk-..." },
-  "azure-openai": { "apiKey": "..." },
+  "azure": { "apiKey": "..." },
   "google": { "apiKey": "..." },
   "flux-bfl": { "apiKey": "..." },
   "bytedance": { "apiKey": "..." },
@@ -99,7 +99,7 @@ Use `imagent config provider add|rm|list` to manage these entries from the CLI, 
 }
 ```
 
-Do not commit this file or paste it into issue reports. Prefer environment variables for temporary automation and CI-like runs. The runtime auto-migrates legacy secrets.json files that still carry endpoint/baseUrl into the matching `providers.<id>` block in config.json on the next launch.
+Do not commit this file or paste it into issue reports. Prefer environment variables for temporary automation and CI-like runs.
 
 ### Environment variables
 
@@ -108,8 +108,8 @@ Supported environment variables are:
 | Variable | Lands in |
 | --- | --- |
 | `OPENAI_API_KEY` | `secrets.openai.apiKey` |
-| `AZURE_OPENAI_API_KEY` | `secrets.azure-openai.apiKey` |
-| `AZURE_OPENAI_ENDPOINT` | `config.providers.azure-openai.endpoint` (overlay) |
+| `AZURE_API_KEY` | `secrets.azure.apiKey` |
+| `AZURE_ENDPOINT` | `config.providers.azure.endpoint` (overlay) |
 | `GOOGLE_API_KEY` | `secrets.google.apiKey` |
 | `FLUX_BFL_API_KEY` | `secrets.flux-bfl.apiKey` |
 | `BYTEDANCE_API_KEY` | `secrets.bytedance.apiKey` |

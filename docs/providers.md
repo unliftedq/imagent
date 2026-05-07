@@ -9,7 +9,7 @@ imagent supports six built-in provider IDs:
 | Provider ID | Display name | Images | Videos | Required secret fields |
 | --- | --- | --- | --- | --- |
 | `openai` | OpenAI | Yes | No | `apiKey` |
-| `azure-openai` | Azure OpenAI | Yes | No | `endpoint`, `apiKey` |
+| `azure` | Azure Foundry | Yes | No | `endpoint`, `apiKey` |
 | `google` | Google AI Studio | Yes | Yes | `apiKey` |
 | `flux-bfl` | Black Forest Labs | Yes | No | `apiKey` |
 | `bytedance` | ByteDance / BytePlus ModelArk | Yes | Yes | `endpoint`, `apiKey` |
@@ -60,35 +60,47 @@ imagent image "clean product render on white background" \
   --option size=1024x1024
 ```
 
-### Azure OpenAI (`azure-openai`)
+### Azure (`azure`)
 
-Azure requires both an endpoint and an API key. The endpoint identifies your Azure resource.
+The `azure` provider id covers every image model family hosted by an Azure AI Foundry resource. One endpoint + one key serves multiple families:
+
+- **Azure OpenAI image models** — `gpt-image-2`, `gpt-image-1.5`, `gpt-image-1-mini`. Routed via `/openai/v1/images/generations` on the `*.services.ai.azure.com` host.
+- **Microsoft MAI-Image models** — `MAI-Image-2`, `MAI-Image-2e`. Routed via `/mai/v1/images/generations` with raw `width`/`height`. PNG-only output, no reference images.
+- **Black Forest Labs FLUX models** — `flux-2-pro`, `flux-2-flex`, `flux-kontext-pro`, `flux-pro-1.1`. Routed via the BFL provider-specific Foundry API at `/providers/blackforestlabs/v1/<path>?api-version=preview` on the same host.
+
+The provider dispatches automatically by looking up each deployment's canonical `modelId`, so the only thing you do per family is map your deployment names — there's nothing else to configure.
 
 CLI setup:
 
 ```bash
-imagent config set azure-openai.endpoint https://my-resource.services.ai.azure.com
-imagent config set azure-openai.apiKey <azure-key>
+imagent config set azure.endpoint https://my-resource.services.ai.azure.com
+imagent config set azure.apiKey <azure-key>
 ```
 
 Environment variables:
 
 ```bash
-AZURE_OPENAI_ENDPOINT=https://my-resource.services.ai.azure.com \
-AZURE_OPENAI_API_KEY=<azure-key> \
-imagent image "prompt" --provider azure-openai
+AZURE_ENDPOINT=https://my-resource.services.ai.azure.com \
+AZURE_API_KEY=<azure-key> \
+imagent image "prompt" --provider azure
 ```
 
-Azure deployment names are per-user provider routing entries. Use `imagent config provider add` or the desktop **Providers** page to map each Azure deployment ID to a canonical image model such as `gpt-image-2`.
+Azure deployment names are per-user provider routing entries. Use `imagent config provider add` or the desktop **Providers** page to map each Azure deployment ID to a canonical image model.
 
-Config routing example:
+Config routing example mixing families on the same resource:
 
 ```json
 {
   "providers": {
-    "azure-openai": {
+    "azure": {
       "endpoint": "https://my-resource.services.ai.azure.com",
-      "image": [{ "id": "my-prod-image-deployment", "modelId": "gpt-image-2" }]
+      "image": [
+        { "id": "my-prod-gpt-image-2", "modelId": "gpt-image-2" },
+        { "id": "my-prod-mai-image-2", "modelId": "MAI-Image-2" },
+        { "id": "my-prod-mai-image-2e", "modelId": "MAI-Image-2e" },
+        { "id": "my-prod-flux-2-pro", "modelId": "flux-2-pro" },
+        { "id": "my-prod-flux-kontext-pro", "modelId": "flux-kontext-pro" }
+      ]
     }
   }
 }
@@ -98,9 +110,23 @@ Then use the deployment ID as the CLI model:
 
 ```bash
 imagent image "architectural concept render" \
-  --provider azure-openai \
-  --model my-prod-image-deployment
+  --provider azure \
+  --model my-prod-gpt-image-2
+
+imagent image "a photorealistic mountain lake at sunrise" \
+  --provider azure \
+  --model my-prod-mai-image-2 \
+  --option size=1024x1024
+
+imagent image "obsidian glass cathedral on a wind-swept cliff" \
+  --provider azure \
+  --model my-prod-flux-2-pro \
+  --option size=1024x1024
 ```
+
+**MAI Image constraints:** both `width` and `height` must be ≥ 768 pixels and `width × height` must be ≤ 1,048,576 (i.e. 1024×1024). Either dimension may exceed 1024 if the total stays within the limit.
+
+**FLUX on Azure Foundry:** map your Azure deployment to the canonical FLUX id you deployed — `flux-2-pro`, `flux-2-flex`, `flux-kontext-pro`, or `flux-pro-1.1`. FLUX.2 [flex] needs Microsoft's [registration approval](https://customervoice.microsoft.com/Pages/ResponsePage.aspx?id=v4j5cvGGr0GRqy180BHbR7en2Ais5pxKtso_Pz4b1_xUMzM2TDBZRko3QldSSFlWREhQSEpSSEdKVyQlQCN0PWcu) before deployment.
 
 ### Google AI Studio (`google`)
 

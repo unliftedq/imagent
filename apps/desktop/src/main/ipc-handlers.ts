@@ -271,8 +271,8 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       // and customOpenAI base URLs go through `providers.config.set` instead.
       const patch: Partial<ProviderSecrets> = {};
       if (input.openai?.apiKey) patch.openai = { apiKey: input.openai.apiKey };
-      if (input["azure-openai"]?.apiKey) {
-        patch["azure-openai"] = { apiKey: input["azure-openai"].apiKey };
+      if (input["azure"]?.apiKey) {
+        patch["azure"] = { apiKey: input["azure"].apiKey };
       }
       if (input.google?.apiKey) patch.google = { apiKey: input.google.apiKey };
       if (input["flux-bfl"]?.apiKey) patch["flux-bfl"] = { apiKey: input["flux-bfl"].apiKey };
@@ -1265,7 +1265,7 @@ type ProviderId = string;
 
 const WELL_KNOWN_PROVIDER_IDS = [
   "openai",
-  "azure-openai",
+  "azure",
   "google",
   "flux-bfl",
   "bytedance",
@@ -1274,7 +1274,7 @@ const WELL_KNOWN_PROVIDER_IDS = [
 
 const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   openai: "OpenAI",
-  "azure-openai": "Azure",
+  "azure": "Azure",
   google: "Google AI Studio",
   "flux-bfl": "Black Forest Labs",
   bytedance: "ByteDance",
@@ -1327,12 +1327,12 @@ function providerSummaryList(
       modelIds: imageIds("openai"),
     },
     {
-      id: "azure-openai",
+      id: "azure",
       displayName: "Azure",
-      configured: !!(secrets["azure-openai"]?.apiKey && prefs["azure-openai"]?.endpoint),
+      configured: !!(secrets["azure"]?.apiKey && prefs["azure"]?.endpoint),
       kinds: ["image"],
-      defaultModel: firstImage("azure-openai"),
-      modelIds: imageIds("azure-openai"),
+      defaultModel: firstImage("azure"),
+      modelIds: imageIds("azure"),
     },
     {
       id: "google",
@@ -1424,8 +1424,8 @@ function buildUnifiedModelList(
   }>;
 } {
   const isProviderConfigured = (id: ProviderId): boolean => {
-    if (id === "azure-openai") {
-      return !!(secrets["azure-openai"]?.apiKey && prefs["azure-openai"]?.endpoint);
+    if (id === "azure") {
+      return !!(secrets["azure"]?.apiKey && prefs["azure"]?.endpoint);
     }
     if (id === "bytedance") {
       return !!(secrets.bytedance?.apiKey && prefs.bytedance?.endpoint);
@@ -1520,7 +1520,7 @@ export function maskValue(v: string | null | undefined): string | null {
 
 function maskSecrets(s: ProviderSecrets): {
   openai?: { apiKey: string | null };
-  "azure-openai"?: { apiKey: string | null };
+  "azure"?: { apiKey: string | null };
   google?: { apiKey: string | null };
   "flux-bfl"?: { apiKey: string | null };
   bytedance?: { apiKey: string | null };
@@ -1529,7 +1529,7 @@ function maskSecrets(s: ProviderSecrets): {
 } {
   const out: Record<string, unknown> = {};
   if (s.openai) out.openai = { apiKey: maskValue(s.openai.apiKey) };
-  if (s["azure-openai"]) out["azure-openai"] = { apiKey: maskValue(s["azure-openai"].apiKey) };
+  if (s["azure"]) out["azure"] = { apiKey: maskValue(s["azure"].apiKey) };
   if (s.google) out.google = { apiKey: maskValue(s.google.apiKey) };
   if (s["flux-bfl"]) out["flux-bfl"] = { apiKey: maskValue(s["flux-bfl"].apiKey) };
   if (s.bytedance) out.bytedance = { apiKey: maskValue(s.bytedance.apiKey) };
@@ -1553,7 +1553,7 @@ function maskSecrets(s: ProviderSecrets): {
 function prefsPayloadFromConfig(p: ProviderPreferences): ProviderPreferencesPayload {
   return {
     openai: p.openai ?? {},
-    "azure-openai": p["azure-openai"] ?? {},
+    "azure": p["azure"] ?? {},
     google: p.google ?? {},
     "flux-bfl": p["flux-bfl"] ?? {},
     bytedance: p.bytedance ?? {},
@@ -1565,7 +1565,7 @@ function prefsPayloadFromConfig(p: ProviderPreferences): ProviderPreferencesPayl
 function prefsConfigFromPayload(payload: ProviderPreferencesPayload): ProviderPreferences {
   return {
     openai: payload.openai,
-    "azure-openai": payload["azure-openai"],
+    "azure": payload["azure"],
     google: payload.google,
     "flux-bfl": payload["flux-bfl"],
     bytedance: payload.bytedance,
