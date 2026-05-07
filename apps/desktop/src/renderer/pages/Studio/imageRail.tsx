@@ -356,7 +356,6 @@ export function ImageRail() {
             aria-label="Custom size"
             value={customSizeValue}
             onChange={(event) => setDraft({ size: event.target.value || undefined })}
-            onBlur={(event) => setDraft({ size: event.target.value.trim() || undefined })}
             placeholder="WIDTHxHEIGHT"
             className="h-8 w-[144px] rounded-(--radius-pill) py-0 pl-8 pr-3 text-[12px]"
           />
