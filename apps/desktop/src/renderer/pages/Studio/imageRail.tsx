@@ -127,7 +127,7 @@ export function ImageRail() {
   );
   const caps = selectedModel?.capabilities;
   const supportsCustomSize = caps?.supportsArbitrarySize === true;
-  const sizeOptions = caps?.sizes ?? [];
+  const sizeOptions = useMemo(() => caps?.sizes ?? [], [caps?.sizes]);
   const selectedFixedSize = draft.size && sizeOptions.includes(draft.size) ? draft.size : undefined;
   const customSizeValue = draft.size && !selectedFixedSize ? draft.size : "";
 
@@ -353,7 +353,7 @@ export function ImageRail() {
           />
           <Input
             aria-label="Custom size"
-            value={customSizeValue}
+            value={draft.size ?? ""}
             onChange={(event) => setDraft({ size: event.target.value.trim() || undefined })}
             placeholder="WIDTHxHEIGHT"
             className="h-8 w-[144px] rounded-(--radius-pill) py-0 pl-8 pr-3 text-[12px]"
