@@ -96,6 +96,21 @@ const MCP_TOOLS: McpTool[] = [
     'Inspect and manage the local model catalog at ~/.imagent/catalog.json. Use to find the catalog path, show available image/video models filtered by provider or kind, or reset the catalog to bundled defaults. Pass args after `imagent catalog`, for example ["show", "--kind", "image"] or ["reset", "--force"].',
   ),
   subcommandTool(
+    "imagent_providers",
+    "providers",
+    'List provider availability without exposing secret values. Use to discover configured and unconfigured image/video providers and model counts. Pass args after `imagent providers`, for example ["--kind", "image"] or ["--json"].',
+  ),
+  subcommandTool(
+    "imagent_models",
+    "models",
+    'List provider-facing model ids from the active catalog with configured status, defaults, capabilities, and option keys. Pass args after `imagent models`, for example ["--provider", "openai"] or ["--kind", "video", "--json"].',
+  ),
+  subcommandTool(
+    "imagent_options",
+    "options",
+    'Show accepted repeatable `--option key=value` parameters, aliases, values, defaults, and reference limits for catalog models. Pass args after `imagent options`, for example ["--provider", "openai", "--model", "gpt-image-2"] or ["--kind", "video", "--json"].',
+  ),
+  subcommandTool(
     "imagent_asset",
     "asset",
     'Manage reusable generation assets: characters, objects, backgrounds, and styles. Use to add reference assets, list/search assets, inspect stored paths and metadata, or remove assets. Pass args after `imagent asset`, for example ["add", "character", "--name", "Ari", "--ref", "./ari.png"] or ["list", "--kind", "style"].',

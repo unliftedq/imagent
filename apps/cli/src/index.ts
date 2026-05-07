@@ -4,6 +4,7 @@ import { Command } from "commander";
 import { registerAssetCommands } from "./commands/asset.js";
 import { registerCatalogCommands } from "./commands/catalog.js";
 import { registerConfigCommand } from "./commands/config.js";
+import { registerDiscoveryCommands } from "./commands/discovery.js";
 import { runDoctor } from "./commands/doctor.js";
 import { registerGalleryCommands } from "./commands/gallery.js";
 import { registerImageCommand } from "./commands/image.js";
@@ -17,7 +18,20 @@ async function main(): Promise<void> {
   program
     .name("imagent")
     .description("imagent CLI — local image and video generation")
-    .version(CLI_VERSION);
+    .summary("Local-first image/video generation with agent-friendly discovery commands")
+    .version(CLI_VERSION)
+    .addHelpText(
+      "after",
+      `
+
+Agent discovery:
+  $ imagent providers                 # provider availability without secret values
+  $ imagent models --provider openai  # provider-facing model ids
+  $ imagent options --model gpt-image-2 --json
+
+Generation options are passed with repeatable --option key=value flags.
+`,
+    );
 
   program
     .command("doctor")
@@ -35,6 +49,7 @@ async function main(): Promise<void> {
   registerImageCommand(program);
   registerConfigCommand(program);
   registerCatalogCommands(program);
+  registerDiscoveryCommands(program);
 
   // M3 commands.
   registerAssetCommands(program);

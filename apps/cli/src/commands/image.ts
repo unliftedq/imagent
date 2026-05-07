@@ -12,6 +12,7 @@ import chalk from "chalk";
 import type { Command } from "commander";
 
 import { buildAssetSlots } from "./asset-slots.js";
+import { supportedImageOptions } from "./model-options.js";
 import { buildRunner, loadCliRuntime } from "./runtime.js";
 import { coerceScalar, collect, parseKeyValueOptions, parsePositiveIntegerOption } from "./util.js";
 
@@ -249,23 +250,6 @@ function assertImageOptionSupported(key: string, model: ImageModelDef): void {
   throw new Error(
     `model '${model.id}' does not advertise image option '${key}'. Supported: ${supportedImageOptions(model).join(", ")}`,
   );
-}
-
-function supportedImageOptions(model: ImageModelDef): string[] {
-  const caps = model.capabilities;
-  if (!caps) {
-    // Unknown capabilities means the catalog cannot provide dynamic guidance,
-    // so keep the full typed request surface available and let providers validate.
-    return ["size", "aspectRatio", "quality", "outputFormat", "negativePrompt", "seed", "count"];
-  }
-  const keys = ["count"];
-  if (caps.sizes && caps.sizes.length > 0) keys.push("size");
-  if (caps.aspectRatios && caps.aspectRatios.length > 0) keys.push("aspectRatio");
-  if (caps.qualities && caps.qualities.length > 0) keys.push("quality");
-  if (caps.outputFormats && caps.outputFormats.length > 0) keys.push("outputFormat");
-  if (caps.supportsNegativePrompt) keys.push("negativePrompt");
-  if (caps.supportsSeed) keys.push("seed");
-  return keys;
 }
 
 function pickModel(

@@ -12,6 +12,7 @@ import chalk from "chalk";
 import type { Command } from "commander";
 
 import { buildAssetSlots, capReferences } from "./asset-slots.js";
+import { supportedVideoOptions } from "./model-options.js";
 import { buildRunner, loadCliRuntime } from "./runtime.js";
 import {
   coerceScalar,
@@ -268,30 +269,6 @@ function assertVideoOptionSupported(key: string, model: VideoModelDef): void {
   throw new Error(
     `model '${model.id}' does not advertise video option '${key}'. Supported: ${supportedVideoOptions(model).join(", ")}`,
   );
-}
-
-function supportedVideoOptions(model: VideoModelDef): string[] {
-  const caps = model.capabilities;
-  if (!caps) {
-    // Unknown capabilities means the catalog cannot provide dynamic guidance,
-    // so keep the full typed request surface available and let providers validate.
-    return [
-      "durationSec",
-      "fps",
-      "resolution",
-      "aspectRatio",
-      "firstFrame",
-      "lastFrame",
-      "negativePrompt",
-    ];
-  }
-  const keys: string[] = [];
-  if (caps.durationsSec || caps.maxDurationSec) keys.push("durationSec");
-  if (caps.fpsOptions && caps.fpsOptions.length > 0) keys.push("fps");
-  if (caps.resolutions && caps.resolutions.length > 0) keys.push("resolution");
-  if (caps.supportsFirstFrame) keys.push("firstFrame");
-  if (caps.supportsLastFrame) keys.push("lastFrame");
-  return keys;
 }
 
 function pickVideoModel(
