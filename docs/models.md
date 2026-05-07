@@ -58,35 +58,35 @@ This page summarizes the bundled default model catalog in `packages/providers/sr
 
 ### Black Forest Labs: `flux-2-pro`
 
-- **Size / ratio controls:** Catalog exposes common aspect-ratio presets, but the API accepts free-form `width`/`height` within provider constraints.
+- **Size controls:** Catalog exposes common `WIDTHxHEIGHT` presets and allows arbitrary `WIDTHxHEIGHT` values; the API receives free-form `width`/`height` values within provider constraints.
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Supported; max 8 input images. Official per-image file-size limit was not found.
 - **Other capabilities:** Supports seed; no negative prompt.
 
 ### Black Forest Labs: `flux-2-max`
 
-- **Size / ratio controls:** Same FLUX.2 aspect-ratio presets as `flux-2-pro`; the API uses free-form dimensions.
+- **Size controls:** Same common `WIDTHxHEIGHT` presets and arbitrary-size support as `flux-2-pro`; the API uses free-form dimensions.
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Supported; max 8 input images through the API.
 - **Other capabilities:** Supports seed; no negative prompt.
 
 ### Black Forest Labs: `flux-2-flex`
 
-- **Size / ratio controls:** Same FLUX.2 aspect-ratio presets as `flux-2-pro`; the API uses free-form dimensions.
+- **Size controls:** Same common `WIDTHxHEIGHT` presets and arbitrary-size support as `flux-2-pro`; the API uses free-form dimensions.
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Supported; max 8 input images.
 - **Other capabilities:** Supports seed; no negative prompt. Flex also has provider-specific raw controls such as steps and guidance.
 
 ### Black Forest Labs: `flux-2-klein-9b`
 
-- **Size / ratio controls:** Same FLUX.2 aspect-ratio presets as the other FLUX.2 endpoints.
+- **Size controls:** Same common `WIDTHxHEIGHT` presets and arbitrary-size support as the other FLUX.2 endpoints.
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Supported; max 4 input images.
 - **Other capabilities:** Supports seed; no negative prompt.
 
 ### Black Forest Labs: `flux-2-klein-4b`
 
-- **Size / ratio controls:** Same FLUX.2 aspect-ratio presets as the other FLUX.2 endpoints.
+- **Size controls:** Same common `WIDTHxHEIGHT` presets and arbitrary-size support as the other FLUX.2 endpoints.
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Supported; max 4 input images.
 - **Other capabilities:** Supports seed; no negative prompt.
