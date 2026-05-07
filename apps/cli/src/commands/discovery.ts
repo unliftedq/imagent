@@ -1,12 +1,13 @@
 import type { ImageModelDef, VideoModelDef } from "@imagent/core";
-import {
-  resolveImageProviderModels,
-  resolveVideoProviderModels,
-} from "@imagent/providers";
+import { resolveImageProviderModels, resolveVideoProviderModels } from "@imagent/providers";
 import chalk from "chalk";
 import type { Command } from "commander";
 
-import { describeImageOptions, describeVideoOptions, type OptionDescriptor } from "./model-options.js";
+import {
+  describeImageOptions,
+  describeVideoOptions,
+  type OptionDescriptor,
+} from "./model-options.js";
 import { loadCliRuntime, type CliRuntime } from "./runtime.js";
 
 type ModelKind = "image" | "video";
@@ -242,12 +243,19 @@ function formatProviders(providers: ProviderSummary[]): string {
   const lines = ["Providers:"];
   for (const provider of providers) {
     const kinds = provider.kinds
-      .map((kind) => `${kind}:${provider.configured[kind] ? "configured" : "not-configured"}(${provider.modelCount[kind] ?? 0} models)`)
+      .map(
+        (kind) =>
+          `${kind}:${provider.configured[kind] ? "configured" : "not-configured"}(${provider.modelCount[kind] ?? 0} models)`,
+      )
       .join(", ");
     lines.push(`  ${chalk.bold(provider.id)} — ${provider.displayName} [${kinds}]`);
   }
   lines.push("");
-  lines.push(chalk.dim("Use `imagent models --provider <id>` and `imagent options --provider <id> --model <id>`."));
+  lines.push(
+    chalk.dim(
+      "Use `imagent models --provider <id>` and `imagent options --provider <id> --model <id>`.",
+    ),
+  );
   return `${lines.join("\n")}\n`;
 }
 
@@ -266,7 +274,11 @@ function formatModels(models: ModelSummary[]): string {
     lines.push(`    options: ${model.options.map((option) => option.key).join(", ") || "(none)"}`);
   }
   lines.push("");
-  lines.push(chalk.dim("Use `imagent options --provider <id> --model <id>` for accepted values and defaults."));
+  lines.push(
+    chalk.dim(
+      "Use `imagent options --provider <id> --model <id>` for accepted values and defaults.",
+    ),
+  );
   return `${lines.join("\n")}\n`;
 }
 
@@ -281,8 +293,10 @@ function formatOptions(models: ModelSummary[]): string {
     }
     for (const option of model.options) {
       const parts = [`${option.key}=<${option.type}>`];
-      if (option.aliases && option.aliases.length > 0) parts.push(`aliases: ${option.aliases.join(", ")}`);
-      if (option.values && option.values.length > 0) parts.push(`values: ${option.values.join(", ")}`);
+      if (option.aliases && option.aliases.length > 0)
+        parts.push(`aliases: ${option.aliases.join(", ")}`);
+      if (option.values && option.values.length > 0)
+        parts.push(`values: ${option.values.join(", ")}`);
       if (option.min !== undefined) parts.push(`min: ${option.min}`);
       if (option.max !== undefined) parts.push(`max: ${option.max}`);
       if (option.default !== undefined) parts.push(`default: ${String(option.default)}`);
@@ -291,7 +305,11 @@ function formatOptions(models: ModelSummary[]): string {
     }
     const caps = model.capabilities ?? {};
     const referenceLimit =
-      typeof caps.maxReferences === "number" ? `${caps.maxReferences}` : caps.supportsRefImages === false ? "0" : undefined;
+      typeof caps.maxReferences === "number"
+        ? `${caps.maxReferences}`
+        : caps.supportsRefImages === false
+          ? "0"
+          : undefined;
     if (referenceLimit) lines.push(`    references: max ${referenceLimit}`);
   }
   return `${lines.join("\n")}\n`;

@@ -28,9 +28,23 @@ describe("CLI --help", () => {
   it("root --help exits 0 and lists every command", () => {
     const r = runCli(["--help"]);
     expect(r.status).toBe(0);
-    for (const cmd of ["doctor", "image", "config", "asset", "gallery", "video", "job", "mcp"]) {
+    for (const cmd of [
+      "doctor",
+      "image",
+      "config",
+      "catalog",
+      "providers",
+      "models",
+      "options",
+      "asset",
+      "gallery",
+      "video",
+      "job",
+      "mcp",
+    ]) {
       expect(r.stdout).toContain(cmd);
     }
+    expect(r.stdout).toContain("Agent discovery");
   });
 
   for (const sub of [
@@ -41,6 +55,10 @@ describe("CLI --help", () => {
     ["image", "--help"],
     ["video", "--help"],
     ["mcp", "--help"],
+    ["providers", "--help"],
+    ["models", "--help"],
+    ["options", "--help"],
+    ["capabilities", "--help"],
     ["asset", "add", "--help"],
     ["gallery", "ls", "--help"],
     ["job", "ls", "--help"],
@@ -66,6 +84,39 @@ describe("CLI --help", () => {
     expect(video.stdout).toContain("--out <dir>");
     expect(video.stdout).not.toContain("--duration");
     expect(video.stdout).not.toContain("--resolution");
+  });
+
+  it("discovery commands expose providers, models, and model options", () => {
+    const providers = runCli(["providers", "--json"]);
+    expect(providers.status, `stderr:\n${providers.stderr}`).toBe(0);
+    const providerPayload = JSON.parse(providers.stdout) as Array<{
+      id: string;
+      modelCount: { image?: number; video?: number };
+    }>;
+    expect(providerPayload).toContainEqual(
+      expect.objectContaining({
+        id: "openai",
+        modelCount: expect.objectContaining({ image: expect.any(Number) }),
+      }),
+    );
+
+    const models = runCli(["models", "--provider", "openai", "--json"]);
+    expect(models.status, `stderr:\n${models.stderr}`).toBe(0);
+    const modelPayload = JSON.parse(models.stdout) as Array<{
+      id: string;
+      options: Array<{ key: string }>;
+    }>;
+    expect(modelPayload).toContainEqual(
+      expect.objectContaining({
+        id: "gpt-image-2",
+        options: expect.arrayContaining([expect.objectContaining({ key: "quality" })]),
+      }),
+    );
+
+    const options = runCli(["options", "--provider", "openai", "--model", "gpt-image-2"]);
+    expect(options.status, `stderr:\n${options.stderr}`).toBe(0);
+    expect(options.stdout).toContain("--option quality=<string>");
+    expect(options.stdout).toContain("values: low, medium, high, auto");
   });
 });
 
@@ -129,6 +180,9 @@ describe("CLI MCP server", () => {
           }),
           expect.objectContaining({ name: "imagent_config" }),
           expect.objectContaining({ name: "imagent_catalog" }),
+          expect.objectContaining({ name: "imagent_providers" }),
+          expect.objectContaining({ name: "imagent_models" }),
+          expect.objectContaining({ name: "imagent_options" }),
           expect.objectContaining({ name: "imagent_asset" }),
           expect.objectContaining({ name: "imagent_gallery" }),
           expect.objectContaining({ name: "imagent_job" }),

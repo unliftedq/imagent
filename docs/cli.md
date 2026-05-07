@@ -10,6 +10,9 @@ description: Use IMAGENT from scripts for provider setup, generation jobs, galle
 imagent doctor
 imagent config {get|set|path}
 imagent catalog {path|show|reset}
+imagent providers [--kind image|video] [--json]
+imagent models [--provider <id>] [--kind image|video] [--json]
+imagent options [--provider <id>] [--model <id>] [--kind image|video] [--json]
 imagent image <prompt>
 imagent video <prompt>
 imagent asset {add|list|show|rm}
@@ -60,6 +63,23 @@ imagent catalog reset --force
 ```
 
 The catalog defines supported models, model capabilities, and provider-facing model IDs or deployment names. Azure OpenAI deployment names and custom provider model mappings belong in the local workspace `catalog.json` file, not in `config.json`.
+
+### Agent discovery commands
+
+Use these commands from scripts or agents before generation. They read the active catalog and configuration status, but never print secret values.
+
+```bash
+imagent providers
+imagent providers --kind image --json
+imagent models --provider openai
+imagent models --kind video --json
+imagent options --provider openai --model gpt-image-2
+imagent capabilities --kind video --json
+```
+
+- `providers` reports provider ids, image/video support, model counts, and whether each provider is configured.
+- `models` reports provider-facing model ids, display names, defaults, capabilities, and supported option keys.
+- `options` (alias: `capabilities`) reports exact repeatable `--option key=value` parameters, aliases, allowed values, defaults, and reference limits.
 
 ### Image generation
 

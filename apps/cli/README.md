@@ -41,8 +41,11 @@ imagent video "a slow camera move through a neon city" --provider bytedance --wa
 imagent doctor
 imagent config {get|set|path}
 imagent catalog {path|show|reset}
-imagent image "<prompt>" [--provider <id>] [--model <id>] [--count <n>] [--out <dir>]
-imagent video "<prompt>" [--provider <id>] [--model <id>] [--duration <sec>] [--wait]
+imagent providers [--kind image|video] [--json]
+imagent models [--provider <id>] [--kind image|video] [--json]
+imagent options [--provider <id>] [--model <id>] [--kind image|video] [--json]
+imagent image "<prompt>" [--provider <id>] [--model <id>] [--option <key=value>] [--out <dir>]
+imagent video "<prompt>" [--provider <id>] [--model <id>] [--option <key=value>] [--wait]
 imagent asset {add|list|show|rm}
 imagent gallery {ls|show|remix|rm|favorite}
 imagent job {ls|status|cancel|watch}
@@ -70,14 +73,22 @@ Environment variables can override matching secrets for one-off runs, for exampl
 OPENAI_API_KEY=sk-... imagent image "minimal product photo"
 ```
 
+Discover providers, model ids, and exact model options without reading the underlying catalog files:
+
+```bash
+imagent providers --json
+imagent models --provider openai
+imagent options --provider openai --model gpt-image-2
+```
+
 ## Image generation
 
 ```bash
 imagent image "prompt" \
   --provider openai \
-  --model gpt-image-1 \
-  --count 2 \
-  --aspect 1:1 \
+  --model gpt-image-2 \
+  --option count=2 \
+  --option size=1024x1024 \
   --character hero \
   --style watercolor \
   --out ./outputs
@@ -86,8 +97,7 @@ imagent image "prompt" \
 Common options:
 
 - `--provider`, `--model`: choose the provider and model.
-- `--count`: set the number of outputs.
-- `--size`, `--aspect`, `--seed`, `--negative`: model-specific generation parameters.
+- `--option key=value`: set model-specific generation parameters shown by `imagent options`.
 - `--ref`: attach one or more reference images.
 - `--character`, `--object`, `--background`, `--style`: attach registered assets.
 - `--out`: override the default output directory.
@@ -98,8 +108,8 @@ Common options:
 imagent video "prompt" \
   --provider bytedance \
   --model seedance-1.0-pro \
-  --duration 5 \
-  --aspect 16:9 \
+  --option durationSec=5 \
+  --option aspectRatio=16:9 \
   --ref ./first-frame.png \
   --wait
 ```

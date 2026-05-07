@@ -24,9 +24,15 @@ export function describeImageOptions(model: ImageModelDef): OptionDescriptor[] {
   const defaults = (model.defaults ?? {}) as Record<string, unknown>;
   if (!caps) {
     return [
-      option("size", "string", "Image size, usually WIDTHxHEIGHT or a provider token", defaults.size, {
-        aliases: [],
-      }),
+      option(
+        "size",
+        "string",
+        "Image size, usually WIDTHxHEIGHT or a provider token",
+        defaults.size,
+        {
+          aliases: [],
+        },
+      ),
       option("aspectRatio", "string", "Image aspect ratio", defaults.aspectRatio, {
         aliases: ["aspect"],
       }),
@@ -52,11 +58,15 @@ export function describeImageOptions(model: ImageModelDef): OptionDescriptor[] {
     out.push(
       option("size", "string", "Image size", defaults.size, {
         values: caps.sizes,
-        descriptionSuffix: caps.supportsArbitrarySize ? "; arbitrary WIDTHxHEIGHT is also accepted" : "",
+        descriptionSuffix: caps.supportsArbitrarySize
+          ? "; arbitrary WIDTHxHEIGHT is also accepted"
+          : "",
       }),
     );
   } else if (caps.supportsArbitrarySize) {
-    out.push(option("size", "string", "Arbitrary image size in WIDTHxHEIGHT format", defaults.size));
+    out.push(
+      option("size", "string", "Arbitrary image size in WIDTHxHEIGHT format", defaults.size),
+    );
   }
   if (caps.aspectRatios && caps.aspectRatios.length > 0) {
     out.push(
@@ -67,7 +77,11 @@ export function describeImageOptions(model: ImageModelDef): OptionDescriptor[] {
     );
   }
   if (caps.qualities && caps.qualities.length > 0) {
-    out.push(option("quality", "string", "Provider quality preset", defaults.quality, { values: caps.qualities }));
+    out.push(
+      option("quality", "string", "Provider quality preset", defaults.quality, {
+        values: caps.qualities,
+      }),
+    );
   }
   if (caps.outputFormats && caps.outputFormats.length > 0) {
     out.push(
@@ -131,10 +145,16 @@ export function describeVideoOptions(model: VideoModelDef): OptionDescriptor[] {
     );
   }
   if (caps.fpsOptions && caps.fpsOptions.length > 0) {
-    out.push(option("fps", "number", "Frames per second", defaults.fps, { values: caps.fpsOptions }));
+    out.push(
+      option("fps", "number", "Frames per second", defaults.fps, { values: caps.fpsOptions }),
+    );
   }
   if (caps.resolutions && caps.resolutions.length > 0) {
-    out.push(option("resolution", "string", "Output resolution", defaults.resolution, { values: caps.resolutions }));
+    out.push(
+      option("resolution", "string", "Output resolution", defaults.resolution, {
+        values: caps.resolutions,
+      }),
+    );
   }
   if (caps.aspectRatios && caps.aspectRatios.length > 0) {
     out.push(
