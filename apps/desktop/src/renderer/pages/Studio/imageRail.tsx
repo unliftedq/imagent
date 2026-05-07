@@ -169,6 +169,7 @@ export function ImageRail() {
 
   const generate = async (): Promise<void> => {
     setValidationError(null);
+    const normalizedSize = draft.size?.trim() || undefined;
     if (!draft.prompt.trim()) {
       setValidationError("Prompt is required.");
       return;
@@ -182,10 +183,10 @@ export function ImageRail() {
       return;
     }
     if (
-      draft.size &&
+      normalizedSize &&
       supportsCustomSize &&
-      !sizeOptions.includes(draft.size) &&
-      !/^\d+x\d+$/.test(draft.size)
+      !sizeOptions.includes(normalizedSize) &&
+      !/^\d+x\d+$/.test(normalizedSize)
     ) {
       setValidationError("Custom size must use WIDTHxHEIGHT format, for example 1024x768.");
       return;
@@ -210,7 +211,7 @@ export function ImageRail() {
       providerId: draft.providerId,
       model: draft.modelId,
       count: draft.count,
-      ...(draft.size ? { size: draft.size } : {}),
+      ...(normalizedSize ? { size: normalizedSize } : {}),
       ...(draft.aspectRatio ? { aspectRatio: draft.aspectRatio } : {}),
       ...(draft.quality ? { quality: draft.quality } : {}),
       ...(draft.outputFormat ? { outputFormat: draft.outputFormat } : {}),
@@ -353,8 +354,9 @@ export function ImageRail() {
           />
           <Input
             aria-label="Custom size"
-            value={draft.size ?? ""}
-            onChange={(event) => setDraft({ size: event.target.value.trim() || undefined })}
+            value={customSizeValue}
+            onChange={(event) => setDraft({ size: event.target.value || undefined })}
+            onBlur={(event) => setDraft({ size: event.target.value.trim() || undefined })}
             placeholder="WIDTHxHEIGHT"
             className="h-8 w-[144px] rounded-(--radius-pill) py-0 pl-8 pr-3 text-[12px]"
           />
