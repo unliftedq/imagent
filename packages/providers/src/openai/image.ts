@@ -316,7 +316,7 @@ export function aggregateCapabilities(
     const c = m.capabilities;
     if (!c) continue;
     for (const s of c.sizes ?? []) sizes.add(s);
-    supportsArbitrarySize ||= c.supportsArbitrarySize;
+    supportsArbitrarySize ||= c.supportsArbitrarySize === true;
     for (const a of c.aspectRatios ?? []) aspectRatios.add(a);
     maxReferences = Math.max(maxReferences, c.maxReferences ?? 0);
     if (c.maxReferenceSizeMb !== undefined) {

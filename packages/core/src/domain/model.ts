@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const ImageModelCapsSchema = z.object({
   sizes: z.array(z.string()).optional(),
-  supportsArbitrarySize: z.boolean().default(false),
+  supportsArbitrarySize: z.boolean().optional(),
   aspectRatios: z.array(z.string()).optional(),
   /**
    * Declares which `quality` values the model accepts (e.g. OpenAI's

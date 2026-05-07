@@ -62,10 +62,9 @@ export function validateImageRequestAgainstModel(
   }
 
   if (req.negativePrompt && caps.supportsNegativePrompt === false) {
-    throw new ProviderRequestError(
-      `model ${model.id} does not support negativePrompt`,
-      { vendorId },
-    );
+    throw new ProviderRequestError(`model ${model.id} does not support negativePrompt`, {
+      vendorId,
+    });
   }
 
   if (req.seed !== undefined && caps.supportsSeed === false) {
@@ -74,10 +73,9 @@ export function validateImageRequestAgainstModel(
 
   if (req.quality !== undefined) {
     if (!caps.qualities || caps.qualities.length === 0) {
-      throw new ProviderRequestError(
-        `model ${model.id} does not support a quality parameter`,
-        { vendorId },
-      );
+      throw new ProviderRequestError(`model ${model.id} does not support a quality parameter`, {
+        vendorId,
+      });
     }
     if (!caps.qualities.includes(req.quality)) {
       throw new ProviderRequestError(
@@ -114,7 +112,11 @@ export function validateVideoRequestAgainstModel(
   if (!caps) return;
 
   if (req.durationSec !== undefined) {
-    if (caps.durationsSec && caps.durationsSec.length > 0 && !caps.durationsSec.includes(req.durationSec)) {
+    if (
+      caps.durationsSec &&
+      caps.durationsSec.length > 0 &&
+      !caps.durationsSec.includes(req.durationSec)
+    ) {
       throw new ProviderRequestError(
         `model ${model.id} only supports durations ${caps.durationsSec.join(",")}s (got ${req.durationSec}s)`,
         { vendorId },

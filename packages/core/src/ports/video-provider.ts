@@ -1,10 +1,6 @@
 import type { VideoModelDef } from "../domain/model.js";
 import type { VideoRequest } from "../domain/request.js";
-import type {
-  VideoGenerationResult,
-  VideoJobHandle,
-  VideoJobStatus,
-} from "../domain/result.js";
+import type { VideoGenerationResult, VideoJobHandle, VideoJobStatus } from "../domain/result.js";
 import type { ProviderTestResult } from "./image-provider.js";
 
 export interface VideoCapabilities {
