@@ -37,6 +37,14 @@ export function parsePositiveIntegerOption(command: string, key: string, value: 
   return parsed;
 }
 
+export function parseNonNegativeIntegerOption(command: string, key: string, value: string): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 0) {
+    throw new Error(`${command} option '${key}' must be a non-negative integer`);
+  }
+  return parsed;
+}
+
 export function parsePositiveNumberOption(command: string, key: string, value: string): number {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) {

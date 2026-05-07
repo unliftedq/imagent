@@ -251,7 +251,7 @@ export function formatProviderModels(providers: ProviderModelsSummary[]): string
     lines.push(`  ${chalk.bold(provider.id)} | ${groups.join("; ")}`);
   }
   lines.push("");
-  lines.push(chalk.dim("Use `imagent options --provider <id> --model <id>` for option values."));
+  lines.push(chalk.dim("Use `imagent options --provider <id> --model <id>` for option details."));
   return `${lines.join("\n")}\n`;
 }
 

@@ -43,7 +43,7 @@ export function describeImageOptions(model: ImageModelDef): OptionDescriptor[] {
       option("negativePrompt", "string", "Negative prompt text", defaults.negativePrompt, {
         aliases: ["negative"],
       }),
-      option("seed", "integer", "Deterministic seed", defaults.seed, { min: 1 }),
+      option("seed", "integer", "Deterministic seed", defaults.seed, { min: 0 }),
       option("count", "integer", "Number of images to generate", defaults.count ?? 1, { min: 1 }),
     ];
   }
@@ -99,7 +99,7 @@ export function describeImageOptions(model: ImageModelDef): OptionDescriptor[] {
     );
   }
   if (caps.supportsSeed) {
-    out.push(option("seed", "integer", "Deterministic seed", defaults.seed, { min: 1 }));
+    out.push(option("seed", "integer", "Deterministic seed", defaults.seed, { min: 0 }));
   }
   return out;
 }

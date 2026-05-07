@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { capReferences } from "./asset-slots.js";
-import { excerpt, formatRelativeTime, truncate } from "./util.js";
+import { excerpt, formatRelativeTime, parseNonNegativeIntegerOption, truncate } from "./util.js";
 
 describe("util", () => {
   it("truncate pads short strings to width", () => {
@@ -26,6 +26,13 @@ describe("util", () => {
   it("excerpt collapses whitespace and adds ellipsis when over n", () => {
     expect(excerpt("hello   world  foo bar", 12)).toBe("hello world…");
     expect(excerpt("short", 20)).toBe("short");
+  });
+
+  it("parseNonNegativeIntegerOption accepts zero", () => {
+    expect(parseNonNegativeIntegerOption("image", "seed", "0")).toBe(0);
+    expect(() => parseNonNegativeIntegerOption("image", "seed", "-1")).toThrow(
+      "non-negative integer",
+    );
   });
 });
 

@@ -14,7 +14,13 @@ import type { Command } from "commander";
 import { buildAssetSlots } from "./asset-slots.js";
 import { supportedImageOptions } from "./model-options.js";
 import { buildRunner, loadCliRuntime } from "./runtime.js";
-import { coerceScalar, collect, parseKeyValueOptions, parsePositiveIntegerOption } from "./util.js";
+import {
+  coerceScalar,
+  collect,
+  parseKeyValueOptions,
+  parseNonNegativeIntegerOption,
+  parsePositiveIntegerOption,
+} from "./util.js";
 
 interface GenerateOptions {
   provider?: string;
@@ -223,7 +229,7 @@ function parseImageOptions(values: readonly string[], model: ImageModelDef): Par
         out.negativePrompt = value;
         break;
       case "seed":
-        out.seed = parsePositiveIntegerOption("image", canonical, value);
+        out.seed = parseNonNegativeIntegerOption("image", canonical, value);
         break;
       case "count":
         out.count = parsePositiveIntegerOption("image", canonical, value);
