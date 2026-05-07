@@ -77,8 +77,7 @@ export const AZURE_IMAGE_MODELS: Record<string, ImageModelDef> = {
     baseModelId: "flux-2-pro",
     displayName: "azure-prod-flux-2-pro (FLUX.2 [pro])",
     capabilities: {
-      aspectRatios: ["1:1", "16:9", "9:16"],
-      sizes: ["1024x1024"],
+      sizes: ["1024x1024", "1024x768", "768x1024", "1280x720", "720x1280", "1440x720", "720x1440"],
       supportsArbitrarySize: true,
       maxReferences: 8,
       maxOutputs: 1,
@@ -111,14 +110,15 @@ export const FLUX_IMAGE_MODELS: Record<string, ImageModelDef> = {
     id: "flux-2-pro",
     displayName: "FLUX.2 [pro]",
     capabilities: {
-      aspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4", "21:9", "9:21", "3:2", "2:3"],
+      sizes: ["1024x1024", "1024x768", "768x1024", "1280x720", "720x1280", "1440x720", "720x1440"],
+      supportsArbitrarySize: true,
       maxReferences: 8,
       maxOutputs: 1,
       supportsNegativePrompt: false,
       supportsSeed: true,
       supportsStyleRef: true,
     },
-    defaults: { aspectRatio: "1:1", count: 1 },
+    defaults: { size: "1024x1024", count: 1 },
   },
 };
 

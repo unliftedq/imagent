@@ -69,7 +69,7 @@ const fluxRequest: ImageRequest = {
   providerId: "azure",
   model: "azure-prod-flux-2-pro",
   count: 1,
-  size: "1024x1024",
+  size: "1234x789",
   references: [],
   assetIds: [],
 };
@@ -238,8 +238,8 @@ describe("AzureImageProvider — FLUX BFL family", () => {
     expect(body).toMatchObject({
       model: "FLUX.2-pro",
       prompt: fluxRequest.prompt,
-      width: 1024,
-      height: 1024,
+      width: 1234,
+      height: 789,
     });
   });
 
