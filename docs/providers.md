@@ -210,7 +210,7 @@ Video example:
 ```bash
 imagent video "a sweeping shot over a cyberpunk street" \
   --provider bytedance \
-  --model doubao-seedance-1-0-pro-250428 \
+  --model doubao-seedance-1-0-pro-250528 \
   --option duration=5 \
   --option resolution=720p \
   --wait

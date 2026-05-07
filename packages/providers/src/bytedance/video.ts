@@ -317,7 +317,10 @@ export function aggregateVideoCapabilities(
   const durationsSec = new Set<number>();
   const fpsOptions = new Set<number>();
   const resolutions = new Set<string>();
+  const aspectRatios = new Set<string>();
   let maxDurationSec = 0;
+  let maxReferences: number | undefined;
+  let maxReferenceSizeMb: number | undefined;
   let supportsFirstFrame = false;
   let supportsLastFrame = false;
   let supportsRefImages = false;
@@ -327,7 +330,12 @@ export function aggregateVideoCapabilities(
     for (const d of c.durationsSec ?? []) durationsSec.add(d);
     for (const f of c.fpsOptions ?? []) fpsOptions.add(f);
     for (const r of c.resolutions ?? []) resolutions.add(r);
+    for (const a of c.aspectRatios ?? []) aspectRatios.add(a);
     if (c.maxDurationSec !== undefined) maxDurationSec = Math.max(maxDurationSec, c.maxDurationSec);
+    if (c.maxReferences !== undefined) maxReferences = Math.max(maxReferences ?? 0, c.maxReferences);
+    if (c.maxReferenceSizeMb !== undefined) {
+      maxReferenceSizeMb = Math.max(maxReferenceSizeMb ?? 0, c.maxReferenceSizeMb);
+    }
     supportsFirstFrame ||= c.supportsFirstFrame;
     supportsLastFrame ||= c.supportsLastFrame;
     supportsRefImages ||= c.supportsRefImages;
@@ -337,6 +345,9 @@ export function aggregateVideoCapabilities(
     maxDurationSec,
     fpsOptions: [...fpsOptions].sort((a, b) => a - b),
     resolutions: [...resolutions],
+    ...(aspectRatios.size > 0 ? { aspectRatios: [...aspectRatios] } : {}),
+    ...(maxReferences !== undefined ? { maxReferences } : {}),
+    ...(maxReferenceSizeMb !== undefined ? { maxReferenceSizeMb } : {}),
     supportsFirstFrame,
     supportsLastFrame,
     supportsRefImages,

@@ -304,8 +304,10 @@ export function aggregateCapabilities(
   models: ReadonlyMap<string, ImageModelDef>,
 ): ImageCapabilities {
   const sizes = new Set<string>();
+  let supportsArbitrarySize = false;
   const aspectRatios = new Set<string>();
   let maxReferences = 0;
+  let maxReferenceSizeMb: number | undefined;
   let maxOutputs = 1;
   let supportsNegativePrompt = false;
   let supportsSeed = false;
@@ -314,8 +316,12 @@ export function aggregateCapabilities(
     const c = m.capabilities;
     if (!c) continue;
     for (const s of c.sizes ?? []) sizes.add(s);
+    supportsArbitrarySize ||= c.supportsArbitrarySize;
     for (const a of c.aspectRatios ?? []) aspectRatios.add(a);
     maxReferences = Math.max(maxReferences, c.maxReferences ?? 0);
+    if (c.maxReferenceSizeMb !== undefined) {
+      maxReferenceSizeMb = Math.max(maxReferenceSizeMb ?? 0, c.maxReferenceSizeMb);
+    }
     maxOutputs = Math.max(maxOutputs, c.maxOutputs);
     supportsNegativePrompt ||= c.supportsNegativePrompt;
     supportsSeed ||= c.supportsSeed;
@@ -323,8 +329,10 @@ export function aggregateCapabilities(
   }
   return {
     sizes: [...sizes],
+    ...(supportsArbitrarySize ? { supportsArbitrarySize } : {}),
     aspectRatios: [...aspectRatios],
     maxReferences,
+    ...(maxReferenceSizeMb !== undefined ? { maxReferenceSizeMb } : {}),
     maxOutputs,
     supportsNegativePrompt,
     supportsSeed,

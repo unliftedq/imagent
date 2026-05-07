@@ -27,7 +27,13 @@ export function validateImageRequestAgainstModel(
     );
   }
 
-  if (req.size && caps.sizes && caps.sizes.length > 0 && !caps.sizes.includes(req.size)) {
+  if (
+    req.size &&
+    !caps.supportsArbitrarySize &&
+    caps.sizes &&
+    caps.sizes.length > 0 &&
+    !caps.sizes.includes(req.size)
+  ) {
     throw new ProviderRequestError(
       `model ${model.id} does not support size '${req.size}'. Supported: ${caps.sizes.join(", ")}`,
       { vendorId },
@@ -147,6 +153,19 @@ export function validateVideoRequestAgainstModel(
     );
   }
 
+  if (
+    req.aspectRatio &&
+    caps.aspectRatios &&
+    caps.aspectRatios.length > 0 &&
+    !caps.aspectRatios.includes(req.aspectRatio)
+  ) {
+    throw new ProviderRequestError(
+      `model ${model.id} does not support aspectRatio '${req.aspectRatio}'. ` +
+        `Supported: ${caps.aspectRatios.join(", ")}`,
+      { vendorId },
+    );
+  }
+
   if (req.firstFrame && caps.supportsFirstFrame === false) {
     throw new ProviderRequestError(`model ${model.id} does not support firstFrame`, { vendorId });
   }
@@ -157,6 +176,13 @@ export function validateVideoRequestAgainstModel(
     throw new ProviderRequestError(`model ${model.id} does not support reference images`, {
       vendorId,
     });
+  }
+  if (caps.maxReferences !== undefined && req.references.length > caps.maxReferences) {
+    throw new ProviderRequestError(
+      `model ${model.id} accepts at most ${caps.maxReferences} reference images ` +
+        `(got ${req.references.length})`,
+      { vendorId },
+    );
   }
 }
 
