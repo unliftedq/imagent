@@ -117,6 +117,26 @@ describe("CLI --help", () => {
     expect(options.status, `stderr:\n${options.stderr}`).toBe(0);
     expect(options.stdout).toContain("--option quality=<string>");
     expect(options.stdout).toContain("values: low, medium, high, auto");
+
+    const videoOptions = runCli([
+      "options",
+      "--provider",
+      "bytedance",
+      "--model",
+      "doubao-seedance-1-0-pro-250528",
+      "--json",
+    ]);
+    expect(videoOptions.status, `stderr:\n${videoOptions.stderr}`).toBe(0);
+    const videoPayload = JSON.parse(videoOptions.stdout) as Array<{
+      options: Array<{ key: string; aliases?: string[]; values?: string[] }>;
+    }>;
+    expect(videoPayload[0]?.options).toContainEqual(
+      expect.objectContaining({
+        key: "aspectRatio",
+        aliases: ["aspect"],
+        values: expect.arrayContaining(["16:9"]),
+      }),
+    );
   });
 });
 

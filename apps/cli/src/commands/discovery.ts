@@ -293,10 +293,12 @@ function formatOptions(models: ModelSummary[]): string {
     }
     for (const option of model.options) {
       const parts = [`${option.key}=<${option.type}>`];
-      if (option.aliases && option.aliases.length > 0)
+      if (option.aliases && option.aliases.length > 0) {
         parts.push(`aliases: ${option.aliases.join(", ")}`);
-      if (option.values && option.values.length > 0)
+      }
+      if (option.values && option.values.length > 0) {
         parts.push(`values: ${option.values.join(", ")}`);
+      }
       if (option.min !== undefined) parts.push(`min: ${option.min}`);
       if (option.max !== undefined) parts.push(`max: ${option.max}`);
       if (option.default !== undefined) parts.push(`default: ${String(option.default)}`);
