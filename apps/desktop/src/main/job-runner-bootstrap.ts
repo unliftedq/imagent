@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { ConfigFile, ConfigStore, SecretsStore } from "@imagent/config";
+import type { ConfigFile, ConfigStore, ProviderSecrets, SecretsStore } from "@imagent/config";
 import { JobRunner, type Logger } from "@imagent/core";
 import {
   BoardRepository,
@@ -193,7 +193,7 @@ async function migrateLegacySecretsRoutingFromDisk(
 
 async function writeCleanSecretsFile(
   filePath: string,
-  secrets: Awaited<ReturnType<SecretsStore["loadSecrets"]>>,
+  secrets: ProviderSecrets,
   logger: Logger,
 ): Promise<void> {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
@@ -203,7 +203,9 @@ async function writeCleanSecretsFile(
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
     if (code !== "EPERM" && code !== "ENOSYS" && code !== "ENOTSUP") {
-      throw err;
+      throw new Error(`Unexpected chmod error for migrated secrets.json at ${filePath}`, {
+        cause: err,
+      });
     }
     logger.warn("[runtime] could not chmod migrated secrets.json", { path: filePath, code });
   }
