@@ -271,7 +271,7 @@ function parseImageOptions(values: readonly string[], model: ImageModelDef): Par
 }
 
 function defaultImageCount(model: ImageModelDef): number {
-  const count = (model.defaults as { count?: unknown } | undefined)?.count;
+  const count = model.defaults?.count;
   return typeof count === "number" && Number.isInteger(count) && count > 0 ? count : 1;
 }
 

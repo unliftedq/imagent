@@ -32,7 +32,8 @@ imagent options --provider openai --model gpt-image-2                       # im
 imagent options --provider google --model veo-3.0-generate-001 --kind video # video model options
 ```
 
-`imagent options` prints the exact `--option key=value` pairs, allowed values, and defaults for a model — read it before using `--option`. If the user did not ask for a specific size, quality, duration, resolution, count, or similar parameter, prefer the model default and omit that `--option` rather than guessing a replacement.
+`imagent options` prints the exact `--option key=value` pairs, allowed values, and defaults for a model — read it before using `--option`.
+If the user did not ask for a specific size, quality, duration, resolution, count, or similar parameter, prefer the model default and omit that `--option` rather than guessing a replacement.
 
 ## Generating images
 
