@@ -24,10 +24,10 @@ The project is local-first. Your creative history lives in the local workspace, 
 
 Back up the entire directory before large catalog edits, system migrations, or manual cleanup.
 
-### Use the catalog as the source of truth for models
+### Use provider routing for per-user deployments
 
-- Do not add model arrays to `config.json`.
-- Put Azure deployment names in `catalog.json` provider offerings.
+- Keep canonical model definitions and capabilities in `catalog.json`.
+- Put Azure deployment names and custom OpenAI-compatible model mappings in `config.json` provider routing via `imagent config provider add|rm|list` or the desktop **Providers** page.
 - Use `imagent models --provider <id>` to verify the model IDs you plan to pass with `--model`, and `imagent options --provider <id> --model <id>` to confirm capabilities.
 - Run `imagent config reset catalog` if local edits cause validation or model resolution errors.
 

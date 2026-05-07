@@ -1329,7 +1329,7 @@ function providerSummaryList(
     {
       id: "azure-openai",
       displayName: "Azure",
-      configured: !!secrets["azure-openai"],
+      configured: !!(secrets["azure-openai"]?.apiKey && prefs["azure-openai"]?.endpoint),
       kinds: ["image"],
       defaultModel: firstImage("azure-openai"),
       modelIds: imageIds("azure-openai"),
@@ -1354,7 +1354,7 @@ function providerSummaryList(
     {
       id: "bytedance",
       displayName: "ByteDance",
-      configured: !!secrets.bytedance,
+      configured: !!(secrets.bytedance?.apiKey && prefs.bytedance?.endpoint),
       // ByteDance spans both kinds: Seedream image + Seedance video.
       kinds: ["image", "video"],
       defaultModel: firstImage("bytedance"),
@@ -1382,7 +1382,7 @@ function providerSummaryList(
   const custom = [...customIds].sort().map((id) => ({
     id,
     displayName: effectiveProviderDisplayName(catalog, prefs, id),
-    configured: !!secrets.customOpenAI?.[id]?.baseUrl,
+    configured: !!prefs.customOpenAI?.[id]?.baseUrl,
     kinds: ["image"] as ("image" | "video")[],
     defaultModel: firstImage(id),
     modelIds: imageIds(id),
@@ -1425,17 +1425,15 @@ function buildUnifiedModelList(
 } {
   const isProviderConfigured = (id: ProviderId): boolean => {
     if (id === "azure-openai") {
-      const b = secrets["azure-openai"];
-      return !!(b && b.endpoint && b.apiKey);
+      return !!(secrets["azure-openai"]?.apiKey && prefs["azure-openai"]?.endpoint);
     }
     if (id === "bytedance") {
-      const b = secrets.bytedance;
-      return !!(b && b.endpoint && b.apiKey);
+      return !!(secrets.bytedance?.apiKey && prefs.bytedance?.endpoint);
     }
-    const custom = secrets.customOpenAI?.[id];
+    const custom = prefs.customOpenAI?.[id];
     if (custom) return !!custom.baseUrl;
     const b = (secrets as Record<string, { apiKey?: string } | undefined>)[id];
-    return !!(b && b.apiKey);
+    return !!b?.apiKey;
   };
   const groupKind = <T extends { id: string; displayName?: string }>(
     kind: "image" | "video",

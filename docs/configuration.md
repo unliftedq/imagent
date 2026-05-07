@@ -120,13 +120,12 @@ API-key env vars override the file-stored secrets. Endpoint env vars overlay the
 
 ### `catalog.json`
 
-`catalog.json` defines canonical model capabilities and provider-facing routes. It is used by both the CLI and desktop app to populate model pickers and validate generation options.
+`catalog.json` defines canonical model capabilities and bundled provider offerings. It is used by both the CLI and desktop app to populate model pickers and validate generation options.
 
 Use it to:
 
-- Add or remove model offerings.
-- Map Azure deployment names to canonical OpenAI image model definitions.
-- Configure custom OpenAI-compatible provider model IDs.
+- Review bundled provider offerings.
+- Add or adjust canonical model definitions.
 - Override model capabilities or defaults for a provider-specific route.
 
-Use `imagent models` and `imagent options` to inspect the catalog before editing, and `imagent config reset catalog` if you need to return to bundled defaults.
+Use `imagent config provider add|rm|list` or the desktop **Providers** page for per-user routing such as Azure deployment names and custom OpenAI-compatible provider model IDs; those entries live in `config.json` under `providers.<id>` / `providers.customOpenAI.<id>` and overlay the catalog at runtime. Use `imagent models` and `imagent options` to inspect the effective catalog, and `imagent config reset catalog` if you need to return to bundled defaults.

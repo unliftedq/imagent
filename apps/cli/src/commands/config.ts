@@ -22,10 +22,10 @@ import { loadCliRuntime } from "./runtime.js";
  * `imagent config path`
  * `imagent config reset <target>`
  *
- * Walks the dotted path against the secrets schema. Only **secrets** paths
- * are accepted: the catalog is the source of truth for model/provider
- * bindings, including Azure deployment names. Use `imagent models` /
- * `imagent options` to inspect the catalog.
+ * Walks the dotted path against the known provider config keys. API keys are
+ * written to secrets.json; non-sensitive routing fields are written to
+ * config.json under providers.<id>. Use `imagent config provider ...` to manage
+ * Azure deployments and custom OpenAI-compatible model mappings.
  *
  * Recognised paths:
  *   - `<vendor>.apiKey`

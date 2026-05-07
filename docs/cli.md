@@ -69,7 +69,7 @@ imagent config get
 imagent config get openai.apiKey
 ```
 
-The CLI config command writes secrets only. General app preferences such as theme, default output directory, default provider, and concurrency are managed by the desktop **Settings** page or by carefully editing the local workspace `config.json` file.
+The CLI config command writes API keys to `secrets.json` and non-sensitive routing fields such as `endpoint` / `baseUrl` to `config.json` under `providers.<id>`. General app preferences such as theme, default output directory, default provider, and concurrency are managed by the desktop **Settings** page or by carefully editing the local workspace `config.json` file.
 
 Reset a state file when you need to start clean:
 
@@ -80,7 +80,7 @@ imagent config reset config           # restore default preferences
 imagent config reset catalog --force  # skip the y/N prompt
 ```
 
-The catalog defines supported models, model capabilities, and provider-facing model IDs or deployment names. Azure OpenAI deployment names and custom provider model mappings live in the local workspace `catalog.json` — edit it directly when you need to add a deployment or override capabilities, and use `imagent models` / `imagent options` to inspect the result.
+The catalog defines supported models, model capabilities, and bundled provider-facing model IDs. Azure OpenAI deployment names and custom provider model mappings live in `config.json` under `providers.<id>` / `providers.customOpenAI.<id>` and overlay the catalog at runtime. Manage them with `imagent config provider add|rm|list` or the desktop **Providers** page, and use `imagent models` / `imagent options` to inspect the effective result.
 
 ### Image generation
 

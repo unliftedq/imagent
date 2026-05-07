@@ -54,8 +54,8 @@ imagent mcp
 
 Configuration files live under `~/.imagent/` by default:
 
-- `config.json`: preferences and non-sensitive configuration.
-- `secrets.json`: provider keys and endpoint settings, written with `chmod 600` by default.
+- `config.json`: preferences and non-sensitive provider routing such as endpoints and base URLs.
+- `secrets.json`: provider API keys only, written with `chmod 600` by default.
 - `catalog.json`: available providers, models, and capability catalog.
 
 Show the active paths (config.json, catalog.json, and secrets.json):
