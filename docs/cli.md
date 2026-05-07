@@ -74,12 +74,12 @@ imagent providers --kind image --json
 imagent models --provider openai
 imagent models --kind video --json
 imagent options --provider openai --model gpt-image-2
-imagent capabilities --kind video --json
+imagent options --kind video --json
 ```
 
 - `providers` reports provider ids, image/video support, model counts, and whether each provider is configured.
 - `models` reports provider-facing model ids, display names, defaults, capabilities, and supported option keys.
-- `options` (alias: `capabilities`) reports exact repeatable `--option key=value` parameters, aliases, allowed values, defaults, and reference limits.
+- `options` reports exact repeatable `--option key=value` parameters, aliases, allowed values, defaults, and reference limits. It also has a `capabilities` alias for agents that prefer that term.
 
 ### Image generation
 
