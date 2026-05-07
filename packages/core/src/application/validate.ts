@@ -39,7 +39,7 @@ export function validateImageRequestAgainstModel(
     }
     if (supportedSizes.length === 0 && caps.supportsArbitrarySize === true && !isArbitrarySize) {
       throw new ProviderRequestError(
-        `model ${model.id} does not support size '${req.size}'. Use WIDTHxHEIGHT format`,
+        `model ${model.id} requires WIDTHxHEIGHT format for arbitrary sizes (got '${req.size}')`,
         { vendorId },
       );
     }
