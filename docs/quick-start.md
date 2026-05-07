@@ -46,6 +46,7 @@ imagent image "a cinematic portrait of a red fox" \
 ```
 
 The CLI prints the generated file path when the job completes. Generated outputs are stored in the shared gallery by default.
+Run `imagent options --provider <id> --model <id>` to inspect model defaults; omit any `--option` the user has not explicitly asked to change.
 
 ### 4. Generate a video
 
@@ -58,6 +59,7 @@ imagent video "a slow camera move through a neon city" \
 ```
 
 Video jobs are asynchronous. Use `--wait` to block until completion, or reattach later with `imagent job watch <jobId>`.
+Video options also default from the selected model; use `imagent options --kind video ...` before overriding duration, resolution, FPS, or aspect ratio.
 
 ### 5. Use the desktop app
 

@@ -97,6 +97,24 @@ describe("CLI --help", () => {
     expect(video.stdout).not.toContain("--duration");
     expect(video.stdout).not.toContain("--resolution");
   });
+
+  it("options --json includes defaults on request option descriptors", () => {
+    const r = runCli(["options", "--provider", "openai", "--model", "gpt-image-2", "--json"]);
+    expect(r.status, `stderr:\n${r.stderr}`).toBe(0);
+
+    const payload = JSON.parse(r.stdout) as {
+      defaults?: Record<string, unknown>;
+      requestOptions?: Array<{ key: string; default?: unknown }>;
+    };
+    expect(payload.defaults).toMatchObject({ size: "1024x1024", quality: "auto", count: 1 });
+    expect(payload.requestOptions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: "size", default: "1024x1024" }),
+        expect.objectContaining({ key: "quality", default: "auto" }),
+        expect.objectContaining({ key: "count", default: 1 }),
+      ]),
+    );
+  });
 });
 
 describe("CLI MCP server", () => {

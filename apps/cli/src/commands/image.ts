@@ -128,7 +128,6 @@ async function runGenerate(prompt: string, options: GenerateOptions): Promise<vo
         prompt: promptWithStyle,
         providerId,
         model,
-        count: requestOptions.count ?? 1,
         ...requestOptions,
         references: cappedRefs,
         assetIds: slots.assetIds,

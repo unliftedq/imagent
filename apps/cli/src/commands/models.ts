@@ -348,8 +348,9 @@ async function runOptions(options: OptionsCommandArgs): Promise<void> {
   } else {
     for (const d of descriptors) {
       const allowed = d.allowed?.length ? `  values: ${d.allowed.join(" | ")}` : "";
+      const defaultValue = d.default !== undefined ? `  default: ${JSON.stringify(d.default)}` : "";
       const note = d.note ? `  ${chalk.dim(d.note)}` : "";
-      process.stdout.write(`  ${chalk.bold(d.key)}${allowed}${note}\n`);
+      process.stdout.write(`  ${chalk.bold(d.key)}${allowed}${defaultValue}${note}\n`);
     }
   }
 
@@ -378,49 +379,79 @@ async function runOptions(options: OptionsCommandArgs): Promise<void> {
 interface OptionDescriptor {
   key: string;
   allowed?: string[];
+  default?: unknown;
   note?: string;
 }
 
 function supportedImageOptionDescriptors(model: ImageModelDef): OptionDescriptor[] {
   const caps = model.capabilities;
+  const defaults = model.defaults ?? {};
   const out: OptionDescriptor[] = [];
-  out.push({ key: "count", note: "positive integer (number of outputs)" });
+  out.push({
+    key: "count",
+    default: defaults.count,
+    note: "positive integer (number of outputs)",
+  });
   if (!caps) {
     return [
       ...out,
-      { key: "size", note: "model has no capability metadata; provider will validate" },
-      { key: "aspectRatio" },
-      { key: "quality" },
-      { key: "outputFormat" },
-      { key: "negativePrompt" },
-      { key: "seed", note: "positive integer" },
+      {
+        key: "size",
+        default: defaults.size,
+        note: "model has no capability metadata; provider will validate",
+      },
+      { key: "aspectRatio", default: defaults.aspectRatio },
+      { key: "quality", default: defaults.quality },
+      { key: "outputFormat", default: defaults.outputFormat },
+      { key: "negativePrompt", default: defaults.negativePrompt },
+      { key: "seed", default: defaults.seed, note: "positive integer" },
     ];
   }
-  if (caps.sizes && caps.sizes.length > 0) out.push({ key: "size", allowed: [...caps.sizes] });
+  if (caps.sizes && caps.sizes.length > 0)
+    out.push({ key: "size", allowed: [...caps.sizes], default: defaults.size });
   if (caps.supportsArbitrarySize)
-    out.push({ key: "size", note: "arbitrary WxH also accepted (supportsArbitrarySize=true)" });
+    out.push({
+      key: "size",
+      default: defaults.size,
+      note: "arbitrary WxH also accepted (supportsArbitrarySize=true)",
+    });
   if (caps.aspectRatios && caps.aspectRatios.length > 0)
-    out.push({ key: "aspectRatio", allowed: [...caps.aspectRatios] });
+    out.push({
+      key: "aspectRatio",
+      allowed: [...caps.aspectRatios],
+      default: defaults.aspectRatio,
+    });
   if (caps.qualities && caps.qualities.length > 0)
-    out.push({ key: "quality", allowed: [...caps.qualities] });
+    out.push({ key: "quality", allowed: [...caps.qualities], default: defaults.quality });
   if (caps.outputFormats && caps.outputFormats.length > 0)
-    out.push({ key: "outputFormat", allowed: [...caps.outputFormats] });
-  if (caps.supportsNegativePrompt) out.push({ key: "negativePrompt" });
-  if (caps.supportsSeed) out.push({ key: "seed", note: "positive integer" });
+    out.push({
+      key: "outputFormat",
+      allowed: [...caps.outputFormats],
+      default: defaults.outputFormat,
+    });
+  if (caps.supportsNegativePrompt)
+    out.push({ key: "negativePrompt", default: defaults.negativePrompt });
+  if (caps.supportsSeed)
+    out.push({ key: "seed", default: defaults.seed, note: "positive integer" });
   return out;
 }
 
 function supportedVideoOptionDescriptors(model: VideoModelDef): OptionDescriptor[] {
   const caps = model.capabilities;
+  const defaults = model.defaults ?? {};
   if (!caps) {
     return [
-      { key: "durationSec", note: "positive number; provider will validate" },
-      { key: "fps", note: "positive number" },
-      { key: "resolution" },
-      { key: "aspectRatio" },
+      {
+        key: "durationSec",
+        default: defaults.durationSec,
+        note: "positive number; provider will validate",
+      },
+      { key: "fps", default: defaults.fps, note: "positive number" },
+      { key: "resolution", default: defaults.resolution },
+      { key: "aspectRatio", default: defaults.aspectRatio },
       { key: "firstFrame", note: "path to a starting-frame image" },
       { key: "lastFrame", note: "path to an ending-frame image" },
-      { key: "negativePrompt" },
+      { key: "negativePrompt", default: defaults.negativePrompt },
     ];
   }
   const out: OptionDescriptor[] = [];
@@ -428,19 +459,24 @@ function supportedVideoOptionDescriptors(model: VideoModelDef): OptionDescriptor
     out.push({
       key: "durationSec",
       allowed: caps.durationsSec.map((n) => String(n)),
+      default: defaults.durationSec,
       note: caps.maxDurationSec ? `max ${caps.maxDurationSec}s` : undefined,
     });
   } else if (caps.maxDurationSec) {
-    out.push({ key: "durationSec", note: `max ${caps.maxDurationSec}s` });
+    out.push({ key: "durationSec", default: defaults.durationSec, note: `max ${caps.maxDurationSec}s` });
   }
   if (caps.fpsOptions && caps.fpsOptions.length > 0) {
-    out.push({ key: "fps", allowed: caps.fpsOptions.map((n) => String(n)) });
+    out.push({ key: "fps", allowed: caps.fpsOptions.map((n) => String(n)), default: defaults.fps });
   }
   if (caps.resolutions && caps.resolutions.length > 0) {
-    out.push({ key: "resolution", allowed: [...caps.resolutions] });
+    out.push({ key: "resolution", allowed: [...caps.resolutions], default: defaults.resolution });
   }
   if (caps.aspectRatios && caps.aspectRatios.length > 0) {
-    out.push({ key: "aspectRatio", allowed: [...caps.aspectRatios] });
+    out.push({
+      key: "aspectRatio",
+      allowed: [...caps.aspectRatios],
+      default: defaults.aspectRatio,
+    });
   }
   if (caps.supportsFirstFrame) out.push({ key: "firstFrame", note: "path to a starting-frame image" });
   if (caps.supportsLastFrame) out.push({ key: "lastFrame", note: "path to an ending-frame image" });

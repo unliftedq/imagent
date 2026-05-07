@@ -45,7 +45,7 @@ imagent options --provider openai --model gpt-image-2
 imagent options --provider google --model veo-3.0-generate-001 --kind video --json
 ```
 
-Use `imagent options` before crafting an `imagent image` or `imagent video` invocation — it lists the exact `--option key=value` pairs and allowed values for that model.
+Use `imagent options` before crafting an `imagent image` or `imagent video` invocation — it lists the exact `--option key=value` pairs, allowed values, and defaults for that model. If the user did not request a non-default value, omit the option and let the CLI apply the model default.
 
 ### Configuration commands
 
@@ -121,7 +121,7 @@ Common image options are:
 - `count`
 - `raw.<vendorOption>` for advanced provider-specific values
 
-Options are validated against the selected model's catalog capabilities. For example, providers that do not advertise negative prompts reject `negativePrompt`.
+Options are validated against the selected model's catalog capabilities. For example, providers that do not advertise negative prompts reject `negativePrompt`. Omitted options use the selected model's defaults, which are visible in `imagent options` and in the `defaults` / `requestOptions[].default` fields from `imagent options --json`.
 
 Attach references and reusable assets:
 
@@ -165,6 +165,8 @@ Common video options are:
 - `firstFrame`
 - `lastFrame`
 - `raw.<vendorOption>` for advanced provider-specific values
+
+As with image generation, omitted video options use the selected model's defaults from `imagent options`; pass `--option` only when changing one of those defaults.
 
 Attach reference images and assets:
 

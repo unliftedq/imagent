@@ -32,7 +32,7 @@ imagent options --provider openai --model gpt-image-2                       # im
 imagent options --provider google --model veo-3.0-generate-001 --kind video # video model options
 ```
 
-`imagent options` prints the exact `--option key=value` pairs and allowed values for a model — read it before using `--option`.
+`imagent options` prints the exact `--option key=value` pairs, allowed values, and defaults for a model — read it before using `--option`. If the user did not ask for a specific size, quality, duration, resolution, count, or similar parameter, prefer the model default and omit that `--option` rather than guessing a replacement.
 
 ## Generating images
 
@@ -41,7 +41,7 @@ Minimal:
 imagent image "minimal product photo of a ceramic mug"
 ```
 
-Pick a provider/model and pass options:
+Pick a provider/model and pass options only when the user asks for non-default settings:
 ```bash
 imagent image "studio portrait, soft rim light" \
   --provider openai \
@@ -70,7 +70,7 @@ Minimal (waits until done):
 imagent video "a slow dolly shot through a rainy alley" --wait
 ```
 
-Pick a provider/model and pass options:
+Pick a provider/model and pass options only when the user asks for non-default settings:
 ```bash
 imagent video "a crane shot over a futuristic coastline" \
   --provider google \
@@ -122,7 +122,8 @@ imagent image "portrait in moonlit forest" --character nova --style soft-waterco
 
 ## Rules and gotchas
 
-- **Do not invent model IDs or option keys.** Run `imagent models` and `imagent options` first; the CLI rejects unsupported values.
+- **Do not invent model IDs, option keys, or option values.** Run `imagent models` and `imagent options` first; the CLI rejects unsupported values.
+- **Prefer defaults for omitted user parameters.** If `imagent options` shows a default and the user did not request a different value, leave that option unset so the CLI/provider default applies.
 - **Image jobs are not resumable** after the originating CLI process exits. Video jobs are async — submit, then `imagent job watch <jobId>` from the same machine.
 - **Outputs land in the local gallery** under `~/.imagent/` by default. Use `--out <dir>` to copy the file to a specific location.
 - **Never paste a secret into a script or commit it.** Setup commands belong in [references/setup.md](references/setup.md).

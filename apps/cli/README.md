@@ -86,7 +86,7 @@ imagent models --kind image --configured       # provider × model inventory (fi
 imagent options --provider openai --model gpt-image-2  # model's exact request options + defaults
 ```
 
-`imagent options` is the canonical way to learn which `--option key=value` pairs (e.g. `size`, `quality`, `aspectRatio`, `durationSec`) a given model accepts before invoking `imagent image|video`.
+`imagent options` is the canonical way to learn which `--option key=value` pairs (e.g. `size`, `quality`, `aspectRatio`, `durationSec`) a given model accepts before invoking `imagent image|video`. It also prints each model default; if the user did not request a different value, omit that option and let the default apply.
 
 ## Image generation
 
@@ -104,7 +104,7 @@ imagent image "prompt" \
 Common options:
 
 - `--provider`, `--model`: choose the provider and model (see `imagent models`).
-- `--option key=value` (repeatable): model capability options like `size`, `aspectRatio`, `quality`, `outputFormat`, `count`, `seed`, `negativePrompt`. Run `imagent options --provider <id> --model <id>` for the exact list.
+- `--option key=value` (repeatable): model capability options like `size`, `aspectRatio`, `quality`, `outputFormat`, `count`, `seed`, `negativePrompt`. Run `imagent options --provider <id> --model <id>` for the exact list and defaults.
 - `--ref`: attach one or more reference images.
 - `--character`, `--object`, `--background`, `--style`: attach registered assets by slug.
 - `--out`: copy the completed result to a local directory (the gallery copy is always retained).
