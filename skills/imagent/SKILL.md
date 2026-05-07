@@ -34,6 +34,11 @@ imagent options --provider google --model veo-3.0-generate-001 --kind video # vi
 
 `imagent options` prints the exact `--option key=value` pairs and allowed values for a model — read it before using `--option`.
 
+Default-first rule:
+- If neither the user nor the agent has a specific requirement for provider/model/options, omit them and let the CLI use its configured provider, catalog default model, and catalog default option values.
+- Do not ask the user for values that already have acceptable defaults (such as size, aspect ratio, quality, count, duration, fps, or resolution) unless the request depends on them.
+- Add `--provider`, `--model`, or `--option` only when the user explicitly asks for a provider/model/format/count/quality/duration/etc., when the prompt requires a non-default capability, or when the default provider/model is not configured or does not support the requested feature.
+
 ## Generating images
 
 Minimal:
@@ -41,7 +46,7 @@ Minimal:
 imagent image "minimal product photo of a ceramic mug"
 ```
 
-Pick a provider/model and pass options:
+Only pick a provider/model and pass options when the request requires non-default values:
 ```bash
 imagent image "studio portrait, soft rim light" \
   --provider openai \
@@ -60,6 +65,7 @@ Common options (validated per model — run `imagent options ...` for the exact 
 - `size`, `aspectRatio` / `aspect`, `quality`, `outputFormat` / `format`
 - `negativePrompt` / `negative`, `seed`, `count`
 - `raw.<vendorOption>=...` for advanced provider-specific values
+- Omit these options when the default is acceptable.
 
 ## Generating videos
 
@@ -70,7 +76,7 @@ Minimal (waits until done):
 imagent video "a slow dolly shot through a rainy alley" --wait
 ```
 
-Pick a provider/model and pass options:
+Only pick a provider/model and pass options when the request requires non-default values:
 ```bash
 imagent video "a crane shot over a futuristic coastline" \
   --provider google \
@@ -82,7 +88,7 @@ imagent video "a crane shot over a futuristic coastline" \
 
 Submit without waiting, then poll:
 ```bash
-imagent video "a quiet sunrise timelapse over mountains" --provider xai
+imagent video "a quiet sunrise timelapse over mountains"
 imagent job ls --kind video                        # find the new jobId
 imagent job watch <jobId>                          # stream progress / final path
 ```
@@ -90,7 +96,6 @@ imagent job watch <jobId>                          # stream progress / final pat
 Image-to-video with a starting frame and a character asset:
 ```bash
 imagent video "Nova turns toward the camera as leaves drift past" \
-  --provider bytedance \
   --character nova \
   --ref ./first-frame.png \
   --option duration=5 \
@@ -98,6 +103,7 @@ imagent video "Nova turns toward the camera as leaves drift past" \
 ```
 
 Common video options (run `imagent options --kind video ...` for the exact set): `durationSec` / `duration`, `fps`, `resolution`, `firstFrame` / `lastFrame`, `raw.<vendorOption>`.
+Omit these options when the default is acceptable.
 
 ## Other commands
 
@@ -123,6 +129,7 @@ imagent image "portrait in moonlit forest" --character nova --style soft-waterco
 ## Rules and gotchas
 
 - **Do not invent model IDs or option keys.** Run `imagent models` and `imagent options` first; the CLI rejects unsupported values.
+- **Prefer defaults.** Do not override provider/model/options just to be explicit; rely on CLI/catalog defaults unless the user request needs a particular value.
 - **Image jobs are not resumable** after the originating CLI process exits. Video jobs are async — submit, then `imagent job watch <jobId>` from the same machine.
 - **Outputs land in the local gallery** under `~/.imagent/` by default. Use `--out <dir>` to copy the file to a specific location.
 - **Never paste a secret into a script or commit it.** Setup commands belong in [references/setup.md](references/setup.md).
