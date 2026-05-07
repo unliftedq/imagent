@@ -38,18 +38,13 @@ Need setup details, provider configuration, desktop installation, or troubleshoo
 
 ## Agent skill integration
 
-The repository includes a ready-to-install skill at [`skills/imagent`](./skills/imagent). Install it into any agent runtime that supports filesystem-based skills, then make sure the `imagent` CLI is available on that agent's `PATH`.
+The repository includes a ready-to-install skill at [`skills/imagent`](./skills/imagent). Install it into any compatible agent runtime, then make sure the `imagent` CLI is available on that agent's `PATH`.
 
 ```bash
-git clone https://github.com/unliftedq/imagent.git
-cd imagent
-
-# Example: copy the skill into your agent's skills directory.
-mkdir -p <agent-skills-dir>
-cp -R skills/imagent <agent-skills-dir>/imagent
+npx skills add unliftedq/imagent
 ```
 
-Use the same `skills/imagent` folder for Claude Code, Codex, OpenClaw, Hermes, or other compatible agents. After installation, the agent can run `imagent doctor` to decide whether to use the shared local gallery and configured providers, or fall back to another generation tool when imagent is not configured.
+Use the same install flow for Claude Code, Codex, OpenClaw, Hermes, or other compatible agents. After installation, the agent can run `imagent doctor` to decide whether to use the shared local gallery and configured providers, or fall back to another generation tool when imagent is not configured.
 
 ## Typical workflows
 
