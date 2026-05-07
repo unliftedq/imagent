@@ -140,17 +140,20 @@ async function runGenerate(prompt: string, options: GenerateOptions): Promise<vo
       ? `${prompt} ${slots.stylePromptSnippets.join(" ")}`
       : prompt;
 
+    const count = requestOptions.count ?? modelDefaultImageCount(resolved);
+    const request = {
+      prompt: promptWithStyle,
+      providerId,
+      model,
+      ...(count !== undefined ? { count } : {}),
+      ...requestOptions,
+      references: cappedRefs,
+      assetIds: slots.assetIds,
+    } satisfies Omit<ImageRequest, "count"> & { count?: ImageRequest["count"] };
+
     const intent: GenerationIntent = {
       kind: "image",
-      request: {
-        prompt: promptWithStyle,
-        providerId,
-        model,
-        count: requestOptions.count ?? defaultImageCount(resolved),
-        ...requestOptions,
-        references: cappedRefs,
-        assetIds: slots.assetIds,
-      } satisfies ImageRequest,
+      request: request as ImageRequest,
     };
 
     const completed = new Promise<Job>((resolve, reject) => {
@@ -270,9 +273,9 @@ function parseImageOptions(values: readonly string[], model: ImageModelDef): Par
   return out;
 }
 
-function defaultImageCount(model: ImageModelDef): number {
+function modelDefaultImageCount(model: ImageModelDef): number | undefined {
   const count = model.defaults?.count;
-  return typeof count === "number" && Number.isInteger(count) && count > 0 ? count : 1;
+  return typeof count === "number" && Number.isInteger(count) && count > 0 ? count : undefined;
 }
 
 const imageOptionAliases: Record<string, string> = {
