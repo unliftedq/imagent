@@ -35,6 +35,19 @@ const imageModelNoQuality: ImageModelDef = {
   },
 };
 
+const arbitrarySizeImageModel: ImageModelDef = {
+  id: "arbitrary-size-model",
+  capabilities: {
+    sizes: ["auto"],
+    maxReferences: 0,
+    maxOutputs: 1,
+    supportsNegativePrompt: false,
+    supportsSeed: false,
+    supportsStyleRef: false,
+    supportsArbitrarySize: true,
+  },
+};
+
 function imageRequest(over: Partial<ImageRequest> = {}): ImageRequest {
   return {
     prompt: "x",
@@ -54,9 +67,11 @@ const videoModel: VideoModelDef = {
     maxDurationSec: 10,
     fpsOptions: [24],
     resolutions: ["720p", "1080p"],
+    aspectRatios: ["16:9", "9:16"],
     supportsFirstFrame: true,
     supportsLastFrame: false,
     supportsRefImages: true,
+    maxReferences: 2,
   },
 };
 
@@ -74,7 +89,11 @@ function videoRequest(over: Partial<VideoRequest> = {}): VideoRequest {
 describe("validateImageRequestAgainstModel", () => {
   it("accepts a request within caps", () => {
     expect(() =>
-      validateImageRequestAgainstModel("openai", imageRequest({ size: "1024x1024", count: 4 }), imageModel),
+      validateImageRequestAgainstModel(
+        "openai",
+        imageRequest({ size: "1024x1024", count: 4 }),
+        imageModel,
+      ),
     ).not.toThrow();
   });
 
@@ -87,6 +106,26 @@ describe("validateImageRequestAgainstModel", () => {
   it("rejects unknown size", () => {
     expect(() =>
       validateImageRequestAgainstModel("openai", imageRequest({ size: "9999x9999" }), imageModel),
+    ).toThrow(ProviderRequestError);
+  });
+
+  it("accepts free-form dimensions for arbitrary-size models", () => {
+    expect(() =>
+      validateImageRequestAgainstModel(
+        "openai",
+        imageRequest({ size: "1536x1024", model: "arbitrary-size-model" }),
+        arbitrarySizeImageModel,
+      ),
+    ).not.toThrow();
+  });
+
+  it("rejects non-dimension sizes for arbitrary-size models", () => {
+    expect(() =>
+      validateImageRequestAgainstModel(
+        "openai",
+        imageRequest({ size: "banana", model: "arbitrary-size-model" }),
+        arbitrarySizeImageModel,
+      ),
     ).toThrow(ProviderRequestError);
   });
 
@@ -112,21 +151,13 @@ describe("validateImageRequestAgainstModel", () => {
 
   it("accepts a quality value present in the supported list", () => {
     expect(() =>
-      validateImageRequestAgainstModel(
-        "openai",
-        imageRequest({ quality: "high" }),
-        imageModel,
-      ),
+      validateImageRequestAgainstModel("openai", imageRequest({ quality: "high" }), imageModel),
     ).not.toThrow();
   });
 
   it("rejects a quality value not in the supported list", () => {
     expect(() =>
-      validateImageRequestAgainstModel(
-        "openai",
-        imageRequest({ quality: "ultra" }),
-        imageModel,
-      ),
+      validateImageRequestAgainstModel("openai", imageRequest({ quality: "ultra" }), imageModel),
     ).toThrow(/quality 'ultra'/);
   });
 
@@ -160,9 +191,45 @@ describe("validateVideoRequestAgainstModel", () => {
 
   it("rejects unsupported resolution", () => {
     expect(() =>
+      validateVideoRequestAgainstModel("seedance", videoRequest({ resolution: "4k" }), videoModel),
+    ).toThrow(ProviderRequestError);
+  });
+
+  it("accepts supported aspect ratios", () => {
+    expect(() =>
       validateVideoRequestAgainstModel(
         "seedance",
-        videoRequest({ resolution: "4k" }),
+        videoRequest({ aspectRatio: "16:9" }),
+        videoModel,
+      ),
+    ).not.toThrow();
+  });
+
+  it("rejects unsupported aspect ratios", () => {
+    expect(() =>
+      validateVideoRequestAgainstModel(
+        "seedance",
+        videoRequest({ aspectRatio: "4:3" }),
+        videoModel,
+      ),
+    ).toThrow(ProviderRequestError);
+  });
+
+  it("accepts reference images exactly at the model cap", () => {
+    expect(() =>
+      validateVideoRequestAgainstModel(
+        "seedance",
+        videoRequest({ references: Array(2).fill({ path: "x", role: "freeform" }) }),
+        videoModel,
+      ),
+    ).not.toThrow();
+  });
+
+  it("rejects reference images over the model cap", () => {
+    expect(() =>
+      validateVideoRequestAgainstModel(
+        "seedance",
+        videoRequest({ references: Array(3).fill({ path: "x", role: "freeform" }) }),
         videoModel,
       ),
     ).toThrow(ProviderRequestError);

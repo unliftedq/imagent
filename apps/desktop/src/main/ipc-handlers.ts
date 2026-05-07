@@ -1053,9 +1053,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       const provider = runtime.videoRegistry.get(r.providerId);
       const resolvedModel = provider?.models?.get?.(r.model);
       const supportsRefs = resolvedModel?.capabilities?.supportsRefImages ?? true;
-      // VideoModelCaps doesn't carry a per-model `maxReferences`; we leave
-      // capping to the provider impl + UI-side hints.
-      const maxRefs: number | undefined = undefined;
+      const maxRefs = resolvedModel?.capabilities?.maxReferences;
 
       let resolution: AssetSlotResolution;
       try {

@@ -27,11 +27,22 @@ export function validateImageRequestAgainstModel(
     );
   }
 
-  if (req.size && caps.sizes && caps.sizes.length > 0 && !caps.sizes.includes(req.size)) {
-    throw new ProviderRequestError(
-      `model ${model.id} does not support size '${req.size}'. Supported: ${caps.sizes.join(", ")}`,
-      { vendorId },
-    );
+  if (req.size) {
+    const supportedSizes = caps.sizes ?? [];
+    const isListedSize = supportedSizes.includes(req.size);
+    const isArbitrarySize = caps.supportsArbitrarySize === true && /^\d+x\d+$/.test(req.size);
+    if (supportedSizes.length > 0 && !isListedSize && !isArbitrarySize) {
+      throw new ProviderRequestError(
+        `model ${model.id} does not support size '${req.size}'. Supported: ${supportedSizes.join(", ")}`,
+        { vendorId },
+      );
+    }
+    if (supportedSizes.length === 0 && caps.supportsArbitrarySize === true && !isArbitrarySize) {
+      throw new ProviderRequestError(
+        `model ${model.id} requires WIDTHxHEIGHT format for arbitrary sizes (got '${req.size}')`,
+        { vendorId },
+      );
+    }
   }
 
   if (
@@ -56,10 +67,9 @@ export function validateImageRequestAgainstModel(
   }
 
   if (req.negativePrompt && caps.supportsNegativePrompt === false) {
-    throw new ProviderRequestError(
-      `model ${model.id} does not support negativePrompt`,
-      { vendorId },
-    );
+    throw new ProviderRequestError(`model ${model.id} does not support negativePrompt`, {
+      vendorId,
+    });
   }
 
   if (req.seed !== undefined && caps.supportsSeed === false) {
@@ -68,10 +78,9 @@ export function validateImageRequestAgainstModel(
 
   if (req.quality !== undefined) {
     if (!caps.qualities || caps.qualities.length === 0) {
-      throw new ProviderRequestError(
-        `model ${model.id} does not support a quality parameter`,
-        { vendorId },
-      );
+      throw new ProviderRequestError(`model ${model.id} does not support a quality parameter`, {
+        vendorId,
+      });
     }
     if (!caps.qualities.includes(req.quality)) {
       throw new ProviderRequestError(
@@ -108,7 +117,11 @@ export function validateVideoRequestAgainstModel(
   if (!caps) return;
 
   if (req.durationSec !== undefined) {
-    if (caps.durationsSec && caps.durationsSec.length > 0 && !caps.durationsSec.includes(req.durationSec)) {
+    if (
+      caps.durationsSec &&
+      caps.durationsSec.length > 0 &&
+      !caps.durationsSec.includes(req.durationSec)
+    ) {
       throw new ProviderRequestError(
         `model ${model.id} only supports durations ${caps.durationsSec.join(",")}s (got ${req.durationSec}s)`,
         { vendorId },
@@ -147,6 +160,19 @@ export function validateVideoRequestAgainstModel(
     );
   }
 
+  if (
+    req.aspectRatio &&
+    caps.aspectRatios &&
+    caps.aspectRatios.length > 0 &&
+    !caps.aspectRatios.includes(req.aspectRatio)
+  ) {
+    throw new ProviderRequestError(
+      `model ${model.id} does not support aspectRatio '${req.aspectRatio}'. ` +
+        `Supported: ${caps.aspectRatios.join(", ")}`,
+      { vendorId },
+    );
+  }
+
   if (req.firstFrame && caps.supportsFirstFrame === false) {
     throw new ProviderRequestError(`model ${model.id} does not support firstFrame`, { vendorId });
   }
@@ -157,6 +183,13 @@ export function validateVideoRequestAgainstModel(
     throw new ProviderRequestError(`model ${model.id} does not support reference images`, {
       vendorId,
     });
+  }
+  if (caps.maxReferences !== undefined && req.references.length > caps.maxReferences) {
+    throw new ProviderRequestError(
+      `model ${model.id} accepts at most ${caps.maxReferences} reference images ` +
+        `(got ${req.references.length})`,
+      { vendorId },
+    );
   }
 }
 

@@ -9,8 +9,10 @@ import type { ImageGenerationResult } from "../domain/result.js";
  */
 export interface ImageCapabilities {
   readonly sizes: readonly string[];
+  readonly supportsArbitrarySize?: boolean;
   readonly aspectRatios: readonly string[];
   readonly maxReferences: number;
+  readonly maxReferenceSizeMb?: number;
   readonly maxOutputs: number;
   readonly supportsNegativePrompt: boolean;
   readonly supportsSeed: boolean;

@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const ImageModelCapsSchema = z.object({
   sizes: z.array(z.string()).optional(),
+  supportsArbitrarySize: z.boolean().optional(),
   aspectRatios: z.array(z.string()).optional(),
   /**
    * Declares which `quality` values the model accepts (e.g. OpenAI's
@@ -20,6 +21,7 @@ export const ImageModelCapsSchema = z.object({
    */
   outputFormats: z.array(z.string()).optional(),
   maxReferences: z.number().int().nonnegative().optional(),
+  maxReferenceSizeMb: z.number().positive().optional(),
   maxOutputs: z.number().int().min(1).default(1),
   supportsNegativePrompt: z.boolean().default(false),
   supportsSeed: z.boolean().default(false),
@@ -29,10 +31,12 @@ export type ImageModelCaps = z.infer<typeof ImageModelCapsSchema>;
 
 export const ImageModelCapsOverrideSchema = z.object({
   sizes: z.array(z.string()).optional(),
+  supportsArbitrarySize: z.boolean().optional(),
   aspectRatios: z.array(z.string()).optional(),
   qualities: z.array(z.string()).optional(),
   outputFormats: z.array(z.string()).optional(),
   maxReferences: z.number().int().nonnegative().optional(),
+  maxReferenceSizeMb: z.number().positive().optional(),
   maxOutputs: z.number().int().min(1).optional(),
   supportsNegativePrompt: z.boolean().optional(),
   supportsSeed: z.boolean().optional(),
@@ -45,6 +49,9 @@ export const VideoModelCapsSchema = z.object({
   maxDurationSec: z.number().optional(),
   fpsOptions: z.array(z.number()).optional(),
   resolutions: z.array(z.string()).optional(),
+  aspectRatios: z.array(z.string()).optional(),
+  maxReferences: z.number().int().nonnegative().optional(),
+  maxReferenceSizeMb: z.number().positive().optional(),
   supportsFirstFrame: z.boolean().default(false),
   supportsLastFrame: z.boolean().default(false),
   supportsRefImages: z.boolean().default(false),
@@ -56,6 +63,9 @@ export const VideoModelCapsOverrideSchema = z.object({
   maxDurationSec: z.number().optional(),
   fpsOptions: z.array(z.number()).optional(),
   resolutions: z.array(z.string()).optional(),
+  aspectRatios: z.array(z.string()).optional(),
+  maxReferences: z.number().int().nonnegative().optional(),
+  maxReferenceSizeMb: z.number().positive().optional(),
   supportsFirstFrame: z.boolean().optional(),
   supportsLastFrame: z.boolean().optional(),
   supportsRefImages: z.boolean().optional(),

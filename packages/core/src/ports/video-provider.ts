@@ -1,10 +1,6 @@
 import type { VideoModelDef } from "../domain/model.js";
 import type { VideoRequest } from "../domain/request.js";
-import type {
-  VideoGenerationResult,
-  VideoJobHandle,
-  VideoJobStatus,
-} from "../domain/result.js";
+import type { VideoGenerationResult, VideoJobHandle, VideoJobStatus } from "../domain/result.js";
 import type { ProviderTestResult } from "./image-provider.js";
 
 export interface VideoCapabilities {
@@ -12,6 +8,9 @@ export interface VideoCapabilities {
   readonly maxDurationSec: number;
   readonly fpsOptions: readonly number[];
   readonly resolutions: readonly string[];
+  readonly aspectRatios?: readonly string[];
+  readonly maxReferences?: number;
+  readonly maxReferenceSizeMb?: number;
   readonly supportsFirstFrame: boolean;
   readonly supportsLastFrame: boolean;
   readonly supportsRefImages: boolean;
