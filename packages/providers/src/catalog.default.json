@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "comments": "Bundled default model catalog. v2 separates canonical model capabilities from provider-facing offerings. Edit ~/.imagent/catalog.json to change provider routes such as Azure deployment names; do not edit this bundled file directly. Capabilities refreshed from official provider documentation and SDK references on 2026-05-07. Reference-image file-size limits are included where documented by providers; undocumented limits are omitted.",
   "models": {
     "image": {
       "gpt-image-2": {
