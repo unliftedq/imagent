@@ -1,7 +1,7 @@
 import type { ImageModelDef, ImageRequest } from "@imagent/core";
 import type { ProviderId } from "@imagent/ipc";
-import { Button, Icons, Select } from "@imagent/ui";
-import { useEffect, useMemo, useState } from "react";
+import { Button, Icons, Popover, Select } from "@imagent/ui";
+import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api.js";
 import { useAssetsStore } from "../../state/useAssetsStore.js";
 import { useConfigStore } from "../../state/useConfigStore.js";
@@ -126,10 +126,19 @@ export function ImageRail() {
   const caps = selectedModel?.capabilities;
 
   useEffect(() => {
-    if (!caps?.sizes || caps.sizes.length === 0) return;
-    if (draft.size && caps.sizes.includes(draft.size)) return;
-    setDraft({ size: caps.sizes[0] });
-  }, [caps?.sizes, draft.size, setDraft]);
+    const presets = caps?.sizes ?? [];
+    const allowArbitrary = caps?.supportsArbitrarySize === true;
+    if (presets.length === 0 && !allowArbitrary) return;
+    if (draft.size) {
+      if (presets.includes(draft.size)) return;
+      if (allowArbitrary && /^\d+x\d+$/.test(draft.size)) return;
+    }
+    if (presets.length > 0) {
+      setDraft({ size: presets[0] });
+    } else if (draft.size !== undefined) {
+      setDraft({ size: undefined });
+    }
+  }, [caps?.sizes, caps?.supportsArbitrarySize, draft.size, setDraft]);
 
   useEffect(() => {
     const supported = caps?.qualities;
@@ -298,24 +307,13 @@ export function ImageRail() {
         onChange={(next) => setDraft({ providerId: next.providerId, modelId: next.modelId })}
       />
 
-      {caps?.sizes && caps.sizes.length > 0 ? (
-        <Select.Root
-          value={draft.size ?? caps.sizes[0]}
-          onValueChange={(value) => setDraft({ size: value })}
-        >
-          <ToolbarSelectTrigger
-            ariaLabel="Size"
-            icon={<Icons.FrameCorners weight="duotone" className="size-3.5" />}
-            className="h-8 w-[132px] rounded-(--radius-pill) bg-(--bg) px-3 py-0 text-[12px]"
-          />
-          <Select.Content>
-            {caps.sizes.map((size) => (
-              <Select.Item key={size} value={size}>
-                {size}
-              </Select.Item>
-            ))}
-          </Select.Content>
-        </Select.Root>
+      {(caps?.sizes && caps.sizes.length > 0) || caps?.supportsArbitrarySize ? (
+        <SizePicker
+          presets={caps?.sizes ?? []}
+          value={draft.size}
+          allowCustom={caps?.supportsArbitrarySize === true}
+          onChange={(value) => setDraft({ size: value })}
+        />
       ) : null}
 
       {caps?.aspectRatios && caps.aspectRatios.length > 0 ? (
@@ -398,5 +396,225 @@ export function ImageRail() {
         </Select.Root>
       ) : null}
     </ChatComposerShell>
+  );
+}
+
+function parseCustomSize(value: string | undefined): { w: string; h: string } | null {
+  if (!value) return null;
+  const match = /^(\d+)x(\d+)$/.exec(value);
+  if (!match) return null;
+  return { w: match[1] ?? "", h: match[2] ?? "" };
+}
+
+function SizePicker({
+  presets,
+  value,
+  allowCustom,
+  onChange,
+}: {
+  presets: readonly string[];
+  value: string | undefined;
+  allowCustom: boolean;
+  onChange: (next: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const isPreset = !!value && presets.includes(value);
+  const customParts = !isPreset ? parseCustomSize(value) : null;
+  const isCustom = customParts !== null;
+
+  const [w, setW] = useState(customParts?.w ?? String(DIMENSION_DEFAULT));
+  const [h, setH] = useState(customParts?.h ?? String(DIMENSION_DEFAULT));
+  const [error, setError] = useState<string | null>(null);
+
+  // Sync inputs whenever the popover opens or the underlying value changes.
+  useEffect(() => {
+    if (!open) return;
+    setW(customParts?.w ?? String(DIMENSION_DEFAULT));
+    setH(customParts?.h ?? String(DIMENSION_DEFAULT));
+    setError(null);
+  }, [open, customParts?.w, customParts?.h]);
+
+  const display = value ?? presets[0] ?? "Size";
+
+  const applyCustom = (): void => {
+    const wNum = Number.parseInt(w, 10);
+    const hNum = Number.parseInt(h, 10);
+    if (!Number.isFinite(wNum) || wNum <= 0 || !Number.isFinite(hNum) || hNum <= 0) {
+      setError("Width and height must be positive integers.");
+      return;
+    }
+    setError(null);
+    onChange(`${wNum}x${hNum}`);
+    setOpen(false);
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>): void => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      applyCustom();
+    }
+  };
+
+  return (
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          aria-label="Size"
+          className={
+            "flex h-8 w-[132px] items-center justify-between gap-2 rounded-(--radius-pill) " +
+            "border border-(--border) bg-(--bg) px-3 py-0 text-[12px] text-(--text) " +
+            "transition-colors duration-(--duration-fast) " +
+            "hover:border-(--text-muted) " +
+            "focus-visible:outline-none focus:border-(--text) " +
+            "data-[state=open]:border-(--text)"
+          }
+        >
+          <span className="flex min-w-0 items-center gap-1.5">
+            <Icons.FrameCorners
+              weight="duotone"
+              className="size-3.5 shrink-0 text-(--text-muted)"
+            />
+            <span className="truncate">{display}</span>
+          </span>
+          <Icons.CaretDown weight="bold" className="size-3 shrink-0 text-(--text-muted)" />
+        </button>
+      </Popover.Trigger>
+      <Popover.Content align="start" className="w-[280px] p-2">
+        {presets.length > 0 ? (
+          <div className="flex flex-col gap-0.5" role="listbox" aria-label="Preset sizes">
+            {presets.map((preset) => {
+              const selected = preset === value;
+              return (
+                <button
+                  key={preset}
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  onClick={() => {
+                    onChange(preset);
+                    setOpen(false);
+                  }}
+                  className={
+                    "flex h-8 items-center justify-between rounded-(--radius-sm) px-2 " +
+                    "text-[12px] text-(--text) hover:bg-(--surface) " +
+                    "focus-visible:outline-none focus-visible:bg-(--surface)"
+                  }
+                >
+                  <span>{preset}</span>
+                  {selected ? <Icons.Check weight="bold" className="size-3.5" /> : null}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+        {allowCustom ? (
+          <>
+            {presets.length > 0 ? <div className="my-2 h-px bg-(--border)" /> : null}
+            <div className="flex flex-col gap-2 px-1 pb-1 pt-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium text-(--text-muted)">
+                  Custom size (px)
+                </span>
+                {isCustom ? (
+                  <Icons.Check weight="bold" className="size-3.5 text-(--text)" />
+                ) : null}
+              </div>
+              <DimensionRow
+                label="Width"
+                value={w}
+                onChange={setW}
+                onKeyDown={handleKeyDown}
+              />
+              <DimensionRow
+                label="Height"
+                value={h}
+                onChange={setH}
+                onKeyDown={handleKeyDown}
+              />
+              {error ? (
+                <span className="text-[11px] text-(--danger)" role="alert">
+                  {error}
+                </span>
+              ) : null}
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={applyCustom}
+                disabled={!w.trim() || !h.trim()}
+              >
+                Apply
+              </Button>
+            </div>
+          </>
+        ) : null}
+      </Popover.Content>
+    </Popover.Root>
+  );
+}
+
+const DIMENSION_MIN = 256;
+const DIMENSION_MAX = 4096;
+const DIMENSION_STEP = 8;
+const DIMENSION_DEFAULT = 1024;
+
+function DimensionRow({
+  label,
+  value,
+  onChange,
+  onKeyDown,
+}: {
+  label: string;
+  value: string;
+  onChange: (next: string) => void;
+  onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
+}) {
+  const numeric = Number.parseInt(value, 10);
+  const sliderValue = Number.isFinite(numeric)
+    ? Math.min(DIMENSION_MAX, Math.max(DIMENSION_MIN, numeric))
+    : DIMENSION_MIN;
+
+  return (
+    <div className="flex items-center gap-2">
+      <label
+        className="w-11 shrink-0 text-[11px] font-medium text-(--text-muted)"
+        htmlFor={`size-${label.toLowerCase()}-input`}
+      >
+        {label}
+      </label>
+      <input
+        type="range"
+        min={DIMENSION_MIN}
+        max={DIMENSION_MAX}
+        step={DIMENSION_STEP}
+        value={sliderValue}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label={`${label} slider`}
+        className={
+          "h-1 flex-1 cursor-ew-resize appearance-none rounded-full bg-(--surface) " +
+          "accent-(--accent) " +
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--accent)/40"
+        }
+      />
+      <input
+        id={`size-${label.toLowerCase()}-input`}
+        type="number"
+        min={1}
+        step={1}
+        inputMode="numeric"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={onKeyDown}
+        placeholder={String(DIMENSION_DEFAULT)}
+        aria-label={label}
+        className={
+          "h-7 w-14 shrink-0 rounded-(--radius-sm) border border-(--border) bg-(--bg) " +
+          "px-1.5 text-right text-[12px] tabular-nums text-(--text) " +
+          "placeholder:text-(--text-faint) " +
+          "focus-visible:outline-none focus:border-(--text) " +
+          "[&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        }
+      />
+    </div>
   );
 }
