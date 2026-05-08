@@ -23,6 +23,8 @@ describe("loadCatalog", () => {
     expect(loaded.version).toBe(2);
     // Sanity: the bundled default ships with at least one openai image model.
     expect(loaded.providers.openai?.image?.length).toBeGreaterThan(0);
+    expect(loaded.models.image["MAI-Image-2"]?.capabilities?.minWidth).toBe(768);
+    expect(loaded.models.image["flux-2-pro"]?.capabilities?.maxWidth).toBe(2048);
 
     const onDisk = JSON.parse(await fs.readFile(userPath, "utf8")) as ModelCatalog;
     expect(onDisk.version).toBe(2);

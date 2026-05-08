@@ -3,6 +3,15 @@ import { z } from "zod";
 export const ImageModelCapsSchema = z.object({
   sizes: z.array(z.string()).optional(),
   supportsArbitrarySize: z.boolean().optional(),
+  minWidth: z.number().int().positive().optional(),
+  maxWidth: z.number().int().positive().optional(),
+  minHeight: z.number().int().positive().optional(),
+  maxHeight: z.number().int().positive().optional(),
+  maxPixels: z.number().int().positive().optional(),
+  widthMultiple: z.number().int().positive().optional(),
+  heightMultiple: z.number().int().positive().optional(),
+  minAspectRatio: z.number().positive().optional(),
+  maxAspectRatio: z.number().positive().optional(),
   aspectRatios: z.array(z.string()).optional(),
   /**
    * Declares which `quality` values the model accepts (e.g. OpenAI's
@@ -32,6 +41,15 @@ export type ImageModelCaps = z.infer<typeof ImageModelCapsSchema>;
 export const ImageModelCapsOverrideSchema = z.object({
   sizes: z.array(z.string()).optional(),
   supportsArbitrarySize: z.boolean().optional(),
+  minWidth: z.number().int().positive().optional(),
+  maxWidth: z.number().int().positive().optional(),
+  minHeight: z.number().int().positive().optional(),
+  maxHeight: z.number().int().positive().optional(),
+  maxPixels: z.number().int().positive().optional(),
+  widthMultiple: z.number().int().positive().optional(),
+  heightMultiple: z.number().int().positive().optional(),
+  minAspectRatio: z.number().positive().optional(),
+  maxAspectRatio: z.number().positive().optional(),
   aspectRatios: z.array(z.string()).optional(),
   qualities: z.array(z.string()).optional(),
   outputFormats: z.array(z.string()).optional(),

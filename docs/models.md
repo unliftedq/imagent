@@ -16,7 +16,7 @@ This page summarizes the bundled default model catalog in `packages/providers/sr
 
 ### OpenAI / Azure OpenAI: `gpt-image-2`
 
-- **Size / ratio controls:** Standard presets `1024x1024`, `1536x1024`, `1024x1536`, `auto`; arbitrary `WIDTHxHEIGHT` also supported when dimensions are divisible by 16, aspect ratio is between 1:3 and 3:1, and resolution is within current OpenAI limits.
+- **Size / ratio controls:** Standard presets `1024x1024`, `1536x1024`, `1024x1536`, `auto`; arbitrary `WIDTHxHEIGHT` also supported when dimensions are divisible by 16, aspect ratio is between 1:3 and 3:1, and resolution is within current OpenAI limits (catalog records max edge/pixel limits from current API docs).
 - **Output controls:** `quality`: `low`, `medium`, `high`, `auto`; `outputFormat`: `png`, `jpeg`, `webp`; max outputs 10.
 - **Reference-image support:** Supported; max 16 images; each PNG/JPEG/WebP reference must be under 50 MB.
 - **Other capabilities:** No negative prompt; no seed.
@@ -33,6 +33,13 @@ This page summarizes the bundled default model catalog in `packages/providers/sr
 - **Size / ratio controls:** `1024x1024`, `1024x1536`, `1536x1024`.
 - **Output controls:** `quality`: `low`, `medium`, `high`, `auto`; `outputFormat`: `png`, `jpeg`, `webp`; max outputs 10.
 - **Reference-image support:** Supported; max 16 images; each PNG/JPEG/WebP reference must be under 50 MB.
+- **Other capabilities:** No negative prompt; no seed.
+
+### Azure OpenAI: `MAI-Image-2` / `MAI-Image-2e`
+
+- **Size controls:** Catalog exposes common `WIDTHxHEIGHT` presets and allows arbitrary `WIDTHxHEIGHT` values; custom width/height must be 768–1365 pixels and `width × height` must be ≤ 1,048,576.
+- **Output controls:** PNG only; max outputs 1.
+- **Reference-image support:** Not supported.
 - **Other capabilities:** No negative prompt; no seed.
 
 ### Google AI Studio: `gemini-2.5-flash-image`
@@ -58,37 +65,51 @@ This page summarizes the bundled default model catalog in `packages/providers/sr
 
 ### Black Forest Labs: `flux-2-pro`
 
-- **Size controls:** Catalog exposes common `WIDTHxHEIGHT` presets and allows arbitrary `WIDTHxHEIGHT` values; the API receives free-form `width`/`height` values within provider constraints.
+- **Size controls:** Catalog exposes common `WIDTHxHEIGHT` presets and allows arbitrary `WIDTHxHEIGHT` values; custom width/height must be 256–2048 pixels and multiples of 32.
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Supported; max 8 input images. Official per-image file-size limit was not found.
 - **Other capabilities:** Supports seed; no negative prompt.
 
 ### Black Forest Labs: `flux-2-max`
 
-- **Size controls:** Same common `WIDTHxHEIGHT` presets and arbitrary-size support as `flux-2-pro`; the API uses free-form dimensions.
+- **Size controls:** Same common `WIDTHxHEIGHT` presets and arbitrary-size support as `flux-2-pro`; custom width/height must be 256–2048 pixels and multiples of 32.
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Supported; max 8 input images through the API.
 - **Other capabilities:** Supports seed; no negative prompt.
 
 ### Black Forest Labs: `flux-2-flex`
 
-- **Size controls:** Same common `WIDTHxHEIGHT` presets and arbitrary-size support as `flux-2-pro`; the API uses free-form dimensions.
+- **Size controls:** Same common `WIDTHxHEIGHT` presets and arbitrary-size support as `flux-2-pro`; custom width/height must be 256–2048 pixels and multiples of 32.
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Supported; max 8 input images.
 - **Other capabilities:** Supports seed; no negative prompt. Flex also has provider-specific raw controls such as steps and guidance.
 
 ### Black Forest Labs: `flux-2-klein-9b`
 
-- **Size controls:** Same common `WIDTHxHEIGHT` presets and arbitrary-size support as the other FLUX.2 endpoints.
+- **Size controls:** Same common `WIDTHxHEIGHT` presets and arbitrary-size support as the other FLUX.2 endpoints; custom width/height must be 256–2048 pixels and multiples of 32.
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Supported; max 4 input images.
 - **Other capabilities:** Supports seed; no negative prompt.
 
 ### Black Forest Labs: `flux-2-klein-4b`
 
-- **Size controls:** Same common `WIDTHxHEIGHT` presets and arbitrary-size support as the other FLUX.2 endpoints.
+- **Size controls:** Same common `WIDTHxHEIGHT` presets and arbitrary-size support as the other FLUX.2 endpoints; custom width/height must be 256–2048 pixels and multiples of 32.
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Supported; max 4 input images.
+- **Other capabilities:** Supports seed; no negative prompt.
+
+### Black Forest Labs: `flux-kontext-pro`
+
+- **Size controls:** Common `WIDTHxHEIGHT` presets plus arbitrary-size support; custom width/height must be 256–1440 pixels and multiples of 32.
+- **Output controls:** Max outputs 1.
+- **Reference-image support:** Supported; max 1 input image.
+- **Other capabilities:** Supports seed; no negative prompt.
+
+### Black Forest Labs: `flux-pro-1.1`
+
+- **Size controls:** Common `WIDTHxHEIGHT` presets plus arbitrary-size support; custom width/height must be 256–1440 pixels and multiples of 32.
+- **Output controls:** Max outputs 1.
+- **Reference-image support:** Not supported.
 - **Other capabilities:** Supports seed; no negative prompt.
 
 ### ByteDance / Volcano Ark: `doubao-seedream-4-0-250828`
