@@ -14,8 +14,6 @@ export interface ImageCapabilities {
   readonly maxReferences: number;
   readonly maxReferenceSizeMb?: number;
   readonly maxOutputs: number;
-  readonly supportsNegativePrompt: boolean;
-  readonly supportsSeed: boolean;
   readonly supportsStyleRef: boolean;
 }
 

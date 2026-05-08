@@ -300,7 +300,6 @@ describe("azureModelFamily", () => {
     expect(
       azureModelFamily({
         id: "MAI-Image-2e",
-        capabilities: { maxOutputs: 1, supportsNegativePrompt: false, supportsSeed: false, supportsStyleRef: false },
       }),
     ).toBe("mai-images");
   });

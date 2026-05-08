@@ -74,8 +74,6 @@ function fakeImageProvider(): ImageProvider {
       aspectRatios: [],
       maxReferences: 0,
       maxOutputs: 1,
-      supportsNegativePrompt: false,
-      supportsSeed: false,
       supportsStyleRef: false,
     },
     models: new Map(),

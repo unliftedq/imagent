@@ -136,8 +136,6 @@ export const ImageModelCapsSchema = z.object({
   qualities:              z.array(z.string()).optional(),   // OpenAI's `low|medium|high|auto`; absent = no quality knob, request must not set quality
   maxReferences:          z.number().int().nonnegative().optional(),
   maxOutputs:             z.number().int().min(1).default(1),
-  supportsNegativePrompt: z.boolean().default(false),
-  supportsSeed:           z.boolean().default(false),
   supportsStyleRef:       z.boolean().default(false),
 });
 

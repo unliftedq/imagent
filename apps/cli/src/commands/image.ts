@@ -61,7 +61,7 @@ export function registerImageCommand(program: Command): void {
     )
     .option(
       "-o, --option <key=value>",
-      "Repeatable model capability option. Common keys: size, aspectRatio, quality, outputFormat, count, seed, negativePrompt. Run `imagent options --provider <id> --model <id>` for the exact list.",
+      "Repeatable model capability option. Common keys: size, aspectRatio, quality, outputFormat, count. Run `imagent options --provider <id> --model <id>` for the exact list.",
       collect,
       [],
     )
@@ -232,12 +232,6 @@ function parseImageOptions(values: readonly string[], model: ImageModelDef): Par
       case "outputFormat":
         out.outputFormat = value;
         break;
-      case "negativePrompt":
-        out.negativePrompt = value;
-        break;
-      case "seed":
-        out.seed = parsePositiveIntegerOption("image", canonical, value);
-        break;
       case "count":
         out.count = parsePositiveIntegerOption("image", canonical, value);
         break;
@@ -255,7 +249,6 @@ function parseImageOptions(values: readonly string[], model: ImageModelDef): Par
 const imageOptionAliases: Record<string, string> = {
   aspect: "aspectRatio",
   format: "outputFormat",
-  negative: "negativePrompt",
 };
 
 function assertImageOptionSupported(key: string, model: ImageModelDef): void {
@@ -269,16 +262,14 @@ function supportedImageOptions(model: ImageModelDef): string[] {
   const caps = model.capabilities;
   if (!caps) {
     // Unknown capabilities means the catalog cannot provide dynamic guidance,
-    // so keep the full typed request surface available and let providers validate.
-    return ["size", "aspectRatio", "quality", "outputFormat", "negativePrompt", "seed", "count"];
+    // so keep the model-option request surface available and let providers validate.
+    return ["size", "aspectRatio", "quality", "outputFormat", "count"];
   }
   const keys = ["count"];
   if (caps.sizes && caps.sizes.length > 0) keys.push("size");
   if (caps.aspectRatios && caps.aspectRatios.length > 0) keys.push("aspectRatio");
   if (caps.qualities && caps.qualities.length > 0) keys.push("quality");
   if (caps.outputFormats && caps.outputFormats.length > 0) keys.push("outputFormat");
-  if (caps.supportsNegativePrompt) keys.push("negativePrompt");
-  if (caps.supportsSeed) keys.push("seed");
   return keys;
 }
 

@@ -309,8 +309,6 @@ export function aggregateCapabilities(
   let maxReferences = 0;
   let maxReferenceSizeMb: number | undefined;
   let maxOutputs = 1;
-  let supportsNegativePrompt = false;
-  let supportsSeed = false;
   let supportsStyleRef = false;
   for (const m of models.values()) {
     const c = m.capabilities;
@@ -323,8 +321,6 @@ export function aggregateCapabilities(
       maxReferenceSizeMb = Math.max(maxReferenceSizeMb ?? 0, c.maxReferenceSizeMb);
     }
     maxOutputs = Math.max(maxOutputs, c.maxOutputs);
-    supportsNegativePrompt ||= c.supportsNegativePrompt;
-    supportsSeed ||= c.supportsSeed;
     supportsStyleRef ||= c.supportsStyleRef;
   }
   return {
@@ -334,8 +330,6 @@ export function aggregateCapabilities(
     maxReferences,
     ...(maxReferenceSizeMb !== undefined ? { maxReferenceSizeMb } : {}),
     maxOutputs,
-    supportsNegativePrompt,
-    supportsSeed,
     supportsStyleRef,
   };
 }

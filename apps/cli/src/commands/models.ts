@@ -392,8 +392,6 @@ function supportedImageOptionDescriptors(model: ImageModelDef): OptionDescriptor
       { key: "aspectRatio" },
       { key: "quality" },
       { key: "outputFormat" },
-      { key: "negativePrompt" },
-      { key: "seed", note: "positive integer" },
     ];
   }
   if (caps.sizes && caps.sizes.length > 0) out.push({ key: "size", allowed: [...caps.sizes] });
@@ -405,8 +403,6 @@ function supportedImageOptionDescriptors(model: ImageModelDef): OptionDescriptor
     out.push({ key: "quality", allowed: [...caps.qualities] });
   if (caps.outputFormats && caps.outputFormats.length > 0)
     out.push({ key: "outputFormat", allowed: [...caps.outputFormats] });
-  if (caps.supportsNegativePrompt) out.push({ key: "negativePrompt" });
-  if (caps.supportsSeed) out.push({ key: "seed", note: "positive integer" });
   return out;
 }
 

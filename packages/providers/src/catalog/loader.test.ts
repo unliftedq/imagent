@@ -44,8 +44,6 @@ describe("loadCatalog", () => {
             capabilities: {
               sizes: ["1024x1024"],
               maxOutputs: 1,
-              supportsNegativePrompt: false,
-              supportsSeed: false,
               supportsStyleRef: false,
             },
             defaults: { size: "1024x1024", count: 1 },
