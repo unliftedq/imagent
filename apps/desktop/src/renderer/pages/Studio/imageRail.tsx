@@ -458,8 +458,16 @@ function SizePicker({
   const hint = customSizeHint(constraints);
 
   const applyCustom = (): void => {
+    if (!w.trim() || !h.trim()) {
+      setError("Width and height are required.");
+      return;
+    }
     const wNum = Number(w);
     const hNum = Number(h);
+    if (!Number.isFinite(wNum) || !Number.isFinite(hNum)) {
+      setError("Width and height must be numbers.");
+      return;
+    }
     if (!Number.isInteger(wNum) || wNum <= 0 || !Number.isInteger(hNum) || hNum <= 0) {
       setError("Width and height must be positive integers.");
       return;
@@ -624,6 +632,9 @@ function validateCustomSize(
   height: number,
   constraints: CustomSizeConstraints,
 ): string | null {
+  if (height <= 0) {
+    return "Height must be greater than 0.";
+  }
   if (width < constraints.width.min || width > constraints.width.max) {
     return `Width must be between ${constraints.width.min} and ${constraints.width.max}.`;
   }
@@ -641,10 +652,16 @@ function validateCustomSize(
   }
 
   const aspectRatio = width / height;
-  if (constraints.minAspectRatio !== undefined && aspectRatio < constraints.minAspectRatio) {
+  if (
+    constraints.minAspectRatio !== undefined &&
+    aspectRatio + ASPECT_RATIO_EPSILON < constraints.minAspectRatio
+  ) {
     return `Aspect ratio must be at least ${formatAspectRatio(constraints.minAspectRatio)}.`;
   }
-  if (constraints.maxAspectRatio !== undefined && aspectRatio > constraints.maxAspectRatio) {
+  if (
+    constraints.maxAspectRatio !== undefined &&
+    aspectRatio - ASPECT_RATIO_EPSILON > constraints.maxAspectRatio
+  ) {
     return `Aspect ratio must be at most ${formatAspectRatio(constraints.maxAspectRatio)}.`;
   }
   return null;
