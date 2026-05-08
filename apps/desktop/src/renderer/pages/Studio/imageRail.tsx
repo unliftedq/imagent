@@ -632,6 +632,9 @@ function validateCustomSize(
   height: number,
   constraints: CustomSizeConstraints,
 ): string | null {
+  if (width <= 0) {
+    return "Width must be greater than 0.";
+  }
   if (height <= 0) {
     return "Height must be greater than 0.";
   }
@@ -668,8 +671,8 @@ function validateCustomSize(
 }
 
 function customSizeHint(constraints: CustomSizeConstraints): string {
-  const width = `${constraints.width.min}–${constraints.width.max}`;
-  const height = `${constraints.height.min}–${constraints.height.max}`;
+  const width = `${constraints.width.min} to ${constraints.width.max}`;
+  const height = `${constraints.height.min} to ${constraints.height.max}`;
   const widthStep = constraints.width.step > 1 ? `, step ${constraints.width.step}` : "";
   const heightStep = constraints.height.step > 1 ? `, step ${constraints.height.step}` : "";
   return `Width ${width}${widthStep}; height ${height}${heightStep}.`;
