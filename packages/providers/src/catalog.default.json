@@ -77,7 +77,15 @@
         "id": "MAI-Image-2",
         "displayName": "MAI Image 2 (preview)",
         "capabilities": {
-          "sizes": ["1024x1024", "1024x768", "768x1024", "1280x768", "768x1280", "1365x768", "768x1365"],
+          "sizes": [
+            "1024x1024",
+            "1024x768",
+            "768x1024",
+            "1280x768",
+            "768x1280",
+            "1365x768",
+            "768x1365"
+          ],
           "supportsArbitrarySize": true,
           "minWidth": 768,
           "maxWidth": 1365,
@@ -101,7 +109,15 @@
         "id": "MAI-Image-2e",
         "displayName": "MAI Image 2e (preview)",
         "capabilities": {
-          "sizes": ["1024x1024", "1024x768", "768x1024", "1280x768", "768x1280", "1365x768", "768x1365"],
+          "sizes": [
+            "1024x1024",
+            "1024x768",
+            "768x1024",
+            "1280x768",
+            "768x1280",
+            "1365x768",
+            "768x1365"
+          ],
           "supportsArbitrarySize": true,
           "minWidth": 768,
           "maxWidth": 1365,
@@ -191,7 +207,15 @@
         "id": "flux-2-pro",
         "displayName": "FLUX.2 [pro]",
         "capabilities": {
-          "sizes": ["1024x1024", "1024x768", "768x1024", "1280x720", "720x1280", "1440x720", "720x1440"],
+          "sizes": [
+            "1024x1024",
+            "1024x768",
+            "768x1024",
+            "1280x720",
+            "720x1280",
+            "1440x720",
+            "720x1440"
+          ],
           "supportsArbitrarySize": true,
           "minWidth": 256,
           "maxWidth": 2048,
@@ -214,7 +238,15 @@
         "id": "flux-2-max",
         "displayName": "FLUX.2 [max]",
         "capabilities": {
-          "sizes": ["1024x1024", "1024x768", "768x1024", "1280x720", "720x1280", "1440x720", "720x1440"],
+          "sizes": [
+            "1024x1024",
+            "1024x768",
+            "768x1024",
+            "1280x720",
+            "720x1280",
+            "1440x720",
+            "720x1440"
+          ],
           "supportsArbitrarySize": true,
           "minWidth": 256,
           "maxWidth": 2048,
@@ -237,7 +269,15 @@
         "id": "flux-2-flex",
         "displayName": "FLUX.2 [flex]",
         "capabilities": {
-          "sizes": ["1024x1024", "1024x768", "768x1024", "1280x720", "720x1280", "1440x720", "720x1440"],
+          "sizes": [
+            "1024x1024",
+            "1024x768",
+            "768x1024",
+            "1280x720",
+            "720x1280",
+            "1440x720",
+            "720x1440"
+          ],
           "supportsArbitrarySize": true,
           "minWidth": 256,
           "maxWidth": 2048,
@@ -260,7 +300,15 @@
         "id": "flux-2-klein-9b",
         "displayName": "FLUX.2 [Klein 9B]",
         "capabilities": {
-          "sizes": ["1024x1024", "1024x768", "768x1024", "1280x720", "720x1280", "1440x720", "720x1440"],
+          "sizes": [
+            "1024x1024",
+            "1024x768",
+            "768x1024",
+            "1280x720",
+            "720x1280",
+            "1440x720",
+            "720x1440"
+          ],
           "supportsArbitrarySize": true,
           "minWidth": 256,
           "maxWidth": 2048,
@@ -283,7 +331,15 @@
         "id": "flux-2-klein-4b",
         "displayName": "FLUX.2 [Klein 4B]",
         "capabilities": {
-          "sizes": ["1024x1024", "1024x768", "768x1024", "1280x720", "720x1280", "1440x720", "720x1440"],
+          "sizes": [
+            "1024x1024",
+            "1024x768",
+            "768x1024",
+            "1280x720",
+            "720x1280",
+            "1440x720",
+            "720x1440"
+          ],
           "supportsArbitrarySize": true,
           "minWidth": 256,
           "maxWidth": 2048,
@@ -306,7 +362,15 @@
         "id": "flux-kontext-pro",
         "displayName": "FLUX.1 Kontext [pro]",
         "capabilities": {
-          "sizes": ["1024x1024", "1024x768", "768x1024", "1280x720", "720x1280", "1440x720", "720x1440"],
+          "sizes": [
+            "1024x1024",
+            "1024x768",
+            "768x1024",
+            "1280x720",
+            "720x1280",
+            "1440x720",
+            "720x1440"
+          ],
           "supportsArbitrarySize": true,
           "minWidth": 256,
           "maxWidth": 1440,
@@ -329,7 +393,15 @@
         "id": "flux-pro-1.1",
         "displayName": "FLUX1.1 [pro]",
         "capabilities": {
-          "sizes": ["1024x1024", "1024x768", "768x1024", "1280x720", "720x1280", "1440x720", "720x1440"],
+          "sizes": [
+            "1024x1024",
+            "1024x768",
+            "768x1024",
+            "1280x720",
+            "720x1280",
+            "1440x720",
+            "720x1440"
+          ],
           "supportsArbitrarySize": true,
           "minWidth": 256,
           "maxWidth": 1440,
