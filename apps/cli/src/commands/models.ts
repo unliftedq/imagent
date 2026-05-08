@@ -416,7 +416,6 @@ function supportedVideoOptionDescriptors(model: VideoModelDef): OptionDescriptor
       { key: "aspectRatio" },
       { key: "firstFrame", note: "path to a starting-frame image" },
       { key: "lastFrame", note: "path to an ending-frame image" },
-      { key: "negativePrompt" },
     ];
   }
   const out: OptionDescriptor[] = [];

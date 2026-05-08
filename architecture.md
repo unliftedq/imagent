@@ -239,7 +239,7 @@ CREATE TABLE gallery_items (
   negative_prompt  TEXT,
   provider_id      TEXT NOT NULL,            -- "openai" | "azure" | "google" | "flux-bfl" | "bytedance" | "xai"
   model            TEXT NOT NULL,
-  params_json      TEXT NOT NULL,            -- aspect, size, fps, duration, count, seed, raw provider params
+  params_json      TEXT NOT NULL,            -- aspect, size, fps, duration, count, raw provider params
   rel_path         TEXT NOT NULL,            -- output file under ~/.imagent/gallery/
   thumb_path       TEXT,
   duration_ms      INTEGER,                  -- video only

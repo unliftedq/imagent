@@ -128,7 +128,6 @@ export class GoogleVideoProvider implements VideoProvider {
     if (merged.aspectRatio) config.aspectRatio = merged.aspectRatio;
     if (merged.durationSec !== undefined) config.durationSeconds = merged.durationSec;
     if (merged.resolution) config.resolution = merged.resolution;
-    if (merged.negativePrompt) config.negativePrompt = merged.negativePrompt;
     config.personGeneration = "allow_all";
 
     if (model.id.startsWith("veo-2.")) {

@@ -206,7 +206,6 @@ export class FluxImageProvider implements ImageProvider {
         out.height = Number(m[2]);
       }
     }
-    if (req.seed !== undefined) out.seed = req.seed;
     if (req.references.length > 0) {
       const refs = await loadImageReferences(req.references, this.id);
       const dataUrls = refs.map(imageDataUrl);

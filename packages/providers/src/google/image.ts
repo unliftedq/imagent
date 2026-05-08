@@ -126,8 +126,6 @@ export class GoogleImageProvider implements ImageProvider {
     const config: Record<string, unknown> = {};
     if (merged.count !== undefined) config.numberOfImages = merged.count;
     if (merged.aspectRatio) config.aspectRatio = merged.aspectRatio;
-    if (merged.negativePrompt) config.negativePrompt = merged.negativePrompt;
-    if (merged.seed !== undefined) config.seed = merged.seed;
     if (signal) config.abortSignal = signal;
 
     let response: Awaited<

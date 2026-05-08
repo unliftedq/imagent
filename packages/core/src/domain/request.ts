@@ -11,7 +11,6 @@ export type ImageReference = z.infer<typeof ImageReferenceSchema>;
 
 export const ImageRequestSchema = z.object({
   prompt: z.string().min(1),
-  negativePrompt: z.string().optional(),
   providerId: z.string(),
   model: z.string(),
   size: z.string().optional(),
@@ -24,7 +23,6 @@ export const ImageRequestSchema = z.object({
    * provider uses the newer `output_format` parameter (gpt-image-*). */
   outputFormat: z.string().optional(),
   count: z.number().int().min(1).default(1),
-  seed: z.number().int().optional(),
   references: z.array(ImageReferenceSchema).default([]),
   /** Asset ids to record on the resulting gallery_item via gallery_item_assets. */
   assetIds: z.array(z.string()).default([]),
@@ -39,7 +37,6 @@ export type ImageRequest = z.infer<typeof ImageRequestSchema>;
 
 export const VideoRequestSchema = z.object({
   prompt: z.string().min(1),
-  negativePrompt: z.string().optional(),
   providerId: z.string(),
   model: z.string(),
   durationSec: z.number().positive().optional(),

@@ -631,7 +631,6 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       if (parent.kind === "video") {
         const req: VideoRequest = {
           prompt: parent.prompt,
-          ...(parent.negativePrompt ? { negativePrompt: parent.negativePrompt } : {}),
           providerId: parent.providerId,
           model: parent.model,
           ...(typeof params.durationSec === "number" ? { durationSec: params.durationSec } : {}),
@@ -645,13 +644,11 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       }
       const req: ImageRequest = {
         prompt: parent.prompt,
-        ...(parent.negativePrompt ? { negativePrompt: parent.negativePrompt } : {}),
         providerId: parent.providerId,
         model: parent.model,
         ...(typeof params.size === "string" ? { size: params.size } : {}),
         ...(typeof params.aspectRatio === "string" ? { aspectRatio: params.aspectRatio } : {}),
         count: typeof params.count === "number" ? params.count : 1,
-        ...(typeof params.seed === "number" ? { seed: params.seed } : {}),
         references: [],
         assetIds: [],
         parentId: parent.id,

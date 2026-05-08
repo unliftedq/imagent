@@ -274,8 +274,6 @@ async function runRemix(itemId: string, options: GalleryRemixOptions): Promise<v
         count,
         ...(typeof params.size === "string" ? { size: params.size } : {}),
         ...(typeof params.aspectRatio === "string" ? { aspectRatio: params.aspectRatio } : {}),
-        ...(typeof params.seed === "number" ? { seed: params.seed } : {}),
-        ...(parent.negativePrompt ? { negativePrompt: parent.negativePrompt } : {}),
         references: references.map((p) => ({ path: p, role: "freeform" as const })),
         assetIds: slotted.assetIds,
       };
@@ -324,7 +322,6 @@ async function runRemix(itemId: string, options: GalleryRemixOptions): Promise<v
       prompt: newPrompt,
       providerId,
       model: parent.model,
-      ...(parent.negativePrompt ? { negativePrompt: parent.negativePrompt } : {}),
       ...(typeof params.durationSec === "number" ? { durationSec: params.durationSec } : {}),
       ...(typeof params.fps === "number" ? { fps: params.fps } : {}),
       ...(typeof params.resolution === "string" ? { resolution: params.resolution } : {}),
