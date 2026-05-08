@@ -451,7 +451,7 @@ function SizePicker({
   const applyCustom = (): void => {
     const wNum = Number(w);
     const hNum = Number(h);
-    if (!Number.isInteger(wNum) || !Number.isInteger(hNum)) {
+    if (!Number.isInteger(wNum) || wNum <= 0 || !Number.isInteger(hNum) || hNum <= 0) {
       setError("Width and height must be positive integers.");
       return;
     }
@@ -626,10 +626,10 @@ function validateCustomSize(
     return `Height must be between ${constraints.height.min} and ${constraints.height.max}.`;
   }
   if (constraints.width.step > 1 && width % constraints.width.step !== 0) {
-    return `Width must use step ${constraints.width.step}.`;
+    return `Width must be a multiple of ${constraints.width.step}.`;
   }
   if (constraints.height.step > 1 && height % constraints.height.step !== 0) {
-    return `Height must use step ${constraints.height.step}.`;
+    return `Height must be a multiple of ${constraints.height.step}.`;
   }
   if (constraints.maxPixels !== undefined && width * height > constraints.maxPixels) {
     return `Width × height must be at most ${constraints.maxPixels.toLocaleString()} pixels.`;
@@ -654,10 +654,12 @@ function customSizeHint(constraints: CustomSizeConstraints): string {
 }
 
 function formatAspectRatio(value: number): string {
-  if (Math.abs(value - 1 / 3) < 0.0001) return "1:3";
-  if (Math.abs(value - 3) < 0.0001) return "3:1";
+  if (Math.abs(value - 1 / 3) < ASPECT_RATIO_EPSILON) return "1:3";
+  if (Math.abs(value - 3) < ASPECT_RATIO_EPSILON) return "3:1";
   return value.toFixed(2);
 }
+
+const ASPECT_RATIO_EPSILON = 0.0001;
 
 function DimensionRow({
   label,
