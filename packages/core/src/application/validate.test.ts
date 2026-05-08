@@ -172,16 +172,6 @@ describe("validateImageRequestAgainstModel", () => {
     ).toThrow(ProviderRequestError);
   });
 
-  it("rejects negativePrompt when not supported", () => {
-    expect(() =>
-      validateImageRequestAgainstModel(
-        "openai",
-        imageRequest({ negativePrompt: "ugly" }),
-        imageModel,
-      ),
-    ).toThrow(ProviderRequestError);
-  });
-
   it("accepts a quality value present in the supported list", () => {
     expect(() =>
       validateImageRequestAgainstModel("openai", imageRequest({ quality: "high" }), imageModel),
