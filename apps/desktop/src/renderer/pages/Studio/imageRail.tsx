@@ -415,6 +415,15 @@ function parseSizeDimensions(value: string | undefined): { width: number; height
   return { width: Number(parts.w), height: Number(parts.h) };
 }
 
+const DIMENSION_MIN = 256;
+const DIMENSION_MAX = 4096;
+const DIMENSION_DEFAULT = 1024;
+const ASPECT_RATIO_EPSILON = 0.0001;
+// Catalog stores OpenAI's custom-size ratio bounds numerically; show the
+// familiar ratio labels for those bounds instead of decimal approximations.
+const MIN_FORMATTED_ASPECT_RATIO = 1 / 3;
+const MAX_FORMATTED_ASPECT_RATIO = 3;
+
 function SizePicker({
   presets,
   value,
@@ -571,10 +580,6 @@ function SizePicker({
   );
 }
 
-const DIMENSION_MIN = 256;
-const DIMENSION_MAX = 4096;
-const DIMENSION_DEFAULT = 1024;
-
 interface DimensionConstraints {
   min: number;
   max: number;
@@ -654,12 +659,10 @@ function customSizeHint(constraints: CustomSizeConstraints): string {
 }
 
 function formatAspectRatio(value: number): string {
-  if (Math.abs(value - 1 / 3) < ASPECT_RATIO_EPSILON) return "1:3";
-  if (Math.abs(value - 3) < ASPECT_RATIO_EPSILON) return "3:1";
+  if (Math.abs(value - MIN_FORMATTED_ASPECT_RATIO) < ASPECT_RATIO_EPSILON) return "1:3";
+  if (Math.abs(value - MAX_FORMATTED_ASPECT_RATIO) < ASPECT_RATIO_EPSILON) return "3:1";
   return value.toFixed(2);
 }
-
-const ASPECT_RATIO_EPSILON = 0.0001;
 
 function DimensionRow({
   label,
