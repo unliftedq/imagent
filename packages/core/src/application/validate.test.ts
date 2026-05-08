@@ -39,6 +39,15 @@ const arbitrarySizeImageModel: ImageModelDef = {
   id: "arbitrary-size-model",
   capabilities: {
     sizes: ["auto"],
+    minWidth: 256,
+    maxWidth: 2048,
+    minHeight: 256,
+    maxHeight: 2048,
+    maxPixels: 1_048_576,
+    widthMultiple: 16,
+    heightMultiple: 16,
+    minAspectRatio: 1 / 3,
+    maxAspectRatio: 3,
     maxReferences: 0,
     maxOutputs: 1,
     supportsNegativePrompt: false,
@@ -113,7 +122,7 @@ describe("validateImageRequestAgainstModel", () => {
     expect(() =>
       validateImageRequestAgainstModel(
         "openai",
-        imageRequest({ size: "1536x1024", model: "arbitrary-size-model" }),
+        imageRequest({ size: "1024x768", model: "arbitrary-size-model" }),
         arbitrarySizeImageModel,
       ),
     ).not.toThrow();
@@ -124,6 +133,36 @@ describe("validateImageRequestAgainstModel", () => {
       validateImageRequestAgainstModel(
         "openai",
         imageRequest({ size: "banana", model: "arbitrary-size-model" }),
+        arbitrarySizeImageModel,
+      ),
+    ).toThrow(ProviderRequestError);
+  });
+
+  it("rejects arbitrary dimensions outside model bounds", () => {
+    expect(() =>
+      validateImageRequestAgainstModel(
+        "openai",
+        imageRequest({ size: "4096x1024", model: "arbitrary-size-model" }),
+        arbitrarySizeImageModel,
+      ),
+    ).toThrow(ProviderRequestError);
+  });
+
+  it("rejects arbitrary dimensions that exceed model pixel limits", () => {
+    expect(() =>
+      validateImageRequestAgainstModel(
+        "openai",
+        imageRequest({ size: "2048x2048", model: "arbitrary-size-model" }),
+        arbitrarySizeImageModel,
+      ),
+    ).toThrow(ProviderRequestError);
+  });
+
+  it("rejects arbitrary dimensions that do not match model increments", () => {
+    expect(() =>
+      validateImageRequestAgainstModel(
+        "openai",
+        imageRequest({ size: "1025x768", model: "arbitrary-size-model" }),
         arbitrarySizeImageModel,
       ),
     ).toThrow(ProviderRequestError);

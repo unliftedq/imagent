@@ -1,4 +1,4 @@
-import type { ImageModelDef, ImageRequest } from "@imagent/core";
+import type { ImageModelCaps, ImageModelDef, ImageRequest } from "@imagent/core";
 import type { ProviderId } from "@imagent/ipc";
 import { Button, Icons, Popover, Select } from "@imagent/ui";
 import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
@@ -124,6 +124,7 @@ export function ImageRail() {
     [modelsByProvider, draft.providerId, draft.modelId],
   );
   const caps = selectedModel?.capabilities;
+  const sizeConstraints = useMemo(() => customSizeConstraints(caps), [caps]);
 
   useEffect(() => {
     const presets = caps?.sizes ?? [];
@@ -131,14 +132,15 @@ export function ImageRail() {
     if (presets.length === 0 && !allowArbitrary) return;
     if (draft.size) {
       if (presets.includes(draft.size)) return;
-      if (allowArbitrary && /^\d+x\d+$/.test(draft.size)) return;
+      const dimensions = parseSizeDimensions(draft.size);
+      if (allowArbitrary && dimensions && isCustomSizeAllowed(dimensions, sizeConstraints)) return;
     }
     if (presets.length > 0) {
       setDraft({ size: presets[0] });
     } else if (draft.size !== undefined) {
       setDraft({ size: undefined });
     }
-  }, [caps?.sizes, caps?.supportsArbitrarySize, draft.size, setDraft]);
+  }, [caps?.sizes, caps?.supportsArbitrarySize, draft.size, setDraft, sizeConstraints]);
 
   useEffect(() => {
     const supported = caps?.qualities;
@@ -312,6 +314,7 @@ export function ImageRail() {
           presets={caps?.sizes ?? []}
           value={draft.size}
           allowCustom={caps?.supportsArbitrarySize === true}
+          constraints={sizeConstraints}
           onChange={(value) => setDraft({ size: value })}
         />
       ) : null}
@@ -406,15 +409,32 @@ function parseCustomSize(value: string | undefined): { w: string; h: string } | 
   return { w: match[1] ?? "", h: match[2] ?? "" };
 }
 
+function parseSizeDimensions(value: string | undefined): { width: number; height: number } | null {
+  const parts = parseCustomSize(value);
+  if (!parts) return null;
+  return { width: Number(parts.w), height: Number(parts.h) };
+}
+
+const DIMENSION_MIN = 256;
+const DIMENSION_MAX = 4096;
+const DIMENSION_DEFAULT = 1024;
+const ASPECT_RATIO_EPSILON = 0.0001;
+// Catalog stores OpenAI's custom-size ratio bounds numerically; show the
+// familiar ratio labels for those bounds instead of decimal approximations.
+const MIN_FORMATTED_ASPECT_RATIO = 1 / 3;
+const MAX_FORMATTED_ASPECT_RATIO = 3;
+
 function SizePicker({
   presets,
   value,
   allowCustom,
+  constraints,
   onChange,
 }: {
   presets: readonly string[];
   value: string | undefined;
   allowCustom: boolean;
+  constraints: CustomSizeConstraints;
   onChange: (next: string) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -435,12 +455,26 @@ function SizePicker({
   }, [open, customParts?.w, customParts?.h]);
 
   const display = value ?? presets[0] ?? "Size";
+  const hint = customSizeHint(constraints);
 
   const applyCustom = (): void => {
-    const wNum = Number.parseInt(w, 10);
-    const hNum = Number.parseInt(h, 10);
-    if (!Number.isFinite(wNum) || wNum <= 0 || !Number.isFinite(hNum) || hNum <= 0) {
+    if (!w.trim() || !h.trim()) {
+      setError("Width and height are required.");
+      return;
+    }
+    const wNum = Number(w);
+    const hNum = Number(h);
+    if (!Number.isFinite(wNum) || !Number.isFinite(hNum)) {
+      setError("Width and height must be numbers.");
+      return;
+    }
+    if (!Number.isInteger(wNum) || wNum <= 0 || !Number.isInteger(hNum) || hNum <= 0) {
       setError("Width and height must be positive integers.");
+      return;
+    }
+    const validationError = validateCustomSize(wNum, hNum, constraints);
+    if (validationError) {
+      setError(validationError);
       return;
     }
     setError(null);
@@ -516,19 +550,20 @@ function SizePicker({
                 <span className="text-[11px] font-medium text-(--text-muted)">
                   Custom size (px)
                 </span>
-                {isCustom ? (
-                  <Icons.Check weight="bold" className="size-3.5 text-(--text)" />
-                ) : null}
+                {isCustom ? <Icons.Check weight="bold" className="size-3.5 text-(--text)" /> : null}
               </div>
+              <span className="text-[10px] leading-4 text-(--text-faint)">{hint}</span>
               <DimensionRow
                 label="Width"
                 value={w}
+                constraints={constraints.width}
                 onChange={setW}
                 onKeyDown={handleKeyDown}
               />
               <DimensionRow
                 label="Height"
                 value={h}
+                constraints={constraints.height}
                 onChange={setH}
                 onKeyDown={handleKeyDown}
               />
@@ -553,26 +588,119 @@ function SizePicker({
   );
 }
 
-const DIMENSION_MIN = 256;
-const DIMENSION_MAX = 4096;
-const DIMENSION_STEP = 8;
-const DIMENSION_DEFAULT = 1024;
+interface DimensionConstraints {
+  min: number;
+  max: number;
+  step: number;
+}
+
+interface CustomSizeConstraints {
+  width: DimensionConstraints;
+  height: DimensionConstraints;
+  maxPixels?: number;
+  minAspectRatio?: number;
+  maxAspectRatio?: number;
+}
+
+function customSizeConstraints(caps: ImageModelCaps | undefined): CustomSizeConstraints {
+  return {
+    width: {
+      min: caps?.minWidth ?? DIMENSION_MIN,
+      max: caps?.maxWidth ?? DIMENSION_MAX,
+      step: caps?.widthMultiple ?? 1,
+    },
+    height: {
+      min: caps?.minHeight ?? DIMENSION_MIN,
+      max: caps?.maxHeight ?? DIMENSION_MAX,
+      step: caps?.heightMultiple ?? 1,
+    },
+    ...(caps?.maxPixels !== undefined ? { maxPixels: caps.maxPixels } : {}),
+    ...(caps?.minAspectRatio !== undefined ? { minAspectRatio: caps.minAspectRatio } : {}),
+    ...(caps?.maxAspectRatio !== undefined ? { maxAspectRatio: caps.maxAspectRatio } : {}),
+  };
+}
+
+function isCustomSizeAllowed(
+  dimensions: { width: number; height: number },
+  constraints: CustomSizeConstraints,
+): boolean {
+  return validateCustomSize(dimensions.width, dimensions.height, constraints) === null;
+}
+
+function validateCustomSize(
+  width: number,
+  height: number,
+  constraints: CustomSizeConstraints,
+): string | null {
+  if (width <= 0) {
+    return "Width must be greater than 0.";
+  }
+  if (height <= 0) {
+    return "Height must be greater than 0.";
+  }
+  if (width < constraints.width.min || width > constraints.width.max) {
+    return `Width must be between ${constraints.width.min} and ${constraints.width.max}.`;
+  }
+  if (height < constraints.height.min || height > constraints.height.max) {
+    return `Height must be between ${constraints.height.min} and ${constraints.height.max}.`;
+  }
+  if (constraints.width.step > 1 && width % constraints.width.step !== 0) {
+    return `Width must be a multiple of ${constraints.width.step}.`;
+  }
+  if (constraints.height.step > 1 && height % constraints.height.step !== 0) {
+    return `Height must be a multiple of ${constraints.height.step}.`;
+  }
+  if (constraints.maxPixels !== undefined && width * height > constraints.maxPixels) {
+    return `Width × height must be at most ${constraints.maxPixels.toLocaleString()} pixels.`;
+  }
+
+  const aspectRatio = width / height;
+  if (
+    constraints.minAspectRatio !== undefined &&
+    aspectRatio + ASPECT_RATIO_EPSILON < constraints.minAspectRatio
+  ) {
+    return `Aspect ratio must be at least ${formatAspectRatio(constraints.minAspectRatio)}.`;
+  }
+  if (
+    constraints.maxAspectRatio !== undefined &&
+    aspectRatio - ASPECT_RATIO_EPSILON > constraints.maxAspectRatio
+  ) {
+    return `Aspect ratio must be at most ${formatAspectRatio(constraints.maxAspectRatio)}.`;
+  }
+  return null;
+}
+
+function customSizeHint(constraints: CustomSizeConstraints): string {
+  const width = `${constraints.width.min} to ${constraints.width.max}`;
+  const height = `${constraints.height.min} to ${constraints.height.max}`;
+  const widthStep = constraints.width.step > 1 ? `, step ${constraints.width.step}` : "";
+  const heightStep = constraints.height.step > 1 ? `, step ${constraints.height.step}` : "";
+  return `Width ${width}${widthStep}; height ${height}${heightStep}.`;
+}
+
+function formatAspectRatio(value: number): string {
+  if (Math.abs(value - MIN_FORMATTED_ASPECT_RATIO) < ASPECT_RATIO_EPSILON) return "1:3";
+  if (Math.abs(value - MAX_FORMATTED_ASPECT_RATIO) < ASPECT_RATIO_EPSILON) return "3:1";
+  return value.toFixed(2);
+}
 
 function DimensionRow({
   label,
   value,
+  constraints,
   onChange,
   onKeyDown,
 }: {
   label: string;
   value: string;
+  constraints: DimensionConstraints;
   onChange: (next: string) => void;
   onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
 }) {
   const numeric = Number.parseInt(value, 10);
   const sliderValue = Number.isFinite(numeric)
-    ? Math.min(DIMENSION_MAX, Math.max(DIMENSION_MIN, numeric))
-    : DIMENSION_MIN;
+    ? Math.min(constraints.max, Math.max(constraints.min, numeric))
+    : constraints.min;
 
   return (
     <div className="flex items-center gap-2">
@@ -584,9 +712,9 @@ function DimensionRow({
       </label>
       <input
         type="range"
-        min={DIMENSION_MIN}
-        max={DIMENSION_MAX}
-        step={DIMENSION_STEP}
+        min={constraints.min}
+        max={constraints.max}
+        step={constraints.step}
         value={sliderValue}
         onChange={(e) => onChange(e.target.value)}
         aria-label={`${label} slider`}
@@ -599,8 +727,9 @@ function DimensionRow({
       <input
         id={`size-${label.toLowerCase()}-input`}
         type="number"
-        min={1}
-        step={1}
+        min={constraints.min}
+        max={constraints.max}
+        step={constraints.step}
         inputMode="numeric"
         value={value}
         onChange={(e) => onChange(e.target.value)}

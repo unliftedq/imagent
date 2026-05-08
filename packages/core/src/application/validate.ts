@@ -30,7 +30,8 @@ export function validateImageRequestAgainstModel(
   if (req.size) {
     const supportedSizes = caps.sizes ?? [];
     const isListedSize = supportedSizes.includes(req.size);
-    const isArbitrarySize = caps.supportsArbitrarySize === true && /^\d+x\d+$/.test(req.size);
+    const dimensions = parseSize(req.size);
+    const isArbitrarySize = caps.supportsArbitrarySize === true && dimensions !== undefined;
     if (supportedSizes.length > 0 && !isListedSize && !isArbitrarySize) {
       throw new ProviderRequestError(
         `model ${model.id} does not support size '${req.size}'. Supported: ${supportedSizes.join(", ")}`,
@@ -42,6 +43,9 @@ export function validateImageRequestAgainstModel(
         `model ${model.id} requires WIDTHxHEIGHT format for arbitrary sizes (got '${req.size}')`,
         { vendorId },
       );
+    }
+    if (caps.supportsArbitrarySize === true && dimensions && !isListedSize) {
+      validateImageDimensions(vendorId, model.id, dimensions.width, dimensions.height, caps);
     }
   }
 
@@ -105,6 +109,77 @@ export function validateImageRequestAgainstModel(
         { vendorId },
       );
     }
+  }
+}
+
+function parseSize(size: string): { width: number; height: number } | undefined {
+  const m = /^(\d+)x(\d+)$/.exec(size);
+  if (!m) return undefined;
+  return { width: Number(m[1]), height: Number(m[2]) };
+}
+
+function validateImageDimensions(
+  vendorId: string,
+  modelId: string,
+  width: number,
+  height: number,
+  caps: NonNullable<ImageModelDef["capabilities"]>,
+): void {
+  if (caps.minWidth !== undefined && width < caps.minWidth) {
+    throw new ProviderRequestError(
+      `model ${modelId} requires width >= ${caps.minWidth} (got ${width})`,
+      { vendorId },
+    );
+  }
+  if (caps.maxWidth !== undefined && width > caps.maxWidth) {
+    throw new ProviderRequestError(
+      `model ${modelId} requires width <= ${caps.maxWidth} (got ${width})`,
+      { vendorId },
+    );
+  }
+  if (caps.minHeight !== undefined && height < caps.minHeight) {
+    throw new ProviderRequestError(
+      `model ${modelId} requires height >= ${caps.minHeight} (got ${height})`,
+      { vendorId },
+    );
+  }
+  if (caps.maxHeight !== undefined && height > caps.maxHeight) {
+    throw new ProviderRequestError(
+      `model ${modelId} requires height <= ${caps.maxHeight} (got ${height})`,
+      { vendorId },
+    );
+  }
+  if (caps.maxPixels !== undefined && width * height > caps.maxPixels) {
+    throw new ProviderRequestError(
+      `model ${modelId} requires width*height <= ${caps.maxPixels} (got ${width * height})`,
+      { vendorId },
+    );
+  }
+  if (caps.widthMultiple !== undefined && width % caps.widthMultiple !== 0) {
+    throw new ProviderRequestError(
+      `model ${modelId} requires width to be a multiple of ${caps.widthMultiple} (got ${width})`,
+      { vendorId },
+    );
+  }
+  if (caps.heightMultiple !== undefined && height % caps.heightMultiple !== 0) {
+    throw new ProviderRequestError(
+      `model ${modelId} requires height to be a multiple of ${caps.heightMultiple} (got ${height})`,
+      { vendorId },
+    );
+  }
+
+  const aspectRatio = width / height;
+  if (caps.minAspectRatio !== undefined && aspectRatio < caps.minAspectRatio) {
+    throw new ProviderRequestError(
+      `model ${modelId} requires aspect ratio >= ${caps.minAspectRatio} (got ${aspectRatio})`,
+      { vendorId },
+    );
+  }
+  if (caps.maxAspectRatio !== undefined && aspectRatio > caps.maxAspectRatio) {
+    throw new ProviderRequestError(
+      `model ${modelId} requires aspect ratio <= ${caps.maxAspectRatio} (got ${aspectRatio})`,
+      { vendorId },
+    );
   }
 }
 
