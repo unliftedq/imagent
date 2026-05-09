@@ -340,7 +340,7 @@ export function GalleryPage() {
               onGoToStudio={() => navigate("studio")}
             />
           ) : (
-            <div style={{ columnWidth: 240, columnGap: 12 }} className="w-full">
+            <div className="grid w-full grid-cols-[repeat(auto-fill,minmax(220px,1fr))] items-start gap-3 overflow-x-hidden">
               {items.map((it) => {
                 const isVideo = it.kind === "video";
                 const src = isVideo
@@ -374,6 +374,7 @@ export function GalleryPage() {
                       void api["system.openPath"]({ path: it.relPath });
                     }}
                     onDelete={() => void removeItem(it.id)}
+                    className="mb-0"
                   />
                 );
               })}
