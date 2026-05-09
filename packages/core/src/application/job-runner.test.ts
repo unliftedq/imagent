@@ -217,7 +217,7 @@ describe("JobRunner — image path", () => {
     expect(j.state).toBe("cancelled");
   });
 
-  it("does not overwrite a DB-cancelled image job with success", async () => {
+  it("does not overwrite a cancelled image job when the provider succeeds", async () => {
     const jobs = new InMemoryJobs();
     const gallery = new InMemoryGallery();
     let counter = 0;
