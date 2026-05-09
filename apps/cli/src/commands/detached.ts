@@ -24,8 +24,8 @@ export async function startDetachedCurrentCommand(
       cwd: process.cwd(),
       detached: true,
       env: { ...process.env, [DETACHED_JOB_ID_ENV]: id },
-      // A detached worker must not inherit the terminal's stdin; all output is
-      // captured in the job log so the parent can return immediately.
+      // A detached worker must not inherit the terminal's stdin; stdout and
+      // stderr are intentionally merged into one job log for later inspection.
       stdio: ["ignore", log.fd, log.fd],
     });
     child.unref();

@@ -2,14 +2,17 @@ import type { Job, JobId, JobRunner, JobState } from "@imagent/core";
 import type { JobRepository } from "@imagent/persistence";
 
 const TERMINAL_STATES = new Set<JobState>(["succeeded", "failed", "cancelled"]);
+const MIN_JOB_ID_PREFIX_LENGTH = 6;
 
 export function isTerminalState(state: JobState): boolean {
   return TERMINAL_STATES.has(state);
 }
 
 export function resolveJobId(jobs: JobRepository, input: string): JobId {
-  if (input.length < 6) {
-    throw new Error(`job id prefix must be at least 6 characters (got ${input.length})`);
+  if (input.length < MIN_JOB_ID_PREFIX_LENGTH) {
+    throw new Error(
+      `job id prefix must be at least ${MIN_JOB_ID_PREFIX_LENGTH} characters (got ${input.length})`,
+    );
   }
   const matches = jobs.findByIdPrefix(input);
   if (matches.length === 0) throw new Error(`no job with id prefix '${input}'`);

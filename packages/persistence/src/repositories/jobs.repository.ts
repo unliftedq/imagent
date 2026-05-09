@@ -60,10 +60,9 @@ export class JobRepository {
   }
 
   findByIdPrefix(prefix: string): Job[] {
-    const escaped = prefix.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_");
     const rows = this.db
-      .prepare("SELECT * FROM jobs WHERE id LIKE ? ESCAPE '\\' ORDER BY created_at DESC")
-      .all(`${escaped}%`) as JobRow[];
+      .prepare("SELECT * FROM jobs WHERE substr(id, 1, ?) = ? ORDER BY created_at DESC")
+      .all(prefix.length, prefix) as JobRow[];
     return rows.map(rowToJob);
   }
 
