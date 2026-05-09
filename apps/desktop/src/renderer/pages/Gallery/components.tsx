@@ -468,8 +468,12 @@ export function LightboxPreview({
 
 function getMediaPreviewStyle(item: GalleryItem): CSSProperties {
   return {
-    maxWidth: item.width && item.width > 0 ? `min(100%, ${item.width}px)` : "100%",
-    maxHeight: item.height && item.height > 0 ? `min(100%, ${item.height}px)` : "100%",
+    maxWidth:
+      typeof item.width === "number" && item.width > 0 ? `min(100%, ${item.width}px)` : "100%",
+    maxHeight:
+      typeof item.height === "number" && item.height > 0
+        ? `min(100%, ${item.height}px)`
+        : "100%",
   };
 }
 
