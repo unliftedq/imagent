@@ -1,13 +1,13 @@
 import {
   DndContext,
+  type DragEndEvent,
   PointerSensor,
   useSensor,
   useSensors,
-  type DragEndEvent,
 } from "@dnd-kit/core";
 import type { Asset, AssetKind, GalleryItem } from "@imagent/core";
-import { useEffect, useMemo, useRef, useState } from "react";
 import { BoardSidebarItem, Button, GalleryItemCard, Icons, Input, Tooltip } from "@imagent/ui";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api.js";
 import { useBoardsStore } from "../../state/useBoardsStore.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
@@ -46,8 +46,7 @@ export function GalleryPage() {
   const [searchInput, setSearchInput] = useState<string>(query.search ?? "");
   const [assetDialogItem, setAssetDialogItem] = useState<GalleryItem | null>(null);
   const [assetDialogKind, setAssetDialogKind] = useState<AssetKind>("character");
-  const { columnCount: galleryColumnCount, ref: galleryWaterfallRef } =
-    useWaterfallColumns();
+  const { columnCount: galleryColumnCount, ref: galleryWaterfallRef } = useWaterfallColumns();
 
   const navigate = useUIStore((s) => s.navigate);
 
@@ -438,18 +437,19 @@ const WATERFALL_MIN_COLUMN_WIDTH = 240;
 const WATERFALL_COLUMN_GAP = 12;
 
 function useWaterfallColumns() {
-  const ref = useRef<HTMLDivElement | null>(null);
+  const [element, setElement] = useState<HTMLDivElement | null>(null);
   const [columnCount, setColumnCount] = useState(1);
 
   useEffect(() => {
-    const element = ref.current;
     if (!element) return;
 
     const updateColumnCount = () => {
       const width = element.getBoundingClientRect().width;
       const nextColumnCount = Math.max(
         1,
-        Math.floor((width + WATERFALL_COLUMN_GAP) / (WATERFALL_MIN_COLUMN_WIDTH + WATERFALL_COLUMN_GAP)),
+        Math.floor(
+          (width + WATERFALL_COLUMN_GAP) / (WATERFALL_MIN_COLUMN_WIDTH + WATERFALL_COLUMN_GAP),
+        ),
       );
       setColumnCount(nextColumnCount);
     };
@@ -459,9 +459,9 @@ function useWaterfallColumns() {
     const resizeObserver = new ResizeObserver(updateColumnCount);
     resizeObserver.observe(element);
     return () => resizeObserver.disconnect();
-  }, []);
+  }, [element]);
 
-  return { columnCount, ref };
+  return { columnCount, ref: setElement };
 }
 
 function distributeWaterfallItems<T>(items: T[], columnCount: number): T[][] {
