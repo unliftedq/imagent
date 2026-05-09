@@ -628,6 +628,29 @@ describe("registerIpcHandlers", () => {
       expect(reply.ok).toBe(true);
       expect(seenSlots).toEqual({ character: ["a1"], style: ["s1"] });
     });
+
+    it("image.submit: returns { jobId } and accepts optional assetSlots", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      let seenSlots: unknown = null;
+      registerIpcHandlers(ipcMain, {
+        "image.submit": async (req) => {
+          seenSlots = (req as { assetSlots?: unknown }).assetSlots;
+          return { jobId: "job-1" };
+        },
+      });
+      const reply = (await invoke("image.submit", {
+        prompt: "x",
+        providerId: "openai",
+        model: "gpt-image-1",
+        count: 1,
+        references: [],
+        assetIds: [],
+        assetSlots: { character: ["a1"], style: ["s1"] },
+      })) as { ok: true; value: { jobId: string } };
+      expect(reply.ok).toBe(true);
+      expect(reply.value.jobId).toBe("job-1");
+      expect(seenSlots).toEqual({ character: ["a1"], style: ["s1"] });
+    });
   });
 
   it("subscribes to events through the client", async () => {

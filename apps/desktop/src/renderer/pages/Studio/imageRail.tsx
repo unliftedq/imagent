@@ -30,12 +30,11 @@ export function ImageRail() {
   const refreshConfig = useConfigStore((state) => state.refresh);
 
   const refreshGallery = useGalleryStore((state) => state.refresh);
-  const upsertOne = useGalleryStore((state) => state.upsertOne);
 
   const assetsByKind = useAssetsStore((state) => state.byKind);
   const refreshAssets = useAssetsStore((state) => state.refresh);
 
-  const setActiveJobId = useJobsStore((state) => state.setActiveJobId);
+  const trackStudioJob = useJobsStore((state) => state.trackStudioJob);
 
   const [modelsByProvider, setModelsByProvider] = useState<Record<string, ImageModelDef[]>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -217,16 +216,18 @@ export function ImageRail() {
     };
 
     setSubmitting(true);
-    setActiveJobId("__pending__");
     try {
-      const item = await api["image.generate"](request);
-      upsertOne(item);
-      window.dispatchEvent(
-        new CustomEvent<{ id: string }>("imagent:canvas-pin", {
-          detail: { id: item.id },
-        }),
-      );
-      if (draft.parentId) setDraft({ parentId: undefined });
+      const { jobId } = await api["image.submit"](request);
+      trackStudioJob({
+        id: jobId,
+        kind: "image",
+        prompt: request.prompt,
+        submittedAt: Date.now(),
+      });
+      setDraft({
+        prompt: "",
+        ...(draft.parentId ? { parentId: undefined } : {}),
+      });
     } catch (err) {
       const message = (err as Error)?.message ?? String(err);
       // The cancel control surfaces its own info toast; don't double-up
@@ -244,7 +245,6 @@ export function ImageRail() {
       });
     } finally {
       setSubmitting(false);
-      setActiveJobId(null);
     }
   };
 
