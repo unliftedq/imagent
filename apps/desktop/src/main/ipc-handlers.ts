@@ -267,6 +267,9 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       runtime.jobRunner.on("job.completed", onCompleted);
       runtime.jobRunner.on("job.failed", onFailed);
 
+      // Register listeners first, then read persisted state to catch terminal
+      // events emitted before listener registration; settle* is idempotent if
+      // an event and this read observe the same terminal job.
       const current = jobsRepo.get(jobId);
       if (current?.state === "succeeded") {
         settleCompleted(current);
