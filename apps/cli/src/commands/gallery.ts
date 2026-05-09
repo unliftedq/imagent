@@ -5,6 +5,7 @@ import type {
   GenerationIntent,
   ImageRequest,
   Job,
+  JobProgressEvent,
   VideoRequest,
 } from "@imagent/core";
 import {
@@ -18,10 +19,12 @@ import chalk from "chalk";
 import type { Command } from "commander";
 
 import { buildAssetSlots, capReferences } from "./asset-slots.js";
+import { installCancelOnInterrupt } from "./job-control.js";
 import { buildRunner, loadCliRuntime } from "./runtime.js";
 import {
   excerpt,
   formatRelativeTime,
+  isTty,
   truncate,
 } from "./util.js";
 
@@ -224,7 +227,7 @@ async function runShow(itemId: string): Promise<void> {
 
 async function runRemix(itemId: string, options: GalleryRemixOptions): Promise<void> {
   const runtime = await loadCliRuntime();
-  const { db, gallery, runner } = buildRunner(runtime);
+  const { db, jobs, gallery, runner } = buildRunner(runtime);
   try {
     const parent = gallery.get(itemId);
     if (!parent) throw new Error(`no gallery item with id '${itemId}'`);
@@ -310,8 +313,8 @@ async function runRemix(itemId: string, options: GalleryRemixOptions): Promise<v
       return;
     }
 
-    // Video remix: submit + print job id (no --wait by default to keep parity
-    // with the image generation UX). Users can `imagent job watch <id>` after.
+    // Video remix follows the foreground video UX: keep this process alive so
+    // polling can finish and parent_id can be written on the resulting item.
     const provider = runtime.videoRegistry.get(providerId);
     if (!provider) {
       throw new Error(
@@ -330,16 +333,36 @@ async function runRemix(itemId: string, options: GalleryRemixOptions): Promise<v
       assetIds: [],
     };
     const intent: GenerationIntent = { kind: "video", request: req };
+    const tty = isTty();
+    const printProgress = (e: JobProgressEvent): void => {
+      const pct = Math.round((e.progress ?? 0) * 100);
+      if (tty) process.stdout.write(`\rprogress: ${pct}% (${e.state})    `);
+      else process.stdout.write(`progress: ${pct}% (${e.state})\n`);
+    };
+    runner.on("job.progress", printProgress);
+    const completed = new Promise<Job>((resolve, reject) => {
+      runner.once("job.completed", (j: Job) => resolve(j));
+      runner.once("job.failed", (j: Job) =>
+        reject(new Error(j.errorMessage ?? `job ended ${j.state}`)),
+      );
+    });
+    process.stdout.write(`${chalk.dim("submitting:")} provider=${providerId} model=${parent.model}\n`);
     const jobId = await runner.start(intent);
-    // Set parent_id once the gallery item lands. Persist a marker now so we
-    // don't lose lineage if the polling continues across restarts: we use
-    // params_json for the parent reference only when the gallery row exists,
-    // so for video we attach via post-processing in `imagent job watch`. For
-    // CLI v1 we only set parent_id directly when --wait is used.
-    process.stdout.write(`${chalk.green("submitted:")} ${jobId}\n`);
-    process.stdout.write(
-      `${chalk.dim("note:")} polling stops when CLI exits; reattach with 'imagent job watch ${jobId}' from the same machine\n`,
-    );
+    const cleanupCancel = installCancelOnInterrupt(runner, jobs, jobId);
+    process.stdout.write(`${chalk.dim("job:")} ${jobId}\n`);
+    const job = await completed.finally(() => {
+      cleanupCancel();
+      runner.off("job.progress", printProgress);
+      if (tty) process.stdout.write("\n");
+    });
+    if (!job.resultItemId) throw new Error("job completed without resultItemId");
+    db.prepare("UPDATE gallery_items SET parent_id = ? WHERE id = ?").run(parent.id, job.resultItemId);
+    const item = gallery.get(job.resultItemId);
+    if (!item) throw new Error("result item missing from gallery_items");
+    const abs = path.isAbsolute(item.relPath)
+      ? item.relPath
+      : path.join(runtime.resolver.dataDir, item.relPath);
+    process.stdout.write(`${chalk.green("ok:")} ${abs}\n`);
   } finally {
     db.close();
   }

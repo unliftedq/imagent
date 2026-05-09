@@ -93,7 +93,7 @@ const MCP_TOOLS: McpTool[] = [
   subcommandTool(
     "imagent_video",
     "video",
-    'Submit or wait for a video generation job from a text prompt. First run `imagent_models --kind video` and `imagent_options --provider <id> --model <id> --kind video` to learn which models are available and which `--option key=value` keys they accept (durationSec, resolution, aspectRatio, fps, firstFrame, ...). Pass `--wait` to stream progress or `--out <dir>` to block and copy the result. Args go after `imagent video`, e.g. ["a camera orbit around a glass sculpture", "--provider", "google", "--model", "veo-3.0-generate-001", "--option", "durationSec=8", "--wait", "--out", "./outputs"].',
+    'Generate a video from a text prompt. First run `imagent_models --kind video` and `imagent_options --provider <id> --model <id> --kind video` to learn which models are available and which `--option key=value` keys they accept (durationSec, resolution, aspectRatio, fps, firstFrame, ...). By default the CLI streams progress until completion; pass `--detach` to run in a background worker or `--out <dir>` to copy the completed result. Args go after `imagent video`, e.g. ["a camera orbit around a glass sculpture", "--provider", "google", "--model", "veo-3.0-generate-001", "--option", "durationSec=8", "--out", "./outputs"].',
   ),
   subcommandTool(
     "imagent_config",

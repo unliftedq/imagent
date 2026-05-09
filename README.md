@@ -29,7 +29,7 @@ Generate with defaults:
 
 ```bash
 imagent image "minimal product photo of a ceramic mug"
-imagent video "a slow dolly shot through a rainy alley" --wait
+imagent video "a slow dolly shot through a rainy alley"
 ```
 
 Need setup details, provider configuration, desktop installation, or troubleshooting? Visit the documentation site:

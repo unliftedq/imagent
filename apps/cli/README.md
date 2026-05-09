@@ -32,7 +32,7 @@ imagent image "a cinematic portrait of a red fox"
 Generate a video:
 
 ```bash
-imagent video "a slow camera move through a neon city" --provider bytedance --wait
+imagent video "a slow camera move through a neon city" --provider bytedance
 ```
 
 ## Common commands
@@ -43,7 +43,7 @@ imagent models [--kind image|video] [--provider <id>] [--configured]
 imagent options --provider <id> --model <id> [--kind image|video]
 imagent config {get|set|path|reset <catalog|secrets|config>}
 imagent image "<prompt>" [--provider <id>] [--model <id>] [--option k=v ...] [--out <dir>]
-imagent video "<prompt>" [--provider <id>] [--model <id>] [--option k=v ...] [--wait]
+imagent video "<prompt>" [--provider <id>] [--model <id>] [--option k=v ...] [--detach]
 imagent asset {add|list|show|rm}
 imagent gallery {ls|show|remix|rm|favorite}
 imagent job {ls|status|cancel|watch}
@@ -118,10 +118,10 @@ imagent video "prompt" \
   --option durationSec=5 \
   --option aspectRatio=16:9 \
   --ref ./first-frame.png \
-  --wait
+  --detach
 ```
 
-`--wait` blocks the command and streams job progress. Without it, the job runs in the background and can be followed later with `imagent job watch <jobId>`.
+By default the command streams job progress until completion. `--detach` runs the job in a background worker and can be followed later with `imagent job watch <jobId>`.
 
 ## Asset and result management
 
