@@ -39,7 +39,7 @@ export function CanvasArea({ mode }: { mode: StudioMode }) {
 
   const modeJobs = useMemo(() => studioJobs.filter((job) => job.kind === mode), [mode, studioJobs]);
   const activeModeJob = modeJobs.find((job) => job.id === activeJobId) ?? null;
-  // studioJobs is newest-first, so the first running fallback is the latest accepted job.
+  // studioJobs is newest-first, so the first running fallback is the latest submitted job.
   const fallbackRunningJob = modeJobs.find((job) => isActiveJobState(jobs[job.id]?.state)) ?? null;
   const selectedStudioJob = activeModeJob ?? fallbackRunningJob;
   const selectedJob = selectedStudioJob ? (jobs[selectedStudioJob.id] ?? null) : null;
@@ -146,7 +146,7 @@ function StudioJobsMonitor({ mode }: { mode: StudioMode }) {
           <div>
             <h2 className="text-[12px] font-semibold text-(--text)">Studio jobs</h2>
             <p className="text-[11px] text-(--text-muted)">
-              Track multiple accepted jobs while continuing to compose.
+              Track multiple submitted jobs while continuing to compose.
             </p>
           </div>
           <span className="rounded-(--radius-pill) bg-(--bg) px-2 py-1 text-[11px] text-(--text-muted)">
@@ -271,7 +271,7 @@ function jobStateLabel(state: Job["state"] | undefined): string {
     case "cancelled":
       return "Cancelled";
     default:
-      return "Accepted";
+      return "Submitted";
   }
 }
 

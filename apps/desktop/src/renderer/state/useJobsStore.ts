@@ -88,10 +88,9 @@ export const useJobsStore = create<JobsState>((set, get) => ({
   trackStudioJob: (job) => {
     set((s) => ({
       activeJobId: job.id,
-      studioJobs: [job, ...s.studioJobs.filter((existing) => existing.id !== job.id)].slice(
-        0,
-        MAX_TRACKED_STUDIO_JOBS,
-      ),
+      studioJobs: s.studioJobs.some((existing) => existing.id === job.id)
+        ? s.studioJobs.map((existing) => (existing.id === job.id ? job : existing))
+        : [job, ...s.studioJobs].slice(0, MAX_TRACKED_STUDIO_JOBS),
     }));
   },
 
