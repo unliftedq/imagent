@@ -472,9 +472,15 @@ function useWaterfallColumns() {
 }
 
 function distributeWaterfallItems<T>(items: T[], columnCount: number): T[][] {
-  const columns = Array.from({ length: columnCount }, () => [] as T[]);
+  const normalizedColumnCount = Math.max(1, columnCount);
+  const columns = Array.from({ length: normalizedColumnCount }, () => [] as T[]);
   items.forEach((item, index) => {
-    columns[index % columnCount]!.push(item);
+    const columnIndex = index % normalizedColumnCount;
+    const column = columns[columnIndex];
+    if (!column) {
+      throw new Error(`Missing waterfall column at index ${columnIndex}`);
+    }
+    column.push(item);
   });
   return columns;
 }
