@@ -231,7 +231,7 @@ export function GalleryPage() {
         durationMs={it.durationMs ?? null}
         favorited={it.favorited}
         selected={selectedId === it.id}
-        className="mb-0"
+        className={WATERFALL_ITEM_CLASS_NAME}
         boards={boards.map((b) => ({ id: b.id, name: b.name }))}
         onSelect={() => {
           setSelectedId(it.id);
@@ -438,7 +438,10 @@ export function GalleryPage() {
 }
 
 const WATERFALL_MIN_COLUMN_WIDTH = 240;
+// Keep this in sync with the `gap-3` spacing used by the waterfall grid and columns.
 const WATERFALL_COLUMN_GAP = 12;
+// GalleryItemCard includes bottom margin for CSS columns; flex waterfall columns use gap instead.
+const WATERFALL_ITEM_CLASS_NAME = "mb-0";
 
 function useWaterfallColumns() {
   const [element, setElement] = useState<HTMLDivElement | null>(null);
