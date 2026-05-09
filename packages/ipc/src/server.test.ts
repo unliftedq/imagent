@@ -679,8 +679,6 @@ describe("registerIpcHandlers", () => {
                 capabilities: {
                   sizes: ["1024x1024"],
                   maxOutputs: 10,
-                  supportsNegativePrompt: false,
-                  supportsSeed: false,
                   supportsStyleRef: true,
                 },
                 defaults: { size: "1024x1024", count: 1 },
@@ -713,8 +711,6 @@ describe("registerIpcHandlers", () => {
               capabilities: {
                 sizes: ["1024x1024"],
                 maxOutputs: 10,
-                supportsNegativePrompt: false,
-                supportsSeed: false,
                 supportsStyleRef: true,
               },
               defaults: { size: "1024x1024", count: 1 },

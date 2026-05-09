@@ -19,119 +19,102 @@ This page summarizes the bundled default model catalog in `packages/providers/sr
 - **Size / ratio controls:** Standard presets `1024x1024`, `1536x1024`, `1024x1536`, `auto`; arbitrary `WIDTHxHEIGHT` also supported when dimensions are divisible by 16, aspect ratio is between 1:3 and 3:1, and resolution is within current OpenAI limits (catalog records max edge/pixel limits from current API docs).
 - **Output controls:** `quality`: `low`, `medium`, `high`, `auto`; `outputFormat`: `png`, `jpeg`, `webp`; max outputs 10.
 - **Reference-image support:** Supported; max 16 images; each PNG/JPEG/WebP reference must be under 50 MB.
-- **Other capabilities:** No negative prompt; no seed.
 
 ### OpenAI / Azure OpenAI: `gpt-image-1.5`
 
 - **Size / ratio controls:** `1024x1024`, `1024x1536`, `1536x1024`.
 - **Output controls:** `quality`: `low`, `medium`, `high`, `auto`; `outputFormat`: `png`, `jpeg`, `webp`; max outputs 10.
 - **Reference-image support:** Supported; max 16 images; each PNG/JPEG/WebP reference must be under 50 MB.
-- **Other capabilities:** No negative prompt; no seed.
 
 ### OpenAI / Azure OpenAI: `gpt-image-1-mini`
 
 - **Size / ratio controls:** `1024x1024`, `1024x1536`, `1536x1024`.
 - **Output controls:** `quality`: `low`, `medium`, `high`, `auto`; `outputFormat`: `png`, `jpeg`, `webp`; max outputs 10.
 - **Reference-image support:** Supported; max 16 images; each PNG/JPEG/WebP reference must be under 50 MB.
-- **Other capabilities:** No negative prompt; no seed.
 
 ### Azure OpenAI: `MAI-Image-2` / `MAI-Image-2e`
 
 - **Size controls:** Catalog exposes common `WIDTHxHEIGHT` presets and allows arbitrary `WIDTHxHEIGHT` values; custom width/height must be 768–1365 pixels and `width × height` must be ≤ 1,048,576.
 - **Output controls:** PNG only; max outputs 1.
 - **Reference-image support:** Not supported.
-- **Other capabilities:** No negative prompt; no seed.
 
 ### Google AI Studio: `gemini-2.5-flash-image`
 
 - **Size / ratio controls:** Aspect ratios: `1:1`, `2:3`, `3:2`, `3:4`, `4:3`, `4:5`, `5:4`, `9:16`, `16:9`, `21:9`; default resolution `1K`.
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Supported; max 3 images. Official per-image size limit was not found.
-- **Other capabilities:** No negative prompt; no confirmed seed support.
 
 ### Google AI Studio: `gemini-3.1-flash-image-preview`
 
 - **Size / ratio controls:** Aspect ratios include standard ratios plus extreme ratios `1:4`, `1:8`, `4:1`, `8:1`; default resolution `1K`.
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Supported in catalog with max 14 images; official sources found during review did not explicitly confirm the exact count for this preview model.
-- **Other capabilities:** No negative prompt; no confirmed seed support.
 
 ### Google AI Studio: `gemini-3-pro-image-preview`
 
 - **Size / ratio controls:** Aspect ratios: `1:1`, `2:3`, `3:2`, `3:4`, `4:3`, `4:5`, `5:4`, `9:16`, `16:9`, `21:9`; default resolution `1K`. Official examples also describe 2K and 4K generation.
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Supported; max 14 images. Official per-image size limit was not found.
-- **Other capabilities:** No negative prompt; no confirmed seed support.
 
 ### Black Forest Labs: `flux-2-pro`
 
 - **Size controls:** Catalog exposes common `WIDTHxHEIGHT` presets and allows arbitrary `WIDTHxHEIGHT` values; custom width/height must be 256–2048 pixels and multiples of 32.
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Supported; max 8 input images. Official per-image file-size limit was not found.
-- **Other capabilities:** Supports seed; no negative prompt.
 
 ### Black Forest Labs: `flux-2-max`
 
 - **Size controls:** Same common `WIDTHxHEIGHT` presets and arbitrary-size support as `flux-2-pro`; custom width/height must be 256–2048 pixels and multiples of 32.
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Supported; max 8 input images through the API.
-- **Other capabilities:** Supports seed; no negative prompt.
 
 ### Black Forest Labs: `flux-2-flex`
 
 - **Size controls:** Same common `WIDTHxHEIGHT` presets and arbitrary-size support as `flux-2-pro`; custom width/height must be 256–2048 pixels and multiples of 32.
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Supported; max 8 input images.
-- **Other capabilities:** Supports seed; no negative prompt. Flex also has provider-specific raw controls such as steps and guidance.
 
 ### Black Forest Labs: `flux-2-klein-9b`
 
 - **Size controls:** Same common `WIDTHxHEIGHT` presets and arbitrary-size support as the other FLUX.2 endpoints; custom width/height must be 256–2048 pixels and multiples of 32.
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Supported; max 4 input images.
-- **Other capabilities:** Supports seed; no negative prompt.
 
 ### Black Forest Labs: `flux-2-klein-4b`
 
 - **Size controls:** Same common `WIDTHxHEIGHT` presets and arbitrary-size support as the other FLUX.2 endpoints; custom width/height must be 256–2048 pixels and multiples of 32.
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Supported; max 4 input images.
-- **Other capabilities:** Supports seed; no negative prompt.
 
 ### Black Forest Labs: `flux-kontext-pro`
 
 - **Size controls:** Common `WIDTHxHEIGHT` presets plus arbitrary-size support; custom width/height must be 256–1440 pixels and multiples of 32.
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Supported; max 1 input image.
-- **Other capabilities:** Supports seed; no negative prompt.
 
 ### Black Forest Labs: `flux-pro-1.1`
 
 - **Size controls:** Common `WIDTHxHEIGHT` presets plus arbitrary-size support; custom width/height must be 256–1440 pixels and multiples of 32.
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Not supported.
-- **Other capabilities:** Supports seed; no negative prompt.
 
 ### ByteDance / Volcano Ark: `doubao-seedream-4-0-250828`
 
 - **Size / ratio controls:** Resolution tokens `1K`, `2K`, `4K`.
 - **Output controls:** Max outputs 15.
 - **Reference-image support:** Supported by the API's image input field; catalog keeps the existing conservative max of 3 because an official maximum was not found.
-- **Other capabilities:** No negative prompt; no seed.
 
 ### ByteDance / Volcano Ark: `doubao-seedream-3-0-t2i-250415`
 
 - **Size / ratio controls:** `1024x1024`, `864x1152`, `1152x864`, `1280x720`, `720x1280`, `832x1248`, `1248x832`, `1512x648`.
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Not supported for this text-to-image model in the default catalog.
-- **Other capabilities:** Supports seed; no negative prompt.
 
 ### xAI: `grok-imagine-image`
 
 - **Size / ratio controls:** Aspect ratios: `1:1`, `16:9`, `9:16`, `4:3`, `3:4`, `3:2`, `2:3`, `2:1`, `1:2`, `19.5:9`, `9:19.5`, `20:9`, `9:20`, `auto`; resolutions `1k`, `2k`.
 - **Output controls:** Max outputs 10.
 - **Reference-image support:** Supported; max 5 images. Official per-image size limit was not found.
-- **Other capabilities:** No negative prompt; no seed.
 
 ## Video models
 

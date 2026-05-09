@@ -9,7 +9,6 @@ export const ImageOutputSchema = z.object({
   mimeType: z.string(),
   width: z.number().int().optional(),
   height: z.number().int().optional(),
-  seed: z.number().int().optional(),
   /** Raw provider response metadata, persisted into params_json. */
   raw: z.record(z.string(), z.unknown()).optional(),
 });

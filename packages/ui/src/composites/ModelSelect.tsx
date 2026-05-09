@@ -16,8 +16,6 @@ export interface ResolvedModelOption {
     qualities?: readonly string[];
     maxReferences?: number;
     maxOutputs?: number;
-    supportsSeed?: boolean;
-    supportsNegativePrompt?: boolean;
     supportsStyleRef?: boolean;
   };
 }

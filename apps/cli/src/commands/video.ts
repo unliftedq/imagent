@@ -57,7 +57,7 @@ export function registerVideoCommand(program: Command): void {
     )
     .option(
       "-o, --option <key=value>",
-      "Repeatable model capability option. Common keys: durationSec, fps, resolution, aspectRatio, firstFrame, lastFrame, negativePrompt. Run `imagent options --provider <id> --model <id> --kind video` for the exact list.",
+      "Repeatable model capability option. Common keys: durationSec, fps, resolution, aspectRatio, firstFrame, lastFrame. Run `imagent options --provider <id> --model <id> --kind video` for the exact list.",
       collect,
       [],
     )
@@ -258,9 +258,6 @@ function parseVideoOptions(values: readonly string[], model: VideoModelDef): Par
       case "lastFrame":
         out.lastFrame = value;
         break;
-      case "negativePrompt":
-        out.negativePrompt = value;
-        break;
       default:
         throw new Error(
           `unknown video option '${key}'. Supported for ${model.id}: ${supportedVideoOptions(model).join(", ")}`,
@@ -275,7 +272,6 @@ function parseVideoOptions(values: readonly string[], model: VideoModelDef): Par
 const videoOptionAliases: Record<string, string> = {
   duration: "durationSec",
   aspect: "aspectRatio",
-  negative: "negativePrompt",
 };
 
 function assertVideoOptionSupported(key: string, model: VideoModelDef): void {
@@ -289,16 +285,8 @@ function supportedVideoOptions(model: VideoModelDef): string[] {
   const caps = model.capabilities;
   if (!caps) {
     // Unknown capabilities means the catalog cannot provide dynamic guidance,
-    // so keep the full typed request surface available and let providers validate.
-    return [
-      "durationSec",
-      "fps",
-      "resolution",
-      "aspectRatio",
-      "firstFrame",
-      "lastFrame",
-      "negativePrompt",
-    ];
+    // so keep the model-option request surface available and let providers validate.
+    return ["durationSec", "fps", "resolution", "aspectRatio", "firstFrame", "lastFrame"];
   }
   const keys: string[] = [];
   if (caps.durationsSec || caps.maxDurationSec) keys.push("durationSec");

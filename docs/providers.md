@@ -197,8 +197,7 @@ Example:
 imagent image "high-detail fantasy landscape, morning mist" \
   --provider flux-bfl \
   --model flux-2-pro \
-  --option aspect=16:9 \
-  --option seed=12345
+  --option aspect=16:9
 ```
 
 ### ByteDance / BytePlus ModelArk (`bytedance`)

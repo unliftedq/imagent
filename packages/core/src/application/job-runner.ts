@@ -337,14 +337,12 @@ export class JobRunner extends EventEmitter {
         kind: "image",
         parentId: overrides.parentId ?? null,
         prompt: req.prompt,
-        negativePrompt: req.negativePrompt ?? null,
         providerId: req.providerId,
         model: req.model,
         paramsJson: JSON.stringify({
           size: req.size,
           aspectRatio: req.aspectRatio,
           count: req.count,
-          seed: req.seed,
           raw: { ...(req.raw ?? {}), ...(out.raw ?? {}) },
         }),
         relPath,
@@ -592,7 +590,6 @@ export class JobRunner extends EventEmitter {
           kind: "video",
           parentId: overrides.parentId ?? null,
           prompt: req.prompt,
-          negativePrompt: req.negativePrompt ?? null,
           providerId: req.providerId,
           model: req.model,
           paramsJson: JSON.stringify({

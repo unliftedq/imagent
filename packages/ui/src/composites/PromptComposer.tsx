@@ -28,10 +28,6 @@ export interface PromptComposerProps {
   onPromptChange: (next: string) => void;
   /** Cmd/Ctrl+Enter shortcut handler (parent owns the actual generate call). */
   onSubmit?: () => void;
-  /** Optional negative-prompt text + setter. When omitted, the negative
-   * textarea is hidden. */
-  negativePrompt?: string;
-  onNegativePromptChange?: (next: string) => void;
   /** Asset chips appearing on a row above the textarea (legacy; populated in M6 via the AssetPicker). */
   assetSlots?: ReadonlyArray<PromptComposerAssetSlot>;
   /** Per-kind asset selection state — wired via `AssetPicker`. */
@@ -47,7 +43,6 @@ export interface PromptComposerProps {
   /** When the user clicks "Create new" inside an AssetPicker. */
   onRequestCreateAsset?: (kind: AssetKind) => void;
   placeholder?: string;
-  negativePlaceholder?: string;
   /** When false, renders the legacy disabled "+ asset" stub. Defaults to true in M6. */
   enableAssetPicker?: boolean;
   /** When the parent wants to re-render with a fresh focus, bump this. */
@@ -64,15 +59,13 @@ export interface PromptComposerProps {
  *
  * Lives inside the 280px params rail; vertically stacked, no internal
  * max-width. Sections are separated by hairline dividers and labelled with
- * sentence-case `body --text-muted`. Two textareas (Prompt, Negative
- * Prompt) auto-grow between 5 and 10 visible lines, mono.
+ * sentence-case `body --text-muted`. The prompt textarea auto-grows
+ * between 5 and 10 visible lines, mono.
  */
 export function PromptComposer({
   prompt,
   onPromptChange,
   onSubmit,
-  negativePrompt,
-  onNegativePromptChange,
   assetSlots = [],
   selectedAssetIds,
   onAssetIdsChange,
@@ -81,7 +74,6 @@ export function PromptComposer({
   thumbnailUrl,
   onRequestCreateAsset,
   placeholder = "Describe what you want to see…",
-  negativePlaceholder = "What to avoid…",
   enableAssetPicker = false,
   autoFocusKey,
   className,
@@ -89,15 +81,11 @@ export function PromptComposer({
   pickerTrailing,
 }: PromptComposerProps) {
   const promptRef = useRef<HTMLTextAreaElement>(null);
-  const negRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-grow up to ~10 lines (default 5, max 10).
   useEffect(() => {
     autosize(promptRef.current, 5, 10);
   }, [prompt]);
-  useEffect(() => {
-    autosize(negRef.current, 2, 4);
-  }, [negativePrompt]);
 
   useEffect(() => {
     if (autoFocusKey === undefined) return;
@@ -152,7 +140,7 @@ export function PromptComposer({
         </div>
       </div>
 
-      {/* Asset chip row — sits between Prompt and Negative Prompt per DESIGN §10.2 */}
+      {/* Asset chip row. */}
       {(enableAssetPicker && selectedAssetIds && onAssetIdsChange && assets) ||
       assetSlots.length > 0 ? (
         <div className="flex flex-wrap items-center gap-1.5">
@@ -222,31 +210,6 @@ export function PromptComposer({
         </Tooltip>
       )}
 
-      {/* Negative prompt — only when the parent provides a setter. */}
-      {onNegativePromptChange ? (
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[12px] text-(--text-muted)" htmlFor="composer-neg">
-            Negative
-          </label>
-          <textarea
-            id="composer-neg"
-            ref={negRef}
-            value={negativePrompt ?? ""}
-            onChange={(e) => onNegativePromptChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={negativePlaceholder}
-            rows={2}
-            className={cn(
-              "block w-full resize-none rounded-(--radius-sm) border border-(--border) " +
-                "bg-(--surface-raised) px-3 py-2 text-[12px] leading-[18px] " +
-                "font-(family-name:--font-mono) text-(--text) " +
-                "placeholder:text-(--text-faint) " +
-                "transition-colors duration-(--motion-fast) ease-(--ease-out) " +
-                "focus-visible:outline-none focus:border-(--accent)",
-            )}
-          />
-        </div>
-      ) : null}
     </div>
   );
 }

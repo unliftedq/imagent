@@ -16,8 +16,6 @@ const imageModel: ImageModelDef = {
     qualities: ["low", "medium", "high", "auto"],
     maxReferences: 4,
     maxOutputs: 4,
-    supportsNegativePrompt: false,
-    supportsSeed: false,
     supportsStyleRef: true,
   },
   defaults: { size: "1024x1024", count: 1 },
@@ -29,8 +27,6 @@ const imageModelNoQuality: ImageModelDef = {
     sizes: ["1024x1024"],
     maxReferences: 0,
     maxOutputs: 1,
-    supportsNegativePrompt: false,
-    supportsSeed: false,
     supportsStyleRef: false,
   },
 };
@@ -50,8 +46,6 @@ const arbitrarySizeImageModel: ImageModelDef = {
     maxAspectRatio: 3,
     maxReferences: 0,
     maxOutputs: 1,
-    supportsNegativePrompt: false,
-    supportsSeed: false,
     supportsStyleRef: false,
     supportsArbitrarySize: true,
   },
@@ -173,16 +167,6 @@ describe("validateImageRequestAgainstModel", () => {
       validateImageRequestAgainstModel(
         "openai",
         imageRequest({ references: Array(5).fill({ path: "x", role: "freeform" }) }),
-        imageModel,
-      ),
-    ).toThrow(ProviderRequestError);
-  });
-
-  it("rejects negativePrompt when not supported", () => {
-    expect(() =>
-      validateImageRequestAgainstModel(
-        "openai",
-        imageRequest({ negativePrompt: "ugly" }),
         imageModel,
       ),
     ).toThrow(ProviderRequestError);

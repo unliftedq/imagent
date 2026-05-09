@@ -104,7 +104,7 @@ imagent image "prompt" \
 Common options:
 
 - `--provider`, `--model`: choose the provider and model (see `imagent models`).
-- `--option key=value` (repeatable): model capability options like `size`, `aspectRatio`, `quality`, `outputFormat`, `count`, `seed`, `negativePrompt`. Run `imagent options --provider <id> --model <id>` for the exact list.
+- `--option key=value` (repeatable): model capability options like `size`, `aspectRatio`, `quality`, `outputFormat`, `count`. Run `imagent options --provider <id> --model <id>` for the exact list.
 - `--ref`: attach one or more reference images.
 - `--character`, `--object`, `--background`, `--style`: attach registered assets by slug.
 - `--out`: copy the completed result to a local directory (the gallery copy is always retained).

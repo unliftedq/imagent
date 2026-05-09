@@ -63,7 +63,7 @@ imagent image "poster art for a synthwave festival" --out ./outputs
 
 Common options (validated per model — run `imagent options ...` for the exact set):
 - `size`, `aspectRatio` / `aspect`, `quality`, `outputFormat` / `format`
-- `negativePrompt` / `negative`, `seed`, `count`
+- `count`
 - `raw.<vendorOption>=...` for advanced provider-specific values
 - Omit these options when the default is acceptable.
 

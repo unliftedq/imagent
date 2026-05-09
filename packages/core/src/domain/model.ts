@@ -32,8 +32,6 @@ export const ImageModelCapsSchema = z.object({
   maxReferences: z.number().int().nonnegative().optional(),
   maxReferenceSizeMb: z.number().positive().optional(),
   maxOutputs: z.number().int().min(1).default(1),
-  supportsNegativePrompt: z.boolean().default(false),
-  supportsSeed: z.boolean().default(false),
   supportsStyleRef: z.boolean().default(false),
 });
 export type ImageModelCaps = z.infer<typeof ImageModelCapsSchema>;
@@ -56,8 +54,6 @@ export const ImageModelCapsOverrideSchema = z.object({
   maxReferences: z.number().int().nonnegative().optional(),
   maxReferenceSizeMb: z.number().positive().optional(),
   maxOutputs: z.number().int().min(1).optional(),
-  supportsNegativePrompt: z.boolean().optional(),
-  supportsSeed: z.boolean().optional(),
   supportsStyleRef: z.boolean().optional(),
 });
 export type ImageModelCapsOverride = z.infer<typeof ImageModelCapsOverrideSchema>;

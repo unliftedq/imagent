@@ -116,12 +116,10 @@ Common image options are:
 - `aspectRatio` or alias `aspect`
 - `quality`
 - `outputFormat` or alias `format`
-- `negativePrompt` or alias `negative`
-- `seed`
 - `count`
 - `raw.<vendorOption>` for advanced provider-specific values
 
-Options are validated against the selected model's catalog capabilities. For example, providers that do not advertise negative prompts reject `negativePrompt`.
+Options are validated against the selected model's catalog capabilities.
 
 Attach references and reusable assets:
 

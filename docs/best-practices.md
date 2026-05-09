@@ -48,7 +48,6 @@ Run `imagent doctor` after installation, updates, and provider changes. It confi
 Not every provider supports the same options. For example:
 
 - Some image models use `size`; others use `aspectRatio`.
-- Some models support `seed`; others do not.
 - Some providers cap reference image counts more tightly than others.
 - Some video models support first and last frames; others support text-only generation.
 

@@ -70,16 +70,6 @@ export function validateImageRequestAgainstModel(
     );
   }
 
-  if (req.negativePrompt && caps.supportsNegativePrompt === false) {
-    throw new ProviderRequestError(`model ${model.id} does not support negativePrompt`, {
-      vendorId,
-    });
-  }
-
-  if (req.seed !== undefined && caps.supportsSeed === false) {
-    throw new ProviderRequestError(`model ${model.id} does not support seed`, { vendorId });
-  }
-
   if (req.quality !== undefined) {
     if (!caps.qualities || caps.qualities.length === 0) {
       throw new ProviderRequestError(`model ${model.id} does not support a quality parameter`, {

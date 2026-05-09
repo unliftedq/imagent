@@ -9,7 +9,7 @@ export const GalleryItemSchema = z.object({
   negativePrompt: z.string().nullable().optional(),
   providerId: z.string(),
   model: z.string(),
-  /** JSON-encoded params (size, fps, duration, count, seed, raw provider params). */
+  /** JSON-encoded params (size, fps, duration, count, raw provider params). */
   paramsJson: z.string(),
   relPath: z.string(),
   thumbPath: z.string().nullable().optional(),

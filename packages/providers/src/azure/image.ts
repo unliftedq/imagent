@@ -548,7 +548,6 @@ export class AzureImageProvider implements ImageProvider {
     }
     if (req.aspectRatio) out.aspect_ratio = req.aspectRatio;
     if (req.outputFormat) out.output_format = req.outputFormat;
-    if (req.seed !== undefined) out.seed = req.seed;
     if (req.count > 1) out.num_images = req.count;
     if (req.references.length > 0) {
       const refs = await loadImageReferences(req.references, this.id);
