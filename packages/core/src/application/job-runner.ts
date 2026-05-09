@@ -313,6 +313,7 @@ export class JobRunner extends EventEmitter {
   ): Promise<void> {
     try {
       const result = await provider.generate(req, signal);
+      this.throwIfPersistedCancelled(job.id, req.providerId);
       // Take the first output (count > 1 is documented but M2 persists one
       // item per generate call; multi-result fan-out lands in M5).
       const out = result.outputs[0];
@@ -330,6 +331,7 @@ export class JobRunner extends EventEmitter {
       await this.deps.writeFile(absPath, out.bytes);
 
       const relPath = relativeToData(absPath, this.deps.files.dataDir);
+      this.throwIfPersistedCancelled(job.id, req.providerId);
 
       const overrides = this.intentOverrides.get(job.id) ?? {};
       const item = this.deps.gallery.create({
@@ -540,6 +542,7 @@ export class JobRunner extends EventEmitter {
 
     if (status.state === "succeeded") {
       try {
+        this.throwIfPersistedCancelled(id, provider.id);
         const result = await provider.fetch(handle);
         const itemId = this.deps.idFactory();
         const now = this.deps.now();
@@ -624,6 +627,7 @@ export class JobRunner extends EventEmitter {
           }
         }
         this.intentOverrides.delete(id);
+        this.throwIfPersistedCancelled(id, provider.id);
 
         const updated = this.deps.jobs.updateState(id, {
           state: "succeeded",
@@ -635,15 +639,18 @@ export class JobRunner extends EventEmitter {
         this.emit("job.completed", updated);
       } catch (err) {
         this.intentOverrides.delete(id);
-        this.deps.logger.error("video fetch failed", {
-          jobId: id,
-          providerId: provider.id,
-          providerJobId: handle.providerJobId,
-          err,
-        });
+        const aborted = isAbortError(err) || err instanceof ProviderAbortError;
+        if (!aborted) {
+          this.deps.logger.error("video fetch failed", {
+            jobId: id,
+            providerId: provider.id,
+            providerJobId: handle.providerJobId,
+            err,
+          });
+        }
         const updated = this.deps.jobs.updateState(id, {
-          state: "failed",
-          errorMessage: (err as Error)?.message ?? String(err),
+          state: aborted ? "cancelled" : "failed",
+          errorMessage: aborted ? "cancelled" : (err as Error)?.message ?? String(err),
           finishedAt: this.deps.now(),
         });
         this.running.delete(id);
@@ -771,6 +778,13 @@ export class JobRunner extends EventEmitter {
   /** Test/inspection helper. */
   isRunning(id: JobId): boolean {
     return this.running.has(id);
+  }
+
+  private throwIfPersistedCancelled(id: JobId, providerId: string): void {
+    const persisted = this.deps.jobs.get(id);
+    if (persisted?.state === "cancelled") {
+      throw new ProviderAbortError(providerId);
+    }
   }
 }
 

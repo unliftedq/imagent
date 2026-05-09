@@ -69,11 +69,11 @@ Common options (validated per model — run `imagent options ...` for the exact 
 
 ## Generating videos
 
-Video jobs are **asynchronous**. Add `--wait` to block until completion, or submit and reattach later with `imagent job watch <jobId>`. Only some providers support video — currently `google` (Veo), `bytedance` (Seedance), and `xai` (Grok).
+Video jobs stream progress by default. Add `--detach` to run in the background and follow later with `imagent job watch <jobId>`. Only some providers support video — currently `google` (Veo), `bytedance` (Seedance), and `xai` (Grok).
 
-Minimal (waits until done):
+Minimal (streams until done):
 ```bash
-imagent video "a slow dolly shot through a rainy alley" --wait
+imagent video "a slow dolly shot through a rainy alley"
 ```
 
 Only pick a provider/model and pass options when the request requires non-default values:
@@ -82,13 +82,12 @@ imagent video "a crane shot over a futuristic coastline" \
   --provider google \
   --model veo-3.0-generate-001 \
   --option durationSec=8 \
-  --option resolution=720p \
-  --wait
+  --option resolution=720p
 ```
 
-Submit without waiting, then poll:
+Submit detached, then poll:
 ```bash
-imagent video "a quiet sunrise timelapse over mountains"
+imagent video "a quiet sunrise timelapse over mountains" --detach
 imagent job ls --kind video                        # find the new jobId
 imagent job watch <jobId>                          # stream progress / final path
 ```
@@ -98,8 +97,7 @@ Image-to-video with a starting frame and a character asset:
 imagent video "Nova turns toward the camera as leaves drift past" \
   --character nova \
   --ref ./first-frame.png \
-  --option duration=5 \
-  --wait
+  --option duration=5
 ```
 
 Common video options (run `imagent options --kind video ...` for the exact set): `durationSec` / `duration`, `fps`, `resolution`, `firstFrame` / `lastFrame`, `raw.<vendorOption>`.
@@ -116,7 +114,7 @@ imagent config {get|set|path|reset}   # see references/setup.md
 
 imagent asset {add|list|show|rm}      # reusable characters / objects / backgrounds / styles
 imagent gallery {ls|show|remix|favorite|rm}   # local result library
-imagent job {ls|status|cancel|watch}  # async video job control
+imagent job {ls|status|cancel|watch}  # image/video job control
 ```
 
 Reusable assets keep recurring subjects consistent across generations:
@@ -130,6 +128,6 @@ imagent image "portrait in moonlit forest" --character nova --style soft-waterco
 
 - **Do not invent model IDs or option keys.** Run `imagent models` and `imagent options` first; the CLI rejects unsupported values.
 - **Prefer defaults.** Do not override provider/model/options just to be explicit; rely on CLI/catalog defaults unless the user request needs a particular value.
-- **Image jobs are not resumable** after the originating CLI process exits. Video jobs are async — submit, then `imagent job watch <jobId>` from the same machine.
+- **Detached jobs keep a background worker alive** until they finish. Use `imagent job watch <jobId>` from the same machine to follow progress.
 - **Outputs land in the local gallery** under `~/.imagent/` by default. Use `--out <dir>` to copy the file to a specific location.
 - **Never paste a secret into a script or commit it.** Setup commands belong in [references/setup.md](references/setup.md).

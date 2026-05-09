@@ -59,6 +59,14 @@ export class JobRepository {
     return row ? rowToJob(row) : null;
   }
 
+  findByIdPrefix(prefix: string): Job[] {
+    const escaped = prefix.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_");
+    const rows = this.db
+      .prepare("SELECT * FROM jobs WHERE id LIKE ? ESCAPE '\\' ORDER BY created_at DESC")
+      .all(`${escaped}%`) as JobRow[];
+    return rows.map(rowToJob);
+  }
+
   create(job: Job): Job {
     this.db
       .prepare(

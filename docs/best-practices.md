@@ -53,11 +53,11 @@ Not every provider supports the same options. For example:
 
 Use `imagent options --provider <id> --model <id>` to inspect a model's exact request options and allowed values before building repeatable scripts.
 
-### Be deliberate with async video jobs
+### Be deliberate with detached jobs
 
-- Use `--wait` when you want the CLI process to stream progress until completion.
-- Save the submitted job ID if you do not wait.
-- Use `imagent job watch <jobId>` to reattach to queued or running video jobs.
+- Omit `--detach` when you want the CLI process to stream progress until completion.
+- Save the submitted job ID when you detach.
+- Use `imagent job watch <jobId>` to follow queued or running image/video jobs.
 - Use `imagent job ls --state running` to find active jobs.
 
 ### Keep desktop and CLI workflows consistent

@@ -217,6 +217,46 @@ describe("JobRunner — image path", () => {
     expect(j.state).toBe("cancelled");
   });
 
+  it("does not overwrite a DB-cancelled image job with success", async () => {
+    const jobs = new InMemoryJobs();
+    const gallery = new InMemoryGallery();
+    let counter = 0;
+    const provider = fakeImageProvider({
+      onGenerate: async () => {
+        jobs.updateState("id-1", {
+          state: "cancelled",
+          errorMessage: "cancelled via CLI",
+          finishedAt: Date.now(),
+        });
+      },
+    });
+    const runner = new JobRunner({
+      jobs,
+      gallery,
+      files: fakeFiles,
+      imageRegistry: new Map([["fake", provider]]),
+      videoRegistry: new Map(),
+      writeFile: async () => {},
+      ensureDir: async () => {},
+      idFactory: () => `id-${++counter}`,
+    });
+    const failed = new Promise<Job>((resolve) => runner.once("job.failed", (j: Job) => resolve(j)));
+    await runner.start({
+      kind: "image",
+      request: {
+        prompt: "x",
+        providerId: "fake",
+        model: "any",
+        count: 1,
+        references: [],
+        assetIds: [],
+      },
+    });
+    const j = await failed;
+    expect(j.state).toBe("cancelled");
+    expect(gallery.items.size).toBe(0);
+  });
+
   it("emits job.failed if provider returns 0 outputs", async () => {
     const jobs = new InMemoryJobs();
     const gallery = new InMemoryGallery();

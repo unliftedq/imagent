@@ -82,7 +82,7 @@ GOOGLE_API_KEY=<key>                  imagent image "<prompt>" --provider google
 AZURE_ENDPOINT=https://... AZURE_API_KEY=<key> \
                                       imagent image "<prompt>" --provider azure
 BYTEDANCE_ENDPOINT=https://... BYTEDANCE_API_KEY=<key> \
-                                      imagent video "<prompt>" --provider bytedance --wait
+                                      imagent video "<prompt>" --provider bytedance
 FLUX_BFL_API_KEY=<key>                imagent image "<prompt>" --provider flux-bfl
 XAI_API_KEY=<key>                     imagent image "<prompt>" --provider xai
 ```

@@ -12,6 +12,8 @@ import chalk from "chalk";
 import type { Command } from "commander";
 
 import { buildAssetSlots } from "./asset-slots.js";
+import { startDetachedCurrentCommand } from "./detached.js";
+import { installCancelOnInterrupt } from "./job-control.js";
 import { buildRunner, loadCliRuntime } from "./runtime.js";
 import { coerceScalar, collect, parseKeyValueOptions, parsePositiveIntegerOption } from "./util.js";
 
@@ -25,6 +27,7 @@ interface GenerateOptions {
   background?: string[];
   style?: string[];
   out?: string;
+  detach?: boolean;
 }
 
 /**
@@ -71,6 +74,7 @@ export function registerImageCommand(program: Command): void {
     .option("--background <slug>", "Attach a saved background asset by slug (repeatable)", collect, [])
     .option("--style <slug>", "Attach a saved style asset by slug (repeatable; the asset's prompt_snippet is appended to the prompt)", collect, [])
     .option("--out <dir>", "Copy the completed result to this directory after success (the gallery copy is always retained)")
+    .option("--detach", "Run the job in a detached background process", false)
     .action(async (prompt: string, options: GenerateOptions) => {
       try {
         await runGenerate(prompt, options);
@@ -83,6 +87,12 @@ export function registerImageCommand(program: Command): void {
 
 async function runGenerate(prompt: string, options: GenerateOptions): Promise<void> {
   const runtime = await loadCliRuntime();
+  if (options.detach) {
+    const detached = await startDetachedCurrentCommand(runtime);
+    process.stdout.write(`${chalk.green("submitted:")} ${detached.id}\n`);
+    process.stdout.write(`${chalk.dim("log:")} ${detached.logPath}\n`);
+    return;
+  }
   const providerId = options.provider ?? runtime.config.app.defaultProvider;
   const provider = runtime.imageRegistry.get(providerId);
   if (!provider) {
@@ -98,7 +108,7 @@ async function runGenerate(prompt: string, options: GenerateOptions): Promise<vo
   const requestOptions = parseImageOptions(options.option ?? [], resolved);
   const maxRefs = resolved?.capabilities?.maxReferences;
 
-  const { db, gallery, runner } = buildRunner(runtime);
+  const { db, jobs, gallery, runner } = buildRunner(runtime);
   try {
     // Asset slots → references + style-snippet additions.
     const slots = await buildAssetSlots(runtime.resolver, db, {
@@ -144,9 +154,10 @@ async function runGenerate(prompt: string, options: GenerateOptions): Promise<vo
 
     process.stdout.write(`${chalk.dim("submitting:")} provider=${providerId} model=${model}\n`);
     const id = await runner.start(intent);
+    const cleanupCancel = installCancelOnInterrupt(runner, jobs, id);
     process.stdout.write(`${chalk.dim("job:")} ${id}\n`);
 
-    const job = await completed;
+    const job = await completed.finally(cleanupCancel);
     if (!job.resultItemId) {
       throw new Error("job completed without resultItemId");
     }

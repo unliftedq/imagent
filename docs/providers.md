@@ -165,8 +165,7 @@ Video example:
 imagent video "a gentle tracking shot through a flower market" \
   --provider google \
   --model veo-3.0-generate-001 \
-  --option duration=8 \
-  --wait
+  --option duration=8
 ```
 
 ### Black Forest Labs / Flux (`flux-bfl`)
@@ -216,7 +215,7 @@ Environment variables:
 ```bash
 BYTEDANCE_ENDPOINT=https://ark.cn-beijing.volces.com/api/v3 \
 BYTEDANCE_API_KEY=<bytedance-key> \
-imagent video "prompt" --provider bytedance --wait
+imagent video "prompt" --provider bytedance
 ```
 
 Image example:
@@ -236,8 +235,7 @@ imagent video "a sweeping shot over a cyberpunk street" \
   --provider bytedance \
   --model doubao-seedance-1-0-pro-250528 \
   --option duration=5 \
-  --option resolution=720p \
-  --wait
+  --option resolution=720p
 ```
 
 If you use a different ByteDance/Ark region, replace the endpoint with the region-specific base URL from your account.
@@ -279,8 +277,7 @@ Video example:
 imagent video "a dramatic hero shot with drifting fog" \
   --provider xai \
   --model grok-imagine-video \
-  --option duration=10 \
-  --wait
+  --option duration=10
 ```
 
 ### Custom OpenAI-compatible image providers
