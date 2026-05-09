@@ -6,7 +6,7 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import type { Asset, AssetKind, GalleryItem } from "@imagent/core";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BoardSidebarItem, Button, GalleryItemCard, Icons, Input, Tooltip } from "@imagent/ui";
 import { api } from "../../lib/api.js";
 import { useBoardsStore } from "../../state/useBoardsStore.js";
@@ -46,6 +46,8 @@ export function GalleryPage() {
   const [searchInput, setSearchInput] = useState<string>(query.search ?? "");
   const [assetDialogItem, setAssetDialogItem] = useState<GalleryItem | null>(null);
   const [assetDialogKind, setAssetDialogKind] = useState<AssetKind>("character");
+  const { columnCount: galleryColumnCount, ref: galleryWaterfallRef } =
+    useWaterfallColumns();
 
   const navigate = useUIStore((s) => s.navigate);
 
@@ -206,6 +208,48 @@ export function GalleryPage() {
     };
   }, [assetDialogItem]);
 
+  const galleryColumns = useMemo(
+    () => distributeWaterfallItems(items, galleryColumnCount),
+    [items, galleryColumnCount],
+  );
+
+  const renderGalleryItem = (it: GalleryItem) => {
+    const isVideo = it.kind === "video";
+    const src = isVideo
+      ? it.thumbPath
+        ? resolveGalleryUrl(it.thumbPath)
+        : ""
+      : resolveGalleryUrl(it.relPath);
+    return (
+      <GalleryItemCard
+        key={it.id}
+        id={it.id}
+        kind={it.kind}
+        src={src}
+        caption={it.prompt}
+        width={it.width ?? null}
+        height={it.height ?? null}
+        durationMs={it.durationMs ?? null}
+        favorited={it.favorited}
+        selected={selectedId === it.id}
+        boards={boards.map((b) => ({ id: b.id, name: b.name }))}
+        onSelect={() => {
+          setSelectedId(it.id);
+          setPreviewId(it.id);
+        }}
+        onOpen={() => setPreviewId(it.id)}
+        onRemix={() => void handleRemix(it.id)}
+        onSaveAsAsset={() => openSaveAsAssetDialog(it)}
+        onToggleFavorite={() => void toggleFav(it.id)}
+        onAddToBoard={(boardId) => void addItem(boardId, it.id)}
+        onOpenFileLocation={() => {
+          void api["system.openPath"]({ path: it.relPath });
+        }}
+        onDelete={() => void removeItem(it.id)}
+      />
+    );
+  };
+
   return (
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
       <div className="grid h-full grid-cols-[220px_minmax(0,1fr)] gap-0">
@@ -341,46 +385,15 @@ export function GalleryPage() {
             />
           ) : (
             <div
-              className={
-                "w-full columns-[240px] gap-3 overflow-x-hidden [column-fill:balance]"
-              }
+              ref={galleryWaterfallRef}
+              className="grid w-full gap-3 overflow-x-hidden"
+              style={{ gridTemplateColumns: `repeat(${galleryColumnCount}, minmax(0, 1fr))` }}
             >
-              {items.map((it) => {
-                const isVideo = it.kind === "video";
-                const src = isVideo
-                  ? it.thumbPath
-                    ? resolveGalleryUrl(it.thumbPath)
-                    : ""
-                  : resolveGalleryUrl(it.relPath);
-                return (
-                  <GalleryItemCard
-                    key={it.id}
-                    id={it.id}
-                    kind={it.kind}
-                    src={src}
-                    caption={it.prompt}
-                    width={it.width ?? null}
-                    height={it.height ?? null}
-                    durationMs={it.durationMs ?? null}
-                    favorited={it.favorited}
-                    selected={selectedId === it.id}
-                    boards={boards.map((b) => ({ id: b.id, name: b.name }))}
-                    onSelect={() => {
-                      setSelectedId(it.id);
-                      setPreviewId(it.id);
-                    }}
-                    onOpen={() => setPreviewId(it.id)}
-                    onRemix={() => void handleRemix(it.id)}
-                    onSaveAsAsset={() => openSaveAsAssetDialog(it)}
-                    onToggleFavorite={() => void toggleFav(it.id)}
-                    onAddToBoard={(boardId) => void addItem(boardId, it.id)}
-                    onOpenFileLocation={() => {
-                      void api["system.openPath"]({ path: it.relPath });
-                    }}
-                    onDelete={() => void removeItem(it.id)}
-                  />
-                );
-              })}
+              {galleryColumns.map((column, columnIndex) => (
+                <div key={columnIndex} className="flex min-w-0 flex-col">
+                  {column.map(renderGalleryItem)}
+                </div>
+              ))}
             </div>
           )}
 
@@ -419,6 +432,44 @@ export function GalleryPage() {
       </div>
     </DndContext>
   );
+}
+
+const WATERFALL_MIN_COLUMN_WIDTH = 240;
+const WATERFALL_COLUMN_GAP = 12;
+
+function useWaterfallColumns() {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [columnCount, setColumnCount] = useState(1);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    const updateColumnCount = () => {
+      const width = element.getBoundingClientRect().width;
+      const nextColumnCount = Math.max(
+        1,
+        Math.floor((width + WATERFALL_COLUMN_GAP) / (WATERFALL_MIN_COLUMN_WIDTH + WATERFALL_COLUMN_GAP)),
+      );
+      setColumnCount(nextColumnCount);
+    };
+
+    updateColumnCount();
+
+    const resizeObserver = new ResizeObserver(updateColumnCount);
+    resizeObserver.observe(element);
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  return { columnCount, ref };
+}
+
+function distributeWaterfallItems<T>(items: T[], columnCount: number): T[][] {
+  const columns = Array.from({ length: columnCount }, () => [] as T[]);
+  items.forEach((item, index) => {
+    columns[index % columnCount]?.push(item);
+  });
+  return columns;
 }
 
 function GalleryEmptyState({
