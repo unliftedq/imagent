@@ -18,9 +18,9 @@ import {
   isTerminalState,
   resolveJobId,
   waitForPersistedTerminalJob,
-} from "./job-control.js";
-import { buildRunner, loadCliRuntime } from "./runtime.js";
-import { excerpt, formatRelativeTime, isTty } from "./util.js";
+} from "../support/job-control.js";
+import { buildRunner, loadCliRuntime } from "../support/runtime.js";
+import { excerpt, formatRelativeTime, isTty } from "../support/util.js";
 
 const VALID_STATES: JobState[] = [
   "queued",

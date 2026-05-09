@@ -8,7 +8,7 @@ import {
 } from "@imagent/providers";
 import chalk from "chalk";
 
-import { loadCliRuntime } from "./runtime.js";
+import { loadCliRuntime } from "../support/runtime.js";
 import { CLI_VERSION } from "../version.js";
 
 /**

@@ -14,8 +14,8 @@ import {
 import chalk from "chalk";
 import type { Command } from "commander";
 
-import { describeAssetSlug } from "./asset-slots.js";
-import { collect, formatRelativeTime, isTty } from "./util.js";
+import { describeAssetSlug } from "../support/asset-slots.js";
+import { collect, formatRelativeTime, isTty } from "../support/util.js";
 
 const VALID_KINDS: AssetKind[] = ["character", "object", "background", "style"];
 

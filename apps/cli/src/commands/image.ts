@@ -11,11 +11,11 @@ import {
 import chalk from "chalk";
 import type { Command } from "commander";
 
-import { buildAssetSlots } from "./asset-slots.js";
-import { startDetachedCurrentCommand } from "./detached.js";
-import { installCancelOnInterrupt } from "./job-control.js";
-import { buildRunner, loadCliRuntime } from "./runtime.js";
-import { coerceScalar, collect, parseKeyValueOptions, parsePositiveIntegerOption } from "./util.js";
+import { buildAssetSlots } from "../support/asset-slots.js";
+import { startDetachedCurrentCommand } from "../support/detached.js";
+import { installCancelOnInterrupt } from "../support/job-control.js";
+import { buildRunner, loadCliRuntime } from "../support/runtime.js";
+import { coerceScalar, collect, parseKeyValueOptions, parsePositiveIntegerOption } from "../support/util.js";
 
 interface GenerateOptions {
   provider?: string;

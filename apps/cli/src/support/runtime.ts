@@ -10,6 +10,7 @@ import {
   type ProviderSecrets,
 } from "@imagent/config";
 import {
+  createConsoleLogger,
   type FilesServicePort,
   type GalleryRepositoryPort,
   type ImageRegistry,
@@ -17,16 +18,15 @@ import {
   JobRunner,
   type Logger,
   type VideoRegistry,
-  createConsoleLogger,
 } from "@imagent/core";
 import {
+  createPathResolver,
   type DatabaseType,
+  ensureDataDir,
   GalleryRepository,
   JobRepository,
-  type PathResolver,
-  createPathResolver,
-  ensureDataDir,
   openDatabase,
+  type PathResolver,
 } from "@imagent/persistence";
 import {
   createImageRegistry,
