@@ -286,15 +286,8 @@ function CancelGenerationControl({ mode, jobId }: { mode: StudioMode; jobId: str
   const [open, setOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
-  const hasRealJobId = !!jobId && jobId !== "__pending__";
-
   const handleConfirm = async (): Promise<void> => {
-    if (!jobId || jobId === "__pending__") {
-      // Runner hasn't returned a job id yet — wait for the next progress
-      // tick. Keep the dialog open so the user can retry the moment the
-      // job becomes cancellable.
-      return;
-    }
+    if (!jobId) return;
     setCancelling(true);
     try {
       await cancelJob(jobId);
@@ -332,9 +325,7 @@ function CancelGenerationControl({ mode, jobId }: { mode: StudioMode; jobId: str
           Stop {mode === "video" ? "video" : "image"} generation?
         </Dialog.Title>
         <Dialog.Description className="mt-2 text-[13px] leading-5 text-(--text-muted)">
-          {hasRealJobId
-            ? "This will end the current job. Any partial result will be discarded."
-            : "The job is still being prepared. Try again in a moment to cancel it cleanly."}
+          This will end the current job. Any partial result will be discarded.
         </Dialog.Description>
         <div className="mt-6 flex items-center justify-end gap-2">
           <Button variant="ghost" size="sm" onClick={() => setOpen(false)} disabled={cancelling}>
@@ -344,7 +335,7 @@ function CancelGenerationControl({ mode, jobId }: { mode: StudioMode; jobId: str
             variant="danger"
             size="sm"
             onClick={() => void handleConfirm()}
-            disabled={!hasRealJobId || cancelling}
+            disabled={!jobId || cancelling}
           >
             {cancelling ? "Stopping…" : "Stop generation"}
           </Button>

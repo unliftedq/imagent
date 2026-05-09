@@ -104,14 +104,6 @@ export const useJobsStore = create<JobsState>((set, get) => ({
   applyProgressEvent: (e) => {
     set((s) => {
       const existing = s.jobs[e.id];
-      // Studio sets activeJobId="__pending__" while waiting for the runner
-      // to assign a real id. The first progress event for any newly-running
-      // job is our cue to promote that placeholder to the real id so the
-      // cancel button can target it.
-      const nextActiveJobId =
-        s.activeJobId === "__pending__" && (e.state === "queued" || e.state === "running")
-          ? e.id
-          : s.activeJobId;
       if (!existing) {
         // We don't have the row yet; stash a thin shadow.
         const tracked = s.studioJobs.find((job) => job.id === e.id);
@@ -131,7 +123,6 @@ export const useJobsStore = create<JobsState>((set, get) => ({
         };
         return {
           jobs: { ...s.jobs, [e.id]: shadow },
-          activeJobId: nextActiveJobId,
         };
       }
       return {
@@ -139,7 +130,6 @@ export const useJobsStore = create<JobsState>((set, get) => ({
           ...s.jobs,
           [e.id]: { ...existing, state: e.state, progress: e.progress },
         },
-        activeJobId: nextActiveJobId,
       };
     });
   },

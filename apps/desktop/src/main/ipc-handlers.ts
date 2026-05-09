@@ -26,6 +26,7 @@ import {
   capReferencePaths,
   resolveAssetSlots,
 } from "@imagent/core";
+import type { ProviderPreferencesPayload } from "@imagent/ipc";
 import {
   type ContractHandlers,
   IpcHandlerError,
@@ -53,7 +54,6 @@ import {
   saveCatalog,
   type VideoRegistry,
 } from "@imagent/providers";
-import type { ProviderPreferencesPayload } from "@imagent/ipc";
 import { app, type BrowserWindow, dialog, type IpcMain, shell } from "electron";
 import sharp from "sharp";
 import type { RuntimeServices } from "./job-runner-bootstrap.js";
@@ -125,6 +125,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
     // Resolve asset slots → reference paths + style snippet appendix +
     // attachments to write after the gallery item lands.
     const slots = request.assetSlots ?? {};
+    const { assetSlots: _assetSlots, ...requestForRunner } = request;
     const slotInputs = {
       ...(slots.character ? { character: slots.character } : {}),
       ...(slots.object ? { object: slots.object } : {}),
@@ -174,12 +175,12 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       resolution.stylePromptSnippets,
     );
     const finalReq: ImageRequest = {
-      ...request,
+      ...requestForRunner,
       prompt: augmentedPrompt,
       references: cappedRefs,
       assetIds: [
-        ...(request.assetIds ?? []),
-        ...resolution.assetIds.filter((id) => !(request.assetIds ?? []).includes(id)),
+        ...(requestForRunner.assetIds ?? []),
+        ...resolution.assetIds.filter((id) => !(requestForRunner.assetIds ?? []).includes(id)),
       ],
     };
     const intent = {
@@ -202,26 +203,24 @@ export function setupIpc(deps: IpcDeps): IpcServer {
     }
 
     const completed = new Promise<GalleryItem>((resolve, reject) => {
+      let settled = false;
       const cleanup = (): void => {
         runtime.jobRunner.off("job.completed", onCompleted);
         runtime.jobRunner.off("job.failed", onFailed);
       };
-      const onCompleted = (j: Job): void => {
-        if (j.id !== jobId) return;
+
+      const settleCompleted = (j: Job): void => {
+        if (settled) return;
+        settled = true;
         cleanup();
         if (!j.resultItemId) {
-          reject(
-            new IpcHandlerError("internal", "image job completed without resultItemId"),
-          );
+          reject(new IpcHandlerError("internal", "image job completed without resultItemId"));
           return;
         }
         const item = galleryRepo.get(j.resultItemId);
         if (!item) {
           reject(
-            new IpcHandlerError(
-              "internal",
-              `image job: gallery item ${j.resultItemId} missing`,
-            ),
+            new IpcHandlerError("internal", `image job: gallery item ${j.resultItemId} missing`),
           );
           return;
         }
@@ -251,13 +250,29 @@ export function setupIpc(deps: IpcDeps): IpcServer {
         }
         resolve(item);
       };
-      const onFailed = (j: Job): void => {
-        if (j.id !== jobId) return;
+
+      const settleFailed = (j: Job): void => {
+        if (settled) return;
+        settled = true;
         cleanup();
         reject(new Error(j.errorMessage ?? `job ended in state '${j.state}'`));
       };
+
+      const onCompleted = (j: Job): void => {
+        if (j.id === jobId) settleCompleted(j);
+      };
+      const onFailed = (j: Job): void => {
+        if (j.id === jobId) settleFailed(j);
+      };
       runtime.jobRunner.on("job.completed", onCompleted);
       runtime.jobRunner.on("job.failed", onFailed);
+
+      const current = jobsRepo.get(jobId);
+      if (current?.state === "succeeded") {
+        settleCompleted(current);
+      } else if (current?.state === "failed" || current?.state === "cancelled") {
+        settleFailed(current);
+      }
     });
 
     return { jobId, completed };
@@ -1291,7 +1306,7 @@ const WELL_KNOWN_PROVIDER_IDS = [
 
 const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   openai: "OpenAI",
-  "azure": "Azure",
+  azure: "Azure",
   google: "Google AI Studio",
   "flux-bfl": "Black Forest Labs",
   bytedance: "ByteDance",
@@ -1544,7 +1559,7 @@ export function maskValue(v: string | null | undefined): string | null {
 
 function maskSecrets(s: ProviderSecrets): {
   openai?: { apiKey: string | null };
-  "azure"?: { apiKey: string | null };
+  azure?: { apiKey: string | null };
   google?: { apiKey: string | null };
   "flux-bfl"?: { apiKey: string | null };
   bytedance?: { apiKey: string | null };
@@ -1577,7 +1592,7 @@ function maskSecrets(s: ProviderSecrets): {
 function prefsPayloadFromConfig(p: ProviderPreferences): ProviderPreferencesPayload {
   return {
     openai: p.openai ?? {},
-    "azure": p["azure"] ?? {},
+    azure: p["azure"] ?? {},
     google: p.google ?? {},
     "flux-bfl": p["flux-bfl"] ?? {},
     bytedance: p.bytedance ?? {},
@@ -1589,7 +1604,7 @@ function prefsPayloadFromConfig(p: ProviderPreferences): ProviderPreferencesPayl
 function prefsConfigFromPayload(payload: ProviderPreferencesPayload): ProviderPreferences {
   return {
     openai: payload.openai,
-    "azure": payload["azure"],
+    azure: payload["azure"],
     google: payload.google,
     "flux-bfl": payload["flux-bfl"],
     bytedance: payload.bytedance,
