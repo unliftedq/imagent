@@ -322,6 +322,23 @@ export const contract = {
     output: GalleryItemSchema,
   },
   /**
+   * Submit an image job and return as soon as the runner accepts it. Studio
+   * uses this non-blocking route so the composer can be reused while jobs run.
+   */
+  "image.submit": {
+    input: ImageRequestSchema.extend({
+      assetSlots: z
+        .object({
+          character: z.array(z.string()).optional(),
+          object: z.array(z.string()).optional(),
+          background: z.array(z.string()).optional(),
+          style: z.array(z.string()).optional(),
+        })
+        .optional(),
+    }),
+    output: z.object({ jobId: z.string() }),
+  },
+  /**
    * M7: Submit a Seedance (or future) video job. Unlike `image.generate`
    * which blocks-and-awaits the gallery item, video submission returns
    * `{ jobId }` immediately — Seedance jobs run for minutes, so the

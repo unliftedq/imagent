@@ -10,6 +10,8 @@ import type { Input, Output } from "./contract.js";
 // image.generate accepts ImageRequest, returns GalleryItem.
 const _imageInput: Input<"image.generate"> = null as unknown as ImageRequest;
 const _imageOutput: Output<"image.generate"> = null as unknown as GalleryItem;
+const _imageSubmitInput: Input<"image.submit"> = null as unknown as ImageRequest;
+const _imageSubmitOutput: Output<"image.submit"> = { jobId: "job_1" };
 
 // jobs.list accepts JobsQuery, returns Job[].
 const _jobsInput: Input<"jobs.list"> = null as unknown as JobsQuery;
@@ -23,6 +25,8 @@ const _providersOutput: Output<"providers.list"> = [];
 export type _ContractTypeProbe = [
   typeof _imageInput,
   typeof _imageOutput,
+  typeof _imageSubmitInput,
+  typeof _imageSubmitOutput,
   typeof _jobsInput,
   typeof _jobsOutput,
   typeof _providersInput,

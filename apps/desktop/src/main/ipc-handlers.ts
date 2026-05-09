@@ -110,6 +110,159 @@ export function setupIpc(deps: IpcDeps): IpcServer {
     return `id_${Math.random().toString(36).slice(2)}_${Date.now().toString(36)}`;
   };
 
+  type ImageSubmitRequest = ImageRequest & {
+    assetSlots?: {
+      character?: string[];
+      object?: string[];
+      background?: string[];
+      style?: string[];
+    };
+  };
+
+  const startImageJob = async (
+    request: ImageSubmitRequest,
+  ): Promise<{ jobId: string; completed: Promise<GalleryItem> }> => {
+    // Resolve asset slots → reference paths + style snippet appendix +
+    // attachments to write after the gallery item lands.
+    const slots = request.assetSlots ?? {};
+    const slotInputs = {
+      ...(slots.character ? { character: slots.character } : {}),
+      ...(slots.object ? { object: slots.object } : {}),
+      ...(slots.background ? { background: slots.background } : {}),
+      ...(slots.style ? { style: slots.style } : {}),
+    };
+
+    // Look up the model's caps to know maxReferences + supportsRef.
+    const provider = runtime.imageRegistry.get(request.providerId);
+    const resolvedModel = provider?.models?.get?.(request.model);
+    const maxRefs = resolvedModel?.capabilities?.maxReferences;
+    const supportsRefs = (maxRefs ?? Infinity) > 0;
+
+    let resolution: AssetSlotResolution;
+    try {
+      resolution = resolveAssetSlots(
+        slotInputs,
+        (id) => assetRepo.get(id),
+        (rel) => (path.isAbsolute(rel) ? rel : path.join(paths.dataDir, rel)),
+        { supportsReferences: supportsRefs },
+      );
+    } catch (err) {
+      throw new IpcHandlerError("validation_failed", (err as Error)?.message ?? String(err));
+    }
+
+    // Combine freeform refs with slot-derived refs (slot order: char→obj→bg→style).
+    const allRefs = [
+      ...(request.references ?? []).map((ref) => ({
+        path: path.isAbsolute(ref.path) ? ref.path : path.join(paths.dataDir, ref.path),
+        role: ref.role ?? ("freeform" as const),
+      })),
+      ...resolution.references,
+    ];
+    const { references: cappedRefs, capped } = capImageReferences(allRefs, maxRefs);
+    if (capped !== undefined) {
+      logger.warn("image.generate: cap-at-max references", {
+        providerId: request.providerId,
+        model: request.model,
+        capped,
+        original: allRefs.length,
+      });
+    }
+
+    // Build the augmented prompt + final ImageRequest the JobRunner sees.
+    const augmentedPrompt = appendStylePromptSnippets(
+      request.prompt,
+      resolution.stylePromptSnippets,
+    );
+    const finalReq: ImageRequest = {
+      ...request,
+      prompt: augmentedPrompt,
+      references: cappedRefs,
+      assetIds: [
+        ...(request.assetIds ?? []),
+        ...resolution.assetIds.filter((id) => !(request.assetIds ?? []).includes(id)),
+      ],
+    };
+    const intent = {
+      kind: "image" as const,
+      request: finalReq,
+      ...(finalReq.parentId ? { parentId: finalReq.parentId } : {}),
+      ...(finalReq.boardId ? { boardId: finalReq.boardId } : {}),
+    };
+
+    let jobId: string;
+    try {
+      jobId = await runtime.jobRunner.start(intent);
+    } catch (err) {
+      logger.error("image.generate: start() threw", {
+        providerId: request.providerId,
+        model: request.model,
+        err,
+      });
+      throw err;
+    }
+
+    const completed = new Promise<GalleryItem>((resolve, reject) => {
+      const cleanup = (): void => {
+        runtime.jobRunner.off("job.completed", onCompleted);
+        runtime.jobRunner.off("job.failed", onFailed);
+      };
+      const onCompleted = (j: Job): void => {
+        if (j.id !== jobId) return;
+        cleanup();
+        if (!j.resultItemId) {
+          reject(
+            new IpcHandlerError("internal", "image.generate: job completed without resultItemId"),
+          );
+          return;
+        }
+        const item = galleryRepo.get(j.resultItemId);
+        if (!item) {
+          reject(
+            new IpcHandlerError(
+              "internal",
+              `image.generate: gallery item ${j.resultItemId} missing`,
+            ),
+          );
+          return;
+        }
+
+        // M6: write gallery_item_assets rows for every contributing slot asset.
+        for (const att of resolution.attachments) {
+          try {
+            galleryRepo.addAssetLink({
+              itemId: item.id,
+              assetId: att.assetId,
+              role: att.role,
+            });
+          } catch (err) {
+            logger.warn("addAssetLink failed", {
+              itemId: item.id,
+              assetId: att.assetId,
+              err: String(err),
+            });
+          }
+        }
+
+        // Notify any other windows via gallery.changed.
+        try {
+          server.emit("gallery.changed", { id: item.id, op: "created", item });
+        } catch (err) {
+          logger.warn("gallery.changed emit failed", { err: String(err) });
+        }
+        resolve(item);
+      };
+      const onFailed = (j: Job): void => {
+        if (j.id !== jobId) return;
+        cleanup();
+        reject(new Error(j.errorMessage ?? `job ended in state '${j.state}'`));
+      };
+      runtime.jobRunner.on("job.completed", onCompleted);
+      runtime.jobRunner.on("job.failed", onFailed);
+    });
+
+    return { jobId, completed };
+  };
+
   const createAssetWithReferenceUploads = async ({
     kind,
     name,
@@ -432,164 +585,31 @@ export function setupIpc(deps: IpcDeps): IpcServer {
 
     // M5 / M6 — Studio + Gallery
     "image.generate": async (request) => {
-      const r = request as ImageRequest & {
-        assetSlots?: {
-          character?: string[];
-          object?: string[];
-          background?: string[];
-          style?: string[];
-        };
-      };
-
-      // Resolve asset slots → reference paths + style snippet appendix +
-      // attachments to write after the gallery item lands.
-      const slots = r.assetSlots ?? {};
-      const slotInputs = {
-        ...(slots.character ? { character: slots.character } : {}),
-        ...(slots.object ? { object: slots.object } : {}),
-        ...(slots.background ? { background: slots.background } : {}),
-        ...(slots.style ? { style: slots.style } : {}),
-      };
-
-      // Look up the model's caps to know maxReferences + supportsRef.
-      const provider = runtime.imageRegistry.get(r.providerId);
-      const resolvedModel = provider?.models?.get?.(r.model);
-      const maxRefs = resolvedModel?.capabilities?.maxReferences;
-      const supportsRefs = (maxRefs ?? Infinity) > 0;
-
-      let resolution: AssetSlotResolution;
+      const { jobId, completed } = await startImageJob(request);
       try {
-        resolution = resolveAssetSlots(
-          slotInputs,
-          (id) => assetRepo.get(id),
-          (rel) => (path.isAbsolute(rel) ? rel : path.join(paths.dataDir, rel)),
-          { supportsReferences: supportsRefs },
-        );
-      } catch (err) {
-        throw new IpcHandlerError("validation_failed", (err as Error)?.message ?? String(err));
-      }
-
-      // Combine freeform refs with slot-derived refs (slot order: char→obj→bg→style).
-      const allRefs = [
-        ...(r.references ?? []).map((ref) => ({
-          path: path.isAbsolute(ref.path) ? ref.path : path.join(paths.dataDir, ref.path),
-          role: ref.role ?? ("freeform" as const),
-        })),
-        ...resolution.references,
-      ];
-      const { references: cappedRefs, capped } = capImageReferences(allRefs, maxRefs);
-      if (capped !== undefined) {
-        logger.warn("image.generate: cap-at-max references", {
-          providerId: r.providerId,
-          model: r.model,
-          capped,
-          original: allRefs.length,
-        });
-      }
-
-      // Build the augmented prompt + final ImageRequest the JobRunner sees.
-      const augmentedPrompt = appendStylePromptSnippets(r.prompt, resolution.stylePromptSnippets);
-      const finalReq: ImageRequest = {
-        ...r,
-        prompt: augmentedPrompt,
-        references: cappedRefs,
-        assetIds: [
-          ...(r.assetIds ?? []),
-          ...resolution.assetIds.filter((id) => !(r.assetIds ?? []).includes(id)),
-        ],
-      };
-      // Strip the IPC-only assetSlots field before passing to the runner.
-      // (ImageRequestSchema doesn't carry it.)
-      const intent = {
-        kind: "image" as const,
-        request: finalReq,
-        ...(finalReq.parentId ? { parentId: finalReq.parentId } : {}),
-        ...(finalReq.boardId ? { boardId: finalReq.boardId } : {}),
-      };
-
-      // Subscribe to a single job's terminal events, then start. Listeners are
-      // wired with a sentinel jobId we capture from start()'s return value.
-      let resolveJob!: (job: Job) => void;
-      let rejectJob!: (err: Error) => void;
-      const completed = new Promise<Job>((resolve, reject) => {
-        resolveJob = resolve;
-        rejectJob = reject;
-      });
-      let targetId: string | null = null;
-      const onCompleted = (j: Job): void => {
-        if (targetId && j.id !== targetId) return;
-        cleanup();
-        resolveJob(j);
-      };
-      const onFailed = (j: Job): void => {
-        if (targetId && j.id !== targetId) return;
-        cleanup();
-        rejectJob(new Error(j.errorMessage ?? `job ended in state '${j.state}'`));
-      };
-      const cleanup = (): void => {
-        runtime.jobRunner.off("job.completed", onCompleted);
-        runtime.jobRunner.off("job.failed", onFailed);
-      };
-      runtime.jobRunner.on("job.completed", onCompleted);
-      runtime.jobRunner.on("job.failed", onFailed);
-      try {
-        targetId = await runtime.jobRunner.start(intent);
-      } catch (err) {
-        cleanup();
-        logger.error("image.generate: start() threw", {
-          providerId: r.providerId,
-          model: r.model,
-          err,
-        });
-        throw err;
-      }
-      let job: Job;
-      try {
-        job = await completed;
+        return await completed;
       } catch (err) {
         logger.error("image.generate failed", {
-          jobId: targetId,
-          providerId: r.providerId,
-          model: r.model,
+          jobId,
+          providerId: request.providerId,
+          model: request.model,
           err,
         });
         throw err;
       }
-      if (!job.resultItemId) {
-        throw new IpcHandlerError("internal", "image.generate: job completed without resultItemId");
-      }
-      const item = galleryRepo.get(job.resultItemId);
-      if (!item) {
-        throw new IpcHandlerError(
-          "internal",
-          `image.generate: gallery item ${job.resultItemId} missing`,
-        );
-      }
+    },
 
-      // M6: write gallery_item_assets rows for every contributing slot asset.
-      for (const att of resolution.attachments) {
-        try {
-          galleryRepo.addAssetLink({
-            itemId: item.id,
-            assetId: att.assetId,
-            role: att.role,
-          });
-        } catch (err) {
-          logger.warn("addAssetLink failed", {
-            itemId: item.id,
-            assetId: att.assetId,
-            err: String(err),
-          });
-        }
-      }
-
-      // Notify any other windows via gallery.changed.
-      try {
-        server.emit("gallery.changed", { id: item.id, op: "created", item });
-      } catch (err) {
-        logger.warn("gallery.changed emit failed", { err: String(err) });
-      }
-      return item;
+    "image.submit": async (request) => {
+      const { jobId, completed } = await startImageJob(request);
+      completed.catch((err) => {
+        logger.error("image.submit failed", {
+          jobId,
+          providerId: request.providerId,
+          model: request.model,
+          err,
+        });
+      });
+      return { jobId };
     },
 
     "gallery.query": async (query) => {

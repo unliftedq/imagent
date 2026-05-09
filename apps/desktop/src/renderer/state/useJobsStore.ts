@@ -100,10 +100,18 @@ export const useJobsStore = create<JobsState>((set, get) => ({
   },
 
   applyCompletedEvent: (j) => {
+    const wasActive = get().activeJobId === j.id;
     set((s) => ({
       jobs: { ...s.jobs, [j.id]: j },
       activeJobId: s.activeJobId === j.id ? null : s.activeJobId,
     }));
+    if (wasActive && j.resultItemId && typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent<{ id: string }>("imagent:canvas-pin", {
+          detail: { id: j.resultItemId },
+        }),
+      );
+    }
   },
 
   applyFailedEvent: (j) => {

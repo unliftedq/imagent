@@ -7,6 +7,7 @@ import { api } from "../../lib/api.js";
 import { useAssetsStore } from "../../state/useAssetsStore.js";
 import { useConfigStore } from "../../state/useConfigStore.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
+import { useJobsStore } from "../../state/useJobsStore.js";
 import { useUIStore } from "../../state/useUIStore.js";
 import { resolveAssetThumbnailUrl } from "../Assets";
 import { ChatComposerShell, ToolbarSelectTrigger } from "./composer.js";
@@ -34,6 +35,8 @@ export function VideoRail() {
 
   const assetsByKind = useAssetsStore((state) => state.byKind);
   const refreshAssets = useAssetsStore((state) => state.refresh);
+
+  const setActiveJobId = useJobsStore((state) => state.setActiveJobId);
 
   const [modelsByProvider, setModelsByProvider] = useState<Record<string, VideoModelDef[]>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -185,8 +188,12 @@ export function VideoRail() {
 
     setSubmitting(true);
     try {
-      await api["video.submit"](request);
-      if (draft.parentId) setDraft({ parentId: undefined });
+      const { jobId } = await api["video.submit"](request);
+      setActiveJobId(jobId);
+      setDraft({
+        prompt: "",
+        ...(draft.parentId ? { parentId: undefined } : {}),
+      });
     } catch (err) {
       const message =
         err instanceof IpcClientError ? `${err.message}` : ((err as Error)?.message ?? String(err));
