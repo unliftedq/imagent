@@ -231,6 +231,7 @@ export function GalleryPage() {
         durationMs={it.durationMs ?? null}
         favorited={it.favorited}
         selected={selectedId === it.id}
+        className="mb-0"
         boards={boards.map((b) => ({ id: b.id, name: b.name }))}
         onSelect={() => {
           setSelectedId(it.id);
@@ -389,7 +390,10 @@ export function GalleryPage() {
               style={{ gridTemplateColumns: `repeat(${galleryColumnCount}, minmax(0, 1fr))` }}
             >
               {galleryColumns.map((column, columnIndex) => (
-                <div key={columnIndex} className="flex min-w-0 flex-col">
+                <div
+                  key={`${galleryColumnCount}:${columnIndex}`}
+                  className="flex min-w-0 flex-col gap-3"
+                >
                   {column.map(renderGalleryItem)}
                 </div>
               ))}
@@ -467,7 +471,7 @@ function useWaterfallColumns() {
 function distributeWaterfallItems<T>(items: T[], columnCount: number): T[][] {
   const columns = Array.from({ length: columnCount }, () => [] as T[]);
   items.forEach((item, index) => {
-    columns[index % columnCount]?.push(item);
+    columns[index % columnCount]!.push(item);
   });
   return columns;
 }
