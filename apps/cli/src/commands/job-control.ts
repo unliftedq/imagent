@@ -3,6 +3,7 @@ import type { JobRepository } from "@imagent/persistence";
 
 const TERMINAL_STATES = new Set<JobState>(["succeeded", "failed", "cancelled"]);
 const MIN_JOB_ID_PREFIX_LENGTH = 6;
+const FORCE_EXIT_TIMEOUT_MS = 1_000;
 
 export function isTerminalState(state: JobState): boolean {
   return TERMINAL_STATES.has(state);
@@ -23,9 +24,13 @@ export function resolveJobId(jobs: JobRepository, input: string): JobId {
       `job id prefix '${input}' is ambiguous (${matches.length} matches); provide more characters`,
     );
   }
+  return firstJob(matches).id;
+}
+
+function firstJob(matches: Job[]): Job {
   const [match] = matches;
-  if (!match) throw new Error(`no job with id prefix '${input}'`);
-  return match.id;
+  if (!match) throw new Error("expected at least one job match");
+  return match;
 }
 
 export function installCancelOnInterrupt(
@@ -53,7 +58,9 @@ export function installCancelOnInterrupt(
       process.stderr.write("\ncancelled\n");
       process.exit(130);
     });
-    setTimeout(() => process.exit(130), 1_000).unref();
+    // Give provider cancellation a short chance to persist state, but preserve
+    // normal Ctrl-C semantics if a provider hangs during cancellation.
+    setTimeout(() => process.exit(130), FORCE_EXIT_TIMEOUT_MS).unref();
   };
   process.once("SIGINT", handler);
   process.once("SIGTERM", handler);

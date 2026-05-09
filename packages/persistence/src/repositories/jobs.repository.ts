@@ -1,4 +1,4 @@
-import type { Job, JobState, JobsQuery } from "@imagent/core";
+import type { Job, JobsQuery, JobState } from "@imagent/core";
 import type { DatabaseType } from "../db.js";
 
 interface JobRow {
@@ -60,9 +60,14 @@ export class JobRepository {
   }
 
   findByIdPrefix(prefix: string): Job[] {
-    const rows = this.db
-      .prepare("SELECT * FROM jobs WHERE substr(id, 1, ?) = ? ORDER BY created_at DESC")
-      .all(prefix.length, prefix) as JobRow[];
+    const upper = prefixUpperBound(prefix);
+    const rows = upper
+      ? (this.db
+          .prepare("SELECT * FROM jobs WHERE id >= ? AND id < ? ORDER BY created_at DESC")
+          .all(prefix, upper) as JobRow[])
+      : (this.db
+          .prepare("SELECT * FROM jobs WHERE id >= ? ORDER BY created_at DESC")
+          .all(prefix) as JobRow[]);
     return rows.map(rowToJob);
   }
 
@@ -141,4 +146,14 @@ export class JobRepository {
       .all(...states) as JobRow[];
     return rows.map(rowToJob);
   }
+}
+
+function prefixUpperBound(prefix: string): string | null {
+  for (let i = prefix.length - 1; i >= 0; i -= 1) {
+    const code = prefix.charCodeAt(i);
+    if (code < 0xffff) {
+      return `${prefix.slice(0, i)}${String.fromCharCode(code + 1)}`;
+    }
+  }
+  return null;
 }
