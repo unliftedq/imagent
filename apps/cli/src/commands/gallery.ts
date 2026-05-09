@@ -18,15 +18,15 @@ import {
 import chalk from "chalk";
 import type { Command } from "commander";
 
-import { buildAssetSlots, capReferences } from "./asset-slots.js";
-import { installCancelOnInterrupt } from "./job-control.js";
-import { buildRunner, loadCliRuntime } from "./runtime.js";
+import { buildAssetSlots, capReferences } from "../support/asset-slots.js";
+import { installCancelOnInterrupt } from "../support/job-control.js";
+import { buildRunner, loadCliRuntime } from "../support/runtime.js";
 import {
   excerpt,
   formatRelativeTime,
   isTty,
   truncate,
-} from "./util.js";
+} from "../support/util.js";
 
 interface GalleryLsOptions {
   kind?: string;

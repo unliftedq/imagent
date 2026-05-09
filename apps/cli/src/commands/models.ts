@@ -7,7 +7,7 @@ import {
 import chalk from "chalk";
 import type { Command } from "commander";
 
-import { loadCliRuntime } from "./runtime.js";
+import { loadCliRuntime } from "../support/runtime.js";
 
 interface ModelsOptions {
   kind?: string;

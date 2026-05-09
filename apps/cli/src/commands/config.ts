@@ -14,7 +14,7 @@ import { getBundledCatalog, loadCatalog, saveCatalog } from "@imagent/providers"
 import chalk from "chalk";
 import type { Command } from "commander";
 
-import { loadCliRuntime } from "./runtime.js";
+import { loadCliRuntime } from "../support/runtime.js";
 
 /**
  * `imagent config set <vendor>.<key> <value>`
