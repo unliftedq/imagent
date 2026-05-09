@@ -43,7 +43,7 @@ export function registerJobCommands(program: Command): void {
 
   job
     .command("status <jobId>")
-    .description("Print current state and progress for a job")
+    .description("Print current state and progress for a job (id may be a unique prefix, min 6 chars)")
     .action(async (jobId: string) => {
       try {
         await runStatus(jobId);
@@ -55,7 +55,7 @@ export function registerJobCommands(program: Command): void {
 
   job
     .command("cancel <jobId>")
-    .description("Cancel an in-flight job (DB-level + provider hint)")
+    .description("Cancel an in-flight job (id may be a unique prefix, min 6 chars)")
     .action(async (jobId: string) => {
       try {
         await runCancel(jobId);
@@ -67,7 +67,7 @@ export function registerJobCommands(program: Command): void {
 
   job
     .command("watch <jobId>")
-    .description("Resume polling a queued/running job and stream progress")
+    .description("Watch a queued/running job (id may be a unique prefix, min 6 chars)")
     .action(async (jobId: string) => {
       try {
         await runWatch(jobId);
