@@ -128,6 +128,6 @@ imagent image "portrait in moonlit forest" --character nova --style soft-waterco
 
 - **Do not invent model IDs or option keys.** Run `imagent models` and `imagent options` first; the CLI rejects unsupported values.
 - **Prefer defaults.** Do not override provider/model/options just to be explicit; rely on CLI/catalog defaults unless the user request needs a particular value.
-- **Detached jobs keep a background worker alive** until they finish. Use `imagent job watch <jobId>` from the same machine to follow progress.
+- **Detached jobs keep a background worker alive** until they finish. Use `imagent job status <jobId>` for a one-time status check, or `imagent job watch <jobId>` from the same machine to follow long-running progress.
 - **Outputs land in the local gallery** under `~/.imagent/` by default. Use `--out <dir>` to copy the file to a specific location.
 - **Never paste a secret into a script or commit it.** Setup commands belong in [references/setup.md](references/setup.md).

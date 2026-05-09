@@ -56,7 +56,7 @@ imagent video "a slow camera move through a neon city" \
   --option resolution=720p
 ```
 
-Video jobs stream progress by default. Add `--detach` to run in the background, then follow with `imagent job watch <jobId>`.
+Video jobs stream progress by default. Add `--detach` to run in the background, then use `imagent job status <jobId>` for a one-time status check or `imagent job watch <jobId>` for long-running progress monitoring.
 
 ### 5. Use the desktop app
 
