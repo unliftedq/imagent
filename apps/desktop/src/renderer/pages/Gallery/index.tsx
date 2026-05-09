@@ -340,7 +340,12 @@ export function GalleryPage() {
               onGoToStudio={() => navigate("studio")}
             />
           ) : (
-            <div style={{ columnWidth: 240, columnGap: 12 }} className="w-full">
+            <div
+              className={
+                "grid w-full grid-cols-[repeat(auto-fill,minmax(240px,1fr))] " +
+                "items-start gap-x-3 gap-y-0 overflow-x-hidden"
+              }
+            >
               {items.map((it) => {
                 const isVideo = it.kind === "video";
                 const src = isVideo
