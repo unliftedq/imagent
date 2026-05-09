@@ -4,8 +4,8 @@ import type { Job, JobState } from "../domain/job.js";
 import type { ImageProvider } from "../ports/image-provider.js";
 import type { VideoProvider } from "../ports/video-provider.js";
 import type {
-  GalleryRepositoryPort,
   FilesServicePort,
+  GalleryRepositoryPort,
   JobRepositoryPort,
   ThumbnailServicePort,
 } from "./job-runner.js";
@@ -24,7 +24,10 @@ class InMemoryJobs implements JobRepositoryPort {
   updateState(
     id: string,
     patch: Partial<
-      Pick<Job, "state" | "progress" | "errorMessage" | "providerJobId" | "resultItemId" | "finishedAt">
+      Pick<
+        Job,
+        "state" | "progress" | "errorMessage" | "providerJobId" | "resultItemId" | "finishedAt"
+      >
     >,
   ): Job {
     const cur = this.jobs.get(id);
@@ -52,7 +55,9 @@ const fakeFiles: FilesServicePort = {
   galleryItemFile: (id, ext) => `/tmp/data/gallery/2026/04/${id}.${ext}`,
 };
 
-function fakeImageProvider(opts: { onGenerate?: (signal?: AbortSignal) => Promise<void> } = {}): ImageProvider {
+function fakeImageProvider(
+  opts: { onGenerate?: (signal?: AbortSignal) => Promise<void> } = {},
+): ImageProvider {
   return {
     id: "fake",
     displayName: "Fake",
@@ -254,7 +259,50 @@ describe("JobRunner — image path", () => {
     });
     const j = await failed;
     expect(j.state).toBe("cancelled");
+    expect(j.errorMessage).toBe("cancelled via CLI");
     expect(gallery.items.size).toBe(0);
+  });
+
+  it("does not mark a cancelled image job succeeded after creating the gallery item", async () => {
+    const jobs = new InMemoryJobs();
+    const gallery = new InMemoryGallery();
+    let counter = 0;
+    const runner = new JobRunner({
+      jobs,
+      gallery: {
+        create(item) {
+          const created = gallery.create(item);
+          jobs.updateState("id-1", {
+            state: "cancelled",
+            errorMessage: "cancelled after gallery create",
+            finishedAt: Date.now(),
+          });
+          return created;
+        },
+      },
+      files: fakeFiles,
+      imageRegistry: new Map([["fake", fakeImageProvider()]]),
+      videoRegistry: new Map(),
+      writeFile: async () => {},
+      ensureDir: async () => {},
+      idFactory: () => `id-${++counter}`,
+    });
+    const failed = new Promise<Job>((resolve) => runner.once("job.failed", (j: Job) => resolve(j)));
+    await runner.start({
+      kind: "image",
+      request: {
+        prompt: "x",
+        providerId: "fake",
+        model: "any",
+        count: 1,
+        references: [],
+        assetIds: [],
+      },
+    });
+    const j = await failed;
+    expect(j.state).toBe("cancelled");
+    expect(j.errorMessage).toBe("cancelled after gallery create");
+    expect(j.resultItemId).toBeNull();
   });
 
   it("emits job.failed if provider returns 0 outputs", async () => {
@@ -341,7 +389,9 @@ describe("JobRunner — video path", () => {
     runner.on("job.progress", () => {
       progressCount += 1;
     });
-    const completed = new Promise<Job>((resolve) => runner.once("job.completed", (j: Job) => resolve(j)));
+    const completed = new Promise<Job>((resolve) =>
+      runner.once("job.completed", (j: Job) => resolve(j)),
+    );
     await runner.start({
       kind: "video",
       request: {
@@ -445,9 +495,7 @@ describe("JobRunner — video path", () => {
       clearTimer: () => {},
       thumbnailService,
     });
-    const failed = new Promise<Job>((resolve) =>
-      runner.once("job.failed", (j: Job) => resolve(j)),
-    );
+    const failed = new Promise<Job>((resolve) => runner.once("job.failed", (j: Job) => resolve(j)));
     await runner.start({
       kind: "video",
       request: {
@@ -509,6 +557,52 @@ describe("JobRunner — video path", () => {
     const item = gallery.items.get(j.resultItemId!);
     expect(item).toBeTruthy();
     expect(item?.thumbPath ?? null).toBeNull();
+  });
+
+  it("does not create a video gallery item when cancelled after writing the output", async () => {
+    const jobs = new InMemoryJobs();
+    const gallery = new InMemoryGallery();
+    const state: FakeVideoState = {
+      pollResults: [{ state: "succeeded" }],
+    };
+    const setTimer = (cb: () => void) => {
+      queueMicrotask(cb);
+      return Symbol("t");
+    };
+    let counter = 0;
+    const runner = new JobRunner({
+      jobs,
+      gallery,
+      files: fakeFiles,
+      imageRegistry: new Map(),
+      videoRegistry: new Map([["fake-video", fakeVideoProvider(state)]]),
+      writeFile: async () => {
+        jobs.updateState("id-1", {
+          state: "cancelled",
+          errorMessage: "cancelled during video write",
+          finishedAt: Date.now(),
+        });
+      },
+      ensureDir: async () => {},
+      idFactory: () => `id-${++counter}`,
+      setTimer,
+      clearTimer: () => {},
+    });
+    const failed = new Promise<Job>((resolve) => runner.once("job.failed", (j: Job) => resolve(j)));
+    await runner.start({
+      kind: "video",
+      request: {
+        prompt: "x",
+        providerId: "fake-video",
+        model: "any",
+        references: [],
+        assetIds: [],
+      },
+    });
+    const j = await failed;
+    expect(j.state).toBe("cancelled");
+    expect(j.errorMessage).toBe("cancelled during video write");
+    expect(gallery.items.size).toBe(0);
   });
 
   it("video failed status emits job.failed", async () => {
@@ -585,10 +679,7 @@ describe("JobRunner — resumeRunningJobs", () => {
       files: fakeFiles,
       imageRegistry: new Map(),
       videoRegistry: new Map([
-        [
-          "fake-video",
-          fakeVideoProvider({ pollResults: [{ state: "succeeded" }] }),
-        ],
+        ["fake-video", fakeVideoProvider({ pollResults: [{ state: "succeeded" }] })],
       ]),
       writeFile: async () => {},
       ensureDir: async () => {},
@@ -679,10 +770,7 @@ describe("JobRunner — attach", () => {
       files: fakeFiles,
       imageRegistry: new Map(),
       videoRegistry: new Map([
-        [
-          "fake-video",
-          fakeVideoProvider({ pollResults: [{ state: "succeeded" }] }),
-        ],
+        ["fake-video", fakeVideoProvider({ pollResults: [{ state: "succeeded" }] })],
       ]),
       writeFile: async () => {},
       ensureDir: async () => {},
