@@ -1,6 +1,6 @@
 /**
  * Small CLI utilities shared by M3 commands. Kept tiny — no fancy table
- * library, no spinner library by default. The `--wait` flow reaches for an
+ * library, no spinner library by default. The foreground job flow reaches for an
  * inline `\r`-based progress writer instead.
  */
 

@@ -87,6 +87,7 @@ describe("CLI --help", () => {
     expect(image.status, `stderr:\n${image.stderr}`).toBe(0);
     expect(image.stdout).toContain("--option <key=value>");
     expect(image.stdout).toContain("--out <dir>");
+    expect(image.stdout).toContain("--detach");
     expect(image.stdout).not.toContain("--negative");
     expect(image.stdout).not.toContain("--size");
 
@@ -94,6 +95,8 @@ describe("CLI --help", () => {
     expect(video.status, `stderr:\n${video.stderr}`).toBe(0);
     expect(video.stdout).toContain("--option <key=value>");
     expect(video.stdout).toContain("--out <dir>");
+    expect(video.stdout).toContain("--detach");
+    expect(video.stdout).not.toContain("--wait");
     expect(video.stdout).not.toContain("--duration");
     expect(video.stdout).not.toContain("--resolution");
   });

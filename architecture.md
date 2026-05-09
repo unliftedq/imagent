@@ -463,7 +463,7 @@ The CLI imports the same packages as the main process (no IPC). It opens the sam
 imagent image "<prompt>"     [--provider bytedance] [--model seedream-3.0] [--ref path,path]
                              [--character slug] [--object slug] [--background slug] [--style slug]
                              [--count 4] [--out dir]
-imagent video <prompt>       [--provider bytedance] [--model seedance-1.0-pro] [--duration 5] [--ref ...] [--character slug] [--wait]
+imagent video <prompt>       [--provider bytedance] [--model seedance-1.0-pro] [--duration 5] [--ref ...] [--character slug] [--detach]
 imagent job {status|cancel|watch} <jobId>
 imagent asset {add|list|rm|show} ...
 imagent gallery {ls|remix|rm|favorite} ...

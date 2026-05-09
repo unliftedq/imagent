@@ -508,7 +508,7 @@ function buildExamples(
     if (caps?.resolutions?.[0]) opts.push(`--option resolution=${caps.resolutions[0]}`);
     if (caps?.aspectRatios?.[0]) opts.push(`--option aspectRatio=${caps.aspectRatios[0]}`);
     examples.push(
-      `imagent video "your prompt" --provider ${providerId} --model ${match.def.id}${opts.length ? ` ${opts.join(" ")}` : ""} --wait --out ./outputs`,
+      `imagent video "your prompt" --provider ${providerId} --model ${match.def.id}${opts.length ? ` ${opts.join(" ")}` : ""} --out ./outputs`,
     );
   }
   return examples;

@@ -2,11 +2,9 @@ import path from "node:path";
 
 import type {
   Job,
-  JobProgressEvent,
   JobState,
 } from "@imagent/core";
 import {
-  GalleryRepository,
   JobRepository,
   createPathResolver,
   ensureDataDir,
@@ -15,8 +13,14 @@ import {
 import chalk from "chalk";
 import type { Command } from "commander";
 
+import {
+  installCancelOnInterrupt,
+  isTerminalState,
+  resolveJobId,
+  waitForPersistedTerminalJob,
+} from "./job-control.js";
 import { buildRunner, loadCliRuntime } from "./runtime.js";
-import { excerpt, formatRelativeTime, isTty, truncate } from "./util.js";
+import { excerpt, formatRelativeTime, isTty } from "./util.js";
 
 const VALID_STATES: JobState[] = [
   "queued",
@@ -33,13 +37,13 @@ export function registerJobCommands(program: Command): void {
       [
         "Inspect, cancel, or watch generation jobs.",
         "",
-        "Submitted video jobs run in the background; use `job watch <id>` from the same machine to resume polling. Jobs are also persisted in ~/.imagent/data/imagent.db so `job ls` and `job status` work across CLI sessions.",
+        "Use `job watch <id>` to follow foreground or detached work. Jobs are persisted in ~/.imagent/data/imagent.db so `job ls` and `job status` work across CLI sessions.",
       ].join("\n"),
     );
 
   job
     .command("status <jobId>")
-    .description("Print current state and progress for a job")
+    .description("Print current state and progress for a job (id may be a unique prefix, min 6 chars)")
     .action(async (jobId: string) => {
       try {
         await runStatus(jobId);
@@ -51,7 +55,7 @@ export function registerJobCommands(program: Command): void {
 
   job
     .command("cancel <jobId>")
-    .description("Cancel an in-flight job (DB-level + provider hint)")
+    .description("Cancel an in-flight job (id may be a unique prefix, min 6 chars)")
     .action(async (jobId: string) => {
       try {
         await runCancel(jobId);
@@ -63,7 +67,7 @@ export function registerJobCommands(program: Command): void {
 
   job
     .command("watch <jobId>")
-    .description("Resume polling a queued/running job and stream progress")
+    .description("Watch a queued/running job (id may be a unique prefix, min 6 chars)")
     .action(async (jobId: string) => {
       try {
         await runWatch(jobId);
@@ -95,8 +99,9 @@ async function runStatus(jobId: string): Promise<void> {
   const db = openDatabase(resolver.dbFile());
   try {
     const repo = new JobRepository(db);
-    const j = repo.get(jobId);
-    if (!j) throw new Error(`no job with id '${jobId}'`);
+    const id = resolveJobId(repo, jobId);
+    const j = repo.get(id);
+    if (!j) throw new Error(`no job with id '${id}'`);
     const lines: string[] = [];
     lines.push(`${chalk.dim("id:        ")}${j.id}`);
     lines.push(`${chalk.dim("kind:      ")}${j.kind}`);
@@ -124,21 +129,22 @@ async function runCancel(jobId: string): Promise<void> {
   const runtime = await loadCliRuntime();
   const { db, jobs, runner } = buildRunner(runtime);
   try {
-    const j = jobs.get(jobId);
-    if (!j) throw new Error(`no job with id '${jobId}'`);
+    const id = resolveJobId(jobs, jobId);
+    const j = jobs.get(id);
+    if (!j) throw new Error(`no job with id '${id}'`);
     if (j.state === "succeeded" || j.state === "failed" || j.state === "cancelled") {
       process.stdout.write(`${chalk.dim("already terminal:")} state=${j.state}\n`);
       return;
     }
-    jobs.updateState(jobId, {
+    jobs.updateState(id, {
       state: "cancelled",
       finishedAt: Date.now(),
       errorMessage: "cancelled via CLI",
     });
-    if (runner.isRunning(jobId)) {
-      await runner.cancel(jobId);
+    if (runner.isRunning(id)) {
+      await runner.cancel(id);
     }
-    process.stdout.write(`${chalk.green("ok:")} cancelled ${jobId}\n`);
+    process.stdout.write(`${chalk.green("ok:")} cancelled ${id}\n`);
   } finally {
     db.close();
   }
@@ -148,8 +154,9 @@ async function runWatch(jobId: string): Promise<void> {
   const runtime = await loadCliRuntime();
   const { db, jobs, gallery, runner } = buildRunner(runtime);
   try {
-    const j = jobs.get(jobId);
-    if (!j) throw new Error(`no job with id '${jobId}'`);
+    const id = resolveJobId(jobs, jobId);
+    const j = jobs.get(id);
+    if (!j) throw new Error(`no job with id '${id}'`);
 
     if (j.state === "succeeded") {
       const item = j.resultItemId ? gallery.get(j.resultItemId) : null;
@@ -164,37 +171,22 @@ async function runWatch(jobId: string): Promise<void> {
     if (j.state === "failed" || j.state === "cancelled") {
       throw new Error(j.errorMessage ?? `job ended in state '${j.state}'`);
     }
-    if (j.kind === "image") {
-      // Image jobs aren't resumable. We mark them failed via attach() below;
-      // first surface a nicer error if a partial file landed somewhere.
-      const item = j.resultItemId ? gallery.get(j.resultItemId) : null;
-      const where = item
-        ? path.isAbsolute(item.relPath)
-          ? item.relPath
-          : path.join(runtime.resolver.dataDir, item.relPath)
-        : "(no file)";
-      try {
-        await runner.attach(jobId);
-      } catch {
-        // attach() throws on the failure path we just wrote.
-      }
-      process.stderr.write(
-        `${chalk.red("error:")} image jobs are not resumable; the file is at ${where} if it succeeded\n`,
-      );
-      process.exit(1);
-    }
 
-    // video: stream progress until completion.
+    // Follow persisted state so watch observes detached background workers.
     const tty = isTty();
-    const onProgress = (e: JobProgressEvent): void => {
-      const pct = Math.round((e.progress ?? 0) * 100);
-      if (tty) process.stdout.write(`\rprogress: ${pct}% (${e.state})    `);
-      else process.stdout.write(`progress: ${pct}% (${e.state})\n`);
+    const cleanupCancel = installCancelOnInterrupt(runner, jobs, id);
+    const onSnapshot = (job: Job): void => {
+      if (isTerminalState(job.state)) return;
+      const pct = Math.round((job.progress ?? 0) * 100);
+      if (tty) process.stdout.write(`\rprogress: ${pct}% (${job.state})    `);
+      else process.stdout.write(`progress: ${pct}% (${job.state})\n`);
     };
-    runner.on("job.progress", onProgress);
     try {
-      const final = await runner.attach(jobId);
+      const final = await waitForPersistedTerminalJob(jobs, id, onSnapshot);
       if (tty) process.stdout.write("\n");
+      if (final.state === "failed" || final.state === "cancelled") {
+        throw new Error(final.errorMessage ?? `job ended in state '${final.state}'`);
+      }
       const item = final.resultItemId ? gallery.get(final.resultItemId) : null;
       const abs = item
         ? path.isAbsolute(item.relPath)
@@ -203,7 +195,7 @@ async function runWatch(jobId: string): Promise<void> {
         : "(no file)";
       process.stdout.write(`${chalk.green("ok:")} ${abs}\n`);
     } finally {
-      runner.off("job.progress", onProgress);
+      cleanupCancel();
     }
   } finally {
     db.close();
@@ -238,7 +230,7 @@ async function runLs(options: { state?: string; kind?: string; limit?: string })
       return;
     }
     for (const j of list) {
-      const id = truncate(j.id, 8);
+      const id = j.id;
       const kind = j.kind === "video" ? chalk.magenta("[video]") : chalk.cyan("[image]");
       const provider = j.providerId;
       const progress =

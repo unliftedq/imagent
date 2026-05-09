@@ -12,6 +12,8 @@ import chalk from "chalk";
 import type { Command } from "commander";
 
 import { buildAssetSlots, capReferences } from "./asset-slots.js";
+import { startDetachedCurrentCommand } from "./detached.js";
+import { installCancelOnInterrupt } from "./job-control.js";
 import { buildRunner, loadCliRuntime } from "./runtime.js";
 import {
   coerceScalar,
@@ -30,7 +32,7 @@ interface VideoOptions {
   object?: string[];
   background?: string[];
   style?: string[];
-  wait?: boolean;
+  detach?: boolean;
   out?: string;
 }
 
@@ -43,7 +45,7 @@ export function registerVideoCommand(program: Command): void {
         "Submit a video generation job from a text prompt.",
         "",
         "Default provider: bytedance. Run `imagent models --kind video` to list providers/models and `imagent options --provider <id> --model <id>` for the model's exact `--option key=value` keys (durationSec, resolution, aspectRatio, fps, firstFrame, lastFrame, ...).",
-        "Without --wait/--out the job is submitted in the background; use `imagent job watch <id>` from the same machine to reattach.",
+        "By default the CLI waits and streams progress. Use --detach to keep the job running in a background process.",
       ].join("\n"),
     )
     .option(
@@ -66,8 +68,8 @@ export function registerVideoCommand(program: Command): void {
     .option("--object <slug>", "Attach a saved object asset by slug (repeatable)", collect, [])
     .option("--background <slug>", "Attach a saved background asset by slug (repeatable)", collect, [])
     .option("--style <slug>", "Attach a saved style asset by slug (repeatable; appends prompt_snippet)", collect, [])
-    .option("--wait", "Block until the job completes, printing live progress")
-    .option("--out <dir>", "Copy the completed result to this directory once done (implies --wait)")
+    .option("--detach", "Run the job in a detached background process", false)
+    .option("--out <dir>", "Copy the completed result to this directory once done")
     .action(async (prompt: string, options: VideoOptions) => {
       try {
         await runVideo(prompt, options);
@@ -80,6 +82,12 @@ export function registerVideoCommand(program: Command): void {
 
 async function runVideo(prompt: string, options: VideoOptions): Promise<void> {
   const runtime = await loadCliRuntime();
+  if (options.detach) {
+    const detached = await startDetachedCurrentCommand(runtime);
+    process.stdout.write(`${chalk.green("submitted:")} ${detached.id}\n`);
+    process.stdout.write(`${chalk.dim("log:")} ${detached.logPath}\n`);
+    return;
+  }
   const providerId = options.provider ?? "bytedance";
   const provider = runtime.videoRegistry.get(providerId);
   if (!provider) {
@@ -96,7 +104,7 @@ async function runVideo(prompt: string, options: VideoOptions): Promise<void> {
   const supportsRefs = resolved?.capabilities?.supportsRefImages !== false;
   const maxRefs = supportsRefs ? undefined : 0;
 
-  const { db, gallery, runner } = buildRunner(runtime);
+  const { db, jobs, gallery, runner } = buildRunner(runtime);
   try {
     const slots = await buildAssetSlots(runtime.resolver, db, {
       characters: options.character ?? [],
@@ -126,17 +134,7 @@ async function runVideo(prompt: string, options: VideoOptions): Promise<void> {
 
     const intent: GenerationIntent = { kind: "video", request: req };
 
-    if (!options.wait && !options.out) {
-      const id = await runner.start(intent);
-      process.stdout.write(`${chalk.green("submitted:")} ${id}\n`);
-      process.stdout.write(
-        `${chalk.dim("note:")} polling stops when CLI exits; reattach with 'imagent job watch ${id}' from the same machine\n`,
-      );
-      // Don't await the polling loop; exiting is the documented behaviour.
-      return;
-    }
-
-    // --wait/--out: subscribe to events, render single-line progress, persist
+    // Foreground mode: subscribe to events, render single-line progress, persist
     // asset links + lineage on completion.
     const tty = isTty();
     const printProgress = (e: JobProgressEvent): void => {
@@ -158,11 +156,14 @@ async function runVideo(prompt: string, options: VideoOptions): Promise<void> {
 
     process.stdout.write(`${chalk.dim("submitting:")} provider=${providerId} model=${model}\n`);
     const id = await runner.start(intent);
+    const cleanupCancel = installCancelOnInterrupt(runner, jobs, id);
     process.stdout.write(`${chalk.dim("job:")} ${id}\n`);
 
-    const job = await completed;
-    runner.off("job.progress", printProgress);
-    if (tty) process.stdout.write("\n");
+    const job = await completed.finally(() => {
+      cleanupCancel();
+      runner.off("job.progress", printProgress);
+      if (tty) process.stdout.write("\n");
+    });
 
     if (!job.resultItemId) {
       throw new Error("job completed without resultItemId");

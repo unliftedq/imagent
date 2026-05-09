@@ -53,11 +53,10 @@ The CLI prints the generated file path when the job completes. Generated outputs
 imagent video "a slow camera move through a neon city" \
   --provider bytedance \
   --option duration=5 \
-  --option resolution=720p \
-  --wait
+  --option resolution=720p
 ```
 
-Video jobs are asynchronous. Use `--wait` to block until completion, or reattach later with `imagent job watch <jobId>`.
+Video jobs stream progress by default. Add `--detach` to run in the background, then use `imagent job status <jobId>` for a one-time status check or `imagent job watch <jobId>` for long-running progress monitoring.
 
 ### 5. Use the desktop app
 

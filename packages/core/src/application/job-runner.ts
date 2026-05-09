@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
+import { isAbortError, ProviderAbortError, ProviderError } from "../domain/errors.js";
 import type { GalleryItem } from "../domain/gallery.js";
-import { ProviderAbortError, ProviderError, isAbortError } from "../domain/errors.js";
 import type { Job, JobId, JobState } from "../domain/job.js";
 import type { GenerationIntent, ImageRequest, VideoRequest } from "../domain/request.js";
 import type { VideoJobHandle, VideoJobState } from "../domain/result.js";
@@ -23,7 +23,10 @@ export interface JobRepositoryPort {
   updateState(
     id: string,
     patch: Partial<
-      Pick<Job, "state" | "progress" | "errorMessage" | "providerJobId" | "resultItemId" | "finishedAt">
+      Pick<
+        Job,
+        "state" | "progress" | "errorMessage" | "providerJobId" | "resultItemId" | "finishedAt"
+      >
     >,
   ): Job;
   listByStates(states: readonly JobState[]): Job[];
@@ -57,7 +60,10 @@ export interface ThumbnailServicePort {
    * Produce a thumbnail next to `srcPath`. Returns the absolute path to the
    * generated file, or `null` when generation was skipped (e.g. unsupported).
    */
-  generateForVideo(srcPath: string, destPath: string): Promise<{ ok: true } | { ok: false; reason: string }>;
+  generateForVideo(
+    srcPath: string,
+    destPath: string,
+  ): Promise<{ ok: true } | { ok: false; reason: string }>;
 }
 
 export type ImageRegistry = ReadonlyMap<string, ImageProvider>;
@@ -256,7 +262,13 @@ export class JobRunner extends EventEmitter {
       const abort = new AbortController();
       const entry: RunningEntry = { abort, pollIndex: 0 };
       this.running.set(job.id, entry);
-      this.scheduleVideoPoll(job.id, provider, handle, entry, JSON.parse(job.requestJson) as VideoRequest);
+      this.scheduleVideoPoll(
+        job.id,
+        provider,
+        handle,
+        entry,
+        JSON.parse(job.requestJson) as VideoRequest,
+      );
     }
   }
 
@@ -313,6 +325,7 @@ export class JobRunner extends EventEmitter {
   ): Promise<void> {
     try {
       const result = await provider.generate(req, signal);
+      this.throwIfPersistedCancelled(job.id, req.providerId);
       // Take the first output (count > 1 is documented but M2 persists one
       // item per generate call; multi-result fan-out lands in M5).
       const out = result.outputs[0];
@@ -330,6 +343,7 @@ export class JobRunner extends EventEmitter {
       await this.deps.writeFile(absPath, out.bytes);
 
       const relPath = relativeToData(absPath, this.deps.files.dataDir);
+      this.throwIfPersistedCancelled(job.id, req.providerId);
 
       const overrides = this.intentOverrides.get(job.id) ?? {};
       const item = this.deps.gallery.create({
@@ -371,6 +385,7 @@ export class JobRunner extends EventEmitter {
         }
       }
       this.intentOverrides.delete(job.id);
+      this.throwIfPersistedCancelled(job.id, req.providerId);
 
       const updated = this.deps.jobs.updateState(job.id, {
         state: "succeeded",
@@ -392,11 +407,7 @@ export class JobRunner extends EventEmitter {
           err,
         });
       }
-      const updated = this.deps.jobs.updateState(job.id, {
-        state: aborted ? "cancelled" : "failed",
-        errorMessage: aborted ? "cancelled" : (err as Error)?.message ?? String(err),
-        finishedAt: this.deps.now(),
-      });
+      const updated = this.updateFailedState(job.id, aborted, err);
       this.emit("job.failed", updated);
     }
   }
@@ -457,11 +468,7 @@ export class JobRunner extends EventEmitter {
             err,
           });
         }
-        const updated = this.deps.jobs.updateState(id, {
-          state: aborted ? "cancelled" : "failed",
-          errorMessage: aborted ? "cancelled" : (err as Error)?.message ?? String(err),
-          finishedAt: this.deps.now(),
-        });
+        const updated = this.updateFailedState(id, aborted, err);
         this.emit("job.failed", updated);
       }
     })();
@@ -540,6 +547,7 @@ export class JobRunner extends EventEmitter {
 
     if (status.state === "succeeded") {
       try {
+        this.throwIfPersistedCancelled(id, provider.id);
         const result = await provider.fetch(handle);
         const itemId = this.deps.idFactory();
         const now = this.deps.now();
@@ -551,6 +559,7 @@ export class JobRunner extends EventEmitter {
         const absPath = this.deps.files.galleryItemFile(itemId, ext, date);
         await this.deps.writeFile(absPath, out.bytes);
         const relPath = relativeToData(absPath, this.deps.files.dataDir);
+        this.throwIfPersistedCancelled(id, provider.id);
 
         // Best-effort thumbnail generation. Persist `thumb_path` only when
         // the service confirms a file was written; failures log + drop.
@@ -558,16 +567,9 @@ export class JobRunner extends EventEmitter {
         if (this.deps.thumbnailService) {
           // `<itemId>.thumb.webp` next to `<itemId>.<ext>` — sibling layout
           // matches architecture.md §6.
-          const absThumb = this.deps.files.galleryItemFile(
-            `${itemId}.thumb`,
-            "webp",
-            date,
-          );
+          const absThumb = this.deps.files.galleryItemFile(`${itemId}.thumb`, "webp", date);
           try {
-            const r = await this.deps.thumbnailService.generateForVideo(
-              absPath,
-              absThumb,
-            );
+            const r = await this.deps.thumbnailService.generateForVideo(absPath, absThumb);
             if (r.ok) {
               thumbRel = relativeToData(absThumb, this.deps.files.dataDir);
             } else {
@@ -624,6 +626,7 @@ export class JobRunner extends EventEmitter {
           }
         }
         this.intentOverrides.delete(id);
+        this.throwIfPersistedCancelled(id, provider.id);
 
         const updated = this.deps.jobs.updateState(id, {
           state: "succeeded",
@@ -635,17 +638,16 @@ export class JobRunner extends EventEmitter {
         this.emit("job.completed", updated);
       } catch (err) {
         this.intentOverrides.delete(id);
-        this.deps.logger.error("video fetch failed", {
-          jobId: id,
-          providerId: provider.id,
-          providerJobId: handle.providerJobId,
-          err,
-        });
-        const updated = this.deps.jobs.updateState(id, {
-          state: "failed",
-          errorMessage: (err as Error)?.message ?? String(err),
-          finishedAt: this.deps.now(),
-        });
+        const aborted = isAbortError(err) || err instanceof ProviderAbortError;
+        if (!aborted) {
+          this.deps.logger.error("video fetch failed", {
+            jobId: id,
+            providerId: provider.id,
+            providerJobId: handle.providerJobId,
+            err,
+          });
+        }
+        const updated = this.updateFailedState(id, aborted, err);
         this.running.delete(id);
         this.emit("job.failed", updated);
       }
@@ -687,10 +689,7 @@ export class JobRunner extends EventEmitter {
     if (!existing) throw new Error(`job ${id} not found`);
 
     if (existing.state === "succeeded") return existing;
-    if (
-      existing.state === "failed" ||
-      existing.state === "cancelled"
-    ) {
+    if (existing.state === "failed" || existing.state === "cancelled") {
       throw new Error(existing.errorMessage ?? `job ended in state '${existing.state}'`);
     }
 
@@ -772,6 +771,25 @@ export class JobRunner extends EventEmitter {
   isRunning(id: JobId): boolean {
     return this.running.has(id);
   }
+
+  private throwIfPersistedCancelled(id: JobId, providerId: string): void {
+    const persisted = this.deps.jobs.get(id);
+    if (persisted?.state === "cancelled") {
+      throw new ProviderAbortError(providerId);
+    }
+  }
+
+  private updateFailedState(id: JobId, aborted: boolean, err: unknown): Job {
+    if (aborted) {
+      const persisted = this.deps.jobs.get(id);
+      if (persisted?.state === "cancelled") return persisted;
+    }
+    return this.deps.jobs.updateState(id, {
+      state: aborted ? "cancelled" : "failed",
+      errorMessage: aborted ? "cancelled" : ((err as Error)?.message ?? String(err)),
+      finishedAt: this.deps.now(),
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -810,7 +828,12 @@ function mimeToExt(mime: string): string {
       return "webm";
     default: {
       const idx = mime.indexOf("/");
-      return idx >= 0 ? mime.slice(idx + 1).split(";")[0]!.trim() : "bin";
+      return idx >= 0
+        ? mime
+            .slice(idx + 1)
+            .split(";")[0]!
+            .trim()
+        : "bin";
     }
   }
 }

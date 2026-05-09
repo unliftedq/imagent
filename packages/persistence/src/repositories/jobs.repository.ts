@@ -1,4 +1,4 @@
-import type { Job, JobsQuery, JobState } from "@imagent/core";
+import type { Job, JobState, JobsQuery } from "@imagent/core";
 import type { DatabaseType } from "../db.js";
 
 interface JobRow {
@@ -59,6 +59,18 @@ export class JobRepository {
     return row ? rowToJob(row) : null;
   }
 
+  findByIdPrefix(prefix: string): Job[] {
+    const end = prefixRangeEnd(prefix);
+    const rows = end
+      ? (this.db
+          .prepare("SELECT * FROM jobs WHERE id >= ? AND id < ? ORDER BY created_at DESC")
+          .all(prefix, end) as JobRow[])
+      : (this.db
+          .prepare("SELECT * FROM jobs WHERE id >= ? ORDER BY created_at DESC")
+          .all(prefix) as JobRow[]);
+    return rows.map(rowToJob);
+  }
+
   create(job: Job): Job {
     this.db
       .prepare(
@@ -87,7 +99,10 @@ export class JobRepository {
   updateState(
     id: string,
     patch: Partial<
-      Pick<Job, "state" | "progress" | "errorMessage" | "providerJobId" | "resultItemId" | "finishedAt">
+      Pick<
+        Job,
+        "state" | "progress" | "errorMessage" | "providerJobId" | "resultItemId" | "finishedAt"
+      >
     >,
   ): Job {
     const sets: string[] = ["updated_at = ?"];
@@ -134,4 +149,14 @@ export class JobRepository {
       .all(...states) as JobRow[];
     return rows.map(rowToJob);
   }
+}
+
+function prefixRangeEnd(prefix: string): string | null {
+  for (let i = prefix.length - 1; i >= 0; i -= 1) {
+    const code = prefix.charCodeAt(i);
+    if (code < 0xffff) {
+      return `${prefix.slice(0, i)}${String.fromCharCode(code + 1)}`;
+    }
+  }
+  return null;
 }

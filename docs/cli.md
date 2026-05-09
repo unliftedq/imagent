@@ -141,7 +141,7 @@ imagent image "poster art for a synthwave festival" --out ./outputs
 Basic video generation:
 
 ```bash
-imagent video "a slow dolly shot through a rainy alley" --wait
+imagent video "a slow dolly shot through a rainy alley"
 ```
 
 Select provider, model, and options:
@@ -151,8 +151,7 @@ imagent video "a crane shot over a futuristic coastline" \
   --provider google \
   --model veo-3.0-generate-001 \
   --option durationSec=8 \
-  --option resolution=720p \
-  --wait
+  --option resolution=720p
 ```
 
 Common video options are:
@@ -171,14 +170,13 @@ imagent video "Nova turns toward the camera as leaves drift past" \
   --provider bytedance \
   --character nova \
   --ref ./first-frame.png \
-  --option duration=5 \
-  --wait
+  --option duration=5
 ```
 
-Submit without waiting:
+Submit detached:
 
 ```bash
-imagent video "a quiet sunrise timelapse over mountains" --provider xai
+imagent video "a quiet sunrise timelapse over mountains" --provider xai --detach
 ```
 
 Then inspect or reattach:
@@ -307,4 +305,4 @@ Watch a video job:
 imagent job watch <jobId>
 ```
 
-Image jobs are not resumable after the originating CLI process exits. Video jobs are designed for async polling and can be watched later from the same machine.
+Detached image and video jobs keep a background CLI worker alive until the job reaches a terminal state. Job commands accept unique ID prefixes of at least 6 characters, and `job ls` prints full IDs.
