@@ -41,6 +41,8 @@ const defaultQuery = {
   offset: 0,
 } satisfies JobsQuery;
 
+const MAX_TRACKED_STUDIO_JOBS = 12;
+
 export const useJobsStore = create<JobsState>((set, get) => ({
   jobs: {},
   activeJobId: null,
@@ -72,7 +74,10 @@ export const useJobsStore = create<JobsState>((set, get) => ({
   trackStudioJob: (job) => {
     set((s) => ({
       activeJobId: job.id,
-      studioJobs: [job, ...s.studioJobs.filter((existing) => existing.id !== job.id)].slice(0, 12),
+      studioJobs: [job, ...s.studioJobs.filter((existing) => existing.id !== job.id)].slice(
+        0,
+        MAX_TRACKED_STUDIO_JOBS,
+      ),
     }));
   },
 

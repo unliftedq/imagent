@@ -7,6 +7,8 @@ import type { StudioMode } from "../../state/useUIStore.js";
 import { useUIStore } from "../../state/useUIStore.js";
 import { resolveGalleryUrl } from "./utils.js";
 
+const MAX_GENERATING_LABEL_PROMPT_LENGTH = 80;
+
 export function CanvasArea({ mode }: { mode: StudioMode }) {
   const items = useGalleryStore((state) => state.items);
   const activeJobId = useJobsStore((state) => state.activeJobId);
@@ -77,7 +79,9 @@ function GeneratingCanvas({
   prompt: string;
 }) {
   const trimmed = prompt.trim();
-  const label = trimmed ? `Generating ${mode}: ${trimmed.slice(0, 80)}` : `Generating ${mode}`;
+  const label = trimmed
+    ? `Generating ${mode}: ${trimmed.slice(0, MAX_GENERATING_LABEL_PROMPT_LENGTH)}`
+    : `Generating ${mode}`;
 
   return (
     <div
