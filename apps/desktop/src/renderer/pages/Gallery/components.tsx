@@ -268,8 +268,8 @@ export function LightboxPreview({
                     controls
                     autoPlay
                     preload="metadata"
-                    width={data.item.width ?? undefined}
-                    height={data.item.height ?? undefined}
+                    width={data.item.width || undefined}
+                    height={data.item.height || undefined}
                     style={mediaPreviewStyle}
                     className="block max-h-full max-w-full rounded-(--radius-md) bg-black shadow-[0_24px_64px_-16px_rgba(0,0,0,0.65)]"
                   />
@@ -277,8 +277,8 @@ export function LightboxPreview({
                   <img
                     src={resolveGalleryUrl(data.item.relPath)}
                     alt={data.item.prompt}
-                    width={data.item.width ?? undefined}
-                    height={data.item.height ?? undefined}
+                    width={data.item.width || undefined}
+                    height={data.item.height || undefined}
                     style={mediaPreviewStyle}
                     className="block max-h-full max-w-full rounded-(--radius-md) shadow-[0_24px_64px_-16px_rgba(0,0,0,0.65)]"
                   />
