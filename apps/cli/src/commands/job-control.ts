@@ -20,7 +20,9 @@ export function resolveJobId(jobs: JobRepository, input: string): JobId {
       `job id prefix '${input}' is ambiguous (${matches.length} matches); provide more characters`,
     );
   }
-  return matches[0]!.id;
+  const [match] = matches;
+  if (!match) throw new Error(`no job with id prefix '${input}'`);
+  return match.id;
 }
 
 export function installCancelOnInterrupt(

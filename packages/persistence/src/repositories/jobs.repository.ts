@@ -1,4 +1,4 @@
-import type { Job, JobsQuery, JobState } from "@imagent/core";
+import type { Job, JobState, JobsQuery } from "@imagent/core";
 import type { DatabaseType } from "../db.js";
 
 interface JobRow {

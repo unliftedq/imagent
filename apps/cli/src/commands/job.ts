@@ -5,7 +5,6 @@ import type {
   JobState,
 } from "@imagent/core";
 import {
-  GalleryRepository,
   JobRepository,
   createPathResolver,
   ensureDataDir,
