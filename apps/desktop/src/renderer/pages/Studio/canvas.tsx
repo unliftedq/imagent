@@ -8,6 +8,10 @@ import { useUIStore } from "../../state/useUIStore.js";
 import { resolveGalleryUrl } from "./utils.js";
 
 const MAX_GENERATING_LABEL_PROMPT_LENGTH = 80;
+const submittedAtFormatter = new Intl.DateTimeFormat(undefined, {
+  hour: "2-digit",
+  minute: "2-digit",
+});
 
 export function CanvasArea({ mode }: { mode: StudioMode }) {
   const items = useGalleryStore((state) => state.items);
@@ -35,6 +39,7 @@ export function CanvasArea({ mode }: { mode: StudioMode }) {
 
   const modeJobs = useMemo(() => studioJobs.filter((job) => job.kind === mode), [mode, studioJobs]);
   const activeModeJob = modeJobs.find((job) => job.id === activeJobId) ?? null;
+  // studioJobs is newest-first, so the first running fallback is the latest accepted job.
   const fallbackRunningJob = modeJobs.find((job) => isActiveJobState(jobs[job.id]?.state)) ?? null;
   const selectedStudioJob = activeModeJob ?? fallbackRunningJob;
   const selectedJob = selectedStudioJob ? (jobs[selectedStudioJob.id] ?? null) : null;
@@ -271,10 +276,7 @@ function jobStateLabel(state: Job["state"] | undefined): string {
 }
 
 function formatSubmittedAt(ts: number): string {
-  return new Intl.DateTimeFormat(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(ts);
+  return submittedAtFormatter.format(ts);
 }
 
 function CancelGenerationControl({ mode, jobId }: { mode: StudioMode; jobId: string | null }) {

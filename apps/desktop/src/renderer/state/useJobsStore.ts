@@ -43,6 +43,20 @@ const defaultQuery = {
 
 const MAX_TRACKED_STUDIO_JOBS = 12;
 
+function nextActiveStudioJobId(
+  studioJobs: StudioTrackedJob[],
+  jobs: Record<string, Job>,
+  completedId: string,
+): string | null {
+  return (
+    studioJobs.find((job) => {
+      if (job.id === completedId) return false;
+      const state = jobs[job.id]?.state;
+      return state === "queued" || state === "running";
+    })?.id ?? null
+  );
+}
+
 export const useJobsStore = create<JobsState>((set, get) => ({
   jobs: {},
   activeJobId: null,
@@ -135,6 +149,10 @@ export const useJobsStore = create<JobsState>((set, get) => ({
     const wasActive = get().activeJobId === j.id;
     set((s) => ({
       jobs: { ...s.jobs, [j.id]: j },
+      activeJobId:
+        s.activeJobId === j.id
+          ? nextActiveStudioJobId(s.studioJobs, { ...s.jobs, [j.id]: j }, j.id)
+          : s.activeJobId,
     }));
     if (wasActive && j.resultItemId && typeof window !== "undefined") {
       window.dispatchEvent(
@@ -148,6 +166,10 @@ export const useJobsStore = create<JobsState>((set, get) => ({
   applyFailedEvent: (j) => {
     set((s) => ({
       jobs: { ...s.jobs, [j.id]: j },
+      activeJobId:
+        s.activeJobId === j.id
+          ? nextActiveStudioJobId(s.studioJobs, { ...s.jobs, [j.id]: j }, j.id)
+          : s.activeJobId,
     }));
   },
 
