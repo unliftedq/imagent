@@ -11,7 +11,7 @@ import type { Input, Output } from "./contract.js";
 const _imageInput: Input<"image.generate"> = null as unknown as ImageRequest;
 const _imageOutput: Output<"image.generate"> = null as unknown as GalleryItem;
 const _imageSubmitInput: Input<"image.submit"> = null as unknown as ImageRequest;
-const _imageSubmitOutput: Output<"image.submit"> = { jobId: "job_1" };
+const _imageSubmitOutput: Output<"image.submit"> = { jobId: "job-1" };
 
 // jobs.list accepts JobsQuery, returns Job[].
 const _jobsInput: Input<"jobs.list"> = null as unknown as JobsQuery;

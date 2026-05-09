@@ -160,7 +160,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
     ];
     const { references: cappedRefs, capped } = capImageReferences(allRefs, maxRefs);
     if (capped !== undefined) {
-      logger.warn("image.generate: cap-at-max references", {
+      logger.warn("image job: cap-at-max references", {
         providerId: request.providerId,
         model: request.model,
         capped,
@@ -193,7 +193,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
     try {
       jobId = await runtime.jobRunner.start(intent);
     } catch (err) {
-      logger.error("image.generate: start() threw", {
+      logger.error("image job: start() threw", {
         providerId: request.providerId,
         model: request.model,
         err,
@@ -211,7 +211,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
         cleanup();
         if (!j.resultItemId) {
           reject(
-            new IpcHandlerError("internal", "image.generate: job completed without resultItemId"),
+            new IpcHandlerError("internal", "image job completed without resultItemId"),
           );
           return;
         }
@@ -220,7 +220,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
           reject(
             new IpcHandlerError(
               "internal",
-              `image.generate: gallery item ${j.resultItemId} missing`,
+              `image job: gallery item ${j.resultItemId} missing`,
             ),
           );
           return;
