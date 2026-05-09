@@ -1,6 +1,6 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { useEffect, useState } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 import { BoardSidebarItem, Icons } from "@imagent/ui";
 import type { Board, GalleryItem } from "@imagent/core";
 import { api } from "../../lib/api.js";
@@ -165,6 +165,7 @@ export function LightboxPreview({
   const cachedItem = useGalleryStore((s) =>
     s.items.find((it) => it.id === itemId) ?? null,
   );
+  const mediaPreviewStyle = data ? getMediaPreviewStyle(data.item) : undefined;
 
   // Show the cached row from the store immediately so the lightbox never
   // flashes "Loading…" — gallery.show() then enriches with lineage + assets.
@@ -267,12 +268,18 @@ export function LightboxPreview({
                     controls
                     autoPlay
                     preload="metadata"
+                    width={data.item.width ?? undefined}
+                    height={data.item.height ?? undefined}
+                    style={mediaPreviewStyle}
                     className="block max-h-full max-w-full rounded-(--radius-md) bg-black shadow-[0_24px_64px_-16px_rgba(0,0,0,0.65)]"
                   />
                 ) : (
                   <img
                     src={resolveGalleryUrl(data.item.relPath)}
                     alt={data.item.prompt}
+                    width={data.item.width ?? undefined}
+                    height={data.item.height ?? undefined}
+                    style={mediaPreviewStyle}
                     className="block max-h-full max-w-full rounded-(--radius-md) shadow-[0_24px_64px_-16px_rgba(0,0,0,0.65)]"
                   />
                 )}
@@ -457,6 +464,13 @@ export function LightboxPreview({
       </Dialog.Portal>
     </Dialog.Root>
   );
+}
+
+function getMediaPreviewStyle(item: GalleryItem): CSSProperties {
+  return {
+    maxWidth: item.width && item.width > 0 ? `min(100%, ${item.width}px)` : "100%",
+    maxHeight: item.height && item.height > 0 ? `min(100%, ${item.height}px)` : "100%",
+  };
 }
 
 function LightboxAction({

@@ -342,8 +342,7 @@ export function GalleryPage() {
           ) : (
             <div
               className={
-                "grid w-full grid-cols-[repeat(auto-fill,minmax(240px,1fr))] " +
-                "items-start gap-x-3 gap-y-0 overflow-x-hidden"
+                "w-full columns-[240px] gap-3 overflow-x-hidden [column-fill:balance]"
               }
             >
               {items.map((it) => {
