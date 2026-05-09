@@ -16,6 +16,7 @@ import { CreateAssetDialog } from "../Assets/CreateAssetDialog.js";
 import { resolveGalleryUrl } from "../Studio";
 import { BoardRow, LightboxPreview } from "./components.js";
 import { BOARD_ALL, BOARD_FAVORITES } from "./constants.js";
+import { MasonryGrid } from "./MasonryGrid.js";
 
 export function GalleryPage() {
   const items = useGalleryStore((s) => s.items);
@@ -340,12 +341,19 @@ export function GalleryPage() {
               onGoToStudio={() => navigate("studio")}
             />
           ) : (
-            <div
-              className={
-                "w-full columns-[240px] gap-3 overflow-x-hidden [column-fill:balance]"
-              }
-            >
-              {items.map((it) => {
+            <MasonryGrid
+              items={items}
+              columnWidth={240}
+              gap={12}
+              getAspect={(it) => {
+                if (it.width && it.height && it.width > 0 && it.height > 0) {
+                  return it.height / it.width;
+                }
+                // Fallbacks mirror GalleryItemCard's defaults: 1:1 for images,
+                // 16:9 for videos. height / width.
+                return it.kind === "video" ? 9 / 16 : 1;
+              }}
+              renderItem={(it) => {
                 const isVideo = it.kind === "video";
                 const src = isVideo
                   ? it.thumbPath
@@ -354,7 +362,6 @@ export function GalleryPage() {
                   : resolveGalleryUrl(it.relPath);
                 return (
                   <GalleryItemCard
-                    key={it.id}
                     id={it.id}
                     kind={it.kind}
                     src={src}
@@ -380,8 +387,8 @@ export function GalleryPage() {
                     onDelete={() => void removeItem(it.id)}
                   />
                 );
-              })}
-            </div>
+              }}
+            />
           )}
 
           {items.length < total ? (
