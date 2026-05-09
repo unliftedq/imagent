@@ -468,13 +468,13 @@ export function LightboxPreview({
 
 function getMediaPreviewStyle(item: GalleryItem): CSSProperties {
   return {
-    maxWidth:
-      typeof item.width === "number" && item.width > 0 ? `min(100%, ${item.width}px)` : "100%",
-    maxHeight:
-      typeof item.height === "number" && item.height > 0
-        ? `min(100%, ${item.height}px)`
-        : "100%",
+    maxWidth: getMediaPreviewMaxSize(item.width),
+    maxHeight: getMediaPreviewMaxSize(item.height),
   };
+}
+
+function getMediaPreviewMaxSize(size: number | null | undefined): string {
+  return typeof size === "number" && size > 0 ? `min(100%, ${size}px)` : "100%";
 }
 
 function LightboxAction({
