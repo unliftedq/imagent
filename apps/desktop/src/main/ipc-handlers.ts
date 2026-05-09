@@ -125,7 +125,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
     // Resolve asset slots → reference paths + style snippet appendix +
     // attachments to write after the gallery item lands.
     const slots = request.assetSlots ?? {};
-    const { assetSlots: _assetSlots, ...requestForRunner } = request;
+    const { assetSlots: _unusedAssetSlots, ...requestForRunner } = request;
     const slotInputs = {
       ...(slots.character ? { character: slots.character } : {}),
       ...(slots.object ? { object: slots.object } : {}),
