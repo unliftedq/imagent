@@ -34,7 +34,7 @@ export function ImageRail() {
   const assetsByKind = useAssetsStore((state) => state.byKind);
   const refreshAssets = useAssetsStore((state) => state.refresh);
 
-  const setActiveJobId = useJobsStore((state) => state.setActiveJobId);
+  const trackStudioJob = useJobsStore((state) => state.trackStudioJob);
 
   const [modelsByProvider, setModelsByProvider] = useState<Record<string, ImageModelDef[]>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -218,7 +218,12 @@ export function ImageRail() {
     setSubmitting(true);
     try {
       const { jobId } = await api["image.submit"](request);
-      setActiveJobId(jobId);
+      trackStudioJob({
+        id: jobId,
+        kind: "image",
+        prompt: request.prompt,
+        submittedAt: Date.now(),
+      });
       setDraft({
         prompt: "",
         ...(draft.parentId ? { parentId: undefined } : {}),
