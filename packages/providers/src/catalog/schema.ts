@@ -1,7 +1,9 @@
 import {
+  ImageModelCapsOverrideSchema,
   ImageModelDefSchema,
   type ImageProviderModel,
   ImageProviderModelSchema,
+  VideoModelCapsOverrideSchema,
   VideoModelDefSchema,
   type VideoProviderModel,
   VideoProviderModelSchema,
@@ -94,13 +96,25 @@ export const ModelCatalogSchema = z
 
 export type ModelCatalog = z.infer<typeof ModelCatalogSchema>;
 
+const ImageModelDefOverlaySchema = ImageModelDefSchema.omit({ capabilities: true })
+  .partial()
+  .extend({
+    capabilities: ImageModelCapsOverrideSchema.optional(),
+  });
+
+const VideoModelDefOverlaySchema = VideoModelDefSchema.omit({ capabilities: true })
+  .partial()
+  .extend({
+    capabilities: VideoModelCapsOverrideSchema.optional(),
+  });
+
 export const ModelCatalogOverlaySchema = z
   .object({
     version: z.literal(2).optional(),
     models: z
       .object({
-        image: z.record(z.string(), ImageModelDefSchema.partial()).optional(),
-        video: z.record(z.string(), VideoModelDefSchema.partial()).optional(),
+        image: z.record(z.string(), ImageModelDefOverlaySchema).optional(),
+        video: z.record(z.string(), VideoModelDefOverlaySchema).optional(),
       })
       .strict()
       .optional(),

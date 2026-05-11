@@ -163,8 +163,11 @@ function mergeOfferings<T extends { id: string }>(base: T[] | undefined, overlay
   return [...byId.values()];
 }
 
-function mergeRecord<T extends object>(base: T | undefined, overlay: Partial<T>): T {
-  return deepMerge(base ? deepClone(base) : {}, overlay) as T;
+function mergeRecord<T extends object>(base: T | undefined, overlay: object): T {
+  return deepMerge(
+    base ? (deepClone(base) as Record<string, unknown>) : {},
+    overlay as Record<string, unknown>,
+  ) as T;
 }
 
 function deepMerge(

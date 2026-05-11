@@ -66,6 +66,38 @@ describe("loadCatalog", () => {
     expect(Object.keys(loaded.models.video).length).toBeGreaterThan(0);
   });
 
+  it("merges partial capability overlays without applying capability defaults", async () => {
+    const dir = await tempDir();
+    const userPath = path.join(dir, "catalog.json");
+    const overlay = {
+      version: 2,
+      models: {
+        image: {
+          "gpt-image-2": {
+            capabilities: { sizes: ["1024x1024"] },
+          },
+        },
+        video: {
+          "veo-3.0-generate-001": {
+            capabilities: { resolutions: ["720p"] },
+          },
+        },
+      },
+    };
+    await fs.writeFile(userPath, JSON.stringify(overlay, null, 2));
+
+    const loaded = await loadCatalog({ path: userPath, logger: silentLogger() });
+    const imageCaps = loaded.models.image["gpt-image-2"]?.capabilities;
+    expect(imageCaps?.sizes).toEqual(["1024x1024"]);
+    expect(imageCaps?.supportsStyleRef).toBe(true);
+    expect(imageCaps?.maxOutputs).toBe(10);
+
+    const videoCaps = loaded.models.video["veo-3.0-generate-001"]?.capabilities;
+    expect(videoCaps?.resolutions).toEqual(["720p"]);
+    expect(videoCaps?.supportsFirstFrame).toBe(true);
+    expect(videoCaps?.supportsLastFrame).toBe(true);
+  });
+
   it("can read the bundled default from a packaged asset path", async () => {
     const dir = await tempDir();
     const userPath = path.join(dir, "catalog.json");
