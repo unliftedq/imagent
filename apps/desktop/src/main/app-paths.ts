@@ -1,10 +1,7 @@
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { createPathResolver, type PathResolver } from "@imagent/persistence";
 import { app } from "electron";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Resolves the on-disk paths for the Electron app. We prefer `~/.imagent/`
@@ -25,5 +22,5 @@ export function createDesktopPathResolver(): PathResolver {
 }
 
 export function defaultCatalogAssetPath(): string {
-  return path.resolve(__dirname, "..", "..", "assets", "catalog.default.json");
+  return path.join(app.getAppPath(), "assets", "catalog.default.json");
 }

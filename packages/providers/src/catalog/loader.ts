@@ -120,7 +120,7 @@ export function getBundledCatalog(override?: ModelCatalog): ModelCatalog {
 }
 
 function mergeCatalogs(base: ModelCatalog, overlay: ModelCatalogOverlay): ModelCatalog {
-  const merged = cloneCatalog(base);
+  const merged = deepClone(base);
 
   if (overlay.comments !== undefined) {
     merged.comments = overlay.comments;
@@ -155,7 +155,7 @@ function mergeCatalogs(base: ModelCatalog, overlay: ModelCatalogOverlay): ModelC
 function mergeOfferings<T extends { id: string }>(base: T[] | undefined, overlay: T[]): T[] {
   const byId = new Map<string, T>();
   for (const offering of base ?? []) {
-    byId.set(offering.id, cloneCatalog(offering));
+    byId.set(offering.id, deepClone(offering));
   }
   for (const offering of overlay) {
     byId.set(offering.id, mergeRecord(byId.get(offering.id), offering));
@@ -164,7 +164,7 @@ function mergeOfferings<T extends { id: string }>(base: T[] | undefined, overlay
 }
 
 function mergeRecord<T extends object>(base: T | undefined, overlay: Partial<T>): T {
-  return deepMerge(base ? cloneCatalog(base) : {}, overlay) as T;
+  return deepMerge(base ? deepClone(base) : {}, overlay) as T;
 }
 
 function deepMerge(
@@ -187,6 +187,6 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function cloneCatalog<T>(value: T): T {
+function deepClone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
