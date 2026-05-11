@@ -1,7 +1,7 @@
-import { app } from "electron";
-import path from "node:path";
 import os from "node:os";
+import path from "node:path";
 import { createPathResolver, type PathResolver } from "@imagent/persistence";
+import { app } from "electron";
 
 /**
  * Resolves the on-disk paths for the Electron app. We prefer `~/.imagent/`
@@ -19,4 +19,8 @@ export function createDesktopPathResolver(): PathResolver {
     }
   })();
   return createPathResolver(path.join(home, ".imagent"));
+}
+
+export function defaultCatalogAssetPath(): string {
+  return path.join(app.getAppPath(), "assets", "catalog.default.json");
 }

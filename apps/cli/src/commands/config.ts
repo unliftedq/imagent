@@ -10,7 +10,7 @@ import {
   ProviderSecretsSchema,
 } from "@imagent/config";
 import { createPathResolver, ensureDataDir } from "@imagent/persistence";
-import { getBundledCatalog, loadCatalog, saveCatalog } from "@imagent/providers";
+import { loadCatalog } from "@imagent/providers";
 import chalk from "chalk";
 import type { Command } from "commander";
 
@@ -37,7 +37,7 @@ import { loadCliRuntime } from "../support/runtime.js";
  * with `unknown config path: <key>`.
  *
  * `reset <target>` rewrites one of the on-disk files to its default state:
- *   - `catalog`  → ~/.imagent/catalog.json with bundled-default catalog
+ *   - `catalog`  → removes ~/.imagent/catalog.json so bundled defaults apply
  *   - `secrets`  → ~/.imagent/secrets.json cleared to `{}`
  *   - `config`   → ~/.imagent/config.json with default preferences
  */
@@ -203,7 +203,7 @@ interface FieldDef {
 }
 const ALLOWED_FIELDS: Record<VendorId, Record<string, FieldDef>> = {
   openai: { apiKey: { store: "secrets" }, baseUrl: { store: "config" } },
-  "azure": { apiKey: { store: "secrets" }, endpoint: { store: "config" } },
+  azure: { apiKey: { store: "secrets" }, endpoint: { store: "config" } },
   google: { apiKey: { store: "secrets" }, baseUrl: { store: "config" } },
   "flux-bfl": { apiKey: { store: "secrets" }, baseUrl: { store: "config" } },
   bytedance: { apiKey: { store: "secrets" }, endpoint: { store: "config" } },
@@ -317,14 +317,17 @@ async function runReset(rawTarget: string, options: { force?: boolean }): Promis
   const targetPath = resetPathFor(rawTarget, resolver);
   const intent = resetIntentFor(rawTarget);
 
-  if (!options.force && !(await confirm(`${chalk.yellow(intent)} ${targetPath}. Continue? [y/N] `))) {
+  if (
+    !options.force &&
+    !(await confirm(`${chalk.yellow(intent)} ${targetPath}. Continue? [y/N] `))
+  ) {
     process.stdout.write("aborted\n");
     return;
   }
 
   switch (rawTarget) {
     case "catalog": {
-      await saveCatalog(getBundledCatalog(), { path: targetPath });
+      await fs.rm(targetPath, { force: true });
       break;
     }
     case "secrets": {
@@ -346,7 +349,10 @@ async function runReset(rawTarget: string, options: { force?: boolean }): Promis
   process.stdout.write(`reset ${targetPath}\n`);
 }
 
-function resetPathFor(target: ResetTarget, resolver: ReturnType<typeof createPathResolver>): string {
+function resetPathFor(
+  target: ResetTarget,
+  resolver: ReturnType<typeof createPathResolver>,
+): string {
   switch (target) {
     case "catalog":
       return resolver.catalogFile();
@@ -360,7 +366,7 @@ function resetPathFor(target: ResetTarget, resolver: ReturnType<typeof createPat
 function resetIntentFor(target: ResetTarget): string {
   switch (target) {
     case "catalog":
-      return "This will overwrite the catalog with the bundled default at";
+      return "This will remove the user catalog overlay at";
     case "secrets":
       return "This will clear all secrets at";
     case "config":
@@ -558,7 +564,9 @@ function formatRouting(providerId: string, block: Record<string, unknown>): void
     process.stdout.write(`  ${chalk.dim("displayName:")} ${block.displayName}\n`);
   }
   for (const kind of ["image", "video"] as const) {
-    const list = (block[kind] as Array<{ id: string; modelId: string; displayName?: string }> | undefined) ?? [];
+    const list =
+      (block[kind] as Array<{ id: string; modelId: string; displayName?: string }> | undefined) ??
+      [];
     if (list.length === 0) continue;
     process.stdout.write(`  ${chalk.cyan(`${kind}:`)}\n`);
     for (const entry of list) {

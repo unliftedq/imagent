@@ -43,6 +43,7 @@ export interface BootstrapDeps {
   configStore: ConfigStore;
   secretsStore: SecretsStore;
   paths: PathResolver;
+  defaultCatalogPath?: string;
   logger: Logger;
 }
 
@@ -56,7 +57,7 @@ export interface BootstrapDeps {
  * Seedance jobs from a prior session keep polling.
  */
 export async function bootstrapRuntime(deps: BootstrapDeps): Promise<RuntimeServices> {
-  const { db, configStore, secretsStore, paths, logger } = deps;
+  const { db, configStore, secretsStore, paths, defaultCatalogPath, logger } = deps;
 
   const galleryRepo = new GalleryRepository(db);
   const jobsRepo = new JobRepository(db);
@@ -74,13 +75,14 @@ export async function bootstrapRuntime(deps: BootstrapDeps): Promise<RuntimeServ
   const imageRegistry = new Map() as Map<string, never>;
   const videoRegistry = new Map() as Map<string, never>;
 
-  // Load the JSON model catalog once. On `refresh()` we re-read from disk so
-  // hand-edits to ~/.imagent/catalog.json take effect on the next IPC tick.
+  // Load the JSON model catalog once. On `refresh()` we re-read the optional
+  // user overlay from disk so hand-edits take effect on the next IPC tick.
   const catalogPath = paths.catalogFile();
-  let catalog = await loadCatalog({ path: catalogPath, logger });
+  const catalogLoaderOptions = { path: catalogPath, bundledPath: defaultCatalogPath, logger };
+  let catalog = await loadCatalog(catalogLoaderOptions);
 
   const repopulate = async (): Promise<void> => {
-    catalog = await loadCatalog({ path: catalogPath, logger });
+    catalog = await loadCatalog(catalogLoaderOptions);
     const config = await configStore.loadConfig();
     const secrets = await secretsStore.loadSecrets();
     const nextImage = createImageRegistry(secrets, config.providers, catalog);

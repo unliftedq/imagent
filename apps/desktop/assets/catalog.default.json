@@ -1,0 +1,1048 @@
+{
+  "version": 2,
+  "models": {
+    "image": {
+      "gpt-image-2": {
+        "id": "gpt-image-2",
+        "displayName": "GPT Image 2",
+        "capabilities": {
+          "sizes": [
+            "1024x1024",
+            "1536x1024",
+            "1024x1536",
+            "auto"
+          ],
+          "qualities": [
+            "low",
+            "medium",
+            "high",
+            "auto"
+          ],
+          "outputFormats": [
+            "png",
+            "jpeg",
+            "webp"
+          ],
+          "maxReferences": 16,
+          "maxOutputs": 10,
+          "supportsStyleRef": true,
+          "maxReferenceSizeMb": 50,
+          "supportsArbitrarySize": true,
+          "maxWidth": 3840,
+          "maxHeight": 3840,
+          "maxPixels": 8294400,
+          "widthMultiple": 16,
+          "heightMultiple": 16,
+          "minAspectRatio": 0.3333333333333333,
+          "maxAspectRatio": 3
+        },
+        "defaults": {
+          "size": "1024x1024",
+          "quality": "medium",
+          "outputFormat": "png",
+          "count": 1
+        }
+      },
+      "gpt-image-1.5": {
+        "id": "gpt-image-1.5",
+        "displayName": "GPT Image 1.5",
+        "capabilities": {
+          "sizes": [
+            "1024x1024",
+            "1024x1536",
+            "1536x1024"
+          ],
+          "qualities": [
+            "low",
+            "medium",
+            "high",
+            "auto"
+          ],
+          "outputFormats": [
+            "png",
+            "jpeg",
+            "webp"
+          ],
+          "maxReferences": 16,
+          "maxOutputs": 10,
+          "supportsStyleRef": true,
+          "maxReferenceSizeMb": 50
+        },
+        "defaults": {
+          "size": "1024x1024",
+          "quality": "medium",
+          "outputFormat": "png",
+          "count": 1
+        }
+      },
+      "gpt-image-1-mini": {
+        "id": "gpt-image-1-mini",
+        "displayName": "GPT Image 1 Mini",
+        "capabilities": {
+          "sizes": [
+            "1024x1024",
+            "1024x1536",
+            "1536x1024"
+          ],
+          "qualities": [
+            "low",
+            "medium",
+            "high",
+            "auto"
+          ],
+          "outputFormats": [
+            "png",
+            "jpeg",
+            "webp"
+          ],
+          "maxReferences": 16,
+          "maxOutputs": 10,
+          "supportsStyleRef": true,
+          "maxReferenceSizeMb": 50
+        },
+        "defaults": {
+          "size": "1024x1024",
+          "quality": "medium",
+          "outputFormat": "png",
+          "count": 1
+        }
+      },
+      "MAI-Image-2": {
+        "id": "MAI-Image-2",
+        "displayName": "MAI Image 2 (preview)",
+        "capabilities": {
+          "sizes": [
+            "1024x1024",
+            "1024x768",
+            "768x1024",
+            "1280x768",
+            "768x1280",
+            "1365x768",
+            "768x1365"
+          ],
+          "supportsArbitrarySize": true,
+          "minWidth": 768,
+          "maxWidth": 1365,
+          "minHeight": 768,
+          "maxHeight": 1365,
+          "maxPixels": 1048576,
+          "outputFormats": [
+            "png"
+          ],
+          "maxReferences": 0,
+          "maxOutputs": 1,
+          "supportsStyleRef": false
+        },
+        "defaults": {
+          "size": "1024x1024",
+          "outputFormat": "png",
+          "count": 1
+        }
+      },
+      "MAI-Image-2e": {
+        "id": "MAI-Image-2e",
+        "displayName": "MAI Image 2e (preview)",
+        "capabilities": {
+          "sizes": [
+            "1024x1024",
+            "1024x768",
+            "768x1024",
+            "1280x768",
+            "768x1280",
+            "1365x768",
+            "768x1365"
+          ],
+          "supportsArbitrarySize": true,
+          "minWidth": 768,
+          "maxWidth": 1365,
+          "minHeight": 768,
+          "maxHeight": 1365,
+          "maxPixels": 1048576,
+          "outputFormats": [
+            "png"
+          ],
+          "maxReferences": 0,
+          "maxOutputs": 1,
+          "supportsStyleRef": false
+        },
+        "defaults": {
+          "size": "1024x1024",
+          "outputFormat": "png",
+          "count": 1
+        }
+      },
+      "gemini-2.5-flash-image": {
+        "id": "gemini-2.5-flash-image",
+        "displayName": "Nano Banana (Gemini 2.5 Flash Image)",
+        "capabilities": {
+          "aspectRatios": [
+            "1:1",
+            "2:3",
+            "3:2",
+            "3:4",
+            "4:3",
+            "4:5",
+            "5:4",
+            "9:16",
+            "16:9",
+            "21:9"
+          ],
+          "maxReferences": 3,
+          "maxOutputs": 1,
+          "supportsStyleRef": true
+        },
+        "defaults": {
+          "aspectRatio": "1:1",
+          "resolution": "1K",
+          "count": 1
+        }
+      },
+      "gemini-3.1-flash-image-preview": {
+        "id": "gemini-3.1-flash-image-preview",
+        "displayName": "Nano Banana 2 (preview)",
+        "capabilities": {
+          "aspectRatios": [
+            "1:1",
+            "1:4",
+            "1:8",
+            "2:3",
+            "3:2",
+            "3:4",
+            "4:1",
+            "4:3",
+            "4:5",
+            "5:4",
+            "8:1",
+            "9:16",
+            "16:9",
+            "21:9"
+          ],
+          "maxReferences": 14,
+          "maxOutputs": 1,
+          "supportsStyleRef": true
+        },
+        "defaults": {
+          "aspectRatio": "1:1",
+          "resolution": "1K",
+          "count": 1
+        }
+      },
+      "gemini-3-pro-image-preview": {
+        "id": "gemini-3-pro-image-preview",
+        "displayName": "Nano Banana Pro (preview)",
+        "capabilities": {
+          "aspectRatios": [
+            "1:1",
+            "2:3",
+            "3:2",
+            "3:4",
+            "4:3",
+            "4:5",
+            "5:4",
+            "9:16",
+            "16:9",
+            "21:9"
+          ],
+          "maxReferences": 14,
+          "maxOutputs": 1,
+          "supportsStyleRef": true
+        },
+        "defaults": {
+          "aspectRatio": "1:1",
+          "resolution": "1K",
+          "count": 1
+        }
+      },
+      "flux-2-pro": {
+        "id": "flux-2-pro",
+        "displayName": "FLUX.2 [pro]",
+        "capabilities": {
+          "sizes": [
+            "1024x1024",
+            "1024x768",
+            "768x1024",
+            "1280x720",
+            "720x1280",
+            "1440x720",
+            "720x1440"
+          ],
+          "supportsArbitrarySize": true,
+          "minWidth": 256,
+          "maxWidth": 2048,
+          "minHeight": 256,
+          "maxHeight": 2048,
+          "widthMultiple": 32,
+          "heightMultiple": 32,
+          "maxReferences": 8,
+          "maxOutputs": 1,
+          "supportsStyleRef": true
+        },
+        "defaults": {
+          "size": "1024x1024",
+          "count": 1
+        }
+      },
+      "flux-2-max": {
+        "id": "flux-2-max",
+        "displayName": "FLUX.2 [max]",
+        "capabilities": {
+          "sizes": [
+            "1024x1024",
+            "1024x768",
+            "768x1024",
+            "1280x720",
+            "720x1280",
+            "1440x720",
+            "720x1440"
+          ],
+          "supportsArbitrarySize": true,
+          "minWidth": 256,
+          "maxWidth": 2048,
+          "minHeight": 256,
+          "maxHeight": 2048,
+          "widthMultiple": 32,
+          "heightMultiple": 32,
+          "maxReferences": 8,
+          "maxOutputs": 1,
+          "supportsStyleRef": true
+        },
+        "defaults": {
+          "size": "1024x1024",
+          "count": 1
+        }
+      },
+      "flux-2-flex": {
+        "id": "flux-2-flex",
+        "displayName": "FLUX.2 [flex]",
+        "capabilities": {
+          "sizes": [
+            "1024x1024",
+            "1024x768",
+            "768x1024",
+            "1280x720",
+            "720x1280",
+            "1440x720",
+            "720x1440"
+          ],
+          "supportsArbitrarySize": true,
+          "minWidth": 256,
+          "maxWidth": 2048,
+          "minHeight": 256,
+          "maxHeight": 2048,
+          "widthMultiple": 32,
+          "heightMultiple": 32,
+          "maxReferences": 8,
+          "maxOutputs": 1,
+          "supportsStyleRef": true
+        },
+        "defaults": {
+          "size": "1024x1024",
+          "count": 1
+        }
+      },
+      "flux-2-klein-9b": {
+        "id": "flux-2-klein-9b",
+        "displayName": "FLUX.2 [Klein 9B]",
+        "capabilities": {
+          "sizes": [
+            "1024x1024",
+            "1024x768",
+            "768x1024",
+            "1280x720",
+            "720x1280",
+            "1440x720",
+            "720x1440"
+          ],
+          "supportsArbitrarySize": true,
+          "minWidth": 256,
+          "maxWidth": 2048,
+          "minHeight": 256,
+          "maxHeight": 2048,
+          "widthMultiple": 32,
+          "heightMultiple": 32,
+          "maxReferences": 4,
+          "maxOutputs": 1,
+          "supportsStyleRef": true
+        },
+        "defaults": {
+          "size": "1024x1024",
+          "count": 1
+        }
+      },
+      "flux-2-klein-4b": {
+        "id": "flux-2-klein-4b",
+        "displayName": "FLUX.2 [Klein 4B]",
+        "capabilities": {
+          "sizes": [
+            "1024x1024",
+            "1024x768",
+            "768x1024",
+            "1280x720",
+            "720x1280",
+            "1440x720",
+            "720x1440"
+          ],
+          "supportsArbitrarySize": true,
+          "minWidth": 256,
+          "maxWidth": 2048,
+          "minHeight": 256,
+          "maxHeight": 2048,
+          "widthMultiple": 32,
+          "heightMultiple": 32,
+          "maxReferences": 4,
+          "maxOutputs": 1,
+          "supportsStyleRef": true
+        },
+        "defaults": {
+          "size": "1024x1024",
+          "count": 1
+        }
+      },
+      "flux-kontext-pro": {
+        "id": "flux-kontext-pro",
+        "displayName": "FLUX.1 Kontext [pro]",
+        "capabilities": {
+          "sizes": [
+            "1024x1024",
+            "1024x768",
+            "768x1024",
+            "1280x720",
+            "720x1280",
+            "1440x720",
+            "720x1440"
+          ],
+          "supportsArbitrarySize": true,
+          "minWidth": 256,
+          "maxWidth": 1440,
+          "minHeight": 256,
+          "maxHeight": 1440,
+          "widthMultiple": 32,
+          "heightMultiple": 32,
+          "maxReferences": 1,
+          "maxOutputs": 1,
+          "supportsStyleRef": true
+        },
+        "defaults": {
+          "size": "1024x1024",
+          "count": 1
+        }
+      },
+      "flux-pro-1.1": {
+        "id": "flux-pro-1.1",
+        "displayName": "FLUX1.1 [pro]",
+        "capabilities": {
+          "sizes": [
+            "1024x1024",
+            "1024x768",
+            "768x1024",
+            "1280x720",
+            "720x1280",
+            "1440x720",
+            "720x1440"
+          ],
+          "supportsArbitrarySize": true,
+          "minWidth": 256,
+          "maxWidth": 1440,
+          "minHeight": 256,
+          "maxHeight": 1440,
+          "widthMultiple": 32,
+          "heightMultiple": 32,
+          "maxReferences": 0,
+          "maxOutputs": 1,
+          "supportsStyleRef": false
+        },
+        "defaults": {
+          "size": "1024x1024",
+          "count": 1
+        }
+      },
+      "doubao-seedream-4-0-250828": {
+        "id": "doubao-seedream-4-0-250828",
+        "displayName": "Seedream 4.0",
+        "capabilities": {
+          "sizes": [
+            "1K",
+            "2K",
+            "4K"
+          ],
+          "maxReferences": 3,
+          "maxOutputs": 15,
+          "supportsStyleRef": true
+        },
+        "defaults": {
+          "size": "2K",
+          "count": 1
+        }
+      },
+      "doubao-seedream-3-0-t2i-250415": {
+        "id": "doubao-seedream-3-0-t2i-250415",
+        "displayName": "Seedream 3.0",
+        "capabilities": {
+          "sizes": [
+            "1024x1024",
+            "864x1152",
+            "1152x864",
+            "1280x720",
+            "720x1280",
+            "832x1248",
+            "1248x832",
+            "1512x648"
+          ],
+          "maxReferences": 0,
+          "maxOutputs": 1,
+          "supportsStyleRef": false
+        },
+        "defaults": {
+          "size": "1024x1024",
+          "count": 1
+        }
+      },
+      "grok-imagine-image": {
+        "id": "grok-imagine-image",
+        "displayName": "Grok Imagine",
+        "capabilities": {
+          "aspectRatios": [
+            "1:1",
+            "16:9",
+            "9:16",
+            "4:3",
+            "3:4",
+            "3:2",
+            "2:3",
+            "2:1",
+            "1:2",
+            "19.5:9",
+            "9:19.5",
+            "20:9",
+            "9:20",
+            "auto"
+          ],
+          "maxReferences": 5,
+          "maxOutputs": 10,
+          "supportsStyleRef": true,
+          "resolutions": [
+            "1k",
+            "2k"
+          ]
+        },
+        "defaults": {
+          "aspectRatio": "1:1",
+          "count": 1,
+          "resolution": "1k"
+        }
+      }
+    },
+    "video": {
+      "veo-3.0-generate-001": {
+        "id": "veo-3.0-generate-001",
+        "displayName": "Veo 3",
+        "capabilities": {
+          "durationsSec": [
+            8
+          ],
+          "fpsOptions": [
+            24
+          ],
+          "resolutions": [
+            "720p",
+            "1080p"
+          ],
+          "supportsFirstFrame": true,
+          "supportsLastFrame": true,
+          "supportsRefImages": false,
+          "aspectRatios": [
+            "16:9",
+            "9:16"
+          ]
+        },
+        "defaults": {
+          "durationSec": 8,
+          "fps": 24,
+          "resolution": "720p",
+          "aspectRatio": "16:9",
+          "count": 1
+        }
+      },
+      "veo-3.0-fast-generate-001": {
+        "id": "veo-3.0-fast-generate-001",
+        "displayName": "Veo 3 Fast",
+        "capabilities": {
+          "durationsSec": [
+            8
+          ],
+          "fpsOptions": [
+            24
+          ],
+          "resolutions": [
+            "720p",
+            "1080p"
+          ],
+          "supportsFirstFrame": true,
+          "supportsLastFrame": true,
+          "supportsRefImages": false,
+          "aspectRatios": [
+            "16:9",
+            "9:16"
+          ]
+        },
+        "defaults": {
+          "durationSec": 8,
+          "fps": 24,
+          "resolution": "720p",
+          "aspectRatio": "16:9",
+          "count": 1
+        }
+      },
+      "doubao-seedance-1-0-pro-250528": {
+        "id": "doubao-seedance-1-0-pro-250528",
+        "displayName": "Seedance 1.0 Pro",
+        "capabilities": {
+          "durationsSec": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "maxDurationSec": 12,
+          "fpsOptions": [
+            24
+          ],
+          "resolutions": [
+            "480p",
+            "720p",
+            "1080p"
+          ],
+          "supportsFirstFrame": true,
+          "supportsLastFrame": true,
+          "supportsRefImages": false,
+          "aspectRatios": [
+            "16:9",
+            "9:16",
+            "1:1",
+            "4:3",
+            "3:4",
+            "21:9"
+          ],
+          "maxReferenceSizeMb": 30
+        },
+        "defaults": {
+          "durationSec": 5,
+          "fps": 24,
+          "resolution": "720p"
+        }
+      },
+      "doubao-seedance-1-0-lite-t2v-250428": {
+        "id": "doubao-seedance-1-0-lite-t2v-250428",
+        "displayName": "Seedance 1.0 Lite (T2V)",
+        "capabilities": {
+          "durationsSec": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "maxDurationSec": 12,
+          "fpsOptions": [
+            24
+          ],
+          "resolutions": [
+            "480p",
+            "720p",
+            "1080p"
+          ],
+          "supportsFirstFrame": false,
+          "supportsLastFrame": false,
+          "supportsRefImages": false,
+          "aspectRatios": [
+            "16:9",
+            "9:16",
+            "1:1",
+            "4:3",
+            "3:4",
+            "21:9"
+          ]
+        },
+        "defaults": {
+          "durationSec": 5,
+          "fps": 24,
+          "resolution": "720p"
+        }
+      },
+      "doubao-seedance-1-0-lite-i2v-250428": {
+        "id": "doubao-seedance-1-0-lite-i2v-250428",
+        "displayName": "Seedance 1.0 Lite (I2V)",
+        "capabilities": {
+          "durationsSec": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "maxDurationSec": 12,
+          "fpsOptions": [
+            24
+          ],
+          "resolutions": [
+            "480p",
+            "720p",
+            "1080p"
+          ],
+          "supportsFirstFrame": true,
+          "supportsLastFrame": true,
+          "supportsRefImages": true,
+          "aspectRatios": [
+            "16:9",
+            "9:16",
+            "1:1",
+            "4:3",
+            "3:4",
+            "21:9"
+          ],
+          "maxReferenceSizeMb": 30,
+          "maxReferences": 4
+        },
+        "defaults": {
+          "durationSec": 5,
+          "fps": 24,
+          "resolution": "720p"
+        }
+      },
+      "doubao-seedance-1-5-pro-251215": {
+        "id": "doubao-seedance-1-5-pro-251215",
+        "displayName": "Seedance 1.5 Pro",
+        "capabilities": {
+          "durationsSec": [
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "maxDurationSec": 12,
+          "fpsOptions": [
+            24
+          ],
+          "resolutions": [
+            "480p",
+            "720p",
+            "1080p"
+          ],
+          "supportsFirstFrame": true,
+          "supportsLastFrame": true,
+          "supportsRefImages": false,
+          "aspectRatios": [
+            "16:9",
+            "9:16",
+            "1:1",
+            "4:3",
+            "3:4",
+            "21:9"
+          ],
+          "maxReferenceSizeMb": 30
+        },
+        "defaults": {
+          "durationSec": 5,
+          "fps": 24,
+          "resolution": "720p"
+        }
+      },
+      "doubao-seedance-2-0-260128": {
+        "id": "doubao-seedance-2-0-260128",
+        "displayName": "Seedance 2.0",
+        "capabilities": {
+          "durationsSec": [
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15
+          ],
+          "maxDurationSec": 15,
+          "fpsOptions": [
+            24
+          ],
+          "resolutions": [
+            "480p",
+            "720p"
+          ],
+          "supportsFirstFrame": true,
+          "supportsLastFrame": true,
+          "supportsRefImages": true,
+          "aspectRatios": [
+            "16:9",
+            "9:16",
+            "1:1",
+            "4:3",
+            "3:4",
+            "21:9"
+          ],
+          "maxReferenceSizeMb": 30
+        },
+        "defaults": {
+          "durationSec": 5,
+          "fps": 24,
+          "resolution": "720p"
+        }
+      },
+      "doubao-seedance-2-0-fast-260128": {
+        "id": "doubao-seedance-2-0-fast-260128",
+        "displayName": "Seedance 2.0 Fast",
+        "capabilities": {
+          "durationsSec": [
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15
+          ],
+          "maxDurationSec": 15,
+          "fpsOptions": [
+            24
+          ],
+          "resolutions": [
+            "480p",
+            "720p"
+          ],
+          "supportsFirstFrame": true,
+          "supportsLastFrame": true,
+          "supportsRefImages": true,
+          "aspectRatios": [
+            "16:9",
+            "9:16",
+            "1:1",
+            "4:3",
+            "3:4",
+            "21:9"
+          ],
+          "maxReferenceSizeMb": 30
+        },
+        "defaults": {
+          "durationSec": 5,
+          "fps": 24,
+          "resolution": "720p"
+        }
+      },
+      "grok-imagine-video": {
+        "id": "grok-imagine-video",
+        "displayName": "Grok Imagine Video",
+        "capabilities": {
+          "durationsSec": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15
+          ],
+          "maxDurationSec": 15,
+          "resolutions": [
+            "480p",
+            "720p"
+          ],
+          "supportsFirstFrame": true,
+          "supportsLastFrame": false,
+          "supportsRefImages": true,
+          "aspectRatios": [
+            "1:1",
+            "16:9",
+            "9:16",
+            "4:3",
+            "3:4",
+            "3:2",
+            "2:3"
+          ]
+        },
+        "defaults": {
+          "durationSec": 8,
+          "fps": 24,
+          "resolution": "720p",
+          "aspectRatio": "16:9"
+        }
+      }
+    }
+  },
+  "providers": {
+    "openai": {
+      "displayName": "OpenAI",
+      "image": [
+        {
+          "id": "gpt-image-2",
+          "modelId": "gpt-image-2"
+        },
+        {
+          "id": "gpt-image-1.5",
+          "modelId": "gpt-image-1.5"
+        },
+        {
+          "id": "gpt-image-1-mini",
+          "modelId": "gpt-image-1-mini"
+        }
+      ]
+    },
+    "azure": {
+      "displayName": "Azure"
+    },
+    "google": {
+      "displayName": "Google AI Studio",
+      "image": [
+        {
+          "id": "gemini-2.5-flash-image",
+          "modelId": "gemini-2.5-flash-image"
+        },
+        {
+          "id": "gemini-3.1-flash-image-preview",
+          "modelId": "gemini-3.1-flash-image-preview"
+        },
+        {
+          "id": "gemini-3-pro-image-preview",
+          "modelId": "gemini-3-pro-image-preview"
+        }
+      ],
+      "video": [
+        {
+          "id": "veo-3.0-generate-001",
+          "modelId": "veo-3.0-generate-001"
+        },
+        {
+          "id": "veo-3.0-fast-generate-001",
+          "modelId": "veo-3.0-fast-generate-001"
+        }
+      ]
+    },
+    "flux-bfl": {
+      "displayName": "Black Forest Labs",
+      "image": [
+        {
+          "id": "flux-2-pro",
+          "modelId": "flux-2-pro"
+        },
+        {
+          "id": "flux-2-max",
+          "modelId": "flux-2-max"
+        },
+        {
+          "id": "flux-2-flex",
+          "modelId": "flux-2-flex"
+        },
+        {
+          "id": "flux-2-klein-9b",
+          "modelId": "flux-2-klein-9b"
+        },
+        {
+          "id": "flux-2-klein-4b",
+          "modelId": "flux-2-klein-4b"
+        },
+        {
+          "id": "flux-kontext-pro",
+          "modelId": "flux-kontext-pro"
+        },
+        {
+          "id": "flux-pro-1.1",
+          "modelId": "flux-pro-1.1"
+        }
+      ]
+    },
+    "bytedance": {
+      "displayName": "ByteDance",
+      "image": [
+        {
+          "id": "doubao-seedream-4-0-250828",
+          "modelId": "doubao-seedream-4-0-250828"
+        },
+        {
+          "id": "doubao-seedream-3-0-t2i-250415",
+          "modelId": "doubao-seedream-3-0-t2i-250415"
+        }
+      ],
+      "video": [
+        {
+          "id": "doubao-seedance-1-0-pro-250528",
+          "modelId": "doubao-seedance-1-0-pro-250528"
+        },
+        {
+          "id": "doubao-seedance-1-0-lite-t2v-250428",
+          "modelId": "doubao-seedance-1-0-lite-t2v-250428"
+        },
+        {
+          "id": "doubao-seedance-1-0-lite-i2v-250428",
+          "modelId": "doubao-seedance-1-0-lite-i2v-250428"
+        },
+        {
+          "id": "doubao-seedance-1-5-pro-251215",
+          "modelId": "doubao-seedance-1-5-pro-251215"
+        },
+        {
+          "id": "doubao-seedance-2-0-260128",
+          "modelId": "doubao-seedance-2-0-260128"
+        },
+        {
+          "id": "doubao-seedance-2-0-fast-260128",
+          "modelId": "doubao-seedance-2-0-fast-260128"
+        }
+      ]
+    },
+    "xai": {
+      "displayName": "xAI",
+      "image": [
+        {
+          "id": "grok-imagine-image",
+          "modelId": "grok-imagine-image"
+        }
+      ],
+      "video": [
+        {
+          "id": "grok-imagine-video",
+          "modelId": "grok-imagine-video"
+        }
+      ]
+    }
+  }
+}

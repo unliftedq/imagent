@@ -14,10 +14,9 @@ function silentLogger(): { info: () => void; warn: () => void } {
 }
 
 describe("loadCatalog", () => {
-  it("first run: writes bundled default to user path and returns it", async () => {
+  it("first run: returns bundled default without writing it to the user path", async () => {
     const dir = await tempDir();
     const userPath = path.join(dir, "catalog.json");
-    const bundled = getBundledCatalog();
 
     const loaded = await loadCatalog({ path: userPath, logger: silentLogger() });
     expect(loaded.version).toBe(2);
@@ -26,15 +25,13 @@ describe("loadCatalog", () => {
     expect(loaded.models.image["MAI-Image-2"]?.capabilities?.minWidth).toBe(768);
     expect(loaded.models.image["flux-2-pro"]?.capabilities?.maxWidth).toBe(2048);
 
-    const onDisk = JSON.parse(await fs.readFile(userPath, "utf8")) as ModelCatalog;
-    expect(onDisk.version).toBe(2);
-    expect(onDisk.providers.openai?.image?.length).toBe(bundled.providers.openai?.image?.length);
+    await expect(fs.stat(userPath)).rejects.toBeTruthy();
   });
 
-  it("normal: reads user file verbatim", async () => {
+  it("normal: merges user catalog overlay with bundled defaults", async () => {
     const dir = await tempDir();
     const userPath = path.join(dir, "catalog.json");
-    const custom: ModelCatalog = {
+    const overlay = {
       version: 2,
       models: {
         image: {
@@ -48,20 +45,82 @@ describe("loadCatalog", () => {
             },
             defaults: { size: "1024x1024", count: 1 },
           },
+          "gpt-image-2": {
+            displayName: "GPT Image 2 Override",
+            defaults: { quality: "high" },
+          },
         },
-        video: {},
       },
       providers: {
         openai: { image: [{ id: "custom-route", modelId: "custom-model" }] },
       },
     };
-    await fs.writeFile(userPath, JSON.stringify(custom, null, 2));
+    await fs.writeFile(userPath, JSON.stringify(overlay, null, 2));
 
     const loaded = await loadCatalog({ path: userPath, logger: silentLogger() });
-    expect(loaded.providers.openai?.image).toHaveLength(1);
-    expect(loaded.providers.openai?.image?.[0]?.id).toBe("custom-route");
+    expect(loaded.providers.openai?.image?.some((entry) => entry.id === "custom-route")).toBe(true);
+    expect(loaded.providers.openai?.image?.some((entry) => entry.id === "gpt-image-2")).toBe(true);
     expect(loaded.models.image["custom-model"]?.displayName).toBe("Custom");
-    expect(loaded.models.video).toEqual({});
+    expect(loaded.models.image["gpt-image-2"]?.displayName).toBe("GPT Image 2 Override");
+    expect(loaded.models.image["gpt-image-2"]?.defaults?.quality).toBe("high");
+    expect(Object.keys(loaded.models.video).length).toBeGreaterThan(0);
+  });
+
+  it("merges partial capability overlays without applying capability defaults", async () => {
+    const dir = await tempDir();
+    const userPath = path.join(dir, "catalog.json");
+    const overlay = {
+      version: 2,
+      models: {
+        image: {
+          "gpt-image-2": {
+            capabilities: { sizes: ["1024x1024"] },
+          },
+        },
+        video: {
+          "veo-3.0-generate-001": {
+            capabilities: { resolutions: ["720p"] },
+          },
+        },
+      },
+    };
+    await fs.writeFile(userPath, JSON.stringify(overlay, null, 2));
+
+    const loaded = await loadCatalog({ path: userPath, logger: silentLogger() });
+    const imageCaps = loaded.models.image["gpt-image-2"]?.capabilities;
+    expect(imageCaps?.sizes).toEqual(["1024x1024"]);
+    expect(imageCaps?.supportsStyleRef).toBe(true);
+    expect(imageCaps?.maxOutputs).toBe(10);
+
+    const videoCaps = loaded.models.video["veo-3.0-generate-001"]?.capabilities;
+    expect(videoCaps?.resolutions).toEqual(["720p"]);
+    expect(videoCaps?.supportsFirstFrame).toBe(true);
+    expect(videoCaps?.supportsLastFrame).toBe(true);
+  });
+
+  it("can read the bundled default from a packaged asset path", async () => {
+    const dir = await tempDir();
+    const userPath = path.join(dir, "catalog.json");
+    const assetPath = path.join(dir, "catalog.default.json");
+    const bundled = getBundledCatalog();
+    await fs.writeFile(
+      assetPath,
+      JSON.stringify(
+        {
+          ...bundled,
+          comments: "asset-source",
+        },
+        null,
+        2,
+      ),
+    );
+
+    const loaded = await loadCatalog({
+      path: userPath,
+      bundledPath: assetPath,
+      logger: silentLogger(),
+    });
+    expect(loaded.comments).toBe("asset-source");
   });
 
   it("invalid JSON: falls back to bundled in-memory and does NOT touch user file", async () => {
