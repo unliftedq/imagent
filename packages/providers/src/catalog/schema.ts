@@ -1,12 +1,12 @@
-import { z } from "zod";
 import {
   ImageModelDefSchema,
+  type ImageProviderModel,
   ImageProviderModelSchema,
   VideoModelDefSchema,
-  VideoProviderModelSchema,
-  type ImageProviderModel,
   type VideoProviderModel,
+  VideoProviderModelSchema,
 } from "@imagent/core";
+import { z } from "zod";
 
 /**
  * Re-export the canonical offering schemas from core so consumers that import
@@ -15,10 +15,10 @@ import {
  * `config.providers.<id>` overlays use the same shape.
  */
 export {
-  ImageProviderModelSchema,
-  VideoProviderModelSchema,
   type ImageProviderModel,
+  ImageProviderModelSchema,
   type VideoProviderModel,
+  VideoProviderModelSchema,
 };
 
 export const ProviderCatalogSchema = z.object({
@@ -94,16 +94,19 @@ export const ModelCatalogSchema = z
 
 export type ModelCatalog = z.infer<typeof ModelCatalogSchema>;
 
-export const ModelCatalogOverlaySchema = z.object({
-  version: z.literal(2).optional(),
-  models: z
-    .object({
-      image: z.record(z.string(), ImageModelDefSchema.partial()).optional(),
-      video: z.record(z.string(), VideoModelDefSchema.partial()).optional(),
-    })
-    .optional(),
-  providers: z.record(z.string(), ProviderCatalogSchema).optional(),
-  comments: z.string().optional(),
-});
+export const ModelCatalogOverlaySchema = z
+  .object({
+    version: z.literal(2).optional(),
+    models: z
+      .object({
+        image: z.record(z.string(), ImageModelDefSchema.partial()).optional(),
+        video: z.record(z.string(), VideoModelDefSchema.partial()).optional(),
+      })
+      .strict()
+      .optional(),
+    providers: z.record(z.string(), ProviderCatalogSchema).optional(),
+    comments: z.string().optional(),
+  })
+  .strict();
 
 export type ModelCatalogOverlay = z.infer<typeof ModelCatalogOverlaySchema>;

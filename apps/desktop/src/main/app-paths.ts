@@ -1,8 +1,8 @@
-import { app } from "electron";
-import path from "node:path";
 import os from "node:os";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createPathResolver, type PathResolver } from "@imagent/persistence";
+import { app } from "electron";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

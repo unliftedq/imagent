@@ -203,7 +203,7 @@ interface FieldDef {
 }
 const ALLOWED_FIELDS: Record<VendorId, Record<string, FieldDef>> = {
   openai: { apiKey: { store: "secrets" }, baseUrl: { store: "config" } },
-  "azure": { apiKey: { store: "secrets" }, endpoint: { store: "config" } },
+  azure: { apiKey: { store: "secrets" }, endpoint: { store: "config" } },
   google: { apiKey: { store: "secrets" }, baseUrl: { store: "config" } },
   "flux-bfl": { apiKey: { store: "secrets" }, baseUrl: { store: "config" } },
   bytedance: { apiKey: { store: "secrets" }, endpoint: { store: "config" } },
@@ -317,7 +317,10 @@ async function runReset(rawTarget: string, options: { force?: boolean }): Promis
   const targetPath = resetPathFor(rawTarget, resolver);
   const intent = resetIntentFor(rawTarget);
 
-  if (!options.force && !(await confirm(`${chalk.yellow(intent)} ${targetPath}. Continue? [y/N] `))) {
+  if (
+    !options.force &&
+    !(await confirm(`${chalk.yellow(intent)} ${targetPath}. Continue? [y/N] `))
+  ) {
     process.stdout.write("aborted\n");
     return;
   }
@@ -346,7 +349,10 @@ async function runReset(rawTarget: string, options: { force?: boolean }): Promis
   process.stdout.write(`reset ${targetPath}\n`);
 }
 
-function resetPathFor(target: ResetTarget, resolver: ReturnType<typeof createPathResolver>): string {
+function resetPathFor(
+  target: ResetTarget,
+  resolver: ReturnType<typeof createPathResolver>,
+): string {
   switch (target) {
     case "catalog":
       return resolver.catalogFile();
@@ -558,7 +564,9 @@ function formatRouting(providerId: string, block: Record<string, unknown>): void
     process.stdout.write(`  ${chalk.dim("displayName:")} ${block.displayName}\n`);
   }
   for (const kind of ["image", "video"] as const) {
-    const list = (block[kind] as Array<{ id: string; modelId: string; displayName?: string }> | undefined) ?? [];
+    const list =
+      (block[kind] as Array<{ id: string; modelId: string; displayName?: string }> | undefined) ??
+      [];
     if (list.length === 0) continue;
     process.stdout.write(`  ${chalk.cyan(`${kind}:`)}\n`);
     for (const entry of list) {

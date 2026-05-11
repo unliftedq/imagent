@@ -1,14 +1,14 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import {
-  ModelCatalogOverlaySchema,
-  ModelCatalogSchema,
-  type ModelCatalog,
-  type ModelCatalogOverlay,
-} from "./schema.js";
 // Bundled default catalog. Imported via JSON ESM so it ships in the package
 // `dist/` and is reachable from both desktop and CLI.
 import bundledDefault from "../catalog.default.json" with { type: "json" };
+import {
+  type ModelCatalog,
+  type ModelCatalogOverlay,
+  ModelCatalogOverlaySchema,
+  ModelCatalogSchema,
+} from "./schema.js";
 
 export interface CatalogLoaderOptions {
   /** Path to user catalog file. Default: `<dataDir>/catalog.json`. */
@@ -167,7 +167,10 @@ function mergeRecord<T extends object>(base: T | undefined, overlay: Partial<T>)
   return deepMerge(base ? cloneCatalog(base) : {}, overlay) as T;
 }
 
-function deepMerge(base: Record<string, unknown>, overlay: Record<string, unknown>): Record<string, unknown> {
+function deepMerge(
+  base: Record<string, unknown>,
+  overlay: Record<string, unknown>,
+): Record<string, unknown> {
   const next = { ...base };
   for (const [key, value] of Object.entries(overlay)) {
     const current = next[key];
