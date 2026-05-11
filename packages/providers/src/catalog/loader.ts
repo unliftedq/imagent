@@ -1,6 +1,11 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { ModelCatalogSchema, type ModelCatalog } from "./schema.js";
+import {
+  ModelCatalogOverlaySchema,
+  ModelCatalogSchema,
+  type ModelCatalog,
+  type ModelCatalogOverlay,
+} from "./schema.js";
 // Bundled default catalog. Imported via JSON ESM so it ships in the package
 // `dist/` and is reachable from both desktop and CLI.
 import bundledDefault from "../catalog.default.json" with { type: "json" };
@@ -10,6 +15,8 @@ export interface CatalogLoaderOptions {
   path?: string;
   /** Override the bundled fallback (test seam). */
   bundled?: ModelCatalog;
+  /** Optional packaged asset path for the bundled fallback (desktop builds). */
+  bundledPath?: string;
   logger?: { info(msg: string): void; warn(msg: string): void };
 }
 
@@ -28,18 +35,34 @@ function validatedBundled(override?: ModelCatalog): ModelCatalog {
   return ModelCatalogSchema.parse(bundledDefault);
 }
 
+async function loadBundled(opts: CatalogLoaderOptions): Promise<ModelCatalog> {
+  if (!opts.bundledPath) {
+    return validatedBundled(opts.bundled);
+  }
+
+  try {
+    const raw = await fs.readFile(opts.bundledPath, "utf8");
+    return ModelCatalogSchema.parse(JSON.parse(raw));
+  } catch (err) {
+    opts.logger?.warn(
+      `[catalog] could not read bundled catalog asset ${opts.bundledPath}: ${String(err)} — using package default`,
+    );
+    return validatedBundled(opts.bundled);
+  }
+}
+
 /**
- * Load the runtime catalog. v2 semantics: USER FILE IS AUTHORITATIVE — no
- * merge with bundled. On first run (file missing), the bundled default is
- * written to the user path and returned. On parse failure (corrupt JSON or
- * schema mismatch), warn + fall back to bundled IN-MEMORY without
- * overwriting the user's broken file (so they can hand-fix it).
+ * Load the runtime catalog. v2 semantics: bundled defaults are authoritative
+ * base data; the user catalog, when present, is an overlay for additions or
+ * overrides. Missing user files are not created. On parse/merge failure
+ * (corrupt JSON or schema mismatch), warn + fall back to bundled IN-MEMORY
+ * without overwriting the user's broken file (so they can hand-fix it).
  *
  * Always returns a parsed `ModelCatalog`; never throws on missing/invalid
  * user files.
  */
 export async function loadCatalog(opts: CatalogLoaderOptions = {}): Promise<ModelCatalog> {
-  const bundled = validatedBundled(opts.bundled);
+  const bundled = await loadBundled(opts);
   const userPath = opts.path;
   const logger = opts.logger;
 
@@ -53,14 +76,6 @@ export async function loadCatalog(opts: CatalogLoaderOptions = {}): Promise<Mode
   } catch (err) {
     const code = (err as NodeJS.ErrnoException)?.code;
     if (code === "ENOENT") {
-      // First run — seed the user path with the bundled default.
-      try {
-        await fs.mkdir(path.dirname(userPath), { recursive: true });
-        await writeAtomic(userPath, JSON.stringify(bundled, null, 2));
-        logger?.info(`[catalog] seeded default to ${userPath}`);
-      } catch (writeErr) {
-        logger?.warn(`[catalog] failed to seed default to ${userPath}: ${String(writeErr)}`);
-      }
       return bundled;
     }
     logger?.warn(`[catalog] could not read ${userPath}: ${String(err)} — using bundled in memory`);
@@ -69,10 +84,11 @@ export async function loadCatalog(opts: CatalogLoaderOptions = {}): Promise<Mode
 
   try {
     const parsed = JSON.parse(raw);
-    return ModelCatalogSchema.parse(parsed);
+    const overlay = ModelCatalogOverlaySchema.parse(parsed);
+    return mergeCatalogs(bundled, overlay);
   } catch (err) {
     logger?.warn(
-      `[catalog] invalid JSON or schema at ${userPath}: ${String(err)} — using bundled in memory; user file preserved`,
+      `[catalog] invalid JSON, schema, or merged catalog at ${userPath}: ${String(err)} — using bundled in memory; user file preserved`,
     );
     return bundled;
   }
@@ -101,4 +117,73 @@ async function writeAtomic(target: string, contents: string): Promise<void> {
 /** Returns the bundled default in-memory (no I/O). Useful for tests. */
 export function getBundledCatalog(override?: ModelCatalog): ModelCatalog {
   return validatedBundled(override);
+}
+
+function mergeCatalogs(base: ModelCatalog, overlay: ModelCatalogOverlay): ModelCatalog {
+  const merged = cloneCatalog(base);
+
+  if (overlay.comments !== undefined) {
+    merged.comments = overlay.comments;
+  }
+
+  for (const [id, model] of Object.entries(overlay.models?.image ?? {})) {
+    merged.models.image[id] = mergeRecord(merged.models.image[id], model);
+  }
+  for (const [id, model] of Object.entries(overlay.models?.video ?? {})) {
+    merged.models.video[id] = mergeRecord(merged.models.video[id], model);
+  }
+
+  for (const [providerId, providerOverlay] of Object.entries(overlay.providers ?? {})) {
+    const current = merged.providers[providerId] ?? {};
+    merged.providers[providerId] = {
+      ...current,
+      ...providerOverlay,
+      image:
+        providerOverlay.image === undefined
+          ? current.image
+          : mergeOfferings(current.image, providerOverlay.image),
+      video:
+        providerOverlay.video === undefined
+          ? current.video
+          : mergeOfferings(current.video, providerOverlay.video),
+    };
+  }
+
+  return ModelCatalogSchema.parse(merged);
+}
+
+function mergeOfferings<T extends { id: string }>(base: T[] | undefined, overlay: T[]): T[] {
+  const byId = new Map<string, T>();
+  for (const offering of base ?? []) {
+    byId.set(offering.id, cloneCatalog(offering));
+  }
+  for (const offering of overlay) {
+    byId.set(offering.id, mergeRecord(byId.get(offering.id), offering));
+  }
+  return [...byId.values()];
+}
+
+function mergeRecord<T extends object>(base: T | undefined, overlay: Partial<T>): T {
+  return deepMerge(base ? cloneCatalog(base) : {}, overlay) as T;
+}
+
+function deepMerge(base: Record<string, unknown>, overlay: Record<string, unknown>): Record<string, unknown> {
+  const next = { ...base };
+  for (const [key, value] of Object.entries(overlay)) {
+    const current = next[key];
+    if (isPlainObject(current) && isPlainObject(value)) {
+      next[key] = deepMerge(current, value);
+    } else {
+      next[key] = value;
+    }
+  }
+  return next;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function cloneCatalog<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
 }

@@ -10,7 +10,7 @@ import {
   ProviderSecretsSchema,
 } from "@imagent/config";
 import { createPathResolver, ensureDataDir } from "@imagent/persistence";
-import { getBundledCatalog, loadCatalog, saveCatalog } from "@imagent/providers";
+import { loadCatalog } from "@imagent/providers";
 import chalk from "chalk";
 import type { Command } from "commander";
 
@@ -37,7 +37,7 @@ import { loadCliRuntime } from "../support/runtime.js";
  * with `unknown config path: <key>`.
  *
  * `reset <target>` rewrites one of the on-disk files to its default state:
- *   - `catalog`  → ~/.imagent/catalog.json with bundled-default catalog
+ *   - `catalog`  → removes ~/.imagent/catalog.json so bundled defaults apply
  *   - `secrets`  → ~/.imagent/secrets.json cleared to `{}`
  *   - `config`   → ~/.imagent/config.json with default preferences
  */
@@ -324,7 +324,7 @@ async function runReset(rawTarget: string, options: { force?: boolean }): Promis
 
   switch (rawTarget) {
     case "catalog": {
-      await saveCatalog(getBundledCatalog(), { path: targetPath });
+      await fs.rm(targetPath, { force: true });
       break;
     }
     case "secrets": {
@@ -360,7 +360,7 @@ function resetPathFor(target: ResetTarget, resolver: ReturnType<typeof createPat
 function resetIntentFor(target: ResetTarget): string {
   switch (target) {
     case "catalog":
-      return "This will overwrite the catalog with the bundled default at";
+      return "This will remove the user catalog overlay at";
     case "secrets":
       return "This will clear all secrets at";
     case "config":

@@ -93,3 +93,17 @@ export const ModelCatalogSchema = z
   });
 
 export type ModelCatalog = z.infer<typeof ModelCatalogSchema>;
+
+export const ModelCatalogOverlaySchema = z.object({
+  version: z.literal(2).optional(),
+  models: z
+    .object({
+      image: z.record(z.string(), ImageModelDefSchema.partial()).optional(),
+      video: z.record(z.string(), VideoModelDefSchema.partial()).optional(),
+    })
+    .optional(),
+  providers: z.record(z.string(), ProviderCatalogSchema).optional(),
+  comments: z.string().optional(),
+});
+
+export type ModelCatalogOverlay = z.infer<typeof ModelCatalogOverlaySchema>;

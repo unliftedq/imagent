@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently --kill-others-on-fail --names main,preload,renderer,electron --prefix-colors yellow,cyan,green,magenta \"vite build --watch --config vite.main.config.ts\" \"vite build --watch --config vite.preload.config.ts\" \"vite --config vite.renderer.config.ts\" \"wait-on dist/main/main.mjs && electron .\"",
-    "build": "vite build --config vite.main.config.ts && vite build --config vite.preload.config.ts && vite build --config vite.renderer.config.ts",
+    "build": "bun run catalog:asset && vite build --config vite.main.config.ts && vite build --config vite.preload.config.ts && vite build --config vite.renderer.config.ts",
     "build:main": "vite build --config vite.main.config.ts",
     "build:preload": "vite build --config vite.preload.config.ts",
     "build:renderer": "vite build --config vite.renderer.config.ts",
@@ -17,6 +17,7 @@
     "package:mac": "bun run rebuild && bun run build && electron-builder --mac dmg --publish never",
     "package:linux": "bun run rebuild && bun run build && electron-builder --linux AppImage --publish never",
     "typecheck": "tsc --noEmit",
+    "catalog:asset": "node -e \"require('node:fs').cpSync('../../packages/providers/src/catalog.default.json','assets/catalog.default.json')\"",
     "rebuild": "electron-rebuild -f -w better-sqlite3 -w sharp",
     "postinstall": "echo 'Run `bun run --filter @imagent/studio rebuild` before launching the desktop app to rebuild native modules for Electron'",
     "clean": "rm -rf dist .tsbuildinfo"

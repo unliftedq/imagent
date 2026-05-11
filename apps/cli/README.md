@@ -67,7 +67,7 @@ imagent config path
 Reset a state file when you need to start clean (`--force` skips the y/N prompt):
 
 ```bash
-imagent config reset catalog --force   # bundled-default model catalog
+imagent config reset catalog --force   # remove user catalog overlay
 imagent config reset secrets           # clear all stored credentials
 imagent config reset config            # restore default preferences
 ```

@@ -62,8 +62,8 @@ export async function loadCliRuntime(): Promise<CliRuntime> {
   const envSecrets = await createEnvSecretsStore(process.env).loadSecrets();
   const secrets = mergeSecrets(fileSecrets, envSecrets);
 
-  // Catalog: USER FILE IS AUTHORITATIVE. First run seeds bundled defaults to
-  // ~/.imagent/catalog.json; subsequent runs read whatever the user edited.
+  // Catalog: bundled defaults are the base; ~/.imagent/catalog.json is an
+  // optional user overlay for additions and overrides.
   const catalog = await loadCatalog({ path: resolver.catalogFile() });
 
   // Apply env-derived routing overlay last so AZURE_ENDPOINT etc.
