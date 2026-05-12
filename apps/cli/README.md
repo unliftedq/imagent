@@ -39,7 +39,7 @@ imagent video generate "a slow camera move through a neon city" --provider byted
 
 ```text
 imagent image generate "<prompt>" [--provider <id>] [--model <id>] [--option k=v ...] [--out <dir>]
-imagent video generate "<prompt>" [--provider <id>] [--model <id>] [--option k=v ...] [--wait] [--out <dir>]
+imagent video generate "<prompt>" [--provider <id>] [--model <id>] [--option k=v ...] [--wait [--out <dir>]]
 imagent video task ls [--state <state>] [--limit <n>]
 imagent video task get --id <jobId>
 imagent video task cancel --id <jobId>

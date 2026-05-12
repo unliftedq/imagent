@@ -8,8 +8,10 @@ description: Use IMAGENT from scripts for provider setup, generation jobs, galle
 
 ```text
 imagent image generate <prompt> [--provider <id>] [--model <id>] [--option k=v ...] [--out <dir>]
-imagent video generate <prompt> [--provider <id>] [--model <id>] [--option k=v ...] [--wait] [--out <dir>]
-imagent video task {ls|get|cancel} [jobId]
+imagent video generate <prompt> [--provider <id>] [--model <id>] [--option k=v ...] [--wait [--out <dir>]]
+imagent video task ls [--state <state>] [--limit <n>]
+imagent video task get --id <jobId>
+imagent video task cancel --id <jobId>
 imagent video download [jobId] [--out <dir>]
 imagent gallery {ls|show|remix|rm|favorite}
 imagent asset {add|list|show|rm}

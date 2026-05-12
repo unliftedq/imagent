@@ -115,7 +115,9 @@ imagent config {get|set|path|reset}   # see references/setup.md
 
 imagent asset {add|list|show|rm}      # reusable characters / objects / backgrounds / styles
 imagent gallery {ls|show|remix|favorite|rm}   # local result library
-imagent video task {ls|get|cancel}    # submitted video task control
+imagent video task ls                  # list submitted video tasks
+imagent video task get --id <jobId>    # refresh and inspect one task
+imagent video task cancel --id <jobId> # cancel one task
 imagent video download [jobId]        # poll a video task and save the result
 ```
 

@@ -62,6 +62,9 @@ describe("CLI --help", () => {
       "mcp",
     ];
     const positions = expected.map((cmd) => r.stdout.indexOf(`  ${cmd}`));
+    for (const position of positions) {
+      expect(position).toBeGreaterThanOrEqual(0);
+    }
     for (let i = 1; i < positions.length; i++) {
       expect(positions[i]).toBeGreaterThan(positions[i - 1]);
     }
@@ -72,7 +75,10 @@ describe("CLI --help", () => {
     expect(r.status).toBe(0);
     // Commander inserts section spacing around Usage/Options/Commands; only
     // inspect the rendered root description itself.
-    const descriptionBlock = r.stdout.match(/imagent —[\s\S]*?(?=\nOptions:)/)?.[0] ?? "";
+    const match = r.stdout.match(/imagent —[\s\S]*?(?=\r?\nOptions:)/);
+    expect(match).not.toBeNull();
+    const descriptionBlock = match?.[0] ?? "";
+    expect(descriptionBlock.length).toBeGreaterThan(0);
     expect(descriptionBlock).not.toMatch(/\n\s*\n/);
   });
 
@@ -132,6 +138,12 @@ describe("CLI --help", () => {
     expect(video.stdout).toContain("--wait");
     expect(video.stdout).not.toContain("--duration");
     expect(video.stdout).not.toContain("--resolution");
+  });
+
+  it("video generate rejects --out without --wait", () => {
+    const r = runCli(["video", "generate", "prompt", "--out", "./videos"]);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain("--out only applies with --wait");
   });
 });
 
