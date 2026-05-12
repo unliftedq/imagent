@@ -65,8 +65,11 @@ describe("CLI --help", () => {
     for (const position of positions) {
       expect(position).toBeGreaterThanOrEqual(0);
     }
-    for (let i = 1; i < positions.length; i++) {
-      expect(positions[i]).toBeGreaterThan(positions[i - 1]);
+    for (const [previous, current] of positions.slice(1).map((position, index) => [
+      positions[index]!,
+      position,
+    ] as const)) {
+      expect(current).toBeGreaterThan(previous);
     }
   });
 

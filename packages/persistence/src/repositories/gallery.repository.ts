@@ -50,13 +50,37 @@ function rowToItem(r: GalleryRow): GalleryItem {
  * the simplest robust strategy: split into whitespace tokens, escape
  * any embedded `"` characters, double-quote each token, and AND them.
  */
+function ftsQuote(raw: string): string {
+  return `"${raw.replace(/"/g, '""')}"`;
+}
+
 function ftsPhrase(raw: string): string {
   const tokens = raw
     .split(/\s+/)
     .map((t) => t.trim())
     .filter((t) => t.length > 0);
   if (tokens.length === 0) return '""';
-  return tokens.map((t) => `"${t.replace(/"/g, '""')}"`).join(" ");
+  const allowedColumns = new Set(["prompt", "negative_prompt"]);
+  const terms: string[] = [];
+  for (let i = 0; i < tokens.length; i += 1) {
+    const token = tokens[i];
+    if (!token) continue;
+    const match = token.match(/^([A-Za-z_][A-Za-z0-9_]*):(.*)$/);
+    const column = match?.[1];
+    if (column && match && allowedColumns.has(column)) {
+      const inlineValue = match[2]?.trim() ?? "";
+      const value = inlineValue.length > 0 ? inlineValue : tokens[i + 1]?.trim() ?? "";
+      if (value.length > 0) {
+        terms.push(`${column}:${ftsQuote(value)}`);
+        if (inlineValue.length === 0) {
+          i += 1;
+        }
+        continue;
+      }
+    }
+    terms.push(ftsQuote(token));
+  }
+  return terms.join(" ");
 }
 
 function likePattern(raw: string): string {
