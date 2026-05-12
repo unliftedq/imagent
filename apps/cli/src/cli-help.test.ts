@@ -37,7 +37,6 @@ describe("CLI --help", () => {
       "asset",
       "gallery",
       "video",
-      "job",
       "mcp",
     ]) {
       expect(r.stdout).toContain(cmd);
@@ -64,16 +63,19 @@ describe("CLI --help", () => {
   for (const sub of [
     ["asset", "--help"],
     ["gallery", "--help"],
-    ["job", "--help"],
     ["config", "--help"],
     ["image", "--help"],
+    ["image", "generate", "--help"],
     ["video", "--help"],
+    ["video", "generate", "--help"],
+    ["video", "status", "--help"],
+    ["video", "download", "--help"],
+    ["video", "ls", "--help"],
     ["mcp", "--help"],
     ["models", "--help"],
     ["options", "--help"],
     ["asset", "add", "--help"],
     ["gallery", "ls", "--help"],
-    ["job", "ls", "--help"],
   ]) {
     it(`'${sub.join(" ")}' exits 0`, () => {
       const r = runCli(sub);
@@ -83,20 +85,20 @@ describe("CLI --help", () => {
   }
 
   it("image/video help exposes dynamic key=value options instead of stale model flags", () => {
-    const image = runCli(["image", "--help"]);
+    const image = runCli(["image", "generate", "--help"]);
     expect(image.status, `stderr:\n${image.stderr}`).toBe(0);
     expect(image.stdout).toContain("--option <key=value>");
     expect(image.stdout).toContain("--out <dir>");
-    expect(image.stdout).toContain("--detach");
+    expect(image.stdout).not.toContain("--detach");
     expect(image.stdout).not.toContain("--negative");
     expect(image.stdout).not.toContain("--size");
 
-    const video = runCli(["video", "--help"]);
+    const video = runCli(["video", "generate", "--help"]);
     expect(video.status, `stderr:\n${video.stderr}`).toBe(0);
     expect(video.stdout).toContain("--option <key=value>");
     expect(video.stdout).toContain("--out <dir>");
-    expect(video.stdout).toContain("--detach");
-    expect(video.stdout).not.toContain("--wait");
+    expect(video.stdout).not.toContain("--detach");
+    expect(video.stdout).toContain("--wait");
     expect(video.stdout).not.toContain("--duration");
     expect(video.stdout).not.toContain("--resolution");
   });
@@ -165,9 +167,9 @@ describe("CLI MCP server", () => {
           expect.objectContaining({ name: "imagent_config" }),
           expect.objectContaining({ name: "imagent_asset" }),
           expect.objectContaining({ name: "imagent_gallery" }),
-          expect.objectContaining({ name: "imagent_job" }),
         ]),
       });
+      expect(listResult.tools?.map((tool) => tool.name)).not.toContain("imagent_job");
       expect(listResult.tools?.map((tool) => tool.name)).not.toContain("imagent_catalog");
       expect(listResult.tools?.map((tool) => tool.name)).not.toContain("imagent_cli");
       const imageTool = listResult.tools?.find((tool) => tool.name === "imagent_image");
