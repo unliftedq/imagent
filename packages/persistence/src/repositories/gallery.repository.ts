@@ -63,8 +63,7 @@ function ftsPhrase(raw: string): string {
   const allowedColumns = new Set(["prompt", "negative_prompt"]);
   const terms: string[] = [];
   for (let i = 0; i < tokens.length; i += 1) {
-    const token = tokens[i];
-    if (!token) continue;
+    const token = tokens[i] ?? "";
     const match = token.match(/^([A-Za-z_][A-Za-z0-9_]*):(.*)$/);
     const column = match?.[1];
     if (column && match && allowedColumns.has(column)) {
