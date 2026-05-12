@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const rootPackagePath = path.join(rootDir, "package.json");
+const cliVersionPath = path.join(rootDir, "apps", "cli", "src", "version.ts");
 const checkOnly = process.argv.includes("--check");
 
 const readJson = async (filePath) => JSON.parse(await readFile(filePath, "utf8"));
@@ -56,7 +57,9 @@ for (const packagePath of workspacePackagePaths.sort()) {
   }
 
   const relativePath = path.relative(rootDir, packagePath).replaceAll(path.sep, "/");
-  changed.push(`${packageJson.name ?? relativePath}: ${packageJson.version ?? "<missing>"} -> ${rootVersion}`);
+  changed.push(
+    `${packageJson.name ?? relativePath}: ${packageJson.version ?? "<missing>"} -> ${rootVersion}`,
+  );
 
   if (!checkOnly) {
     packageJson.version = rootVersion;
@@ -64,11 +67,36 @@ for (const packagePath of workspacePackagePaths.sort()) {
   }
 }
 
+const cliVersionFile = await readFile(cliVersionPath, "utf8");
+const cliVersionMatch = cliVersionFile.match(/export const CLI_VERSION = "([^"]+)";/);
+
+if (!cliVersionMatch) {
+  throw new Error(`Could not find CLI_VERSION in ${path.relative(rootDir, cliVersionPath)}.`);
+}
+
+const cliVersion = cliVersionMatch[1];
+
+if (cliVersion !== rootVersion) {
+  changed.push(`CLI_VERSION: ${cliVersion} -> ${rootVersion}`);
+
+  if (!checkOnly) {
+    await writeFile(
+      cliVersionPath,
+      cliVersionFile.replace(
+        /export const CLI_VERSION = "[^"]+";/,
+        `export const CLI_VERSION = "${rootVersion}";`,
+      ),
+    );
+  }
+}
+
 if (changed.length > 0) {
   const message = changed.map((item) => `- ${item}`).join("\n");
 
   if (checkOnly) {
-    throw new Error(`Workspace package versions are not synced with root ${rootVersion}:\n${message}`);
+    throw new Error(
+      `Workspace package versions are not synced with root ${rootVersion}:\n${message}`,
+    );
   }
 
   console.log(`Synced workspace package versions to ${rootVersion}:\n${message}`);
