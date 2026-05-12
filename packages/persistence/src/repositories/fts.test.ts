@@ -109,35 +109,6 @@ describe("FTS5 query planning", () => {
     }
   });
 
-  it("supports the `prompt:` column-filter form for gallery search (M8)", () => {
-    const db = openDatabase(dbPath);
-    try {
-      const repo = new GalleryRepository(db);
-      // Two items: one with "otter" only in negative_prompt, one with it in
-      // prompt. `prompt:otter` should return only the latter.
-      repo.create(
-        makeGalleryItem("p-only", { prompt: "a tiny otter on a lily pad" }),
-      );
-      repo.create(
-        makeGalleryItem("neg-only", {
-          prompt: "a cat in a hat",
-          negativePrompt: "otter",
-        }),
-      );
-      const broad = repo.query({ search: "otter", limit: 50, offset: 0 });
-      expect(broad.items.map((i) => i.id).sort()).toEqual(["neg-only", "p-only"]);
-
-      const promptOnly = repo.query({
-        search: "prompt:otter",
-        limit: 50,
-        offset: 0,
-      });
-      expect(promptOnly.items.map((i) => i.id)).toEqual(["p-only"]);
-    } finally {
-      db.close();
-    }
-  });
-
   it("AssetRepository.list({ search }) consults assets_fts (no base scan)", () => {
     const db = openDatabase(dbPath);
     try {

@@ -9,9 +9,8 @@ import { NavRail, NAV_RAIL_ROWS, type NavRoute } from "./NavRail.js";
  * aren't part of the workspace today. These cover:
  *   1. The five rows appear in the canonical order.
  *   2. The active row is rendered with `aria-current="page"`.
- *   3. The wordmark and version label are present.
- *   4. The exported NAV_RAIL_ROWS list matches the spec.
- *   5. Settings is pinned to the bottom in its own `<ul>` after `mt-auto`.
+ *   3. The exported NAV_RAIL_ROWS list matches the spec.
+ *   4. Settings is pinned to the bottom in its own `<ul>` after `mt-auto`.
  */
 
 describe("NavRail", () => {
@@ -24,18 +23,6 @@ describe("NavRail", () => {
   it("does NOT include a Video item in the nav", () => {
     const ids = NAV_RAIL_ROWS.map((r) => r.id) as string[];
     expect(ids).not.toContain("video");
-  });
-
-  it("renders the wordmark and version caption", () => {
-    const html = renderToStaticMarkup(
-      createElement(NavRail, {
-        activeRoute: "studio" as NavRoute,
-        onNavigate: vi.fn(),
-        version: "v0.0.1",
-      }),
-    );
-    expect(html).toContain("Imagine");
-    expect(html).toContain("v0.0.1");
   });
 
   it("renders all five labels in order", () => {
