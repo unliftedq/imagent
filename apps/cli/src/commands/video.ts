@@ -101,12 +101,56 @@ export function registerVideoCommand(program: Command): void {
       }
     });
 
+  const task = video
+    .command("task")
+    .description("List, inspect, and cancel submitted video tasks");
+
+  task
+    .command("ls")
+    .description("List video tasks, refreshing running tasks from their remote provider before printing")
+    .option("--state <state>", `One of: ${VALID_STATES.join("|")}`)
+    .option("--limit <n>", "Maximum rows to print", "50")
+    .action(async (options: { state?: string; limit?: string }) => {
+      try {
+        await runVideoTaskLs(options);
+      } catch (err) {
+        process.stderr.write(`${chalk.red("video task ls failed:")} ${(err as Error).message}\n`);
+        process.exit(1);
+      }
+    });
+
+  task
+    .command("get")
+    .description("Show a video task, refreshing it from the remote provider first when it is running")
+    .requiredOption("--id <jobId>", "Video task id or unique prefix (min 6 chars)")
+    .action(async (options: { id: string }) => {
+      try {
+        await runVideoTaskGet(options.id);
+      } catch (err) {
+        process.stderr.write(`${chalk.red("video task get failed:")} ${(err as Error).message}\n`);
+        process.exit(1);
+      }
+    });
+
+  task
+    .command("cancel")
+    .description("Cancel a video task after first refreshing its latest remote provider status")
+    .requiredOption("--id <jobId>", "Video task id or unique prefix (min 6 chars)")
+    .action(async (options: { id: string }) => {
+      try {
+        await runVideoTaskCancel(options.id);
+      } catch (err) {
+        process.stderr.write(`${chalk.red("video task cancel failed:")} ${(err as Error).message}\n`);
+        process.exit(1);
+      }
+    });
+
   video
     .command("status <jobId>")
     .description("Poll and print current provider status for a video job (id may be a unique prefix, min 6 chars)")
     .action(async (jobId: string) => {
       try {
-        await runVideoStatus(jobId);
+        await runVideoTaskGet(jobId);
       } catch (err) {
         process.stderr.write(`${chalk.red("video status failed:")} ${(err as Error).message}\n`);
         process.exit(1);
@@ -131,7 +175,7 @@ export function registerVideoCommand(program: Command): void {
     .description("Cancel an in-flight video job (id may be a unique prefix, min 6 chars)")
     .action(async (jobId: string) => {
       try {
-        await runVideoCancel(jobId);
+        await runVideoTaskCancel(jobId);
       } catch (err) {
         process.stderr.write(`${chalk.red("video cancel failed:")} ${(err as Error).message}\n`);
         process.exit(1);
@@ -145,7 +189,7 @@ export function registerVideoCommand(program: Command): void {
     .option("--limit <n>", "Maximum rows to print", "50")
     .action(async (options: { state?: string; limit?: string }) => {
       try {
-        await runVideoLs(options);
+        await runVideoTaskLs(options);
       } catch (err) {
         process.stderr.write(`${chalk.red("video ls failed:")} ${(err as Error).message}\n`);
         process.exit(1);
@@ -196,7 +240,7 @@ async function runVideoGenerate(prompt: string, options: VideoGenerateOptions): 
       });
       process.stdout.write(`${chalk.green("submitted:")} ${id}\n`);
       process.stdout.write(`${chalk.dim("provider job:")} ${handle.providerJobId}\n`);
-      process.stdout.write(`${chalk.dim("status:")} imagent video status ${id}\n`);
+      process.stdout.write(`${chalk.dim("status:")} imagent video task get --id ${id}\n`);
       process.stdout.write(`${chalk.dim("download:")} imagent video download ${id}\n`);
     } catch (err) {
       bundle.jobs.updateState(id, {
@@ -262,34 +306,16 @@ async function runWaitedVideoGenerate(
   await printDownloadedResult(bundle, job, outDir);
 }
 
-async function runVideoStatus(jobId: string): Promise<void> {
+async function runVideoTaskGet(jobId: string): Promise<void> {
   const runtime = await loadCliRuntime();
   const bundle = buildRunner(runtime);
   try {
     const id = resolveJobId(bundle.jobs, jobId);
-    const job = requireVideoJob(bundle.jobs.get(id), id);
-    let providerState: string | null = null;
-    let progress = job.progress;
-    let errorMessage = job.errorMessage;
-
-    if (!isTerminalState(job.state) && job.providerJobId) {
-      const provider = getVideoProvider(runtime, job.providerId);
-      const status = await provider.poll({ providerId: job.providerId, providerJobId: job.providerJobId });
-      providerState = status.state;
-      progress = status.state === "succeeded" ? 1 : (status.progress ?? progress);
-      errorMessage = status.errorMessage ?? errorMessage;
-      if (status.state === "queued" || status.state === "running") {
-        bundle.jobs.updateState(id, { state: status.state, progress: status.progress });
-      } else if (status.state === "failed" || status.state === "cancelled") {
-        bundle.jobs.updateState(id, {
-          state: status.state,
-          errorMessage: status.errorMessage ?? null,
-          finishedAt: Date.now(),
-        });
-      } else {
-        bundle.jobs.updateState(id, { progress: 1 });
-      }
-    }
+    const { job, providerState, progress, errorMessage } = await refreshRemoteVideoTask(
+      runtime,
+      bundle,
+      requireVideoJob(bundle.jobs.get(id), id),
+    );
 
     process.stdout.write(`${chalk.dim("id:        ")}${job.id}\n`);
     process.stdout.write(`${chalk.dim("state:     ")}${stateBadge(job.state)}\n`);
@@ -345,14 +371,23 @@ async function runVideoDownload(jobId: string, options: { out?: string }): Promi
   }
 }
 
-async function runVideoCancel(jobId: string): Promise<void> {
+async function runVideoTaskCancel(jobId: string): Promise<void> {
   const runtime = await loadCliRuntime();
   const bundle = buildRunner(runtime);
   try {
     const id = resolveJobId(bundle.jobs, jobId);
-    const job = requireVideoJob(bundle.jobs.get(id), id);
+    const { job, providerState } = await refreshRemoteVideoTask(
+      runtime,
+      bundle,
+      requireVideoJob(bundle.jobs.get(id), id),
+    );
     if (isTerminalState(job.state)) {
       process.stdout.write(`${chalk.dim("already terminal:")} state=${job.state}\n`);
+      return;
+    }
+    if (providerState === "succeeded") {
+      process.stdout.write(`${chalk.dim("already complete:")} remote state=succeeded\n`);
+      process.stdout.write(`${chalk.dim("download:")} imagent video download ${job.id}\n`);
       return;
     }
     bundle.jobs.updateState(id, {
@@ -370,7 +405,7 @@ async function runVideoCancel(jobId: string): Promise<void> {
   }
 }
 
-async function runVideoLs(options: { state?: string; limit?: string }): Promise<void> {
+async function runVideoTaskLs(options: { state?: string; limit?: string }): Promise<void> {
   if (options.state && !VALID_STATES.includes(options.state as JobState)) {
     throw new Error(`--state must be one of: ${VALID_STATES.join("|")} (got '${options.state}')`);
   }
@@ -392,17 +427,70 @@ async function runVideoLs(options: { state?: string; limit?: string }): Promise<
       process.stdout.write(`${chalk.dim("(no video jobs)")}\n`);
       return;
     }
-    for (const job of list) {
-      const progress =
-        job.progress !== null && job.progress !== undefined ? `${Math.round(job.progress * 100)}%` : "—";
+    for (const listedJob of list) {
+      const { job, providerState, progress } = await refreshRemoteVideoTask(
+        runtime,
+        bundle,
+        listedJob,
+      );
+      const progressText =
+        progress !== null && progress !== undefined ? `${Math.round(progress * 100)}%` : "—";
       const created = formatRelativeTime(job.createdAt);
+      const remote = providerState ? `  ${chalk.dim(`remote=${providerState}`)}` : "";
       process.stdout.write(
-        `${chalk.dim(job.id)}  ${stateBadge(job.state)}  ${chalk.dim(job.providerId)}  ${chalk.dim(progress)}  ${chalk.dim(created)}${job.errorMessage ? `  ${chalk.red(excerpt(job.errorMessage, 30))}` : ""}\n`,
+        `${chalk.dim(job.id)}  ${stateBadge(job.state)}  ${chalk.dim(job.providerId)}  ${chalk.dim(progressText)}  ${chalk.dim(created)}${remote}${job.errorMessage ? `  ${chalk.red(excerpt(job.errorMessage, 30))}` : ""}\n`,
       );
     }
   } finally {
     bundle.db.close();
   }
+}
+
+interface RemoteVideoTaskSnapshot {
+  job: Job;
+  providerState: string | null;
+  progress: number | null | undefined;
+  errorMessage: string | null | undefined;
+}
+
+async function refreshRemoteVideoTask(
+  runtime: CliRuntime,
+  bundle: RunnerBundle,
+  job: Job,
+): Promise<RemoteVideoTaskSnapshot> {
+  if (isTerminalState(job.state) || !job.providerJobId) {
+    return {
+      job,
+      providerState: null,
+      progress: job.progress,
+      errorMessage: job.errorMessage,
+    };
+  }
+
+  const provider = getVideoProvider(runtime, job.providerId);
+  const status = await provider.poll({ providerId: job.providerId, providerJobId: job.providerJobId });
+  let updated = job;
+  if (status.state === "queued" || status.state === "running") {
+    updated = bundle.jobs.updateState(job.id, {
+      state: status.state,
+      progress: status.progress,
+    });
+  } else if (status.state === "failed" || status.state === "cancelled") {
+    updated = bundle.jobs.updateState(job.id, {
+      state: status.state,
+      errorMessage: status.errorMessage ?? null,
+      finishedAt: Date.now(),
+    });
+  } else {
+    updated = bundle.jobs.updateState(job.id, { progress: 1 });
+  }
+
+  return {
+    job: updated,
+    providerState: status.state,
+    progress: status.state === "succeeded" ? 1 : (status.progress ?? updated.progress),
+    errorMessage: status.errorMessage ?? updated.errorMessage,
+  };
 }
 
 async function prepareVideoRequest(
