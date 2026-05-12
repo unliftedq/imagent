@@ -16,7 +16,7 @@ import { CLI_VERSION } from "../version.js";
  * (running the migration if needed), prints DB / FTS / config status, and
  * breaks down each provider with the concrete image+video models it would
  * expose. Useful for agents that need to know which provider/model pairs are
- * actually callable before invoking `imagent image|video`.
+ * actually callable before invoking `imagent image|video generate`.
  */
 export async function runDoctor(): Promise<void> {
   const runtime = await loadCliRuntime();

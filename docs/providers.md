@@ -40,7 +40,7 @@ imagent config set openai.apiKey sk-...
 Environment variable:
 
 ```bash
-OPENAI_API_KEY=sk-... imagent image "prompt" --provider openai
+OPENAI_API_KEY=sk-... imagent image generate "prompt" --provider openai
 ```
 
 Optional advanced secret field:
@@ -54,7 +54,7 @@ Use `baseUrl` only when pointing OpenAI traffic at a compatible proxy or alterna
 Example:
 
 ```bash
-imagent image "clean product render on white background" \
+imagent image generate "clean product render on white background" \
   --provider openai \
   --model gpt-image-2 \
   --option size=1024x1024
@@ -82,7 +82,7 @@ Environment variables:
 ```bash
 AZURE_ENDPOINT=https://my-resource.services.ai.azure.com \
 AZURE_API_KEY=<azure-key> \
-imagent image "prompt" --provider azure
+imagent image generate "prompt" --provider azure
 ```
 
 Azure deployment names are per-user provider routing entries. Use `imagent config provider add` or the desktop **Providers** page to map each Azure deployment ID to a canonical image model.
@@ -109,16 +109,16 @@ Config routing example mixing families on the same resource:
 Then use the deployment ID as the CLI model:
 
 ```bash
-imagent image "architectural concept render" \
+imagent image generate "architectural concept render" \
   --provider azure \
   --model my-prod-gpt-image-2
 
-imagent image "a photorealistic mountain lake at sunrise" \
+imagent image generate "a photorealistic mountain lake at sunrise" \
   --provider azure \
   --model my-prod-mai-image-2 \
   --option size=1024x1024
 
-imagent image "obsidian glass cathedral on a wind-swept cliff" \
+imagent image generate "obsidian glass cathedral on a wind-swept cliff" \
   --provider azure \
   --model my-prod-flux-2-pro \
   --option size=1024x1024
@@ -141,7 +141,7 @@ imagent config set google.apiKey <google-api-key>
 Environment variable:
 
 ```bash
-GOOGLE_API_KEY=<google-api-key> imagent image "prompt" --provider google
+GOOGLE_API_KEY=<google-api-key> imagent image generate "prompt" --provider google
 ```
 
 Optional advanced secret field:
@@ -153,7 +153,7 @@ imagent config set google.baseUrl https://your-google-compatible-endpoint
 Image example:
 
 ```bash
-imagent image "storybook illustration of a floating library" \
+imagent image generate "storybook illustration of a floating library" \
   --provider google \
   --model gemini-2.5-flash-image \
   --option aspect=16:9
@@ -162,7 +162,7 @@ imagent image "storybook illustration of a floating library" \
 Video example:
 
 ```bash
-imagent video "a gentle tracking shot through a flower market" \
+imagent video generate "a gentle tracking shot through a flower market" \
   --provider google \
   --model veo-3.0-generate-001 \
   --option duration=8
@@ -181,7 +181,7 @@ imagent config set flux-bfl.apiKey <bfl-key>
 Environment variable:
 
 ```bash
-FLUX_BFL_API_KEY=<bfl-key> imagent image "prompt" --provider flux-bfl
+FLUX_BFL_API_KEY=<bfl-key> imagent image generate "prompt" --provider flux-bfl
 ```
 
 Optional advanced secret field:
@@ -193,7 +193,7 @@ imagent config set flux-bfl.baseUrl https://api.bfl.ai
 Example:
 
 ```bash
-imagent image "high-detail fantasy landscape, morning mist" \
+imagent image generate "high-detail fantasy landscape, morning mist" \
   --provider flux-bfl \
   --model flux-2-pro \
   --option aspect=16:9
@@ -215,13 +215,13 @@ Environment variables:
 ```bash
 BYTEDANCE_ENDPOINT=https://ark.cn-beijing.volces.com/api/v3 \
 BYTEDANCE_API_KEY=<bytedance-key> \
-imagent video "prompt" --provider bytedance
+imagent video generate "prompt" --provider bytedance
 ```
 
 Image example:
 
 ```bash
-imagent image "polished character key art" \
+imagent image generate "polished character key art" \
   --provider bytedance \
   --model doubao-seedream-4-0-250828 \
   --option size=2K \
@@ -231,7 +231,7 @@ imagent image "polished character key art" \
 Video example:
 
 ```bash
-imagent video "a sweeping shot over a cyberpunk street" \
+imagent video generate "a sweeping shot over a cyberpunk street" \
   --provider bytedance \
   --model doubao-seedance-1-0-pro-250528 \
   --option duration=5 \
@@ -253,7 +253,7 @@ imagent config set xai.apiKey <xai-key>
 Environment variable:
 
 ```bash
-XAI_API_KEY=<xai-key> imagent image "prompt" --provider xai
+XAI_API_KEY=<xai-key> imagent image generate "prompt" --provider xai
 ```
 
 Optional advanced secret field:
@@ -265,7 +265,7 @@ imagent config set xai.baseUrl https://api.x.ai/v1
 Image example:
 
 ```bash
-imagent image "retro sci-fi explorer poster" \
+imagent image generate "retro sci-fi explorer poster" \
   --provider xai \
   --model grok-imagine-image \
   --option aspect=3:4
@@ -274,7 +274,7 @@ imagent image "retro sci-fi explorer poster" \
 Video example:
 
 ```bash
-imagent video "a dramatic hero shot with drifting fog" \
+imagent video generate "a dramatic hero shot with drifting fog" \
   --provider xai \
   --model grok-imagine-video \
   --option duration=10

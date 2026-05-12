@@ -47,7 +47,6 @@ export function registerImageCommand(program: Command): void {
     .description(
       [
         "Generate one or more images from a text prompt.",
-        "",
         "Use `imagent image generate <prompt>` to generate images.",
         "Run `imagent models --kind image` to list providers/models and `imagent options --provider <id> --model <id>` to see the exact `--option key=value` pairs the chosen model accepts.",
         "Without --provider/--model the CLI falls back to the catalog default for the configured default provider (`config get` to inspect).",
@@ -60,7 +59,6 @@ export function registerImageCommand(program: Command): void {
     .description(
       [
         "Generate one or more images from a text prompt.",
-        "",
         "The command waits until generation finishes. If it is interrupted, the in-flight job is cancelled.",
       ].join("\n"),
     )

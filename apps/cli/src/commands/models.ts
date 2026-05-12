@@ -27,7 +27,7 @@ interface OptionsCommandArgs {
  * `imagent models` — list every provider/model pair in the catalog.
  * `imagent options --provider <id> --model <id>` — print the concrete request
  * options, capabilities, and defaults for a specific model so agents can
- * craft a valid `imagent image|video` invocation without guessing.
+ * craft a valid `imagent image|video generate` invocation without guessing.
  *
  * Both commands operate against the resolved catalog (canonical model caps
  * merged with any provider override). `models --configured` filters to
@@ -499,7 +499,7 @@ function buildExamples(
     else if (caps?.aspectRatios?.[0]) opts.push(`--option aspectRatio=${caps.aspectRatios[0]}`);
     if (caps?.qualities?.[0]) opts.push(`--option quality=${caps.qualities[0]}`);
     examples.push(
-      `imagent image "your prompt" --provider ${providerId} --model ${match.def.id}${opts.length ? ` ${opts.join(" ")}` : ""} --out ./outputs`,
+      `imagent image generate "your prompt" --provider ${providerId} --model ${match.def.id}${opts.length ? ` ${opts.join(" ")}` : ""} --out ./outputs`,
     );
   } else {
     const caps = match.def.capabilities;
@@ -508,7 +508,7 @@ function buildExamples(
     if (caps?.resolutions?.[0]) opts.push(`--option resolution=${caps.resolutions[0]}`);
     if (caps?.aspectRatios?.[0]) opts.push(`--option aspectRatio=${caps.aspectRatios[0]}`);
     examples.push(
-      `imagent video "your prompt" --provider ${providerId} --model ${match.def.id}${opts.length ? ` ${opts.join(" ")}` : ""} --out ./outputs`,
+      `imagent video generate "your prompt" --provider ${providerId} --model ${match.def.id}${opts.length ? ` ${opts.join(" ")}` : ""} --wait --out ./outputs`,
     );
   }
   return examples;

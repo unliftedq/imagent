@@ -56,7 +56,6 @@ export function registerVideoCommand(program: Command): void {
     .description(
       [
         "Submit, track, and download video generation jobs.",
-        "",
         "Use `imagent video generate <prompt>` to submit a video job. By default it returns after provider submission; pass `--wait` to poll until completion and download into the gallery.",
       ].join("\n"),
     );
@@ -67,7 +66,6 @@ export function registerVideoCommand(program: Command): void {
     .description(
       [
         "Submit a video generation job from a text prompt.",
-        "",
         "Default provider: bytedance. Without --wait, the command exits after the provider accepts the job and prints commands for status/download. With --wait, it polls until completion and downloads the completed video into the gallery.",
         "Run `imagent models --kind video` to list providers/models and `imagent options --provider <id> --model <id>` for the model's exact `--option key=value` keys (durationSec, resolution, aspectRatio, fps, firstFrame, lastFrame, ...).",
       ].join("\n"),
