@@ -62,19 +62,21 @@ function ftsPhrase(raw: string): string {
   if (tokens.length === 0) return '""';
   const allowedColumns = new Set(["prompt", "negative_prompt"]);
   const terms: string[] = [];
-  for (let i = 0; i < tokens.length; i += 1) {
-    const token = tokens[i]!;
+  let skipNextToken = false;
+  for (const [index, token] of tokens.entries()) {
+    if (skipNextToken) {
+      skipNextToken = false;
+      continue;
+    }
     const match = token.match(/^([A-Za-z_][A-Za-z0-9_]*):(.*)$/);
     if (match) {
       const [, column, rawValue = ""] = match;
       if (typeof column === "string" && allowedColumns.has(column)) {
         const inlineValue = rawValue.trim();
-        const value = inlineValue.length > 0 ? inlineValue : tokens[i + 1]?.trim() ?? "";
+        const value = inlineValue.length > 0 ? inlineValue : tokens[index + 1]?.trim() ?? "";
         if (value.length > 0) {
           terms.push(`${column}:${ftsQuote(value)}`);
-          if (inlineValue.length === 0) {
-            i += 1;
-          }
+          skipNextToken = inlineValue.length === 0;
           continue;
         }
       }
