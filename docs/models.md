@@ -32,11 +32,12 @@ This page summarizes the bundled default model catalog in `packages/providers/sr
 - **Output controls:** `quality`: `low`, `medium`, `high`, `auto`; `outputFormat`: `png`, `jpeg`, `webp`; max outputs 10.
 - **Reference-image support:** Supported; max 16 images; each PNG/JPEG/WebP reference must be under 50 MB.
 
-### Azure OpenAI: `MAI-Image-2` / `MAI-Image-2e`
+### Azure Foundry / Microsoft MAI Image: `MAI-Image-2` / `MAI-Image-2e`
 
-- **Size controls:** Catalog exposes common `WIDTHxHEIGHT` presets and allows arbitrary `WIDTHxHEIGHT` values; custom width/height must be 768–1365 pixels and `width × height` must be ≤ 1,048,576.
-- **Output controls:** PNG only; max outputs 1.
-- **Reference-image support:** Not supported.
+- **Request shape:** These models do not use OpenAI-style image generation parameters on Azure. imagent sends them to `/mai/v1/images/generations` with raw `width` / `height` integers derived from the CLI `size=WIDTHxHEIGHT` option.
+- **Size controls:** The bundled catalog includes the common presets `1024x1024`, `1024x768`, `768x1024`, `1280x768`, `768x1280`, `1365x768`, and `768x1365`. Arbitrary `WIDTHxHEIGHT` values are also supported, but both dimensions must stay within 768–1365 pixels and `width × height` must be ≤ 1,048,576.
+- **Output controls:** PNG only; default size `1024x1024`; max outputs 1.
+- **Reference-image support:** Not supported. MAI Image does not accept reference-image or style-reference inputs in the current Azure route.
 
 ### Google AI Studio: `gemini-2.5-flash-image`
 
