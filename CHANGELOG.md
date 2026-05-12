@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.2.0 - 2026-05-12
+
+### Highlights
+
+- Azure Foundry image support is now a single `azure` provider that can route Azure OpenAI image models, Microsoft MAI Image models, and Foundry-hosted FLUX deployments from one endpoint + key.
+- The bundled catalog now includes the new canonical MAI Image ids (`MAI-Image-2`, `MAI-Image-2e`) plus additional FLUX families (`flux-kontext-pro`, `flux-pro-1.1`) with their documented capability limits.
+- The CLI and docs now better reflect the current workflow: use `imagent doctor`, `imagent models`, and `imagent options` to discover configured providers, concrete deployment mappings, and model-specific request options before generation.
+
+### Azure Foundry
+
+- Azure deployment routing now dispatches by canonical model family instead of assuming a single Azure OpenAI image path.
+- `gpt-image-*` deployments use the OpenAI-compatible `/openai/v1/images/...` surface.
+- `MAI-Image-2` and `MAI-Image-2e` use `/mai/v1/images/generations` with raw `width` / `height`, PNG-only output, and no reference-image support.
+- Foundry-hosted FLUX models use the Black Forest Labs provider API on Azure, including async submit + poll handling with sync-response fallback.
+
+### CLI and packaging
+
+- The CLI help and command layout emphasize the current generation flow (`image generate`, `video generate`, `video task`, `models`, `options`, `doctor`) and remove stale top-level command references.
+- Workspace version sync now updates the CLI-reported version string too, so the published package version and `imagent --version` stay aligned.
+
+### Documentation
+
+- `docs/providers.md` documents mixed Azure deployment mappings across Azure OpenAI, MAI Image, and FLUX families.
+- `docs/models.md` now calls out the MAI Image size rules, PNG-only output, and lack of reference-image support more explicitly.
+
 ## 0.1.0 - 2026-05-07
 
 ### Breaking changes
