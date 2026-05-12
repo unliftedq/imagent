@@ -47,7 +47,6 @@ export function registerConfigCommand(program: Command): void {
     .description(
       [
         "Inspect and edit local provider credentials in ~/.imagent/secrets.json (and the preferences file at ~/.imagent/config.json).",
-        "",
         "Recognised dotted keys: <vendor>.apiKey, azure.endpoint, bytedance.endpoint, <vendor>.baseUrl.",
         "Vendors: openai | azure | google | flux-bfl | bytedance | xai.",
         "Use `imagent models` and `imagent options` to inspect the model catalog instead of reading catalog.json by hand.",
@@ -117,7 +116,6 @@ export function registerConfigCommand(program: Command): void {
     .description(
       [
         "Manage per-user provider routing in config.json (Azure deployment names, custom OpenAI-compatible model lists).",
-        "",
         "Use this when you have an Azure deployment named differently from the canonical model id, or when registering a custom OpenAI-compatible provider's models. The runtime merges these entries on top of the bundled catalog.",
       ].join("\n"),
     );

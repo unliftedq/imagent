@@ -520,7 +520,7 @@ export class JobRunner extends EventEmitter {
       return;
     }
 
-    // DB-poll-cancellation check: another process / `imagent job cancel`
+    // DB-poll-cancellation check: another process / `imagent video task cancel`
     // may have flipped state=cancelled while we were polling. Bail before
     // we record progress for an already-cancelled job.
     const persisted = this.deps.jobs.get(id);
@@ -565,8 +565,7 @@ export class JobRunner extends EventEmitter {
         // the service confirms a file was written; failures log + drop.
         let thumbRel: string | null = null;
         if (this.deps.thumbnailService) {
-          // `<itemId>.thumb.webp` next to `<itemId>.<ext>` — sibling layout
-          // matches architecture.md §6.
+          // `<itemId>.thumb.webp` is stored next to `<itemId>.<ext>`.
           const absThumb = this.deps.files.galleryItemFile(`${itemId}.thumb`, "webp", date);
           try {
             const r = await this.deps.thumbnailService.generateForVideo(absPath, absThumb);
@@ -674,7 +673,7 @@ export class JobRunner extends EventEmitter {
   }
 
   /**
-   * Re-attach to a previously-submitted job (e.g. `imagent job watch`).
+   * Re-attach to a previously-submitted job (e.g. `imagent video download`).
    * Resolves on terminal completion, rejects on terminal failure.
    *
    * - If the job is already terminal, returns/rejects immediately.

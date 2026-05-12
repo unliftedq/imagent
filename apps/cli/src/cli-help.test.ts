@@ -29,14 +29,14 @@ describe("CLI --help", () => {
     const r = runCli(["--help"]);
     expect(r.status).toBe(0);
     for (const cmd of [
-      "doctor",
+      "image",
+      "video",
+      "gallery",
+      "asset",
       "models",
       "options",
-      "image",
+      "doctor",
       "config",
-      "asset",
-      "gallery",
-      "video",
       "mcp",
     ]) {
       expect(r.stdout).toContain(cmd);
@@ -45,6 +45,41 @@ describe("CLI --help", () => {
     // Match commander's "Commands:" listing format: two leading spaces, a name,
     // then padding before the description.
     expect(r.stdout).not.toMatch(/^ {2}catalog(?:\s|\[)/m);
+  });
+
+  it("root --help lists commands in expected registration order", () => {
+    const r = runCli(["--help"]);
+    expect(r.status).toBe(0);
+    const expected = [
+      "image",
+      "video",
+      "gallery",
+      "asset",
+      "models",
+      "options",
+      "doctor",
+      "config",
+      "mcp",
+    ];
+    const positions = expected.map((cmd) => r.stdout.indexOf(`  ${cmd}`));
+    for (const position of positions) {
+      expect(position).toBeGreaterThanOrEqual(0);
+    }
+    for (let i = 1; i < positions.length; i++) {
+      expect(positions[i]).toBeGreaterThan(positions[i - 1]);
+    }
+  });
+
+  it("root --help description does not contain blank lines", () => {
+    const r = runCli(["--help"]);
+    expect(r.status).toBe(0);
+    // Commander inserts section spacing around Usage/Options/Commands; only
+    // inspect the rendered root description itself.
+    const match = r.stdout.match(/imagent —[\s\S]*?(?=\r?\nOptions:)/);
+    expect(match).not.toBeNull();
+    const descriptionBlock = match?.[0] ?? "";
+    expect(descriptionBlock.length).toBeGreaterThan(0);
+    expect(descriptionBlock).not.toMatch(/\n\s*\n/);
   });
 
   it("config --help advertises the reset subcommand with all targets", () => {
@@ -103,6 +138,12 @@ describe("CLI --help", () => {
     expect(video.stdout).toContain("--wait");
     expect(video.stdout).not.toContain("--duration");
     expect(video.stdout).not.toContain("--resolution");
+  });
+
+  it("video generate rejects --out without --wait", () => {
+    const r = runCli(["video", "generate", "prompt", "--out", "./videos"]);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain("--out only applies with --wait");
   });
 });
 

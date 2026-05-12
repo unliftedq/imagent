@@ -58,7 +58,7 @@ function ProductConsole() {
       </div>
       <div className="terminal-line">
         <Terminal size={18} weight="duotone" />
-        <code>imagent image "product concept" --provider openai</code>
+        <code>imagent image generate "product concept" --provider openai</code>
       </div>
     </div>
   );

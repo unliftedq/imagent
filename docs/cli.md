@@ -7,15 +7,18 @@ description: Use IMAGENT from scripts for provider setup, generation jobs, galle
 ### Command overview
 
 ```text
-imagent doctor
+imagent image generate <prompt> [--provider <id>] [--model <id>] [--option k=v ...] [--out <dir>]
+imagent video generate <prompt> [--provider <id>] [--model <id>] [--option k=v ...] [--wait [--out <dir>]]
+imagent video task ls [--state <state>] [--limit <n>]
+imagent video task get --id <jobId>
+imagent video task cancel --id <jobId>
+imagent video download [jobId] [--out <dir>]
+imagent gallery {ls|show|remix|rm|favorite}
+imagent asset {add|list|show|rm}
 imagent models [--kind image|video] [--provider <id>] [--configured] [--json]
 imagent options --provider <id> --model <id> [--kind image|video] [--json]
+imagent doctor
 imagent config {get|set|path|reset}
-imagent image <prompt>
-imagent video <prompt>
-imagent asset {add|list|show|rm}
-imagent gallery {ls|show|remix|rm|favorite}
-imagent job {ls|status|cancel|watch}
 imagent mcp
 ```
 
@@ -87,13 +90,13 @@ The catalog defines supported models, model capabilities, and bundled provider-f
 Basic image generation:
 
 ```bash
-imagent image "minimal product photo of a ceramic mug"
+imagent image generate "minimal product photo of a ceramic mug"
 ```
 
 Select provider and model:
 
 ```bash
-imagent image "editorial fashion portrait" \
+imagent image generate "editorial fashion portrait" \
   --provider google \
   --model gemini-2.5-flash-image
 ```
@@ -101,7 +104,7 @@ imagent image "editorial fashion portrait" \
 Pass model options with repeatable `--option key=value` flags:
 
 ```bash
-imagent image "studio portrait, soft rim light" \
+imagent image generate "studio portrait, soft rim light" \
   --provider openai \
   --model gpt-image-2 \
   --option size=1024x1536 \
@@ -124,7 +127,7 @@ Options are validated against the selected model's catalog capabilities.
 Attach references and reusable assets:
 
 ```bash
-imagent image "Nova exploring a glass greenhouse" \
+imagent image generate "Nova exploring a glass greenhouse" \
   --character nova \
   --style watercolor \
   --ref ./moodboard.png
@@ -133,7 +136,7 @@ imagent image "Nova exploring a glass greenhouse" \
 Copy the completed result to a specific directory:
 
 ```bash
-imagent image "poster art for a synthwave festival" --out ./outputs
+imagent image generate "poster art for a synthwave festival" --out ./outputs
 ```
 
 ### Video generation
@@ -141,13 +144,13 @@ imagent image "poster art for a synthwave festival" --out ./outputs
 Basic video generation:
 
 ```bash
-imagent video "a slow dolly shot through a rainy alley"
+imagent video generate "a slow dolly shot through a rainy alley"
 ```
 
 Select provider, model, and options:
 
 ```bash
-imagent video "a crane shot over a futuristic coastline" \
+imagent video generate "a crane shot over a futuristic coastline" \
   --provider google \
   --model veo-3.0-generate-001 \
   --option durationSec=8 \
@@ -166,26 +169,30 @@ Common video options are:
 Attach reference images and assets:
 
 ```bash
-imagent video "Nova turns toward the camera as leaves drift past" \
+imagent video generate "Nova turns toward the camera as leaves drift past" \
   --provider bytedance \
   --character nova \
   --ref ./first-frame.png \
   --option duration=5
 ```
 
-Submit detached:
+Wait for completion inline:
 
 ```bash
-imagent video "a quiet sunrise timelapse over mountains" --provider xai --detach
+imagent video generate "a quiet sunrise timelapse over mountains" --provider xai --wait
 ```
 
-Then inspect or reattach:
+Submit without waiting, then track and download:
 
 ```bash
-imagent job ls --kind video
-imagent job status <jobId>
-imagent job watch <jobId>
+imagent video generate "a quiet sunrise timelapse over mountains" --provider xai
+imagent video task ls
+imagent video task get --id <jobId>
+imagent video task cancel --id <jobId>
+imagent video download <jobId> --out ./videos
 ```
+
+Video task commands accept unique ID prefixes of at least 6 characters.
 
 ### Asset management
 
@@ -234,7 +241,7 @@ imagent asset rm <assetId> --force
 When generating, attach assets by slug or ID:
 
 ```bash
-imagent image "portrait in a moonlit forest" --character nova --style soft-watercolor
+imagent image generate "portrait in a moonlit forest" --character nova --style soft-watercolor
 ```
 
 Style assets append their prompt snippet to the generation prompt. Asset reference images are added to the request and capped according to the selected model's catalog capabilities.
@@ -276,33 +283,3 @@ Delete a result and its file:
 imagent gallery rm <itemId>
 imagent gallery rm <itemId> --force
 ```
-
-### Job management
-
-List jobs:
-
-```bash
-imagent job ls
-imagent job ls --state running
-imagent job ls --kind video --limit 20
-```
-
-Inspect a job:
-
-```bash
-imagent job status <jobId>
-```
-
-Cancel a queued or running job:
-
-```bash
-imagent job cancel <jobId>
-```
-
-Watch a video job:
-
-```bash
-imagent job watch <jobId>
-```
-
-Detached image and video jobs keep a background CLI worker alive until the job reaches a terminal state. Job commands accept unique ID prefixes of at least 6 characters, and `job ls` prints full IDs.

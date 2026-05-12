@@ -56,7 +56,6 @@ export function registerVideoCommand(program: Command): void {
     .description(
       [
         "Submit, track, and download video generation jobs.",
-        "",
         "Use `imagent video generate <prompt>` to submit a video job. By default it returns after provider submission; pass `--wait` to poll until completion and download into the gallery.",
       ].join("\n"),
     );
@@ -67,8 +66,7 @@ export function registerVideoCommand(program: Command): void {
     .description(
       [
         "Submit a video generation job from a text prompt.",
-        "",
-        "Default provider: bytedance. Without --wait, the command exits after the provider accepts the job and prints commands for status/download. With --wait, it polls until completion and downloads the completed video into the gallery.",
+        "Default provider: bytedance. Without --wait, the command exits after the provider accepts the job and prints commands for status/download. With --wait, it polls until completion and downloads the completed video into the gallery; --out only applies with --wait.",
         "Run `imagent models --kind video` to list providers/models and `imagent options --provider <id> --model <id>` for the model's exact `--option key=value` keys (durationSec, resolution, aspectRatio, fps, firstFrame, lastFrame, ...).",
       ].join("\n"),
     )
@@ -93,7 +91,7 @@ export function registerVideoCommand(program: Command): void {
     .option("--background <slug>", "Attach a saved background asset by slug (repeatable)", collect, [])
     .option("--style <slug>", "Attach a saved style asset by slug (repeatable; appends prompt_snippet)", collect, [])
     .option("--wait", "Poll until completion and download the completed video into the gallery", false)
-    .option("--out <dir>", "Copy the downloaded result to this directory")
+    .option("--out <dir>", "With --wait, copy the downloaded result to this directory")
     .action(async (prompt: string, options: VideoGenerateOptions) => {
       try {
         await runVideoGenerate(prompt, options);
@@ -164,6 +162,9 @@ export function registerVideoCommand(program: Command): void {
 }
 
 async function runVideoGenerate(prompt: string, options: VideoGenerateOptions): Promise<void> {
+  if (options.out && !options.wait) {
+    throw new Error("--out only applies with --wait; use `imagent video download --id <jobId> --out <dir>` after submission");
+  }
   const runtime = await loadCliRuntime();
   const bundle = buildRunner(runtime);
   try {

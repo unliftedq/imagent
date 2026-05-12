@@ -38,8 +38,7 @@ export function registerAssetCommands(program: Command): void {
     .description(
       [
         "Manage reusable generation assets: characters, objects, backgrounds, and styles.",
-        "",
-        "Assets are referenced by slug from `imagent image|video --character/--object/--background/--style <slug>`. Add a few here, then attach them to prompts to keep references consistent across runs.",
+        "Assets are referenced by slug from `imagent image|video generate --character/--object/--background/--style <slug>`. Add a few here, then attach them to prompts to keep references consistent across runs.",
       ].join("\n"),
     );
 

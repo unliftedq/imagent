@@ -77,14 +77,14 @@ imagent models --configured     # lists only providers with credentials
 For ephemeral runs that should NOT persist a key to disk:
 
 ```bash
-OPENAI_API_KEY=sk-...                 imagent image "<prompt>" --provider openai
-GOOGLE_API_KEY=<key>                  imagent image "<prompt>" --provider google
+OPENAI_API_KEY=sk-...                 imagent image generate "<prompt>" --provider openai
+GOOGLE_API_KEY=<key>                  imagent image generate "<prompt>" --provider google
 AZURE_ENDPOINT=https://... AZURE_API_KEY=<key> \
-                                      imagent image "<prompt>" --provider azure
+                                      imagent image generate "<prompt>" --provider azure
 BYTEDANCE_ENDPOINT=https://... BYTEDANCE_API_KEY=<key> \
-                                      imagent video "<prompt>" --provider bytedance
-FLUX_BFL_API_KEY=<key>                imagent image "<prompt>" --provider flux-bfl
-XAI_API_KEY=<key>                     imagent image "<prompt>" --provider xai
+                                      imagent video generate "<prompt>" --provider bytedance
+FLUX_BFL_API_KEY=<key>                imagent image generate "<prompt>" --provider flux-bfl
+XAI_API_KEY=<key>                     imagent image generate "<prompt>" --provider xai
 ```
 
 Env values override `secrets.json` for that single CLI invocation.
@@ -111,7 +111,7 @@ imagent config provider list
 
 Then use the deployment ID as `--model`:
 ```bash
-imagent image "render" --provider azure --model my-prod-gpt-image-2
+imagent image generate "render" --provider azure --model my-prod-gpt-image-2
 ```
 
 MAI-Image constraint: `width >= 768`, `height >= 768`, `width * height <= 1,048,576`.

@@ -26,27 +26,30 @@ imagent config set openai.apiKey sk-...
 Generate an image:
 
 ```bash
-imagent image "a cinematic portrait of a red fox"
+imagent image generate "a cinematic portrait of a red fox"
 ```
 
 Generate a video:
 
 ```bash
-imagent video "a slow camera move through a neon city" --provider bytedance
+imagent video generate "a slow camera move through a neon city" --provider bytedance
 ```
 
 ## Common commands
 
 ```text
-imagent doctor
+imagent image generate "<prompt>" [--provider <id>] [--model <id>] [--option k=v ...] [--out <dir>]
+imagent video generate "<prompt>" [--provider <id>] [--model <id>] [--option k=v ...] [--wait [--out <dir>]]
+imagent video task ls [--state <state>] [--limit <n>]
+imagent video task get --id <jobId>
+imagent video task cancel --id <jobId>
+imagent video download [jobId] [--out <dir>]
+imagent gallery {ls|show|remix|rm|favorite}
+imagent asset {add|list|show|rm}
 imagent models [--kind image|video] [--provider <id>] [--configured]
 imagent options --provider <id> --model <id> [--kind image|video]
+imagent doctor
 imagent config {get|set|path|reset <catalog|secrets|config>}
-imagent image "<prompt>" [--provider <id>] [--model <id>] [--option k=v ...] [--out <dir>]
-imagent video "<prompt>" [--provider <id>] [--model <id>] [--option k=v ...] [--detach]
-imagent asset {add|list|show|rm}
-imagent gallery {ls|show|remix|rm|favorite}
-imagent job {ls|status|cancel|watch}
 imagent mcp
 ```
 
@@ -75,7 +78,7 @@ imagent config reset config            # restore default preferences
 Environment variables can override matching secrets for one-off runs, for example:
 
 ```bash
-OPENAI_API_KEY=sk-... imagent image "minimal product photo"
+OPENAI_API_KEY=sk-... imagent image generate "minimal product photo"
 ```
 
 ## Discovering providers, models, and options
@@ -86,12 +89,12 @@ imagent models --kind image --configured       # provider × model inventory (fi
 imagent options --provider openai --model gpt-image-2  # model's exact request options + defaults
 ```
 
-`imagent options` is the canonical way to learn which `--option key=value` pairs (e.g. `size`, `quality`, `aspectRatio`, `durationSec`) a given model accepts before invoking `imagent image|video`.
+`imagent options` is the canonical way to learn which `--option key=value` pairs (e.g. `size`, `quality`, `aspectRatio`, `durationSec`) a given model accepts before invoking `imagent image generate` or `imagent video generate`.
 
 ## Image generation
 
 ```bash
-imagent image "prompt" \
+imagent image generate "prompt" \
   --provider openai \
   --model gpt-image-2 \
   --option size=1024x1024 \
@@ -112,16 +115,27 @@ Common options:
 ## Video generation
 
 ```bash
-imagent video "prompt" \
+imagent video generate "prompt" \
   --provider bytedance \
   --model doubao-seedance-1-0-pro-250528 \
   --option durationSec=5 \
   --option aspectRatio=16:9 \
   --ref ./first-frame.png \
-  --detach
+  --wait
 ```
 
-By default the command streams job progress until completion. `--detach` runs the job in a background worker and can be followed later with `imagent job watch <jobId>`.
+By default the command exits after the provider accepts the job and prints the job id for later tracking. Pass `--wait` to poll until completion and download the video into the gallery.
+
+### Managing video tasks
+
+After submission without `--wait`, use these commands to track and retrieve results:
+
+```bash
+imagent video task ls                  # list submitted video jobs
+imagent video task get --id <jobId>         # show status of a specific job
+imagent video task cancel --id <jobId>      # cancel a running job
+imagent video download <jobId> --out ./videos  # wait for completion and download
+```
 
 ## Asset and result management
 

@@ -50,7 +50,7 @@ Run `rebuild` again after dependency or Electron changes so native modules match
 
 ### Update the model catalog
 
-The runtime model catalog is stored in the local workspace `catalog.json` file. On first run, imagent seeds it from the bundled default catalog. After that, the user file is authoritative.
+The bundled model catalog ships with imagent. The optional local workspace `catalog.json` file is an overlay for additions or overrides; it is not created on first run.
 
 Show the active catalog path (printed alongside config.json and secrets.json):
 
@@ -67,7 +67,7 @@ imagent models --kind video
 imagent options --provider openai --model gpt-image-2
 ```
 
-Reset the user catalog to the bundled default:
+Remove the local overlay so only the bundled catalog applies:
 
 ```bash
 imagent config reset catalog

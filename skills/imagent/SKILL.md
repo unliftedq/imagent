@@ -43,12 +43,12 @@ Default-first rule:
 
 Minimal:
 ```bash
-imagent image "minimal product photo of a ceramic mug"
+imagent image generate "minimal product photo of a ceramic mug"
 ```
 
 Only pick a provider/model and pass options when the request requires non-default values:
 ```bash
-imagent image "studio portrait, soft rim light" \
+imagent image generate "studio portrait, soft rim light" \
   --provider openai \
   --model gpt-image-2 \
   --option size=1024x1536 \
@@ -58,7 +58,7 @@ imagent image "studio portrait, soft rim light" \
 
 Save the output to a specific directory (otherwise it lands in the local gallery only):
 ```bash
-imagent image "poster art for a synthwave festival" --out ./outputs
+imagent image generate "poster art for a synthwave festival" --out ./outputs
 ```
 
 Common options (validated per model — run `imagent options ...` for the exact set):
@@ -69,32 +69,33 @@ Common options (validated per model — run `imagent options ...` for the exact 
 
 ## Generating videos
 
-Video jobs stream progress by default. Add `--detach` to run in the background and follow later with `imagent job watch <jobId>`. Only some providers support video — currently `google` (Veo), `bytedance` (Seedance), and `xai` (Grok).
+By default, video generation exits after the provider accepts the job and prints a job ID. Add `--wait` to poll until completion and download the result inline. Only some providers support video — currently `google` (Veo), `bytedance` (Seedance), and `xai` (Grok).
 
-Minimal (streams until done):
+Minimal (submits a provider job):
 ```bash
-imagent video "a slow dolly shot through a rainy alley"
+imagent video generate "a slow dolly shot through a rainy alley"
 ```
 
 Only pick a provider/model and pass options when the request requires non-default values:
 ```bash
-imagent video "a crane shot over a futuristic coastline" \
+imagent video generate "a crane shot over a futuristic coastline" \
   --provider google \
   --model veo-3.0-generate-001 \
   --option durationSec=8 \
   --option resolution=720p
 ```
 
-Submit detached, then poll:
+Submit and track later:
 ```bash
-imagent video "a quiet sunrise timelapse over mountains" --detach
-imagent job ls --kind video                        # find the new jobId
-imagent job watch <jobId>                          # stream progress / final path
+imagent video generate "a quiet sunrise timelapse over mountains"
+imagent video task ls                              # find the new jobId
+imagent video task get --id <jobId>                # refresh and inspect status
+imagent video download --id <jobId>                # poll until done and save to gallery
 ```
 
 Image-to-video with a starting frame and a character asset:
 ```bash
-imagent video "Nova turns toward the camera as leaves drift past" \
+imagent video generate "Nova turns toward the camera as leaves drift past" \
   --character nova \
   --ref ./first-frame.png \
   --option duration=5
@@ -114,20 +115,23 @@ imagent config {get|set|path|reset}   # see references/setup.md
 
 imagent asset {add|list|show|rm}      # reusable characters / objects / backgrounds / styles
 imagent gallery {ls|show|remix|favorite|rm}   # local result library
-imagent job {ls|status|cancel|watch}  # image/video job control
+imagent video task ls                  # list submitted video tasks
+imagent video task get --id <jobId>    # refresh and inspect one task
+imagent video task cancel --id <jobId> # cancel one task
+imagent video download [jobId]        # poll a video task and save the result
 ```
 
 Reusable assets keep recurring subjects consistent across generations:
 ```bash
 imagent asset add character --name "Nova" --description "silver jacket" --ref ./nova.png
 imagent asset add style     --name "Soft watercolor" --prompt "soft watercolor, muted palette"
-imagent image "portrait in moonlit forest" --character nova --style soft-watercolor
+imagent image generate "portrait in moonlit forest" --character nova --style soft-watercolor
 ```
 
 ## Rules and gotchas
 
 - **Do not invent model IDs or option keys.** Run `imagent models` and `imagent options` first; the CLI rejects unsupported values.
 - **Prefer defaults.** Do not override provider/model/options just to be explicit; rely on CLI/catalog defaults unless the user request needs a particular value.
-- **Detached jobs keep a background worker alive** until they finish. Use `imagent job status <jobId>` for a one-time status check, or `imagent job watch <jobId>` from the same machine to follow long-running progress.
+- **Video tasks are explicit.** Use `--wait` for inline completion, or save the printed job ID and use `imagent video task get --id <jobId>` / `imagent video download --id <jobId>` later.
 - **Outputs land in the local gallery** under `~/.imagent/` by default. Use `--out <dir>` to copy the file to a specific location.
 - **Never paste a secret into a script or commit it.** Setup commands belong in [references/setup.md](references/setup.md).

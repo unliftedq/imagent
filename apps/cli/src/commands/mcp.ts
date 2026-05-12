@@ -78,12 +78,12 @@ const MCP_TOOLS: McpTool[] = [
   subcommandTool(
     "imagent_models",
     "models",
-    'List every provider/model pair available in the catalog. Filter with --kind image|video, --provider <id>, or --configured (only providers with credentials). Add --json for machine-readable output. Use this to discover what to pass to `imagent image|video --provider <id> --model <id>`. Example args: ["--kind", "image", "--configured"] or ["--provider", "openai", "--json"].',
+    'List every provider/model pair available in the catalog. Filter with --kind image|video, --provider <id>, or --configured (only providers with credentials). Add --json for machine-readable output. Use this to discover what to pass to `imagent image|video generate --provider <id> --model <id>`. Example args: ["--kind", "image", "--configured"] or ["--provider", "openai", "--json"].',
   ),
   subcommandTool(
     "imagent_options",
     "options",
-    'Show the request options, capabilities, defaults, and reference-image limits for a specific provider/model. Use this before calling `imagent image|video` to know exactly which `--option key=value` pairs (size, aspectRatio, quality, durationSec, ...) the model accepts and what values are valid. Add --json for machine-readable output. Required args: --provider <id> --model <id>. Example args: ["--provider", "openai", "--model", "gpt-image-2"] or ["--provider", "google", "--model", "veo-3.0-generate-001", "--kind", "video", "--json"].',
+    'Show the request options, capabilities, defaults, and reference-image limits for a specific provider/model. Use this before calling `imagent image|video generate` to know exactly which `--option key=value` pairs (size, aspectRatio, quality, durationSec, ...) the model accepts and what values are valid. Add --json for machine-readable output. Required args: --provider <id> --model <id>. Example args: ["--provider", "openai", "--model", "gpt-image-2"] or ["--provider", "google", "--model", "veo-3.0-generate-001", "--kind", "video", "--json"].',
   ),
   subcommandTool(
     "imagent_image",
@@ -103,7 +103,7 @@ const MCP_TOOLS: McpTool[] = [
   subcommandTool(
     "imagent_asset",
     "asset",
-    'Manage reusable generation assets: characters, objects, backgrounds, and styles. Assets are referenced by slug from `imagent image|video --character/--object/--background/--style <slug>`. Args go after `imagent asset`, e.g. ["add", "character", "--name", "Ari", "--ref", "./ari.png"], ["list", "--kind", "style"], or ["show", "<assetId>"].',
+    'Manage reusable generation assets: characters, objects, backgrounds, and styles. Assets are referenced by slug from `imagent image|video generate --character/--object/--background/--style <slug>`. Args go after `imagent asset`, e.g. ["add", "character", "--name", "Ari", "--ref", "./ari.png"], ["list", "--kind", "style"], or ["show", "<assetId>"].',
   ),
   subcommandTool(
     "imagent_gallery",

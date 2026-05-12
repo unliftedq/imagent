@@ -33,13 +33,13 @@ imagent doctor
 Environment variables can also supply secrets for one-off CLI runs:
 
 ```bash
-OPENAI_API_KEY=sk-... imagent image "a cinematic portrait of a red fox"
+OPENAI_API_KEY=sk-... imagent image generate "a cinematic portrait of a red fox"
 ```
 
 ### 3. Generate an image
 
 ```bash
-imagent image "a cinematic portrait of a red fox" \
+imagent image generate "a cinematic portrait of a red fox" \
   --provider openai \
   --option size=1024x1024 \
   --option quality=medium
@@ -50,13 +50,13 @@ The CLI prints the generated file path when the job completes. Generated outputs
 ### 4. Generate a video
 
 ```bash
-imagent video "a slow camera move through a neon city" \
+imagent video generate "a slow camera move through a neon city" \
   --provider bytedance \
   --option duration=5 \
   --option resolution=720p
 ```
 
-Video jobs stream progress by default. Add `--detach` to run in the background, then use `imagent job status <jobId>` for a one-time status check or `imagent job watch <jobId>` for long-running progress monitoring.
+By default the command exits after the provider accepts the job and prints the job id. Add `--wait` to poll until completion and download the video inline. To track a submitted job later, use `imagent video task get --id <jobId>` or `imagent video download <jobId>`.
 
 ### 5. Use the desktop app
 
