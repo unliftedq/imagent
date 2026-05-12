@@ -88,12 +88,12 @@ const MCP_TOOLS: McpTool[] = [
   subcommandTool(
     "imagent_image",
     "image",
-    'Generate one or more images from a text prompt. First run `imagent_models --kind image` and `imagent_options --provider <id> --model <id>` to learn which models are available and which `--option key=value` keys they accept. Supports provider/model overrides, repeatable freeform `--ref` paths, character/object/background/style asset slots by slug, and `--out <dir>` to copy the gallery result. Args go after `imagent image`, e.g. ["a cinematic robot portrait", "--provider", "openai", "--model", "gpt-image-2", "--option", "size=1024x1024", "--option", "count=2", "--out", "./outputs"].',
+    'Generate one or more images from a text prompt. First run `imagent_models --kind image` and `imagent_options --provider <id> --model <id>` to learn which models are available and which `--option key=value` keys they accept. Supports provider/model overrides, repeatable freeform `--ref` paths, character/object/background/style asset slots by slug, and `--out <dir>` to copy the gallery result. Args go after `imagent image`, e.g. ["generate", "a cinematic robot portrait", "--provider", "openai", "--model", "gpt-image-2", "--option", "size=1024x1024", "--option", "count=2", "--out", "./outputs"].',
   ),
   subcommandTool(
     "imagent_video",
     "video",
-    'Generate a video from a text prompt. First run `imagent_models --kind video` and `imagent_options --provider <id> --model <id> --kind video` to learn which models are available and which `--option key=value` keys they accept (durationSec, resolution, aspectRatio, fps, firstFrame, ...). By default the CLI streams progress until completion; pass `--detach` to run in a background worker or `--out <dir>` to copy the completed result. Args go after `imagent video`, e.g. ["a camera orbit around a glass sculpture", "--provider", "google", "--model", "veo-3.0-generate-001", "--option", "durationSec=8", "--out", "./outputs"].',
+    'Submit, track, and download video jobs. First run `imagent_models --kind video` and `imagent_options --provider <id> --model <id> --kind video` to learn which models are available and which `--option key=value` keys they accept (durationSec, resolution, aspectRatio, fps, firstFrame, ...). `generate` defaults to async submission; pass `--wait` to poll until completion and download into the gallery. Use `status <jobId>` and `download <jobId>` for async jobs. Args go after `imagent video`, e.g. ["generate", "a camera orbit around a glass sculpture", "--provider", "google", "--model", "veo-3.0-generate-001", "--option", "durationSec=8", "--wait", "--out", "./outputs"].',
   ),
   subcommandTool(
     "imagent_config",
@@ -109,11 +109,6 @@ const MCP_TOOLS: McpTool[] = [
     "imagent_gallery",
     "gallery",
     'Browse and curate prior generations. Args go after `imagent gallery`, e.g. ["ls", "--favorite"], ["show", "<itemId>"], ["remix", "<itemId>", "--prompt-suffix", "in pencil"], or ["rm", "<itemId>", "--force"]. Item ids are persistent and survive across CLI sessions.',
-  ),
-  subcommandTool(
-    "imagent_job",
-    "job",
-    'Inspect and control generation jobs. Submitted video jobs run in the background — reattach with `watch <id>` from the same machine. Args go after `imagent job`, e.g. ["ls", "--state", "running"], ["status", "<jobId>"], ["watch", "<jobId>"], or ["cancel", "<jobId>"].',
   ),
 ];
 

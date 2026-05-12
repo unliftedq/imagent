@@ -6,7 +6,6 @@ import { registerConfigCommand } from "./commands/config.js";
 import { runDoctor } from "./commands/doctor.js";
 import { registerGalleryCommands } from "./commands/gallery.js";
 import { registerImageCommand } from "./commands/image.js";
-import { registerJobCommands } from "./commands/job.js";
 import { registerMcpCommand } from "./commands/mcp.js";
 import { registerModelsCommand, registerOptionsCommand } from "./commands/models.js";
 import { registerVideoCommand } from "./commands/video.js";
@@ -24,7 +23,7 @@ async function main(): Promise<void> {
         "  1. `imagent doctor`                                 — see which providers are configured and what models they expose.",
         "  2. `imagent models [--kind image|video]`            — full provider/model inventory across the catalog.",
         "  3. `imagent options --provider <id> --model <id>`   — exact request options/defaults/limits for the chosen model.",
-        "  4. `imagent image|video <prompt> --provider <id> --model <id> --option key=value [--out <dir>]`",
+        "  4. `imagent image|video generate <prompt> --provider <id> --model <id> --option key=value [--out <dir>]`",
         "",
         "All assets, jobs, and gallery items live under ~/.imagent (override with `imagent config path`).",
       ].join("\n"),
@@ -57,7 +56,6 @@ async function main(): Promise<void> {
   registerAssetCommands(program);
   registerGalleryCommands(program);
   registerVideoCommand(program);
-  registerJobCommands(program);
   registerMcpCommand(program);
 
   await program.parseAsync(process.argv);

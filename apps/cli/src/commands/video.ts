@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
@@ -5,25 +6,33 @@ import type {
   GenerationIntent,
   Job,
   JobProgressEvent,
+  JobState,
   VideoModelDef,
+  VideoProvider,
   VideoRequest,
 } from "@imagent/core";
+import { AssetRepository } from "@imagent/persistence";
 import chalk from "chalk";
 import type { Command } from "commander";
 
 import { buildAssetSlots, capReferences } from "../support/asset-slots.js";
-import { startDetachedCurrentCommand } from "../support/detached.js";
-import { installCancelOnInterrupt } from "../support/job-control.js";
-import { buildRunner, loadCliRuntime } from "../support/runtime.js";
+import {
+  installCancelOnInterrupt,
+  isTerminalState,
+  resolveJobId,
+} from "../support/job-control.js";
+import { buildRunner, loadCliRuntime, type CliRuntime, type RunnerBundle } from "../support/runtime.js";
 import {
   coerceScalar,
   collect,
+  excerpt,
+  formatRelativeTime,
   isTty,
   parseKeyValueOptions,
   parsePositiveNumberOption,
 } from "../support/util.js";
 
-interface VideoOptions {
+interface VideoGenerateOptions {
   provider?: string;
   model?: string;
   option?: string[];
@@ -32,20 +41,33 @@ interface VideoOptions {
   object?: string[];
   background?: string[];
   style?: string[];
-  detach?: boolean;
+  wait?: boolean;
   out?: string;
 }
 
+const VALID_STATES: JobState[] = ["queued", "running", "succeeded", "failed", "cancelled"];
+
 export function registerVideoCommand(program: Command): void {
-  program
-    .command("video <prompt>")
+  const video = program
+    .command("video")
+    .summary("Video generation commands")
+    .description(
+      [
+        "Submit, track, and download video generation jobs.",
+        "",
+        "Use `imagent video generate <prompt>` to submit a video job. By default it returns after provider submission; pass `--wait` to poll until completion and download into the gallery.",
+      ].join("\n"),
+    );
+
+  video
+    .command("generate <prompt>")
     .summary("Submit a video generation job from a text prompt")
     .description(
       [
         "Submit a video generation job from a text prompt.",
         "",
-        "Default provider: bytedance. Run `imagent models --kind video` to list providers/models and `imagent options --provider <id> --model <id>` for the model's exact `--option key=value` keys (durationSec, resolution, aspectRatio, fps, firstFrame, lastFrame, ...).",
-        "By default the CLI waits and streams progress. Use --detach to keep the job running in a background process.",
+        "Default provider: bytedance. Without --wait, the command exits after the provider accepts the job and prints commands for status/download. With --wait, it polls until completion and downloads the completed video into the gallery.",
+        "Run `imagent models --kind video` to list providers/models and `imagent options --provider <id> --model <id>` for the model's exact `--option key=value` keys (durationSec, resolution, aspectRatio, fps, firstFrame, lastFrame, ...).",
       ].join("\n"),
     )
     .option(
@@ -68,26 +90,329 @@ export function registerVideoCommand(program: Command): void {
     .option("--object <slug>", "Attach a saved object asset by slug (repeatable)", collect, [])
     .option("--background <slug>", "Attach a saved background asset by slug (repeatable)", collect, [])
     .option("--style <slug>", "Attach a saved style asset by slug (repeatable; appends prompt_snippet)", collect, [])
-    .option("--detach", "Run the job in a detached background process", false)
-    .option("--out <dir>", "Copy the completed result to this directory once done")
-    .action(async (prompt: string, options: VideoOptions) => {
+    .option("--wait", "Poll until completion and download the completed video into the gallery", false)
+    .option("--out <dir>", "Copy the downloaded result to this directory")
+    .action(async (prompt: string, options: VideoGenerateOptions) => {
       try {
-        await runVideo(prompt, options);
+        await runVideoGenerate(prompt, options);
       } catch (err) {
         process.stderr.write(`${chalk.red("video failed:")} ${(err as Error).message}\n`);
         process.exit(1);
       }
     });
+
+  video
+    .command("status <jobId>")
+    .description("Poll and print current provider status for a video job (id may be a unique prefix, min 6 chars)")
+    .action(async (jobId: string) => {
+      try {
+        await runVideoStatus(jobId);
+      } catch (err) {
+        process.stderr.write(`${chalk.red("video status failed:")} ${(err as Error).message}\n`);
+        process.exit(1);
+      }
+    });
+
+  video
+    .command("download <jobId>")
+    .description("Poll until a video job succeeds, download it into the gallery, and optionally copy it to --out")
+    .option("--out <dir>", "Copy the downloaded result to this directory")
+    .action(async (jobId: string, options: { out?: string }) => {
+      try {
+        await runVideoDownload(jobId, options);
+      } catch (err) {
+        process.stderr.write(`${chalk.red("video download failed:")} ${(err as Error).message}\n`);
+        process.exit(1);
+      }
+    });
+
+  video
+    .command("cancel <jobId>")
+    .description("Cancel an in-flight video job (id may be a unique prefix, min 6 chars)")
+    .action(async (jobId: string) => {
+      try {
+        await runVideoCancel(jobId);
+      } catch (err) {
+        process.stderr.write(`${chalk.red("video cancel failed:")} ${(err as Error).message}\n`);
+        process.exit(1);
+      }
+    });
+
+  video
+    .command("ls")
+    .description("List video jobs")
+    .option("--state <state>", `One of: ${VALID_STATES.join("|")}`)
+    .option("--limit <n>", "Maximum rows to print", "50")
+    .action(async (options: { state?: string; limit?: string }) => {
+      try {
+        await runVideoLs(options);
+      } catch (err) {
+        process.stderr.write(`${chalk.red("video ls failed:")} ${(err as Error).message}\n`);
+        process.exit(1);
+      }
+    });
 }
 
-async function runVideo(prompt: string, options: VideoOptions): Promise<void> {
+async function runVideoGenerate(prompt: string, options: VideoGenerateOptions): Promise<void> {
   const runtime = await loadCliRuntime();
-  if (options.detach) {
-    const detached = await startDetachedCurrentCommand(runtime);
-    process.stdout.write(`${chalk.green("submitted:")} ${detached.id}\n`);
-    process.stdout.write(`${chalk.dim("log:")} ${detached.logPath}\n`);
-    return;
+  const bundle = buildRunner(runtime);
+  try {
+    const { provider, providerId, model, request, slots } = await prepareVideoRequest(
+      runtime,
+      bundle,
+      prompt,
+      options,
+    );
+
+    if (options.wait) {
+      await runWaitedVideoGenerate(bundle, providerId, model, request, slots.attachments, options.out);
+      return;
+    }
+
+    process.stdout.write(`${chalk.dim("submitting:")} provider=${providerId} model=${model}\n`);
+    const id = randomUUID();
+    const now = Date.now();
+    bundle.jobs.create({
+      id,
+      kind: "video",
+      state: "queued",
+      providerId,
+      providerJobId: null,
+      requestJson: JSON.stringify(request),
+      progress: 0,
+      errorMessage: null,
+      resultItemId: null,
+      createdAt: now,
+      updatedAt: now,
+      finishedAt: null,
+    });
+
+    try {
+      const handle = await provider.submit(request);
+      bundle.jobs.updateState(id, {
+        state: "running",
+        providerJobId: handle.providerJobId,
+        progress: 0,
+      });
+      process.stdout.write(`${chalk.green("submitted:")} ${id}\n`);
+      process.stdout.write(`${chalk.dim("provider job:")} ${handle.providerJobId}\n`);
+      process.stdout.write(`${chalk.dim("status:")} imagent video status ${id}\n`);
+      process.stdout.write(`${chalk.dim("download:")} imagent video download ${id}\n`);
+    } catch (err) {
+      bundle.jobs.updateState(id, {
+        state: "failed",
+        errorMessage: (err as Error)?.message ?? String(err),
+        finishedAt: Date.now(),
+      });
+      throw err;
+    }
+  } finally {
+    bundle.db.close();
   }
+}
+
+async function runWaitedVideoGenerate(
+  bundle: RunnerBundle,
+  providerId: string,
+  model: string,
+  request: VideoRequest,
+  attachments: Array<{ assetId: string; role: string }>,
+  outDir: string | undefined,
+): Promise<void> {
+  const intent: GenerationIntent = { kind: "video", request };
+  const tty = isTty();
+  const printProgress = (e: JobProgressEvent): void => {
+    const pct = Math.round((e.progress ?? 0) * 100);
+    if (tty) {
+      process.stdout.write(`\rprogress: ${pct}% (${e.state})    `);
+    } else {
+      process.stdout.write(`progress: ${pct}% (${e.state})\n`);
+    }
+  };
+  bundle.runner.on("job.progress", printProgress);
+
+  const completed = new Promise<Job>((resolve, reject) => {
+    bundle.runner.once("job.completed", (j: Job) => resolve(j));
+    bundle.runner.once("job.failed", (j: Job) =>
+      reject(new Error(j.errorMessage ?? `job ended ${j.state}`)),
+    );
+  });
+
+  process.stdout.write(`${chalk.dim("submitting:")} provider=${providerId} model=${model}\n`);
+  const id = await bundle.runner.start(intent);
+  const cleanupCancel = installCancelOnInterrupt(bundle.runner, bundle.jobs, id);
+  process.stdout.write(`${chalk.dim("job:")} ${id}\n`);
+
+  const job = await completed.finally(() => {
+    cleanupCancel();
+    bundle.runner.off("job.progress", printProgress);
+    if (tty) process.stdout.write("\n");
+  });
+
+  if (!job.resultItemId) {
+    throw new Error("job completed without resultItemId");
+  }
+  for (const a of attachments) {
+    bundle.gallery.addAssetLink({
+      itemId: job.resultItemId,
+      assetId: a.assetId,
+      role: a.role,
+    });
+  }
+  await printDownloadedResult(bundle, job, outDir);
+}
+
+async function runVideoStatus(jobId: string): Promise<void> {
+  const runtime = await loadCliRuntime();
+  const bundle = buildRunner(runtime);
+  try {
+    const id = resolveJobId(bundle.jobs, jobId);
+    const job = requireVideoJob(bundle.jobs.get(id), id);
+    let displayState: string = job.state;
+    let progress = job.progress;
+    let errorMessage = job.errorMessage;
+
+    if (!isTerminalState(job.state) && job.providerJobId) {
+      const provider = getVideoProvider(runtime, job.providerId);
+      const status = await provider.poll({ providerId: job.providerId, providerJobId: job.providerJobId });
+      displayState = status.state === "succeeded" ? "ready" : status.state;
+      progress = status.state === "succeeded" ? 1 : (status.progress ?? progress);
+      errorMessage = status.errorMessage ?? errorMessage;
+      if (status.state === "queued" || status.state === "running") {
+        bundle.jobs.updateState(id, { state: status.state, progress: status.progress });
+      } else if (status.state === "failed" || status.state === "cancelled") {
+        bundle.jobs.updateState(id, {
+          state: status.state,
+          errorMessage: status.errorMessage ?? null,
+          finishedAt: Date.now(),
+        });
+      } else {
+        bundle.jobs.updateState(id, { progress: 1 });
+      }
+    }
+
+    process.stdout.write(`${chalk.dim("id:        ")}${job.id}\n`);
+    process.stdout.write(`${chalk.dim("state:     ")}${stateBadge(displayState)}\n`);
+    process.stdout.write(`${chalk.dim("provider:  ")}${job.providerId}\n`);
+    if (job.providerJobId) process.stdout.write(`${chalk.dim("provJobId: ")}${job.providerJobId}\n`);
+    if (progress !== null && progress !== undefined) {
+      process.stdout.write(`${chalk.dim("progress:  ")}${Math.round(progress * 100)}%\n`);
+    }
+    if (errorMessage) process.stdout.write(`${chalk.dim("error:     ")}${errorMessage}\n`);
+    if (job.resultItemId) process.stdout.write(`${chalk.dim("result:    ")}${job.resultItemId}\n`);
+    if (displayState === "ready" && !job.resultItemId) {
+      process.stdout.write(`${chalk.dim("download:  ")}imagent video download ${job.id}\n`);
+    }
+    process.stdout.write(`${chalk.dim("created:   ")}${new Date(job.createdAt).toISOString()}\n`);
+    process.stdout.write(`${chalk.dim("updated:   ")}${new Date(job.updatedAt).toISOString()}\n`);
+    if (job.finishedAt) process.stdout.write(`${chalk.dim("finished:  ")}${new Date(job.finishedAt).toISOString()}\n`);
+  } finally {
+    bundle.db.close();
+  }
+}
+
+async function runVideoDownload(jobId: string, options: { out?: string }): Promise<void> {
+  const runtime = await loadCliRuntime();
+  const bundle = buildRunner(runtime);
+  try {
+    const id = resolveJobId(bundle.jobs, jobId);
+    requireVideoJob(bundle.jobs.get(id), id);
+
+    const tty = isTty();
+    const printProgress = (e: JobProgressEvent): void => {
+      if (e.id !== id) return;
+      const pct = Math.round((e.progress ?? 0) * 100);
+      if (tty) process.stdout.write(`\rprogress: ${pct}% (${e.state})    `);
+      else process.stdout.write(`progress: ${pct}% (${e.state})\n`);
+    };
+    bundle.runner.on("job.progress", printProgress);
+    const cleanupCancel = installCancelOnInterrupt(bundle.runner, bundle.jobs, id);
+    try {
+      const job = await bundle.runner.attach(id);
+      if (tty) process.stdout.write("\n");
+      await linkVideoAssetsFromRequest(bundle, job);
+      await printDownloadedResult(bundle, job, options.out);
+    } finally {
+      cleanupCancel();
+      bundle.runner.off("job.progress", printProgress);
+    }
+  } finally {
+    bundle.db.close();
+  }
+}
+
+async function runVideoCancel(jobId: string): Promise<void> {
+  const runtime = await loadCliRuntime();
+  const bundle = buildRunner(runtime);
+  try {
+    const id = resolveJobId(bundle.jobs, jobId);
+    const job = requireVideoJob(bundle.jobs.get(id), id);
+    if (isTerminalState(job.state)) {
+      process.stdout.write(`${chalk.dim("already terminal:")} state=${job.state}\n`);
+      return;
+    }
+    bundle.jobs.updateState(id, {
+      state: "cancelled",
+      finishedAt: Date.now(),
+      errorMessage: "cancelled via CLI",
+    });
+    if (job.providerJobId) {
+      const provider = getVideoProvider(runtime, job.providerId);
+      await provider.cancel?.({ providerId: job.providerId, providerJobId: job.providerJobId });
+    }
+    process.stdout.write(`${chalk.green("ok:")} cancelled ${id}\n`);
+  } finally {
+    bundle.db.close();
+  }
+}
+
+async function runVideoLs(options: { state?: string; limit?: string }): Promise<void> {
+  if (options.state && !VALID_STATES.includes(options.state as JobState)) {
+    throw new Error(`--state must be one of: ${VALID_STATES.join("|")} (got '${options.state}')`);
+  }
+  const limit = options.limit ? Number.parseInt(options.limit, 10) : 50;
+  if (Number.isNaN(limit) || limit <= 0) {
+    throw new Error(`--limit must be a positive integer (got '${options.limit}')`);
+  }
+
+  const runtime = await loadCliRuntime();
+  const bundle = buildRunner(runtime);
+  try {
+    const list = bundle.jobs.query({
+      kind: "video",
+      ...(options.state ? { state: [options.state as JobState] } : {}),
+      limit,
+      offset: 0,
+    });
+    if (list.length === 0) {
+      process.stdout.write(`${chalk.dim("(no video jobs)")}\n`);
+      return;
+    }
+    for (const job of list) {
+      const progress =
+        job.progress !== null && job.progress !== undefined ? `${Math.round(job.progress * 100)}%` : "—";
+      const created = formatRelativeTime(job.createdAt);
+      process.stdout.write(
+        `${chalk.dim(job.id)}  ${stateBadge(job.state)}  ${chalk.dim(job.providerId)}  ${chalk.dim(progress)}  ${chalk.dim(created)}${job.errorMessage ? `  ${chalk.red(excerpt(job.errorMessage, 30))}` : ""}\n`,
+      );
+    }
+  } finally {
+    bundle.db.close();
+  }
+}
+
+async function prepareVideoRequest(
+  runtime: CliRuntime,
+  bundle: RunnerBundle,
+  prompt: string,
+  options: VideoGenerateOptions,
+): Promise<{
+  provider: VideoProvider;
+  providerId: string;
+  model: string;
+  request: VideoRequest;
+  slots: Awaited<ReturnType<typeof buildAssetSlots>>;
+}> {
   const providerId = options.provider ?? "bytedance";
   const provider = runtime.videoRegistry.get(providerId);
   if (!provider) {
@@ -104,95 +429,80 @@ async function runVideo(prompt: string, options: VideoOptions): Promise<void> {
   const supportsRefs = resolved?.capabilities?.supportsRefImages !== false;
   const maxRefs = supportsRefs ? undefined : 0;
 
-  const { db, jobs, gallery, runner } = buildRunner(runtime);
-  try {
-    const slots = await buildAssetSlots(runtime.resolver, db, {
-      characters: options.character ?? [],
-      objects: options.object ?? [],
-      backgrounds: options.background ?? [],
-      styles: options.style ?? [],
-    });
-    const allRefPaths = [...(options.ref ?? []), ...slots.referencePaths];
-    const { references: cappedRefs, capped } = capReferences(allRefPaths, maxRefs);
-    if (capped !== undefined) {
-      process.stderr.write(
-        `${chalk.yellow("warn:")} capped at ${capped} references for model '${model}'\n`,
-      );
-    }
-    const promptWithStyle = slots.stylePromptSnippets.length
-      ? `${prompt} ${slots.stylePromptSnippets.join(" ")}`
-      : prompt;
+  const slots = await buildAssetSlots(runtime.resolver, bundle.db, {
+    characters: options.character ?? [],
+    objects: options.object ?? [],
+    backgrounds: options.background ?? [],
+    styles: options.style ?? [],
+  });
+  const allRefPaths = [...(options.ref ?? []), ...slots.referencePaths];
+  const { references: cappedRefs, capped } = capReferences(allRefPaths, maxRefs);
+  if (capped !== undefined) {
+    process.stderr.write(`${chalk.yellow("warn:")} capped at ${capped} references for model '${model}'\n`);
+  }
+  const promptWithStyle = slots.stylePromptSnippets.length
+    ? `${prompt} ${slots.stylePromptSnippets.join(" ")}`
+    : prompt;
 
-    const req: VideoRequest = {
+  return {
+    provider,
+    providerId,
+    model,
+    slots,
+    request: {
       prompt: promptWithStyle,
       providerId,
       model,
       ...requestOptions,
       references: cappedRefs.map((p) => ({ path: p, role: "freeform" as const })),
       assetIds: slots.assetIds,
-    };
+    },
+  };
+}
 
-    const intent: GenerationIntent = { kind: "video", request: req };
+function getVideoProvider(runtime: CliRuntime, providerId: string): VideoProvider {
+  const provider = runtime.videoRegistry.get(providerId);
+  if (!provider) throw new Error(`video provider '${providerId}' is not configured`);
+  return provider;
+}
 
-    // Foreground mode: subscribe to events, render single-line progress, persist
-    // asset links + lineage on completion.
-    const tty = isTty();
-    const printProgress = (e: JobProgressEvent): void => {
-      const pct = Math.round((e.progress ?? 0) * 100);
-      if (tty) {
-        process.stdout.write(`\rprogress: ${pct}% (${e.state})    `);
-      } else {
-        process.stdout.write(`progress: ${pct}% (${e.state})\n`);
-      }
-    };
-    runner.on("job.progress", printProgress);
+function requireVideoJob(job: Job | null, id: string): Job {
+  if (!job) throw new Error(`no job with id '${id}'`);
+  if (job.kind !== "video") throw new Error(`job '${id}' is not a video job`);
+  return job;
+}
 
-    const completed = new Promise<Job>((resolve, reject) => {
-      runner.once("job.completed", (j: Job) => resolve(j));
-      runner.once("job.failed", (j: Job) =>
-        reject(new Error(j.errorMessage ?? `job ended ${j.state}`)),
-      );
-    });
+async function linkVideoAssetsFromRequest(bundle: RunnerBundle, job: Job): Promise<void> {
+  if (!job.resultItemId) return;
+  const request = JSON.parse(job.requestJson) as VideoRequest;
+  if (!request.assetIds || request.assetIds.length === 0) return;
+  const assets = new AssetRepository(bundle.db);
+  for (const assetId of request.assetIds) {
+    const asset = assets.get(assetId);
+    if (!asset) continue;
+    bundle.gallery.addAssetLink({ itemId: job.resultItemId, assetId, role: asset.kind });
+  }
+}
 
-    process.stdout.write(`${chalk.dim("submitting:")} provider=${providerId} model=${model}\n`);
-    const id = await runner.start(intent);
-    const cleanupCancel = installCancelOnInterrupt(runner, jobs, id);
-    process.stdout.write(`${chalk.dim("job:")} ${id}\n`);
-
-    const job = await completed.finally(() => {
-      cleanupCancel();
-      runner.off("job.progress", printProgress);
-      if (tty) process.stdout.write("\n");
-    });
-
-    if (!job.resultItemId) {
-      throw new Error("job completed without resultItemId");
+async function printDownloadedResult(
+  bundle: RunnerBundle,
+  job: Job,
+  outDir: string | undefined,
+): Promise<void> {
+  if (!job.resultItemId) {
+    throw new Error("job completed without resultItemId");
+  }
+  const item = bundle.gallery.get(job.resultItemId);
+  if (!item) throw new Error("result item missing from gallery_items");
+  const abs = path.isAbsolute(item.relPath) ? item.relPath : path.join(bundle.files.dataDir, item.relPath);
+  process.stdout.write(`${chalk.green("ok:")} ${abs}\n`);
+  if (outDir) {
+    try {
+      const copied = await copyResultToDir(abs, outDir);
+      process.stdout.write(`${chalk.green("copied to:")} ${copied}\n`);
+    } catch (err) {
+      process.stderr.write(`${chalk.yellow("warn:")} failed to copy result: ${(err as Error).message}\n`);
     }
-    for (const a of slots.attachments) {
-      gallery.addAssetLink({
-        itemId: job.resultItemId,
-        assetId: a.assetId,
-        role: a.role,
-      });
-    }
-    const item = gallery.get(job.resultItemId);
-    if (!item) throw new Error("result item missing from gallery_items");
-    const abs = path.isAbsolute(item.relPath)
-      ? item.relPath
-      : path.join(runtime.resolver.dataDir, item.relPath);
-    process.stdout.write(`${chalk.green("ok:")} ${abs}\n`);
-    if (options.out) {
-      try {
-        const copied = await copyResultToDir(abs, options.out);
-        process.stdout.write(`${chalk.green("copied to:")} ${copied}\n`);
-      } catch (err) {
-        process.stderr.write(
-          `${chalk.yellow("warn:")} failed to copy result: ${(err as Error).message}\n`,
-        );
-      }
-    }
-  } finally {
-    db.close();
   }
 }
 
@@ -293,6 +603,7 @@ function supportedVideoOptions(model: VideoModelDef): string[] {
   if (caps.durationsSec || caps.maxDurationSec) keys.push("durationSec");
   if (caps.fpsOptions && caps.fpsOptions.length > 0) keys.push("fps");
   if (caps.resolutions && caps.resolutions.length > 0) keys.push("resolution");
+  if (caps.aspectRatios && caps.aspectRatios.length > 0) keys.push("aspectRatio");
   if (caps.supportsFirstFrame) keys.push("firstFrame");
   if (caps.supportsLastFrame) keys.push("lastFrame");
   return keys;
@@ -309,4 +620,22 @@ function pickVideoModel(
   const first = providerModels.keys().next().value;
   if (typeof first === "string") return first;
   throw new Error(`no model configured for video provider '${providerId}'`);
+}
+
+function stateBadge(state: string): string {
+  switch (state) {
+    case "queued":
+      return chalk.dim(state);
+    case "running":
+      return chalk.cyan(state);
+    case "ready":
+    case "succeeded":
+      return chalk.green(state);
+    case "failed":
+      return chalk.red(state);
+    case "cancelled":
+      return chalk.yellow(state);
+    default:
+      return state;
+  }
 }

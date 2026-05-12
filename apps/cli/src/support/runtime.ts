@@ -1,5 +1,3 @@
-import { randomUUID } from "node:crypto";
-
 import {
   type ConfigFile,
   createEnvSecretsStore,
@@ -34,7 +32,6 @@ import {
   loadCatalog,
   type ModelCatalog,
 } from "@imagent/providers";
-import { DETACHED_JOB_ID_ENV } from "./detached.js";
 
 export interface CliRuntime {
   resolver: PathResolver;
@@ -104,8 +101,6 @@ export function buildRunner(runtime: CliRuntime, logger?: Logger): RunnerBundle 
     galleryDir: (date) => runtime.resolver.galleryDir(date),
     galleryItemFile: (id, ext, date) => runtime.resolver.galleryItemFile(id, ext, date),
   };
-  const forcedJobId = process.env[DETACHED_JOB_ID_ENV];
-  let usedForcedJobId = false;
   const runner = new JobRunner({
     jobs,
     gallery,
@@ -113,17 +108,6 @@ export function buildRunner(runtime: CliRuntime, logger?: Logger): RunnerBundle 
     imageRegistry: runtime.imageRegistry,
     videoRegistry: runtime.videoRegistry,
     logger: logger ?? createConsoleLogger("imagent"),
-    ...(forcedJobId
-      ? {
-          idFactory: () => {
-            if (!usedForcedJobId) {
-              usedForcedJobId = true;
-              return forcedJobId;
-            }
-            return randomUUID();
-          },
-        }
-      : {}),
   });
   return { db, jobs, gallery, files, runner };
 }
