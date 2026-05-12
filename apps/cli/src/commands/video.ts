@@ -285,8 +285,9 @@ async function runVideoTaskGet(jobId: string): Promise<void> {
     process.stdout.write(`${chalk.dim("state:     ")}${stateBadge(job.state)}\n`);
     process.stdout.write(`${chalk.dim("provider:  ")}${job.providerId}\n`);
     if (job.providerJobId) process.stdout.write(`${chalk.dim("provJobId: ")}${job.providerJobId}\n`);
+    const readyToDownload = providerState === "succeeded" && !job.resultItemId;
     if (providerState) {
-      const suffix = providerState === "succeeded" && !job.resultItemId ? " (ready to download)" : "";
+      const suffix = readyToDownload ? " (ready to download)" : "";
       process.stdout.write(`${chalk.dim("provState: ")}${stateBadge(providerState)}${suffix}\n`);
     }
     if (progress !== null && progress !== undefined) {
@@ -294,7 +295,7 @@ async function runVideoTaskGet(jobId: string): Promise<void> {
     }
     if (errorMessage) process.stdout.write(`${chalk.dim("error:     ")}${errorMessage}\n`);
     if (job.resultItemId) process.stdout.write(`${chalk.dim("result:    ")}${job.resultItemId}\n`);
-    if (providerState === "succeeded" && !job.resultItemId) {
+    if (readyToDownload) {
       process.stdout.write(`${chalk.dim("download:  ")}imagent video download --id ${job.id}\n`);
     }
     process.stdout.write(`${chalk.dim("created:   ")}${new Date(job.createdAt).toISOString()}\n`);
@@ -453,9 +454,18 @@ async function refreshRemoteVideoTask(
   return {
     job: updated,
     providerState: status.state,
-    progress: status.state === "succeeded" ? 1 : (status.progress ?? updated.progress),
+    progress: refreshedProgress(status.state, status.progress, updated.progress),
     errorMessage: status.errorMessage ?? updated.errorMessage,
   };
+}
+
+function refreshedProgress(
+  providerState: string,
+  statusProgress: number | undefined,
+  persistedProgress: number | null | undefined,
+): number | null | undefined {
+  if (providerState === "succeeded") return 1;
+  return statusProgress ?? persistedProgress;
 }
 
 async function prepareVideoRequest(
