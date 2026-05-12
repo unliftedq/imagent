@@ -12,7 +12,6 @@ import chalk from "chalk";
 import type { Command } from "commander";
 
 import { buildAssetSlots } from "../support/asset-slots.js";
-import { startDetachedCurrentCommand } from "../support/detached.js";
 import { installCancelOnInterrupt } from "../support/job-control.js";
 import { buildRunner, loadCliRuntime } from "../support/runtime.js";
 import { coerceScalar, collect, parseKeyValueOptions, parsePositiveIntegerOption } from "../support/util.js";
@@ -27,11 +26,10 @@ interface GenerateOptions {
   background?: string[];
   style?: string[];
   out?: string;
-  detach?: boolean;
 }
 
 /**
- * `imagent image <prompt>` — image generation with asset slots.
+ * `imagent image generate <prompt>` — image generation with asset slots.
  *
  * Wires:
  *   secrets + config → registry → JobRunner → start image intent.
@@ -43,15 +41,27 @@ interface GenerateOptions {
  * model's maxReferences with a stderr warning.
  */
 export function registerImageCommand(program: Command): void {
-  program
-    .command("image <prompt>")
+  const image = program
+    .command("image")
+    .summary("Image generation commands")
+    .description(
+      [
+        "Generate one or more images from a text prompt.",
+        "",
+        "Use `imagent image generate <prompt>` to generate images.",
+        "Run `imagent models --kind image` to list providers/models and `imagent options --provider <id> --model <id>` to see the exact `--option key=value` pairs the chosen model accepts.",
+        "Without --provider/--model the CLI falls back to the catalog default for the configured default provider (`config get` to inspect).",
+      ].join("\n"),
+    );
+
+  image
+    .command("generate <prompt>")
     .summary("Generate one or more images from a text prompt")
     .description(
       [
         "Generate one or more images from a text prompt.",
         "",
-        "Run `imagent models --kind image` to list providers/models and `imagent options --provider <id> --model <id>` to see the exact `--option key=value` pairs the chosen model accepts.",
-        "Without --provider/--model the CLI falls back to the catalog default for the configured default provider (`config get` to inspect).",
+        "The command waits until generation finishes. If it is interrupted, the in-flight job is cancelled.",
       ].join("\n"),
     )
     .option(
@@ -74,7 +84,6 @@ export function registerImageCommand(program: Command): void {
     .option("--background <slug>", "Attach a saved background asset by slug (repeatable)", collect, [])
     .option("--style <slug>", "Attach a saved style asset by slug (repeatable; the asset's prompt_snippet is appended to the prompt)", collect, [])
     .option("--out <dir>", "Copy the completed result to this directory after success (the gallery copy is always retained)")
-    .option("--detach", "Run the job in a detached background process", false)
     .action(async (prompt: string, options: GenerateOptions) => {
       try {
         await runGenerate(prompt, options);
@@ -87,12 +96,6 @@ export function registerImageCommand(program: Command): void {
 
 async function runGenerate(prompt: string, options: GenerateOptions): Promise<void> {
   const runtime = await loadCliRuntime();
-  if (options.detach) {
-    const detached = await startDetachedCurrentCommand(runtime);
-    process.stdout.write(`${chalk.green("submitted:")} ${detached.id}\n`);
-    process.stdout.write(`${chalk.dim("log:")} ${detached.logPath}\n`);
-    return;
-  }
   const providerId = options.provider ?? runtime.config.app.defaultProvider;
   const provider = runtime.imageRegistry.get(providerId);
   if (!provider) {
