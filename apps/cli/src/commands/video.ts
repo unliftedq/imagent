@@ -146,18 +146,6 @@ export function registerVideoCommand(program: Command): void {
     });
 
   video
-    .command("status <jobId>")
-    .description("Poll and print current provider status for a video job (id may be a unique prefix, min 6 chars)")
-    .action(async (jobId: string) => {
-      try {
-        await runVideoTaskGet(jobId);
-      } catch (err) {
-        process.stderr.write(`${chalk.red("video status failed:")} ${(err as Error).message}\n`);
-        process.exit(1);
-      }
-    });
-
-  video
     .command("download <jobId>")
     .description("Poll until a video job succeeds, download it into the gallery, and optionally copy it to --out")
     .option("--out <dir>", "Copy the downloaded result to this directory")
@@ -170,31 +158,6 @@ export function registerVideoCommand(program: Command): void {
       }
     });
 
-  video
-    .command("cancel <jobId>")
-    .description("Cancel an in-flight video job (id may be a unique prefix, min 6 chars)")
-    .action(async (jobId: string) => {
-      try {
-        await runVideoTaskCancel(jobId);
-      } catch (err) {
-        process.stderr.write(`${chalk.red("video cancel failed:")} ${(err as Error).message}\n`);
-        process.exit(1);
-      }
-    });
-
-  video
-    .command("ls")
-    .description("List video jobs")
-    .option("--state <state>", `One of: ${VALID_STATES.join("|")}`)
-    .option("--limit <n>", "Maximum rows to print", "50")
-    .action(async (options: { state?: string; limit?: string }) => {
-      try {
-        await runVideoTaskLs(options);
-      } catch (err) {
-        process.stderr.write(`${chalk.red("video ls failed:")} ${(err as Error).message}\n`);
-        process.exit(1);
-      }
-    });
 }
 
 async function runVideoGenerate(prompt: string, options: VideoGenerateOptions): Promise<void> {
