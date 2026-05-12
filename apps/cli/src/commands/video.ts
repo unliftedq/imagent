@@ -46,6 +46,7 @@ interface VideoGenerateOptions {
 }
 
 const VALID_STATES: JobState[] = ["queued", "running", "succeeded", "failed", "cancelled"];
+const VALID_STATE_VALUES = new Set<string>(VALID_STATES);
 
 export function registerVideoCommand(program: Command): void {
   const video = program
@@ -372,12 +373,17 @@ async function runVideoTaskCancel(jobId: string): Promise<void> {
 }
 
 async function runVideoTaskLs(options: { state?: string; limit?: string }): Promise<void> {
-  if (options.state && !VALID_STATES.includes(options.state as JobState)) {
-    throw new Error(`--state must be one of: ${VALID_STATES.join("|")} (got '${options.state}')`);
-  }
+  const state = options.state;
   const limit = options.limit ? Number.parseInt(options.limit, 10) : 50;
   if (Number.isNaN(limit) || limit <= 0) {
     throw new Error(`--limit must be a positive integer (got '${options.limit}')`);
+  }
+  let stateFilter: JobState[] | undefined;
+  if (state) {
+    if (!isValidJobState(state)) {
+      throw new Error(`--state must be one of: ${VALID_STATES.join("|")} (got '${state}')`);
+    }
+    stateFilter = [state];
   }
 
   const runtime = await loadCliRuntime();
@@ -385,7 +391,7 @@ async function runVideoTaskLs(options: { state?: string; limit?: string }): Prom
   try {
     const list = bundle.jobs.query({
       kind: "video",
-      ...(options.state ? { state: [options.state as JobState] } : {}),
+      ...(stateFilter ? { state: stateFilter } : {}),
       limit,
       offset: 0,
     });
@@ -464,8 +470,20 @@ function refreshedProgress(
   statusProgress: number | undefined,
   persistedProgress: number | null | undefined,
 ): number | null | undefined {
-  if (providerState === "succeeded") return 1;
-  return statusProgress ?? persistedProgress;
+  switch (providerState) {
+    case "succeeded":
+      return 1;
+    case "failed":
+    case "cancelled":
+    case "queued":
+    case "running":
+    default:
+      return statusProgress ?? persistedProgress;
+  }
+}
+
+function isValidJobState(state: string): state is JobState {
+  return VALID_STATE_VALUES.has(state);
 }
 
 async function prepareVideoRequest(
