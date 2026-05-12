@@ -65,8 +65,13 @@ describe("CLI --help", () => {
     for (const position of positions) {
       expect(position).toBeGreaterThanOrEqual(0);
     }
-    for (let i = 1; i < positions.length; i++) {
-      expect(positions[i]).toBeGreaterThan(positions[i - 1]);
+    for (let i = 1; i < positions.length; i += 1) {
+      const previous = positions[i - 1];
+      const current = positions[i];
+      if (previous === undefined || current === undefined) {
+        throw new Error("expected command positions to be present");
+      }
+      expect(current).toBeGreaterThan(previous);
     }
   });
 
