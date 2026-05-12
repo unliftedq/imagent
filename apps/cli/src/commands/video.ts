@@ -47,6 +47,7 @@ interface VideoGenerateOptions {
 
 const VALID_STATES: JobState[] = ["queued", "running", "succeeded", "failed", "cancelled"];
 const VALID_STATE_VALUES = new Set<string>(VALID_STATES);
+const VIDEO_TASK_LS_REFRESH_CONCURRENCY = 5;
 
 export function registerVideoCommand(program: Command): void {
   const video = program
@@ -357,15 +358,18 @@ async function runVideoTaskCancel(jobId: string): Promise<void> {
       process.stdout.write(`${chalk.dim("download:")} imagent video download --id ${job.id}\n`);
       return;
     }
+    if (job.providerJobId) {
+      const provider = getVideoProvider(runtime, job.providerId);
+      if (!provider.cancel) {
+        throw new Error(`video provider '${job.providerId}' does not support cancelling video tasks`);
+      }
+      await provider.cancel({ providerId: job.providerId, providerJobId: job.providerJobId });
+    }
     bundle.jobs.updateState(id, {
       state: "cancelled",
       finishedAt: Date.now(),
       errorMessage: "cancelled via CLI",
     });
-    if (job.providerJobId) {
-      const provider = getVideoProvider(runtime, job.providerId);
-      await provider.cancel?.({ providerId: job.providerId, providerJobId: job.providerJobId });
-    }
     process.stdout.write(`${chalk.green("ok:")} cancelled ${id}\n`);
   } finally {
     bundle.db.close();
@@ -399,12 +403,8 @@ async function runVideoTaskLs(options: { state?: string; limit?: string }): Prom
       process.stdout.write(`${chalk.dim("(no video jobs)")}\n`);
       return;
     }
-    for (const listedJob of list) {
-      const { job, providerState, progress } = await refreshRemoteVideoTask(
-        runtime,
-        bundle,
-        listedJob,
-      );
+    const snapshots = await refreshRemoteVideoTasks(runtime, bundle, list);
+    for (const { job, providerState, progress } of snapshots) {
       const progressText =
         progress !== null && progress !== undefined ? `${Math.round(progress * 100)}%` : "—";
       const created = formatRelativeTime(job.createdAt);
@@ -416,6 +416,25 @@ async function runVideoTaskLs(options: { state?: string; limit?: string }): Prom
   } finally {
     bundle.db.close();
   }
+}
+
+async function refreshRemoteVideoTasks(
+  runtime: CliRuntime,
+  bundle: RunnerBundle,
+  jobs: readonly Job[],
+): Promise<RemoteVideoTaskSnapshot[]> {
+  const snapshots = new Array<RemoteVideoTaskSnapshot>(jobs.length);
+  let next = 0;
+  const worker = async (): Promise<void> => {
+    while (next < jobs.length) {
+      const index = next;
+      next += 1;
+      snapshots[index] = await refreshRemoteVideoTask(runtime, bundle, jobs[index]!);
+    }
+  };
+  const workerCount = Math.min(VIDEO_TASK_LS_REFRESH_CONCURRENCY, jobs.length);
+  await Promise.all(Array.from({ length: workerCount }, worker));
+  return snapshots;
 }
 
 interface RemoteVideoTaskSnapshot {
@@ -688,6 +707,7 @@ function supportedVideoOptions(model: VideoModelDef): string[] {
   if (caps.durationsSec || caps.maxDurationSec) keys.push("durationSec");
   if (caps.fpsOptions && caps.fpsOptions.length > 0) keys.push("fps");
   if (caps.resolutions && caps.resolutions.length > 0) keys.push("resolution");
+  if (caps.aspectRatios && caps.aspectRatios.length > 0) keys.push("aspectRatio");
   if (caps.supportsFirstFrame) keys.push("firstFrame");
   if (caps.supportsLastFrame) keys.push("lastFrame");
   return keys;

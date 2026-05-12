@@ -29,7 +29,7 @@ interface GenerateOptions {
 }
 
 /**
- * `imagent image <prompt>` — image generation with asset slots.
+ * `imagent image generate <prompt>` — image generation with asset slots.
  *
  * Wires:
  *   secrets + config → registry → JobRunner → start image intent.
