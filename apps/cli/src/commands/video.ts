@@ -423,18 +423,20 @@ async function refreshRemoteVideoTasks(
   bundle: RunnerBundle,
   jobs: readonly Job[],
 ): Promise<RemoteVideoTaskSnapshot[]> {
-  const snapshots = new Array<RemoteVideoTaskSnapshot>(jobs.length);
+  const snapshots = new Array<RemoteVideoTaskSnapshot | undefined>(jobs.length);
   let next = 0;
   const worker = async (): Promise<void> => {
     while (next < jobs.length) {
       const index = next;
       next += 1;
-      snapshots[index] = await refreshRemoteVideoTask(runtime, bundle, jobs[index]!);
+      const job = jobs[index];
+      if (!job) continue;
+      snapshots[index] = await refreshRemoteVideoTask(runtime, bundle, job);
     }
   };
   const workerCount = Math.min(VIDEO_TASK_LS_REFRESH_CONCURRENCY, jobs.length);
   await Promise.all(Array.from({ length: workerCount }, worker));
-  return snapshots;
+  return snapshots.flatMap((snapshot) => (snapshot ? [snapshot] : []));
 }
 
 interface RemoteVideoTaskSnapshot {
