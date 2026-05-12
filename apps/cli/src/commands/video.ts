@@ -146,12 +146,13 @@ export function registerVideoCommand(program: Command): void {
     });
 
   video
-    .command("download <jobId>")
+    .command("download [jobId]")
     .description("Poll until a video job succeeds, download it into the gallery, and optionally copy it to --out")
+    .option("--id <jobId>", "Video task id or unique prefix (min 6 chars)")
     .option("--out <dir>", "Copy the downloaded result to this directory")
-    .action(async (jobId: string, options: { out?: string }) => {
+    .action(async (jobId: string | undefined, options: { id?: string; out?: string }) => {
       try {
-        await runVideoDownload(jobId, options);
+        await runVideoDownload(options.id ?? jobId, options);
       } catch (err) {
         process.stderr.write(`${chalk.red("video download failed:")} ${(err as Error).message}\n`);
         process.exit(1);
@@ -204,7 +205,7 @@ async function runVideoGenerate(prompt: string, options: VideoGenerateOptions): 
       process.stdout.write(`${chalk.green("submitted:")} ${id}\n`);
       process.stdout.write(`${chalk.dim("provider job:")} ${handle.providerJobId}\n`);
       process.stdout.write(`${chalk.dim("status:")} imagent video task get --id ${id}\n`);
-      process.stdout.write(`${chalk.dim("download:")} imagent video download ${id}\n`);
+      process.stdout.write(`${chalk.dim("download:")} imagent video download --id ${id}\n`);
     } catch (err) {
       bundle.jobs.updateState(id, {
         state: "failed",
@@ -294,7 +295,7 @@ async function runVideoTaskGet(jobId: string): Promise<void> {
     if (errorMessage) process.stdout.write(`${chalk.dim("error:     ")}${errorMessage}\n`);
     if (job.resultItemId) process.stdout.write(`${chalk.dim("result:    ")}${job.resultItemId}\n`);
     if (providerState === "succeeded" && !job.resultItemId) {
-      process.stdout.write(`${chalk.dim("download:  ")}imagent video download ${job.id}\n`);
+      process.stdout.write(`${chalk.dim("download:  ")}imagent video download --id ${job.id}\n`);
     }
     process.stdout.write(`${chalk.dim("created:   ")}${new Date(job.createdAt).toISOString()}\n`);
     process.stdout.write(`${chalk.dim("updated:   ")}${new Date(job.updatedAt).toISOString()}\n`);
@@ -304,7 +305,8 @@ async function runVideoTaskGet(jobId: string): Promise<void> {
   }
 }
 
-async function runVideoDownload(jobId: string, options: { out?: string }): Promise<void> {
+async function runVideoDownload(jobId: string | undefined, options: { out?: string }): Promise<void> {
+  if (!jobId) throw new Error("missing required job id; pass <jobId> or --id <jobId>");
   const runtime = await loadCliRuntime();
   const bundle = buildRunner(runtime);
   try {
@@ -350,7 +352,7 @@ async function runVideoTaskCancel(jobId: string): Promise<void> {
     }
     if (providerState === "succeeded") {
       process.stdout.write(`${chalk.dim("already complete:")} remote state=succeeded\n`);
-      process.stdout.write(`${chalk.dim("download:")} imagent video download ${job.id}\n`);
+      process.stdout.write(`${chalk.dim("download:")} imagent video download --id ${job.id}\n`);
       return;
     }
     bundle.jobs.updateState(id, {
@@ -531,9 +533,9 @@ async function linkVideoAssetsFromRequest(bundle: RunnerBundle, job: Job): Promi
   if (!job.resultItemId) return;
   const request = JSON.parse(job.requestJson) as VideoRequest;
   if (!request.assetIds || request.assetIds.length === 0) return;
-  const assets = new AssetRepository(bundle.db);
+  const assetRepo = new AssetRepository(bundle.db);
   for (const assetId of request.assetIds) {
-    const asset = assets.get(assetId);
+    const asset = assetRepo.get(assetId);
     if (!asset) continue;
     bundle.gallery.addAssetLink({ itemId: job.resultItemId, assetId, role: asset.kind });
   }
