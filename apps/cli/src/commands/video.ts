@@ -268,14 +268,14 @@ async function runVideoStatus(jobId: string): Promise<void> {
   try {
     const id = resolveJobId(bundle.jobs, jobId);
     const job = requireVideoJob(bundle.jobs.get(id), id);
-    let displayState: string = job.state;
+    let providerState: string | null = null;
     let progress = job.progress;
     let errorMessage = job.errorMessage;
 
     if (!isTerminalState(job.state) && job.providerJobId) {
       const provider = getVideoProvider(runtime, job.providerId);
       const status = await provider.poll({ providerId: job.providerId, providerJobId: job.providerJobId });
-      displayState = status.state === "succeeded" ? "ready" : status.state;
+      providerState = status.state;
       progress = status.state === "succeeded" ? 1 : (status.progress ?? progress);
       errorMessage = status.errorMessage ?? errorMessage;
       if (status.state === "queued" || status.state === "running") {
@@ -292,15 +292,19 @@ async function runVideoStatus(jobId: string): Promise<void> {
     }
 
     process.stdout.write(`${chalk.dim("id:        ")}${job.id}\n`);
-    process.stdout.write(`${chalk.dim("state:     ")}${stateBadge(displayState)}\n`);
+    process.stdout.write(`${chalk.dim("state:     ")}${stateBadge(job.state)}\n`);
     process.stdout.write(`${chalk.dim("provider:  ")}${job.providerId}\n`);
     if (job.providerJobId) process.stdout.write(`${chalk.dim("provJobId: ")}${job.providerJobId}\n`);
+    if (providerState) {
+      const suffix = providerState === "succeeded" && !job.resultItemId ? " (ready to download)" : "";
+      process.stdout.write(`${chalk.dim("provState: ")}${stateBadge(providerState)}${suffix}\n`);
+    }
     if (progress !== null && progress !== undefined) {
       process.stdout.write(`${chalk.dim("progress:  ")}${Math.round(progress * 100)}%\n`);
     }
     if (errorMessage) process.stdout.write(`${chalk.dim("error:     ")}${errorMessage}\n`);
     if (job.resultItemId) process.stdout.write(`${chalk.dim("result:    ")}${job.resultItemId}\n`);
-    if (displayState === "ready" && !job.resultItemId) {
+    if (providerState === "succeeded" && !job.resultItemId) {
       process.stdout.write(`${chalk.dim("download:  ")}imagent video download ${job.id}\n`);
     }
     process.stdout.write(`${chalk.dim("created:   ")}${new Date(job.createdAt).toISOString()}\n`);
@@ -603,7 +607,6 @@ function supportedVideoOptions(model: VideoModelDef): string[] {
   if (caps.durationsSec || caps.maxDurationSec) keys.push("durationSec");
   if (caps.fpsOptions && caps.fpsOptions.length > 0) keys.push("fps");
   if (caps.resolutions && caps.resolutions.length > 0) keys.push("resolution");
-  if (caps.aspectRatios && caps.aspectRatios.length > 0) keys.push("aspectRatio");
   if (caps.supportsFirstFrame) keys.push("firstFrame");
   if (caps.supportsLastFrame) keys.push("lastFrame");
   return keys;
@@ -628,7 +631,6 @@ function stateBadge(state: string): string {
       return chalk.dim(state);
     case "running":
       return chalk.cyan(state);
-    case "ready":
     case "succeeded":
       return chalk.green(state);
     case "failed":
