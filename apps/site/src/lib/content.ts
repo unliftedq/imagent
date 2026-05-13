@@ -107,6 +107,10 @@ export function createChangelogEntries() {
   });
 }
 
+export function createChangelogMarkdown() {
+  return changelogMarkdown.replace(/^#\s+Changelog\s*\n+/, "");
+}
+
 export function renderMarkdown(markdown: string) {
   return { __html: marked.parse(markdown) as string };
 }

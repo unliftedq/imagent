@@ -12,64 +12,97 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useRef } from "react";
 import { githubUrl } from "../lib/constants";
 import { SiteLink } from "../lib/site-link";
-import type { ChangelogEntry } from "../lib/types";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 const workflowItems = [
   {
     icon: Database,
-    title: "Keep data local",
-    copy: "Configuration, SQLite data, assets, thumbnails, and generated files stay in one local workspace.",
+    title: "One local workspace",
+    copy: "State, configuration, assets, thumbnails, and generated outputs live under the shared IMAGENT workspace.",
   },
   {
     icon: SquaresFour,
-    title: "Reuse creative context",
-    copy: "Characters, objects, backgrounds, and style references can be named once and reused across ongoing projects.",
+    title: "Reusable creative assets",
+    copy: "Characters, objects, backgrounds, styles, and references can be named once and reused in later jobs.",
   },
   {
     icon: BracketsCurly,
-    title: "Compare providers",
-    copy: "Run OpenAI, Azure OpenAI, Google, Flux, ByteDance, and xAI models without changing project structure.",
+    title: "Provider choice stays explicit",
+    copy: "OpenAI, Azure, Google, Flux/BFL, ByteDance, and xAI provider IDs can be configured side by side.",
   },
   {
     icon: Command,
-    title: "Move between app and terminal",
-    copy: "Generate from scripts, review in the desktop gallery, then return to automation with the same history intact.",
+    title: "Desktop and terminal together",
+    copy: "Run repeatable CLI jobs, review them in the desktop gallery, and keep the same history available to both.",
+  },
+];
+
+const workflowPreviewItems = [
+  {
+    label: "Collect context",
+    detail: "Name characters, objects, backgrounds, styles, and references once so later generations can reuse them.",
+  },
+  {
+    label: "Generate anywhere",
+    detail: "Use the desktop studio for visual work or the CLI when an agent, script, or repeatable job needs control.",
+  },
+  {
+    label: "Keep the lineage",
+    detail: "Generated outputs, favorites, boards, config, and provider routing stay available in the same local workspace.",
+  },
+];
+
+const startItems = [
+  {
+    title: "Quick Start",
+    copy: "Create the workspace, configure a provider, and generate the first local result.",
+    to: "/docs/quick-start",
+  },
+  {
+    title: "Providers",
+    copy: "Connect OpenAI, Azure, Google, Flux/BFL, ByteDance, or xAI side by side.",
+    to: "/docs/providers",
+  },
+  {
+    title: "CLI for automation",
+    copy: "Use IMAGENT from scripts, agents, and repeatable local generation workflows.",
+    to: "/docs/cli",
   },
 ];
 
 function ProductConsole() {
   return (
-    <div className="product-console">
-      <div className="console-grid">
-        <article>
-          <span>assets</span>
-          <strong>characters / objects / styles</strong>
-        </article>
-        <article>
-          <span>providers</span>
-          <strong>OpenAI / Google / Flux / xAI</strong>
-        </article>
-        <article>
-          <span>gallery</span>
-          <strong>favorites / boards / lineage</strong>
-        </article>
+    <div className="product-console" aria-label="IMAGENT desktop and CLI summary">
+      <div className="console-grid" aria-label="Human and automation surfaces">
+        <div className="surface-lane human-lane">
+          <span>Desktop for humans</span>
+          <strong>See, compare, curate.</strong>
+          <p>Work visually when taste, selection, and creative direction need a human eye.</p>
+        </div>
+        <div className="surface-lane agent-lane">
+          <span>CLI for agents and automation</span>
+          <strong>Script, repeat, inspect.</strong>
+          <p>Give agents and scripts a stable local interface for generation, discovery, and review.</p>
+        </div>
       </div>
       <div className="terminal-line">
         <Terminal size={18} weight="duotone" />
-        <code>imagent image generate "product concept" --provider openai</code>
+        <code>imagent image generate "idea" --provider openai</code>
       </div>
     </div>
   );
 }
 
-export function HomePage({ changelogEntries }: { changelogEntries: ChangelogEntry[] }) {
+export function HomePage() {
   const root = useRef<HTMLDivElement | null>(null);
-  const latestEntries = changelogEntries.slice(0, 2);
 
   useGSAP(
     () => {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        return;
+      }
+
       gsap.utils.toArray<HTMLElement>("[data-reveal]").forEach((element) => {
         gsap.fromTo(
           element,
@@ -88,7 +121,7 @@ export function HomePage({ changelogEntries }: { changelogEntries: ChangelogEntr
       });
 
       gsap.fromTo(
-        ".console-grid article",
+        ".surface-lane",
         { opacity: 0, y: 20 },
         { opacity: 1, y: 0, stagger: 0.12, duration: 0.7, ease: "power3.out" },
       );
@@ -100,19 +133,15 @@ export function HomePage({ changelogEntries }: { changelogEntries: ChangelogEntr
     <div ref={root}>
       <section className="hero section-gap" data-reveal>
         <div className="hero-copyblock">
-          <p className="eyebrow">Local workspace for generated images and video</p>
-          <h1>
-            IMAGENT keeps your creative assets, providers, and generated results in one local
-            system.
-          </h1>
+          <p className="eyebrow">Imagine agent, kept local</p>
+          <h1>The local agent that turns imagination into work.</h1>
           <p className="hero-copy">
-            Use the desktop studio for visual work, the CLI for repeatable jobs, and the same asset
-            library across both. No account layer, no cloud sync requirement, no hidden project
-            state.
+            IMAGENT gives image and video creation a local operating layer: a visual studio for
+            human taste, a CLI for agentic work, and one shared memory for every result.
           </p>
           <div className="hero-actions">
             <SiteLink className="btn btn-solid" to="/docs/quick-start">
-              Start locally
+              Quick Start
             </SiteLink>
             <a className="text-link" href={githubUrl} target="_blank" rel="noreferrer">
               View repository <ArrowRight size={17} />
@@ -122,13 +151,24 @@ export function HomePage({ changelogEntries }: { changelogEntries: ChangelogEntr
         <ProductConsole />
       </section>
 
+      <section className="setup-strip section-gap" data-reveal>
+        <div className="section-head">
+          <h2>From idea to reusable context.</h2>
+        </div>
+        <div className="setup-steps">
+          {workflowPreviewItems.map((step, index) => (
+            <article className="setup-step" key={step.label}>
+              <span className="step-number">{String(index + 1).padStart(2, "0")}</span>
+              <h3>{step.label}</h3>
+              <p>{step.detail}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section className="workflow section-gap" data-reveal>
-        <div className="section-head split-head">
-          <h2>Built for creators who want control over the whole generation loop.</h2>
-          <p>
-            IMAGENT is a local project workspace for references, provider settings, generated files,
-            review, and repeatable automation.
-          </p>
+        <div className="section-head">
+          <h2>One generation loop.</h2>
         </div>
         <div className="workflow-grid">
           {workflowItems.map((item, index) => {
@@ -145,26 +185,22 @@ export function HomePage({ changelogEntries }: { changelogEntries: ChangelogEntr
         </div>
       </section>
 
-      <section className="release-preview section-gap" data-reveal>
+      <section className="start-locally section-gap" data-reveal>
         <div className="section-head split-head">
-          <h2>Recent release notes</h2>
-          <SiteLink className="text-link" to="/changelogs">
-            View changelogs <ArrowRight size={17} />
-          </SiteLink>
+          <h2>Start locally.</h2>
+          <a className="text-link" href={githubUrl} target="_blank" rel="noreferrer">
+            View repository <ArrowRight size={17} />
+          </a>
         </div>
-        <div className="timeline compact">
-          {latestEntries.map((entry) => (
-            <article className="timeline-item" key={entry.version}>
-              <div>
-                <p className="version">{entry.version}</p>
-                <p className="date">{entry.date}</p>
-              </div>
-              <ul>
-                {entry.notes.slice(0, 2).map((note) => (
-                  <li key={note}>{note}</li>
-                ))}
-              </ul>
-            </article>
+        <div className="start-grid">
+          {startItems.map((item) => (
+            <SiteLink className="start-card hover-lift" key={item.title} to={item.to}>
+              <h3>{item.title}</h3>
+              <p>{item.copy}</p>
+              <span>
+                Open guide <ArrowRight size={17} />
+              </span>
+            </SiteLink>
           ))}
         </div>
       </section>
