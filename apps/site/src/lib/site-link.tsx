@@ -1,15 +1,16 @@
-import type { MouseEvent, ReactNode } from "react";
+import type { AnchorHTMLAttributes, MouseEvent, ReactNode } from "react";
 import { toPublicPath } from "./base-path";
 
 export function SiteLink({
   to,
   className,
   children,
+  ...props
 }: {
   to: string;
   className?: string;
   children: ReactNode;
-}) {
+} & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href" | "onClick">) {
   const href = toPublicPath(to);
 
   const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
@@ -24,7 +25,7 @@ export function SiteLink({
   };
 
   return (
-    <a className={className} href={href} onClick={handleClick}>
+    <a className={className} href={href} onClick={handleClick} {...props}>
       {children}
     </a>
   );

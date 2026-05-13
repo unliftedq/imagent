@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Shell } from "./components/shell";
-import { createChangelogEntries, createDocs } from "./lib/content";
+import { createChangelogMarkdown, createDocs } from "./lib/content";
 import { useRouter } from "./lib/router";
 import type { Theme } from "./lib/types";
 import { ChangelogsPage } from "./pages/changelogs";
@@ -12,7 +12,7 @@ import { NotFoundPage } from "./pages/not-found";
 export function App() {
   const { route } = useRouter();
   const docs = useMemo(() => createDocs(), []);
-  const changelogEntries = useMemo(() => createChangelogEntries(), []);
+  const changelogMarkdown = useMemo(() => createChangelogMarkdown(), []);
   const [theme, setTheme] = useState<Theme>(() => {
     const storedTheme = window.localStorage.getItem("imagent-site-theme");
     return storedTheme === "dark" ? "dark" : "light";
@@ -33,11 +33,11 @@ export function App() {
       theme={theme}
       onToggleTheme={() => setTheme(theme === "light" ? "dark" : "light")}
     >
-      {route.name === "home" ? <HomePage changelogEntries={changelogEntries} /> : null}
+      {route.name === "home" ? <HomePage /> : null}
       {route.name === "docs" ? <DocsIndexPage docs={docs} /> : null}
       {route.name === "doc" && selectedDoc ? <DocPageView doc={selectedDoc} docs={docs} /> : null}
       {route.name === "doc" && !selectedDoc ? <NotFoundPage /> : null}
-      {route.name === "changelogs" ? <ChangelogsPage entries={changelogEntries} /> : null}
+      {route.name === "changelogs" ? <ChangelogsPage markdown={changelogMarkdown} /> : null}
       {route.name === "not-found" ? <NotFoundPage /> : null}
     </Shell>
   );

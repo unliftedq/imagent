@@ -17,22 +17,27 @@ export function Shell({
   children: ReactNode;
 }) {
   return (
-    <main className="site-root" id="content">
+    <div className="site-root">
       <a className="skip-link" href="#content">
         Skip to content
       </a>
 
       <header className="nav-wrap">
         <nav className="nav-shell" aria-label="Primary">
-          <SiteLink className="brand" to="/">
+          <SiteLink className="brand" to="/" aria-label="IMAGENT home">
             IMAGENT
           </SiteLink>
           <div className="nav-links">
-            <SiteLink className={route.name === "home" ? "active" : undefined} to="/">
+            <SiteLink
+              aria-label="Home"
+              className={route.name === "home" ? "active" : undefined}
+              to="/"
+            >
               <House size={16} weight="duotone" />
               <span>Home</span>
             </SiteLink>
             <SiteLink
+              aria-label="Documentation"
               className={route.name === "docs" || route.name === "doc" ? "active" : undefined}
               to="/docs"
             >
@@ -40,6 +45,7 @@ export function Shell({
               <span>Docs</span>
             </SiteLink>
             <SiteLink
+              aria-label="Changelogs"
               className={route.name === "changelogs" ? "active" : undefined}
               to="/changelogs"
             >
@@ -49,7 +55,13 @@ export function Shell({
           </div>
           <div className="nav-actions">
             <ThemeToggle theme={theme} onToggle={onToggleTheme} />
-            <a className="github-link" href={githubUrl} target="_blank" rel="noreferrer">
+            <a
+              aria-label="Open IMAGENT on GitHub"
+              className="github-link"
+              href={githubUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
               <GithubLogo size={18} weight="duotone" />
               <span>GitHub</span>
             </a>
@@ -57,14 +69,14 @@ export function Shell({
         </nav>
       </header>
 
-      {children}
+      <main className="site-main" id="content">
+        {children}
+      </main>
 
       <footer className="footer">
         <div>
           <strong>IMAGENT</strong>
-          <p>
-            Local-first generation workspace for creators who use both desktop tools and scripts.
-          </p>
+          <p>Local image and video generation for human curation and agent automation.</p>
         </div>
         <nav aria-label="Footer">
           <SiteLink to="/">Home</SiteLink>
@@ -75,6 +87,6 @@ export function Shell({
           </a>
         </nav>
       </footer>
-    </main>
+    </div>
   );
 }
