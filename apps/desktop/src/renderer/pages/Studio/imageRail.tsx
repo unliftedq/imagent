@@ -7,9 +7,15 @@ import { useAssetsStore } from "../../state/useAssetsStore.js";
 import { useConfigStore } from "../../state/useConfigStore.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
 import { useJobsStore } from "../../state/useJobsStore.js";
-import { useUIStore } from "../../state/useUIStore.js";
+import { type ImageDraft, useUIStore } from "../../state/useUIStore.js";
 import { resolveAssetThumbnailUrl } from "../Assets";
-import { ChatComposerShell, ToolbarSelectTrigger } from "./composer.js";
+import { ChatComposerShell } from "./composer.js";
+import {
+  AspectRatioGrid,
+  ConfigurationPopoverButton,
+  ConfigSection,
+  PanelSelectTrigger,
+} from "./configurationPanel.js";
 import {
   createUnifiedModelOptions,
   ProviderModelPicker,
@@ -309,95 +315,13 @@ export function ImageRail() {
         onChange={(next) => setDraft({ providerId: next.providerId, modelId: next.modelId })}
       />
 
-      {(caps?.sizes && caps.sizes.length > 0) || caps?.supportsArbitrarySize ? (
-        <SizePicker
-          presets={caps?.sizes ?? []}
-          value={draft.size}
-          allowCustom={caps?.supportsArbitrarySize === true}
-          constraints={sizeConstraints}
-          onChange={(value) => setDraft({ size: value })}
-        />
-      ) : null}
-
-      {caps?.aspectRatios && caps.aspectRatios.length > 0 ? (
-        <Select.Root
-          value={draft.aspectRatio ?? caps.aspectRatios[0]}
-          onValueChange={(value) => setDraft({ aspectRatio: value })}
-        >
-          <ToolbarSelectTrigger
-            ariaLabel="Aspect ratio"
-            icon={<Icons.Crop weight="duotone" className="size-3.5" />}
-            className="h-8 w-[102px] rounded-(--radius-pill) bg-(--bg) px-3 py-0 text-[12px]"
-          />
-          <Select.Content>
-            {caps.aspectRatios.map((ratio) => (
-              <Select.Item key={ratio} value={ratio}>
-                {ratio}
-              </Select.Item>
-            ))}
-          </Select.Content>
-        </Select.Root>
-      ) : null}
-
-      {caps?.qualities && caps.qualities.length > 0 ? (
-        <Select.Root
-          value={draft.quality ?? caps.qualities[0]}
-          onValueChange={(value) => setDraft({ quality: value })}
-        >
-          <ToolbarSelectTrigger
-            ariaLabel="Quality"
-            icon={<Icons.SealCheck weight="duotone" className="size-3.5" />}
-            className="h-8 w-[104px] rounded-(--radius-pill) bg-(--bg) px-3 py-0 text-[12px]"
-          />
-          <Select.Content>
-            {caps.qualities.map((quality) => (
-              <Select.Item key={quality} value={quality}>
-                {quality}
-              </Select.Item>
-            ))}
-          </Select.Content>
-        </Select.Root>
-      ) : null}
-
-      {caps?.outputFormats && caps.outputFormats.length > 0 ? (
-        <Select.Root
-          value={draft.outputFormat ?? caps.outputFormats[0]}
-          onValueChange={(value) => setDraft({ outputFormat: value })}
-        >
-          <ToolbarSelectTrigger
-            ariaLabel="Format"
-            icon={<Icons.FileImage weight="duotone" className="size-3.5" />}
-            className="h-8 w-[104px] rounded-(--radius-pill) bg-(--bg) px-3 py-0 text-[12px]"
-          />
-          <Select.Content>
-            {caps.outputFormats.map((format) => (
-              <Select.Item key={format} value={format}>
-                {format}
-              </Select.Item>
-            ))}
-          </Select.Content>
-        </Select.Root>
-      ) : null}
-
-      {outputMax > 1 ? (
-        <Select.Root
-          value={String(draft.count)}
-          onValueChange={(value) => setDraft({ count: Number.parseInt(value, 10) || 1 })}
-        >
-          <ToolbarSelectTrigger
-            ariaLabel="Output count"
-            icon={<Icons.StackPlus weight="duotone" className="size-3.5" />}
-            className="h-8 w-[86px] rounded-(--radius-pill) bg-(--bg) px-3 py-0 text-[12px]"
-          />
-          <Select.Content>
-            {Array.from({ length: outputMax }, (_, index) => index + 1).map((count) => (
-              <Select.Item key={count} value={String(count)}>
-                {count}x
-              </Select.Item>
-            ))}
-          </Select.Content>
-        </Select.Root>
-      ) : null}
+      <ImageConfigurationPanel
+        caps={caps}
+        draft={draft}
+        outputMax={outputMax}
+        sizeConstraints={sizeConstraints}
+        onChange={setDraft}
+      />
     </ChatComposerShell>
   );
 }
@@ -424,29 +348,35 @@ const ASPECT_RATIO_EPSILON = 0.0001;
 const MIN_FORMATTED_ASPECT_RATIO = 1 / 3;
 const MAX_FORMATTED_ASPECT_RATIO = 3;
 
-function SizePicker({
-  presets,
-  value,
-  allowCustom,
-  constraints,
+function ImageConfigurationPanel({
+  caps,
+  draft,
+  outputMax,
+  sizeConstraints,
   onChange,
 }: {
-  presets: readonly string[];
-  value: string | undefined;
-  allowCustom: boolean;
-  constraints: CustomSizeConstraints;
-  onChange: (next: string) => void;
+  caps: ImageModelCaps | undefined;
+  draft: ImageDraft;
+  outputMax: number;
+  sizeConstraints: CustomSizeConstraints;
+  onChange: (patch: Partial<ImageDraft>) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const isPreset = !!value && presets.includes(value);
-  const customParts = !isPreset ? parseCustomSize(value) : null;
+  const presets = caps?.sizes ?? [];
+  const allowCustom = caps?.supportsArbitrarySize === true;
+  const hasSize = presets.length > 0 || allowCustom;
+  const hasAspectRatios = !!caps?.aspectRatios?.length;
+  const hasQualities = !!caps?.qualities?.length;
+  const hasFormats = !!caps?.outputFormats?.length;
+  const hasCount = outputMax > 1;
+  const isPreset = !!draft.size && presets.includes(draft.size);
+  const customParts = !isPreset ? parseCustomSize(draft.size) : null;
   const isCustom = customParts !== null;
 
   const [w, setW] = useState(customParts?.w ?? String(DIMENSION_DEFAULT));
   const [h, setH] = useState(customParts?.h ?? String(DIMENSION_DEFAULT));
   const [error, setError] = useState<string | null>(null);
 
-  // Sync inputs whenever the popover opens or the underlying value changes.
   useEffect(() => {
     if (!open) return;
     setW(customParts?.w ?? String(DIMENSION_DEFAULT));
@@ -454,16 +384,16 @@ function SizePicker({
     setError(null);
   }, [open, customParts?.w, customParts?.h]);
 
-  const display = value ?? presets[0] ?? "Size";
-  const hint = customSizeHint(constraints);
+  if (!hasSize && !hasAspectRatios && !hasQualities && !hasFormats && !hasCount) {
+    return null;
+  }
 
-  const applyCustom = (): void => {
-    if (!w.trim() || !h.trim()) {
-      setError("Width and height are required.");
-      return;
-    }
-    const wNum = Number(w);
-    const hNum = Number(h);
+  const commitCustomSize = (nextW: string, nextH: string): void => {
+    setW(nextW);
+    setH(nextH);
+    if (!nextW.trim() || !nextH.trim()) return;
+    const wNum = Number(nextW);
+    const hNum = Number(nextH);
     if (!Number.isFinite(wNum) || !Number.isFinite(hNum)) {
       setError("Width and height must be numbers.");
       return;
@@ -472,99 +402,86 @@ function SizePicker({
       setError("Width and height must be positive integers.");
       return;
     }
-    const validationError = validateCustomSize(wNum, hNum, constraints);
+    const validationError = validateCustomSize(wNum, hNum, sizeConstraints);
     if (validationError) {
       setError(validationError);
       return;
     }
     setError(null);
-    onChange(`${wNum}x${hNum}`);
-    setOpen(false);
+    onChange({ size: `${wNum}x${hNum}` });
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>): void => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      applyCustom();
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commitCustomSize(w, h);
     }
   };
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
-        <button
-          type="button"
-          aria-label="Size"
-          className={
-            "flex h-8 w-[132px] items-center justify-between gap-2 rounded-(--radius-pill) " +
-            "border border-(--border) bg-(--bg) px-3 py-0 text-[12px] text-(--text) " +
-            "transition-colors duration-(--duration-fast) " +
-            "hover:border-(--text-muted) " +
-            "focus-visible:outline-none focus:border-(--text) " +
-            "data-[state=open]:border-(--text)"
-          }
-        >
-          <span className="flex min-w-0 items-center gap-1.5">
-            <Icons.FrameCorners
-              weight="duotone"
-              className="size-3.5 shrink-0 text-(--text-muted)"
-            />
-            <span className="truncate">{display}</span>
-          </span>
-          <Icons.CaretDown weight="bold" className="size-3 shrink-0 text-(--text-muted)" />
-        </button>
+        <ConfigurationPopoverButton label="Image configuration" />
       </Popover.Trigger>
-      <Popover.Content align="start" className="w-[280px] p-2">
-        {presets.length > 0 ? (
-          <div className="flex flex-col gap-0.5" role="listbox" aria-label="Preset sizes">
-            {presets.map((preset) => {
-              const selected = preset === value;
-              return (
-                <button
-                  key={preset}
-                  type="button"
-                  role="option"
-                  aria-selected={selected}
-                  onClick={() => {
-                    onChange(preset);
-                    setOpen(false);
-                  }}
-                  className={
-                    "flex h-8 items-center justify-between rounded-(--radius-sm) px-2 " +
-                    "text-[12px] text-(--text) hover:bg-(--surface) " +
-                    "focus-visible:outline-none focus-visible:bg-(--surface)"
+      <Popover.Content align="start" className="w-[420px] p-0">
+        <div className="flex max-h-[70vh] flex-col gap-5 overflow-y-auto p-5">
+          <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-(--text)">
+            Configuration
+          </h2>
+
+          {hasAspectRatios ? (
+            <ConfigSection title="Aspect Ratio">
+              <AspectRatioGrid
+                ratios={caps?.aspectRatios ?? []}
+                value={draft.aspectRatio ?? caps?.aspectRatios?.[0]}
+                onChange={(aspectRatio) => onChange({ aspectRatio })}
+              />
+            </ConfigSection>
+          ) : null}
+
+          {presets.length > 0 ? (
+            <ConfigSection title="Size">
+              <Select.Root
+                value={isPreset ? (draft.size ?? presets[0]) : "custom"}
+                onValueChange={(size) => {
+                  if (size === "custom") {
+                    commitCustomSize(w, h);
+                  } else {
+                    onChange({ size });
                   }
-                >
-                  <span>{preset}</span>
-                  {selected ? <Icons.Check weight="bold" className="size-3.5" /> : null}
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
-        {allowCustom ? (
-          <>
-            {presets.length > 0 ? <div className="my-2 h-px bg-(--border)" /> : null}
-            <div className="flex flex-col gap-2 px-1 pb-1 pt-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-medium text-(--text-muted)">
-                  Custom size (px)
-                </span>
-                {isCustom ? <Icons.Check weight="bold" className="size-3.5 text-(--text)" /> : null}
-              </div>
-              <span className="text-[10px] leading-4 text-(--text-faint)">{hint}</span>
+                }}
+              >
+                <PanelSelectTrigger ariaLabel="Size" />
+                <Select.Content>
+                  {presets.map((preset) => (
+                    <Select.Item key={preset} value={preset}>
+                      {preset}
+                    </Select.Item>
+                  ))}
+                  {allowCustom ? <Select.Item value="custom">Custom</Select.Item> : null}
+                </Select.Content>
+              </Select.Root>
+            </ConfigSection>
+          ) : null}
+
+          {allowCustom ? (
+            <ConfigSection
+              title="Dimensions"
+              description={customSizeHint(sizeConstraints)}
+              trailing={isCustom ? <Icons.Check weight="bold" className="size-3.5" /> : null}
+            >
               <DimensionRow
                 label="Width"
                 value={w}
-                constraints={constraints.width}
-                onChange={setW}
+                constraints={sizeConstraints.width}
+                onChange={(value) => commitCustomSize(value, h)}
                 onKeyDown={handleKeyDown}
               />
               <DimensionRow
                 label="Height"
                 value={h}
-                constraints={constraints.height}
-                onChange={setH}
+                constraints={sizeConstraints.height}
+                onChange={(value) => commitCustomSize(w, value)}
                 onKeyDown={handleKeyDown}
               />
               {error ? (
@@ -572,17 +489,63 @@ function SizePicker({
                   {error}
                 </span>
               ) : null}
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={applyCustom}
-                disabled={!w.trim() || !h.trim()}
+            </ConfigSection>
+          ) : null}
+
+          {hasQualities ? (
+            <ConfigSection title="Quality">
+              <Select.Root
+                value={draft.quality ?? caps?.qualities?.[0]}
+                onValueChange={(quality) => onChange({ quality })}
               >
-                Apply
-              </Button>
-            </div>
-          </>
-        ) : null}
+                <PanelSelectTrigger ariaLabel="Quality" />
+                <Select.Content>
+                  {(caps?.qualities ?? []).map((quality) => (
+                    <Select.Item key={quality} value={quality}>
+                      {quality}
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Root>
+            </ConfigSection>
+          ) : null}
+
+          {hasFormats ? (
+            <ConfigSection title="Format">
+              <Select.Root
+                value={draft.outputFormat ?? caps?.outputFormats?.[0]}
+                onValueChange={(outputFormat) => onChange({ outputFormat })}
+              >
+                <PanelSelectTrigger ariaLabel="Format" />
+                <Select.Content>
+                  {(caps?.outputFormats ?? []).map((format) => (
+                    <Select.Item key={format} value={format}>
+                      {format}
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Root>
+            </ConfigSection>
+          ) : null}
+
+          {hasCount ? (
+            <ConfigSection title="Outputs">
+              <Select.Root
+                value={String(draft.count)}
+                onValueChange={(value) => onChange({ count: Number.parseInt(value, 10) || 1 })}
+              >
+                <PanelSelectTrigger ariaLabel="Output count" />
+                <Select.Content>
+                  {Array.from({ length: outputMax }, (_, index) => index + 1).map((count) => (
+                    <Select.Item key={count} value={String(count)}>
+                      {count}x
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Root>
+            </ConfigSection>
+          ) : null}
+        </div>
       </Popover.Content>
     </Popover.Root>
   );
