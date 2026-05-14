@@ -9,8 +9,6 @@ const cliRoot = path.resolve(__dirname, "..");
 const repoRoot = path.resolve(cliRoot, "..", "..");
 const distDir = path.join(cliRoot, "dist");
 const bundleMapPath = path.join(distDir, "cli.js.map");
-const licenseSource = path.join(repoRoot, "LICENSE");
-const licenseTarget = path.join(distDir, "LICENSE");
 
 const internalPackages = new Map([
   ["@imagent/config", path.join(repoRoot, "packages", "config", "src")],
@@ -73,7 +71,6 @@ const migrationsSource = path.join(repoRoot, "packages", "persistence", "src", "
 const migrationsTarget = path.join(distDir, "migrations");
 rmSync(migrationsTarget, { recursive: true, force: true });
 cpSync(migrationsSource, migrationsTarget, { recursive: true });
-cpSync(licenseSource, licenseTarget);
 
 try {
   chmodSync(path.join(distDir, "cli.js"), 0o755);

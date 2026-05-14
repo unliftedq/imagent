@@ -46,7 +46,7 @@ async function main(): Promise<void> {
     .description("Print the Apache-2.0 license text")
     .action(async () => {
       try {
-        const license = await readFile(new URL("./LICENSE", import.meta.url), "utf8");
+        const license = await readFile(new URL("../LICENSE", import.meta.url), "utf8");
         process.stdout.write(license.endsWith("\n") ? license : `${license}\n`);
       } catch (err) {
         process.stderr.write(`license unavailable: ${(err as Error).message}\n`);

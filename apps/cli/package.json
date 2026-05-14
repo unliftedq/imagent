@@ -25,7 +25,7 @@
   },
   "files": [
     "dist/cli.js",
-    "dist/LICENSE",
+    "LICENSE",
     "dist/migrations"
   ],
   "engines": {
