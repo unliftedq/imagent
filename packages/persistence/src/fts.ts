@@ -15,10 +15,16 @@ function cjkNgrams(input: string): string[] {
     const chars = Array.from(match[0]);
     tokens.push(...chars);
     for (let i = 0; i < chars.length - 1; i += 1) {
-      tokens.push(`${chars[i] ?? ""}${chars[i + 1] ?? ""}`);
+      const current = chars[i];
+      const next = chars[i + 1];
+      if (current && next) tokens.push(`${current}${next}`);
     }
   }
   return tokens;
+}
+
+function shouldKeepRawQueryToken(token: string): boolean {
+  return !HAS_CJK_RE.test(token) || Array.from(token).length === 1;
 }
 
 /**
@@ -50,7 +56,7 @@ export function ftsMatchQuery(raw: string): string {
   const tokens = new Set<string>();
   for (const token of text.split(/\s+/)) {
     const trimmed = token.trim();
-    if (trimmed && (!HAS_CJK_RE.test(trimmed) || Array.from(trimmed).length === 1)) {
+    if (trimmed && shouldKeepRawQueryToken(trimmed)) {
       tokens.add(trimmed);
     }
   }
