@@ -2,6 +2,7 @@
   "name": "imagent",
   "version": "0.2.0",
   "private": true,
+  "license": "Apache-2.0",
   "type": "module",
   "packageManager": "bun@1.3.12",
   "workspaces": {

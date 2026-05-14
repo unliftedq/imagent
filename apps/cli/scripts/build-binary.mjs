@@ -28,6 +28,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const cliRoot = path.resolve(__dirname, "..");
 const repoRoot = path.resolve(cliRoot, "..", "..");
 const distDir = path.join(cliRoot, "dist");
+const licenseSource = path.join(repoRoot, "LICENSE");
+const licenseTarget = path.join(distDir, "LICENSE");
 
 function run(cmd, args, opts = {}) {
   const cwd = opts.cwd ?? cliRoot;
@@ -63,6 +65,7 @@ async function main() {
   if (!existsSync(distDir)) {
     mkdirSync(distDir, { recursive: true });
   }
+  copyFileSync(licenseSource, licenseTarget);
 
   // 1. esbuild bundle. better-sqlite3 + sharp + ffmpeg-static stay external
   // (native modules can't be embedded in SEA; they resolve via require() at
