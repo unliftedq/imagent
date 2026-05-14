@@ -1,5 +1,6 @@
 import type { GalleryItem, GalleryItemAssetLink, GalleryQuery } from "@imagent/core";
 import type { DatabaseType } from "../db.js";
+import { ftsMatchQuery } from "../fts.js";
 
 interface GalleryRow {
   id: string;
@@ -43,22 +44,6 @@ function rowToItem(r: GalleryRow): GalleryItem {
   };
 }
 
-/**
- * Wrap a raw user search string into an FTS5-safe phrase query. FTS5
- * MATCH inputs are parsed; punctuation (`.`, `-`, `/`, `:`, etc.) and
- * unbalanced quotes throw `unrecognized token` / `syntax error`. We use
- * the simplest robust strategy: split into whitespace tokens, escape
- * any embedded `"` characters, double-quote each token, and AND them.
- */
-function ftsPhrase(raw: string): string {
-  const tokens = raw
-    .split(/\s+/)
-    .map((t) => t.trim())
-    .filter((t) => t.length > 0);
-  if (tokens.length === 0) return '""';
-  return tokens.map((t) => `"${t.replace(/"/g, '""')}"`).join(" ");
-}
-
 function likePattern(raw: string): string {
   return `%${raw.replace(/[\\%_]/g, (match) => `\\${match}`)}%`;
 }
@@ -94,13 +79,7 @@ export class GalleryRepository {
     }
     if (query.search && query.search.trim().length > 0) {
       const raw = query.search.trim();
-      // Prompt + negative_prompt go through FTS5 for tokenized matching.
-      // LIKE fallbacks keep substring, path, and CJK searches intuitive —
-      // FTS5's default tokenizer won't reliably match a Chinese character
-      // like `猫` inside a longer prompt.
-      // Wrap the FTS query as a quoted phrase so user input containing
-      // punctuation (`.`, `-`, `/`) doesn't blow up FTS5's tokenizer.
-      const ftsQuery = ftsPhrase(raw);
+      const ftsQuery = ftsMatchQuery(raw);
       const likeQuery = likePattern(raw);
       where.push(
         `(
