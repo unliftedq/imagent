@@ -58,11 +58,11 @@ export function VideoRail() {
   useEffect(() => {
     if (configuredVideoProviders.length === 0) return;
     const defaultVideoModel = appPrefs?.defaultVideoModel;
+    const defaultProvider = defaultVideoModel
+      ? configuredVideoProviders.find((provider) => provider.id === defaultVideoModel.providerId)
+      : undefined;
     const first =
-      defaultVideoModel &&
-      configuredVideoProviders.find((provider) => provider.id === defaultVideoModel.providerId)
-        ? configuredVideoProviders.find((provider) => provider.id === defaultVideoModel.providerId)
-        : configuredVideoProviders[0];
+      defaultVideoModel && defaultProvider ? defaultProvider : configuredVideoProviders[0];
     if (!first) return;
     const defaultId =
       draft.providerId &&

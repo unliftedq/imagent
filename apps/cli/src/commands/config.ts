@@ -331,7 +331,7 @@ function defaultModelFieldFor(
 
 function parseDefaultModelValue(value: string): DefaultModelPreference {
   const separator = value.indexOf(":");
-  if (separator <= 0 || separator === value.length - 1) {
+  if (separator === -1 || separator === 0 || separator === value.length - 1) {
     throw new Error("default model must be formatted as <provider>:<model>");
   }
   return {

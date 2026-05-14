@@ -61,11 +61,11 @@ export function ImageRail() {
       return;
     }
     const defaultImageModel = appPrefs?.defaultImageModel;
+    const defaultProvider = defaultImageModel
+      ? configuredProviders.find((provider) => provider.id === defaultImageModel.providerId)
+      : undefined;
     const first =
-      defaultImageModel &&
-      configuredProviders.find((provider) => provider.id === defaultImageModel.providerId)
-        ? configuredProviders.find((provider) => provider.id === defaultImageModel.providerId)
-        : configuredProviders[0];
+      defaultImageModel && defaultProvider ? defaultProvider : configuredProviders[0];
     if (!first) return;
     setDraft({
       providerId: first.id,
