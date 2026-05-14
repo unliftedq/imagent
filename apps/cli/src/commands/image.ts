@@ -8,6 +8,7 @@ import {
   type ImageRequest,
   type Job,
 } from "@imagent/core";
+import type { DefaultModelPreference } from "@imagent/config";
 import chalk from "chalk";
 import type { Command } from "commander";
 
@@ -49,7 +50,7 @@ export function registerImageCommand(program: Command): void {
         "Generate one or more images from a text prompt.",
         "Use `imagent image generate <prompt>` to generate images.",
         "Run `imagent models --kind image` to list providers/models and `imagent options --provider <id> --model <id>` to see the exact `--option key=value` pairs the chosen model accepts.",
-        "Without --provider/--model the CLI falls back to the catalog default for the configured default provider (`config get` to inspect).",
+        "Without --provider/--model the CLI falls back to the configured image default model (`config get image.defaultModel` to inspect).",
       ].join("\n"),
     );
 
@@ -94,14 +95,18 @@ export function registerImageCommand(program: Command): void {
 
 async function runGenerate(prompt: string, options: GenerateOptions): Promise<void> {
   const runtime = await loadCliRuntime();
-  const providerId = options.provider ?? runtime.config.app.defaultProvider;
+  const { providerId, model } = resolveImageSelection(
+    runtime.config.app.defaultImageModel,
+    runtime.imageRegistry,
+    options.provider,
+    options.model,
+  );
   const provider = runtime.imageRegistry.get(providerId);
   if (!provider) {
     throw new Error(
       `provider '${providerId}' is not configured. Run \`imagent config set ${providerId.split("-")[0]}.apiKey ...\` first.`,
     );
   }
-  const model = pickModel(providerId, options.model, provider.models);
   const resolved = provider.models.get(model);
   if (!resolved) {
     throw new Error(`unknown model '${model}' for provider '${providerId}'`);
@@ -296,4 +301,46 @@ function pickModel(
   const first = providerModels.keys().next().value;
   if (typeof first === "string") return first;
   throw new Error(`no model configured for provider '${providerId}'`);
+}
+
+function resolveImageSelection(
+  configuredDefault: DefaultModelPreference | null,
+  registry: ReadonlyMap<string, { models: ReadonlyMap<string, unknown> }>,
+  providerOverride: string | undefined,
+  modelOverride: string | undefined,
+): { providerId: string; model: string } {
+  if (providerOverride) {
+    const provider = registry.get(providerOverride);
+    if (!provider) return { providerId: providerOverride, model: modelOverride ?? "" };
+    return {
+      providerId: providerOverride,
+      model: pickModel(providerOverride, modelOverride, provider.models),
+    };
+  }
+
+  if (modelOverride) {
+    for (const [providerId, provider] of registry) {
+      if (provider.models.has(modelOverride)) return { providerId, model: modelOverride };
+    }
+  }
+
+  if (
+    !modelOverride &&
+    configuredDefault &&
+    registry.get(configuredDefault.providerId)?.models.has(configuredDefault.modelId)
+  ) {
+    return {
+      providerId: configuredDefault.providerId,
+      model: configuredDefault.modelId,
+    };
+  }
+
+  const first = registry.entries().next().value;
+  if (first) {
+    const [providerId, provider] = first;
+    return { providerId, model: pickModel(providerId, modelOverride, provider.models) };
+  }
+  throw new Error(
+    "no image providers configured. Run `imagent config set <vendor>.apiKey ...` first.",
+  );
 }

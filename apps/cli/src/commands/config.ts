@@ -6,6 +6,7 @@ import {
   createFileConfigStore,
   createFileSecretsStore,
   DEFAULT_CONFIG,
+  type DefaultModelPreference,
   type ProviderSecrets,
   ProviderSecretsSchema,
 } from "@imagent/config";
@@ -18,6 +19,7 @@ import { loadCliRuntime } from "../support/runtime.js";
 
 /**
  * `imagent config set <vendor>.<key> <value>`
+ * `imagent config set image.defaultModel <provider>:<model>`
  * `imagent config get <vendor>.<key>`
  * `imagent config path`
  * `imagent config reset <target>`
@@ -32,6 +34,8 @@ import { loadCliRuntime } from "../support/runtime.js";
  *   - `azure.endpoint`
  *   - `bytedance.endpoint`
  *   - any `<vendor>.baseUrl` (advanced override)
+ *   - `image.defaultModel`
+ *   - `video.defaultModel`
  *
  * Anything else (e.g. `<vendor>.models`, `<vendor>.defaultModel`) is rejected
  * with `unknown config path: <key>`.
@@ -47,7 +51,7 @@ export function registerConfigCommand(program: Command): void {
     .description(
       [
         "Inspect and edit local provider credentials in ~/.imagent/secrets.json (and the preferences file at ~/.imagent/config.json).",
-        "Recognised dotted keys: <vendor>.apiKey, azure.endpoint, bytedance.endpoint, <vendor>.baseUrl.",
+        "Recognised dotted keys: <vendor>.apiKey, azure.endpoint, bytedance.endpoint, <vendor>.baseUrl, image.defaultModel, video.defaultModel.",
         "Vendors: openai | azure | google | flux-bfl | bytedance | xai.",
         "Use `imagent models` and `imagent options` to inspect the model catalog instead of reading catalog.json by hand.",
       ].join("\n"),
@@ -56,7 +60,7 @@ export function registerConfigCommand(program: Command): void {
   config
     .command("set <key> <value>")
     .description(
-      "Set a secret. Examples: `imagent config set openai.apiKey sk-...`, `imagent config set azure.endpoint https://...`, `imagent config set bytedance.endpoint https://ark.cn-beijing.volces.com`.",
+      "Set config. Examples: `imagent config set openai.apiKey sk-...`, `imagent config set image.defaultModel openai:gpt-image-2`, `imagent config set azure.endpoint https://...`.",
     )
     .action(async (key: string, value: string) => {
       try {
@@ -70,7 +74,7 @@ export function registerConfigCommand(program: Command): void {
   config
     .command("get [key]")
     .description(
-      "Print a secret value (apiKey fields are masked). Omit [key] to dump every configured secret as JSON.",
+      "Print a config value (apiKey fields are masked). Omit [key] to dump configured values as JSON.",
     )
     .action(async (key: string | undefined) => {
       try {
@@ -208,6 +212,13 @@ const ALLOWED_FIELDS: Record<VendorId, Record<string, FieldDef>> = {
   xai: { apiKey: { store: "secrets" }, baseUrl: { store: "config" } },
 };
 
+type DefaultModelConfigKey = "image.defaultModel" | "video.defaultModel";
+const DEFAULT_MODEL_KEYS: Record<DefaultModelConfigKey, "defaultImageModel" | "defaultVideoModel"> =
+  {
+    "image.defaultModel": "defaultImageModel",
+    "video.defaultModel": "defaultVideoModel",
+  };
+
 function isVendorKey(s: string): s is VendorId {
   return (VENDOR_KEYS as readonly string[]).includes(s);
 }
@@ -217,6 +228,19 @@ function isResetTarget(s: string): s is ResetTarget {
 }
 
 async function runSet(dottedKey: string, value: string): Promise<void> {
+  const defaultModelField = defaultModelFieldFor(dottedKey);
+  if (defaultModelField) {
+    const parsed = parseDefaultModelValue(value);
+    const runtime = await loadCliRuntime();
+    if (!validateConfiguredDefaultModel(defaultModelField, parsed, runtime)) return;
+    const resolver = createPathResolver();
+    await ensureDataDir(resolver);
+    const store = createFileConfigStore(resolver.configFile());
+    await store.saveConfig({ app: { [defaultModelField]: parsed } });
+    process.stdout.write("OK\n");
+    return;
+  }
+
   const { vendor, field } = parseKey(dottedKey);
   const fieldDef = ALLOWED_FIELDS[vendor][field];
   if (!fieldDef) {
@@ -257,7 +281,19 @@ async function runGet(dottedKey: string | undefined): Promise<void> {
 
   if (!dottedKey) {
     const view = combinedConfigView(secrets, config.providers);
+    view.app = defaultModelConfigView(config.app);
     process.stdout.write(`${JSON.stringify(view, null, 2)}\n`);
+    return;
+  }
+
+  const defaultModelField = defaultModelFieldFor(dottedKey);
+  if (defaultModelField) {
+    const value = config.app[defaultModelField];
+    if (!value) {
+      process.stdout.write(`${chalk.dim(`${dottedKey} not set`)}\n`);
+      return;
+    }
+    process.stdout.write(`${formatDefaultModelValue(value)}\n`);
     return;
   }
 
@@ -282,6 +318,60 @@ async function runGet(dottedKey: string | undefined): Promise<void> {
   } else {
     process.stdout.write(`${String(value)}\n`);
   }
+}
+
+function defaultModelFieldFor(dottedKey: string): "defaultImageModel" | "defaultVideoModel" | null {
+  if (dottedKey === "app.defaultImageModel") return "defaultImageModel";
+  if (dottedKey === "app.defaultVideoModel") return "defaultVideoModel";
+  return DEFAULT_MODEL_KEYS[dottedKey as DefaultModelConfigKey] ?? null;
+}
+
+function parseDefaultModelValue(value: string): DefaultModelPreference {
+  const separator = value.indexOf(":");
+  if (separator === -1 || separator === 0 || separator === value.length - 1) {
+    throw new Error("default model must be formatted as <provider>:<model>");
+  }
+  return {
+    providerId: value.slice(0, separator),
+    modelId: value.slice(separator + 1),
+  };
+}
+
+function formatDefaultModelValue(value: DefaultModelPreference): string {
+  return `${value.providerId}:${value.modelId}`;
+}
+
+function validateConfiguredDefaultModel(
+  field: "defaultImageModel" | "defaultVideoModel",
+  value: DefaultModelPreference,
+  runtime: Awaited<ReturnType<typeof loadCliRuntime>>,
+): boolean {
+  const kind = field === "defaultImageModel" ? "image" : "video";
+  const registry = kind === "image" ? runtime.imageRegistry : runtime.videoRegistry;
+  const provider = registry.get(value.providerId);
+  if (!provider) {
+    process.stderr.write(
+      `${chalk.yellow("warn:")} ${kind} provider '${value.providerId}' is not configured; default model was not changed\n`,
+    );
+    return false;
+  }
+  if (!provider.models.has(value.modelId)) {
+    process.stderr.write(
+      `${chalk.yellow("warn:")} ${kind} model '${value.modelId}' is not available for configured provider '${value.providerId}'; default model was not changed\n`,
+    );
+    return false;
+  }
+  return true;
+}
+
+function defaultModelConfigView(app: {
+  defaultImageModel: DefaultModelPreference | null;
+  defaultVideoModel: DefaultModelPreference | null;
+}): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (app.defaultImageModel) out.defaultImageModel = formatDefaultModelValue(app.defaultImageModel);
+  if (app.defaultVideoModel) out.defaultVideoModel = formatDefaultModelValue(app.defaultVideoModel);
+  return out;
 }
 
 function combinedConfigView(

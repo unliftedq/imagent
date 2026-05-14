@@ -196,7 +196,8 @@ export type SecretsWrite = z.infer<typeof SecretsWriteSchema>;
 
 export const AppPreferencesPayloadSchema = z.object({
   theme: z.enum(["light", "dark", "system"]),
-  defaultProvider: z.string(),
+  defaultImageModel: z.object({ providerId: z.string(), modelId: z.string() }).nullable(),
+  defaultVideoModel: z.object({ providerId: z.string(), modelId: z.string() }).nullable(),
   defaultOutputDir: z.string().nullable(),
   generationConcurrency: z.number().int().min(1).max(8),
   keepPromptHistory: z.boolean(),

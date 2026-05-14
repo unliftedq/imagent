@@ -178,7 +178,8 @@ describe("registerIpcHandlers", () => {
         saved = input;
         return {
           theme: "dark",
-          defaultProvider: "openai",
+          defaultImageModel: { providerId: "openai", modelId: "gpt-image-1" },
+          defaultVideoModel: null,
           defaultOutputDir: null,
           generationConcurrency: 2,
           keepPromptHistory: true,

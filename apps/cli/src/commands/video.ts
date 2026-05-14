@@ -11,6 +11,7 @@ import type {
   VideoProvider,
   VideoRequest,
 } from "@imagent/core";
+import type { DefaultModelPreference } from "@imagent/config";
 import { AssetRepository } from "@imagent/persistence";
 import chalk from "chalk";
 import type { Command } from "commander";
@@ -66,14 +67,13 @@ export function registerVideoCommand(program: Command): void {
     .description(
       [
         "Submit a video generation job from a text prompt.",
-        "Default provider: bytedance. Without --wait, the command exits after the provider accepts the job and prints commands for status/download. With --wait, it polls until completion and downloads the completed video into the gallery; --out only applies with --wait.",
+        "Without --provider/--model the CLI falls back to the configured video default model. Without --wait, the command exits after the provider accepts the job and prints commands for status/download. With --wait, it polls until completion and downloads the completed video into the gallery; --out only applies with --wait.",
         "Run `imagent models --kind video` to list providers/models and `imagent options --provider <id> --model <id>` for the model's exact `--option key=value` keys (durationSec, resolution, aspectRatio, fps, firstFrame, lastFrame, ...).",
       ].join("\n"),
     )
     .option(
       "--provider <id>",
       "Video provider id (bytedance | google | xai). See `imagent doctor`.",
-      "bytedance",
     )
     .option(
       "--model <id>",
@@ -520,14 +520,18 @@ async function prepareVideoRequest(
   request: VideoRequest;
   slots: Awaited<ReturnType<typeof buildAssetSlots>>;
 }> {
-  const providerId = options.provider ?? "bytedance";
+  const { providerId, model } = resolveVideoSelection(
+    runtime.config.app.defaultVideoModel,
+    runtime.videoRegistry,
+    options.provider,
+    options.model,
+  );
   const provider = runtime.videoRegistry.get(providerId);
   if (!provider) {
     throw new Error(
-      `video provider '${providerId}' is not configured. Run \`imagent config set bytedance.apiKey ...\` first.`,
+      `video provider '${providerId}' is not configured. Run \`${videoProviderConfigHint(providerId)}\` first.`,
     );
   }
-  const model = pickVideoModel(providerId, options.model, provider.models);
   const resolved = provider.models.get(model);
   if (!resolved) {
     throw new Error(`unknown model '${model}' for video provider '${providerId}'`);
@@ -571,6 +575,17 @@ function getVideoProvider(runtime: CliRuntime, providerId: string): VideoProvide
   const provider = runtime.videoRegistry.get(providerId);
   if (!provider) throw new Error(`video provider '${providerId}' is not configured`);
   return provider;
+}
+
+function videoProviderConfigHint(providerId: string): string {
+  switch (providerId) {
+    case "azure":
+      return "imagent config set azure.endpoint <url> && imagent config set azure.apiKey <key>";
+    case "bytedance":
+      return "imagent config set bytedance.endpoint <url> && imagent config set bytedance.apiKey <key>";
+    default:
+      return `imagent config set ${providerId}.apiKey <key>`;
+  }
 }
 
 function requireVideoJob(job: Job | null, id: string): Job {
@@ -727,6 +742,48 @@ function pickVideoModel(
   const first = providerModels.keys().next().value;
   if (typeof first === "string") return first;
   throw new Error(`no model configured for video provider '${providerId}'`);
+}
+
+function resolveVideoSelection(
+  configuredDefault: DefaultModelPreference | null,
+  registry: ReadonlyMap<string, { models: ReadonlyMap<string, unknown> }>,
+  providerOverride: string | undefined,
+  modelOverride: string | undefined,
+): { providerId: string; model: string } {
+  if (providerOverride) {
+    const provider = registry.get(providerOverride);
+    if (!provider) return { providerId: providerOverride, model: modelOverride ?? "" };
+    return {
+      providerId: providerOverride,
+      model: pickVideoModel(providerOverride, modelOverride, provider.models),
+    };
+  }
+
+  if (modelOverride) {
+    for (const [providerId, provider] of registry) {
+      if (provider.models.has(modelOverride)) return { providerId, model: modelOverride };
+    }
+  }
+
+  if (
+    !modelOverride &&
+    configuredDefault &&
+    registry.get(configuredDefault.providerId)?.models.has(configuredDefault.modelId)
+  ) {
+    return {
+      providerId: configuredDefault.providerId,
+      model: configuredDefault.modelId,
+    };
+  }
+
+  const first = registry.entries().next().value;
+  if (first) {
+    const [providerId, provider] = first;
+    return { providerId, model: pickVideoModel(providerId, modelOverride, provider.models) };
+  }
+  throw new Error(
+    "no video providers configured. Run `imagent config set <vendor>.apiKey ...` first.",
+  );
 }
 
 function stateBadge(state: string): string {

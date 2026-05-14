@@ -31,7 +31,8 @@ The desktop application and CLI both use this workspace, so changes made in one 
   "version": 1,
   "app": {
     "theme": "system",
-    "defaultProvider": "openai",
+    "defaultImageModel": { "providerId": "openai", "modelId": "gpt-image-2" },
+    "defaultVideoModel": { "providerId": "bytedance", "modelId": "doubao-seedance-1-0-pro-250528" },
     "defaultOutputDir": null,
     "generationConcurrency": 2,
     "keepPromptHistory": true,
@@ -65,7 +66,7 @@ The desktop application and CLI both use this workspace, so changes made in one 
 App preferences:
 
 - `theme`: `light`, `dark`, or `system`.
-- `defaultProvider`: provider used by image generation when `--provider` is omitted.
+- `defaultImageModel` / `defaultVideoModel`: provider/model selections used when generation starts without explicit `--provider` / `--model` options.
 - `defaultOutputDir`: optional output directory override; `null` means the default gallery location.
 - `generationConcurrency`: integer from `1` to `8`.
 - `keepPromptHistory`: whether prompt history is retained.
