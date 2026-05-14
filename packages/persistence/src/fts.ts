@@ -7,6 +7,7 @@ const nodejieba = require("nodejieba") as {
 };
 
 const CJK_RE = /[\p{Script=Han}]+/gu;
+const HAS_CJK_RE = /[\p{Script=Han}]/u;
 
 function cjkNgrams(input: string): string[] {
   const tokens: string[] = [];
@@ -49,7 +50,9 @@ export function ftsMatchQuery(raw: string): string {
   const tokens = new Set<string>();
   for (const token of text.split(/\s+/)) {
     const trimmed = token.trim();
-    if (trimmed) tokens.add(trimmed);
+    if (trimmed && (!HAS_CJK_RE.test(trimmed) || Array.from(trimmed).length === 1)) {
+      tokens.add(trimmed);
+    }
   }
   for (const token of nodejieba.cutForSearch(text)) {
     const trimmed = token.trim();
