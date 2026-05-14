@@ -177,10 +177,16 @@ describe("CLI --help", () => {
 
   it("config set/get supports image and video default models", () => {
     withTempHome((env) => {
-      const image = runCli(
-        ["config", "set", "image.defaultModel", "openai:gpt-image-2"],
-        env,
-      );
+      expect(runCli(["config", "set", "openai.apiKey", "sk-test"], env).status).toBe(0);
+      expect(runCli(["config", "set", "bytedance.apiKey", "bd-test"], env).status).toBe(0);
+      expect(
+        runCli(
+          ["config", "set", "bytedance.endpoint", "https://ark.cn-beijing.volces.com/api/v3"],
+          env,
+        ).status,
+      ).toBe(0);
+
+      const image = runCli(["config", "set", "image.defaultModel", "openai:gpt-image-2"], env);
       expect(image.status, `stderr:\n${image.stderr}`).toBe(0);
       const video = runCli(
         ["config", "set", "video.defaultModel", "bytedance:doubao-seedance-1-0-pro-250528"],
@@ -198,6 +204,34 @@ describe("CLI --help", () => {
     });
   });
 
+  it("config set warns and skips invalid default models", () => {
+    withTempHome((env) => {
+      const missingProvider = runCli(
+        ["config", "set", "image.defaultModel", "openai:gpt-image-2"],
+        env,
+      );
+      expect(missingProvider.status, `stderr:\n${missingProvider.stderr}`).toBe(0);
+      expect(missingProvider.stderr).toContain("warn:");
+      expect(missingProvider.stderr).toContain("provider 'openai' is not configured");
+
+      const getMissing = runCli(["config", "get", "image.defaultModel"], env);
+      expect(getMissing.status, `stderr:\n${getMissing.stderr}`).toBe(0);
+      expect(getMissing.stdout).toContain("not set");
+
+      expect(runCli(["config", "set", "openai.apiKey", "sk-test"], env).status).toBe(0);
+      const missingModel = runCli(
+        ["config", "set", "image.defaultModel", "openai:not-a-model"],
+        env,
+      );
+      expect(missingModel.status, `stderr:\n${missingModel.stderr}`).toBe(0);
+      expect(missingModel.stderr).toContain("warn:");
+      expect(missingModel.stderr).toContain("model 'not-a-model' is not available");
+
+      const getInvalid = runCli(["config", "get", "image.defaultModel"], env);
+      expect(getInvalid.status, `stderr:\n${getInvalid.stderr}`).toBe(0);
+      expect(getInvalid.stdout).toContain("not set");
+    });
+  });
 });
 
 describe("CLI MCP server", () => {

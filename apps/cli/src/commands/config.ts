@@ -213,13 +213,11 @@ const ALLOWED_FIELDS: Record<VendorId, Record<string, FieldDef>> = {
 };
 
 type DefaultModelConfigKey = "image.defaultModel" | "video.defaultModel";
-const DEFAULT_MODEL_KEYS: Record<
-  DefaultModelConfigKey,
-  "defaultImageModel" | "defaultVideoModel"
-> = {
-  "image.defaultModel": "defaultImageModel",
-  "video.defaultModel": "defaultVideoModel",
-};
+const DEFAULT_MODEL_KEYS: Record<DefaultModelConfigKey, "defaultImageModel" | "defaultVideoModel"> =
+  {
+    "image.defaultModel": "defaultImageModel",
+    "video.defaultModel": "defaultVideoModel",
+  };
 
 function isVendorKey(s: string): s is VendorId {
   return (VENDOR_KEYS as readonly string[]).includes(s);
@@ -233,7 +231,8 @@ async function runSet(dottedKey: string, value: string): Promise<void> {
   const defaultModelField = defaultModelFieldFor(dottedKey);
   if (defaultModelField) {
     const parsed = parseDefaultModelValue(value);
-    await loadCliRuntime();
+    const runtime = await loadCliRuntime();
+    if (!validateConfiguredDefaultModel(defaultModelField, parsed, runtime)) return;
     const resolver = createPathResolver();
     await ensureDataDir(resolver);
     const store = createFileConfigStore(resolver.configFile());
@@ -321,9 +320,7 @@ async function runGet(dottedKey: string | undefined): Promise<void> {
   }
 }
 
-function defaultModelFieldFor(
-  dottedKey: string,
-): "defaultImageModel" | "defaultVideoModel" | null {
+function defaultModelFieldFor(dottedKey: string): "defaultImageModel" | "defaultVideoModel" | null {
   if (dottedKey === "app.defaultImageModel") return "defaultImageModel";
   if (dottedKey === "app.defaultVideoModel") return "defaultVideoModel";
   return DEFAULT_MODEL_KEYS[dottedKey as DefaultModelConfigKey] ?? null;
@@ -342,6 +339,29 @@ function parseDefaultModelValue(value: string): DefaultModelPreference {
 
 function formatDefaultModelValue(value: DefaultModelPreference): string {
   return `${value.providerId}:${value.modelId}`;
+}
+
+function validateConfiguredDefaultModel(
+  field: "defaultImageModel" | "defaultVideoModel",
+  value: DefaultModelPreference,
+  runtime: Awaited<ReturnType<typeof loadCliRuntime>>,
+): boolean {
+  const kind = field === "defaultImageModel" ? "image" : "video";
+  const registry = kind === "image" ? runtime.imageRegistry : runtime.videoRegistry;
+  const provider = registry.get(value.providerId);
+  if (!provider) {
+    process.stderr.write(
+      `${chalk.yellow("warn:")} ${kind} provider '${value.providerId}' is not configured; default model was not changed\n`,
+    );
+    return false;
+  }
+  if (!provider.models.has(value.modelId)) {
+    process.stderr.write(
+      `${chalk.yellow("warn:")} ${kind} model '${value.modelId}' is not available for configured provider '${value.providerId}'; default model was not changed\n`,
+    );
+    return false;
+  }
+  return true;
 }
 
 function defaultModelConfigView(app: {
