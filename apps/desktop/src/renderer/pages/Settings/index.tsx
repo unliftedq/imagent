@@ -5,14 +5,20 @@ import {
   Panel,
   PanelBody,
   PanelHeader,
-  Select,
   type ThemePref,
   useTheme,
 } from "@imagent/ui";
+import type { ImageModelDef, VideoModelDef } from "@imagent/core";
+import type { AppPreferencesPayload, ProviderId, ProviderSummary } from "@imagent/ipc";
 import type * as React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api.js";
 import { useConfigStore } from "../../state/useConfigStore.js";
+import {
+  createUnifiedModelOptions,
+  ProviderModelPicker,
+  useModelFavorites,
+} from "../Studio/modelPicker.js";
 
 export function SettingsPage() {
   const { appPrefs, summaries, refresh, saveAppPrefs } = useConfigStore();
@@ -21,6 +27,22 @@ export function SettingsPage() {
     null,
   );
   const [saveTimer, setSaveTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [imageModelsByProvider, setImageModelsByProvider] = useState<Record<string, ImageModelDef[]>>(
+    {},
+  );
+  const [videoModelsByProvider, setVideoModelsByProvider] = useState<Record<string, VideoModelDef[]>>(
+    {},
+  );
+  const { favoriteKeys, toggleFavorite } = useModelFavorites();
+
+  const configuredImageProviders = useMemo(
+    () => summaries.filter((summary) => summary.configured && summary.kinds.includes("image")),
+    [summaries],
+  );
+  const configuredVideoProviders = useMemo(
+    () => summaries.filter((summary) => summary.configured && summary.kinds.includes("video")),
+    [summaries],
+  );
 
   useEffect(() => {
     void refresh();
@@ -28,6 +50,14 @@ export function SettingsPage() {
       .then(setVersion)
       .catch(() => {});
   }, [refresh]);
+
+  useEffect(() => {
+    void loadModels(configuredImageProviders, "image", setImageModelsByProvider);
+  }, [configuredImageProviders]);
+
+  useEffect(() => {
+    void loadModels(configuredVideoProviders, "video", setVideoModelsByProvider);
+  }, [configuredVideoProviders]);
 
   function patch(next: Partial<NonNullable<typeof appPrefs>>) {
     if (saveTimer) clearTimeout(saveTimer);
@@ -87,23 +117,34 @@ export function SettingsPage() {
         </PanelHeader>
         <PanelBody>
           <div className="flex flex-col gap-5">
-            <Field label="Default provider">
-              <Select.Root
-                value={appPrefs.defaultProvider}
-                onValueChange={(v) => void saveAppPrefs({ defaultProvider: v })}
-              >
-                <Select.Trigger className="w-full">
-                  <Select.Value placeholder="Choose a provider…" />
-                </Select.Trigger>
-                <Select.Content>
-                  {summaries.map((s) => (
-                    <Select.Item key={s.id} value={s.id} disabled={!s.configured}>
-                      {s.displayName}
-                      {!s.configured ? " (not configured)" : ""}
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select.Root>
+            <Field
+              label="Default image model"
+              helperText="Used when image generation starts without an explicit provider/model."
+            >
+              <DefaultModelPicker
+                mode="image"
+                providers={configuredImageProviders}
+                modelsByProvider={imageModelsByProvider}
+                value={appPrefs.defaultImageModel}
+                favoriteKeys={favoriteKeys}
+                onToggleFavorite={toggleFavorite}
+                onChange={(value) => void saveAppPrefs({ defaultImageModel: value })}
+              />
+            </Field>
+
+            <Field
+              label="Default video model"
+              helperText="Used when video generation starts without an explicit provider/model."
+            >
+              <DefaultModelPicker
+                mode="video"
+                providers={configuredVideoProviders}
+                modelsByProvider={videoModelsByProvider}
+                value={appPrefs.defaultVideoModel}
+                favoriteKeys={favoriteKeys}
+                onToggleFavorite={toggleFavorite}
+                onChange={(value) => void saveAppPrefs({ defaultVideoModel: value })}
+              />
             </Field>
 
             <Field label="Generation concurrency" helperText="How many jobs may run in parallel.">
@@ -181,6 +222,82 @@ export function SettingsPage() {
       </Panel>
     </div>
   );
+}
+
+type DefaultModelValue = NonNullable<AppPreferencesPayload["defaultImageModel"]>;
+
+function DefaultModelPicker({
+  mode,
+  providers,
+  modelsByProvider,
+  value,
+  favoriteKeys,
+  onToggleFavorite,
+  onChange,
+}: {
+  mode: "image" | "video";
+  providers: ProviderSummary[];
+  modelsByProvider: Record<string, Array<ImageModelDef | VideoModelDef>>;
+  value: DefaultModelValue | null;
+  favoriteKeys: Set<string>;
+  onToggleFavorite: Parameters<typeof ProviderModelPicker>[0]["onToggleFavorite"];
+  onChange: (value: DefaultModelValue) => void;
+}) {
+  const options = useMemo(
+    () => createUnifiedModelOptions(providers, modelsByProvider),
+    [providers, modelsByProvider],
+  );
+  const first = options[0];
+  const providerId = value?.providerId ?? first?.providerId ?? "";
+  const modelId = value?.modelId ?? first?.modelId ?? "";
+
+  if (providers.length === 0) {
+    return <p className="text-(length:--text-body-sm) text-(--text-muted)">No configured providers.</p>;
+  }
+
+  return (
+    <ProviderModelPicker
+      mode={mode}
+      options={options}
+      providerId={providerId}
+      modelId={modelId}
+      favoriteKeys={favoriteKeys}
+      onToggleFavorite={onToggleFavorite}
+      onChange={(next) => onChange({ providerId: next.providerId, modelId: next.modelId })}
+    />
+  );
+}
+
+async function loadModels(
+  providers: ProviderSummary[],
+  mode: "image",
+  setModels: (models: Record<string, ImageModelDef[]>) => void,
+): Promise<void>;
+async function loadModels(
+  providers: ProviderSummary[],
+  mode: "video",
+  setModels: (models: Record<string, VideoModelDef[]>) => void,
+): Promise<void>;
+async function loadModels(
+  providers: ProviderSummary[],
+  mode: "image" | "video",
+  setModels: (models: Record<string, Array<ImageModelDef | VideoModelDef>>) => void,
+): Promise<void> {
+  if (providers.length === 0) {
+    setModels({});
+    return;
+  }
+  const nextModels: Record<string, Array<ImageModelDef | VideoModelDef>> = {};
+  await Promise.all(
+    providers.map(async (provider) => {
+      const response =
+        mode === "image"
+          ? await api["image.models"]({ providerId: provider.id as ProviderId })
+          : await api["video.models"]({ providerId: provider.id as ProviderId });
+      nextModels[provider.id] = response.models;
+    }),
+  );
+  setModels(nextModels);
 }
 
 function SegmentedTheme({

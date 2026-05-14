@@ -1,4 +1,6 @@
 import { spawn, spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -12,9 +14,10 @@ interface Result {
   stderr: string;
 }
 
-function runCli(args: string[]): Result {
+function runCli(args: string[], env: NodeJS.ProcessEnv = {}): Result {
   const result = spawnSync(process.execPath, [ENTRY, ...args], {
     encoding: "utf8",
+    env: { ...process.env, ...env },
     timeout: 15_000,
   });
   return {
@@ -22,6 +25,15 @@ function runCli(args: string[]): Result {
     stdout: result.stdout ?? "",
     stderr: result.stderr ?? "",
   };
+}
+
+function withTempHome<T>(fn: (env: NodeJS.ProcessEnv) => T): T {
+  const home = mkdtempSync(path.join(os.tmpdir(), "imagent-cli-home-"));
+  try {
+    return fn({ HOME: home, USERPROFILE: home });
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
 }
 
 describe("CLI --help", () => {
@@ -149,6 +161,41 @@ describe("CLI --help", () => {
     const r = runCli(["video", "generate", "prompt", "--out", "./videos"]);
     expect(r.status).toBe(1);
     expect(r.stderr).toContain("--out only applies with --wait");
+  });
+
+  it("config get masks apiKey values", () => {
+    withTempHome((env) => {
+      const set = runCli(["config", "set", "openai.apiKey", "sk-1234567890"], env);
+      expect(set.status, `stderr:\n${set.stderr}`).toBe(0);
+
+      const get = runCli(["config", "get", "openai.apiKey"], env);
+      expect(get.status, `stderr:\n${get.stderr}`).toBe(0);
+      expect(get.stdout.trim()).toBe("sk-1…7890");
+      expect(get.stdout).not.toContain("sk-1234567890");
+    });
+  });
+
+  it("config set/get supports image and video default models", () => {
+    withTempHome((env) => {
+      const image = runCli(
+        ["config", "set", "image.defaultModel", "openai:gpt-image-2"],
+        env,
+      );
+      expect(image.status, `stderr:\n${image.stderr}`).toBe(0);
+      const video = runCli(
+        ["config", "set", "video.defaultModel", "bytedance:doubao-seedance-1-0-pro-250528"],
+        env,
+      );
+      expect(video.status, `stderr:\n${video.stderr}`).toBe(0);
+
+      const imageGet = runCli(["config", "get", "image.defaultModel"], env);
+      expect(imageGet.status, `stderr:\n${imageGet.stderr}`).toBe(0);
+      expect(imageGet.stdout.trim()).toBe("openai:gpt-image-2");
+
+      const videoGet = runCli(["config", "get", "video.defaultModel"], env);
+      expect(videoGet.status, `stderr:\n${videoGet.stderr}`).toBe(0);
+      expect(videoGet.stdout.trim()).toBe("bytedance:doubao-seedance-1-0-pro-250528");
+    });
   });
 
 });

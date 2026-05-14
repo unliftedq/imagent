@@ -60,17 +60,21 @@ export function ImageRail() {
     ) {
       return;
     }
+    const defaultImageModel = appPrefs?.defaultImageModel;
     const first =
-      appPrefs?.defaultProvider &&
-      configuredProviders.find((provider) => provider.id === appPrefs.defaultProvider)
-        ? configuredProviders.find((provider) => provider.id === appPrefs.defaultProvider)
+      defaultImageModel &&
+      configuredProviders.find((provider) => provider.id === defaultImageModel.providerId)
+        ? configuredProviders.find((provider) => provider.id === defaultImageModel.providerId)
         : configuredProviders[0];
     if (!first) return;
     setDraft({
       providerId: first.id,
-      modelId: first.defaultModel ?? first.modelIds[0] ?? "",
+      modelId:
+        first.id === defaultImageModel?.providerId
+          ? defaultImageModel.modelId
+          : (first.defaultModel ?? first.modelIds[0] ?? ""),
     });
-  }, [configuredProviders, appPrefs?.defaultProvider, draft.providerId, setDraft]);
+  }, [configuredProviders, appPrefs?.defaultImageModel, draft.providerId, setDraft]);
 
   useEffect(() => {
     if (configuredProviders.length === 0) {
