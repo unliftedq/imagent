@@ -78,9 +78,16 @@ export const ProviderPreferencesSchema = z.object({
 });
 export type ProviderPreferences = z.infer<typeof ProviderPreferencesSchema>;
 
+export const DefaultModelPreferenceSchema = z.object({
+  providerId: z.string(),
+  modelId: z.string(),
+});
+export type DefaultModelPreference = z.infer<typeof DefaultModelPreferenceSchema>;
+
 export const AppPreferencesSchema = z.object({
   theme: z.enum(["light", "dark", "system"]).default("system"),
-  defaultProvider: z.string().default("openai"),
+  defaultImageModel: DefaultModelPreferenceSchema.nullable().default(null),
+  defaultVideoModel: DefaultModelPreferenceSchema.nullable().default(null),
   defaultOutputDir: z.string().nullable().default(null),
   generationConcurrency: z.number().int().min(1).max(8).default(2),
   keepPromptHistory: z.boolean().default(true),

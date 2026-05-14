@@ -34,6 +34,7 @@ export function VideoRail() {
   const pushToast = useUIStore((state) => state.pushToast);
 
   const summaries = useConfigStore((state) => state.summaries);
+  const appPrefs = useConfigStore((state) => state.appPrefs);
   const refreshConfig = useConfigStore((state) => state.refresh);
 
   const refreshGallery = useGalleryStore((state) => state.refresh);
@@ -62,7 +63,12 @@ export function VideoRail() {
 
   useEffect(() => {
     if (configuredVideoProviders.length === 0) return;
-    const first = configuredVideoProviders[0];
+    const defaultVideoModel = appPrefs?.defaultVideoModel;
+    const defaultProvider = defaultVideoModel
+      ? configuredVideoProviders.find((provider) => provider.id === defaultVideoModel.providerId)
+      : undefined;
+    const first =
+      defaultVideoModel && defaultProvider ? defaultProvider : configuredVideoProviders[0];
     if (!first) return;
     const defaultId =
       draft.providerId &&
@@ -70,9 +76,12 @@ export function VideoRail() {
         ? (draft.providerId as ProviderId)
         : (first.id as ProviderId);
     if (draft.providerId !== defaultId) {
-      setDraft({ providerId: defaultId });
+      setDraft({
+        providerId: defaultId,
+        modelId: defaultId === defaultVideoModel?.providerId ? defaultVideoModel.modelId : undefined,
+      });
     }
-  }, [configuredVideoProviders, draft.providerId, setDraft]);
+  }, [configuredVideoProviders, appPrefs?.defaultVideoModel, draft.providerId, setDraft]);
 
   useEffect(() => {
     if (configuredVideoProviders.length === 0) {

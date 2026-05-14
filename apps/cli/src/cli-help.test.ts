@@ -1,4 +1,6 @@
 import { spawn, spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -12,9 +14,10 @@ interface Result {
   stderr: string;
 }
 
-function runCli(args: string[]): Result {
+function runCli(args: string[], env: NodeJS.ProcessEnv = {}): Result {
   const result = spawnSync(process.execPath, [ENTRY, ...args], {
     encoding: "utf8",
+    env: { ...process.env, ...env },
     timeout: 15_000,
   });
   return {
@@ -22,6 +25,15 @@ function runCli(args: string[]): Result {
     stdout: result.stdout ?? "",
     stderr: result.stderr ?? "",
   };
+}
+
+function withTempHome<T>(fn: (env: NodeJS.ProcessEnv) => T): T {
+  const home = mkdtempSync(path.join(os.tmpdir(), "imagent-cli-home-"));
+  try {
+    return fn({ HOME: home, USERPROFILE: home });
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
 }
 
 describe("CLI --help", () => {
@@ -151,6 +163,75 @@ describe("CLI --help", () => {
     expect(r.stderr).toContain("--out only applies with --wait");
   });
 
+  it("config get masks apiKey values", () => {
+    withTempHome((env) => {
+      const set = runCli(["config", "set", "openai.apiKey", "sk-1234567890"], env);
+      expect(set.status, `stderr:\n${set.stderr}`).toBe(0);
+
+      const get = runCli(["config", "get", "openai.apiKey"], env);
+      expect(get.status, `stderr:\n${get.stderr}`).toBe(0);
+      expect(get.stdout.trim()).toBe("sk-1…7890");
+      expect(get.stdout).not.toContain("sk-1234567890");
+    });
+  });
+
+  it("config set/get supports image and video default models", () => {
+    withTempHome((env) => {
+      expect(runCli(["config", "set", "openai.apiKey", "sk-test"], env).status).toBe(0);
+      expect(runCli(["config", "set", "bytedance.apiKey", "bd-test"], env).status).toBe(0);
+      expect(
+        runCli(
+          ["config", "set", "bytedance.endpoint", "https://ark.cn-beijing.volces.com/api/v3"],
+          env,
+        ).status,
+      ).toBe(0);
+
+      const image = runCli(["config", "set", "image.defaultModel", "openai:gpt-image-2"], env);
+      expect(image.status, `stderr:\n${image.stderr}`).toBe(0);
+      const video = runCli(
+        ["config", "set", "video.defaultModel", "bytedance:doubao-seedance-1-0-pro-250528"],
+        env,
+      );
+      expect(video.status, `stderr:\n${video.stderr}`).toBe(0);
+
+      const imageGet = runCli(["config", "get", "image.defaultModel"], env);
+      expect(imageGet.status, `stderr:\n${imageGet.stderr}`).toBe(0);
+      expect(imageGet.stdout.trim()).toBe("openai:gpt-image-2");
+
+      const videoGet = runCli(["config", "get", "video.defaultModel"], env);
+      expect(videoGet.status, `stderr:\n${videoGet.stderr}`).toBe(0);
+      expect(videoGet.stdout.trim()).toBe("bytedance:doubao-seedance-1-0-pro-250528");
+    });
+  });
+
+  it("config set warns and skips invalid default models", () => {
+    withTempHome((env) => {
+      const missingProvider = runCli(
+        ["config", "set", "image.defaultModel", "openai:gpt-image-2"],
+        env,
+      );
+      expect(missingProvider.status, `stderr:\n${missingProvider.stderr}`).toBe(0);
+      expect(missingProvider.stderr).toContain("warn:");
+      expect(missingProvider.stderr).toContain("provider 'openai' is not configured");
+
+      const getMissing = runCli(["config", "get", "image.defaultModel"], env);
+      expect(getMissing.status, `stderr:\n${getMissing.stderr}`).toBe(0);
+      expect(getMissing.stdout).toContain("not set");
+
+      expect(runCli(["config", "set", "openai.apiKey", "sk-test"], env).status).toBe(0);
+      const missingModel = runCli(
+        ["config", "set", "image.defaultModel", "openai:not-a-model"],
+        env,
+      );
+      expect(missingModel.status, `stderr:\n${missingModel.stderr}`).toBe(0);
+      expect(missingModel.stderr).toContain("warn:");
+      expect(missingModel.stderr).toContain("model 'not-a-model' is not available");
+
+      const getInvalid = runCli(["config", "get", "image.defaultModel"], env);
+      expect(getInvalid.status, `stderr:\n${getInvalid.stderr}`).toBe(0);
+      expect(getInvalid.stdout).toContain("not set");
+    });
+  });
 });
 
 describe("CLI MCP server", () => {
