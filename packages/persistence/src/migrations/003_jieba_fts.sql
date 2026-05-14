@@ -15,6 +15,8 @@ CREATE VIRTUAL TABLE gallery_items_fts USING fts5(
   content='gallery_items', content_rowid='rowid', tokenize='porter unicode61'
 );
 
+-- Migrations run in a single transaction; these INSERT ... SELECT rebuilds keep
+-- existing rows searchable immediately after the FTS schema is recreated.
 INSERT INTO gallery_items_fts(rowid, prompt, negative_prompt)
 SELECT rowid, imagent_jieba(prompt), imagent_jieba(negative_prompt)
 FROM gallery_items;

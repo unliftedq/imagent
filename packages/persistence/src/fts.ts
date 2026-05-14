@@ -23,7 +23,7 @@ function cjkNgrams(input: string): string[] {
   return tokens;
 }
 
-function shouldKeepRawQueryToken(token: string): boolean {
+function shouldKeepUntokenizedToken(token: string): boolean {
   return !HAS_CJK_RE.test(token) || Array.from(token).length === 1;
 }
 
@@ -35,7 +35,13 @@ function shouldKeepRawQueryToken(token: string): boolean {
 export function tokenizeFtsText(raw: string | null | undefined): string {
   const text = raw?.trim() ?? "";
   if (!text) return "";
-  const tokens = new Set<string>([text]);
+  const tokens = new Set<string>();
+  for (const token of text.split(/\s+/)) {
+    const trimmed = token.trim();
+    if (trimmed && shouldKeepUntokenizedToken(trimmed)) {
+      tokens.add(trimmed);
+    }
+  }
   for (const token of nodejieba.cutForSearch(text)) {
     const trimmed = token.trim();
     if (trimmed) tokens.add(trimmed);
@@ -54,9 +60,12 @@ export function tokenizeFtsText(raw: string | null | undefined): string {
 export function ftsMatchQuery(raw: string): string {
   const text = raw.trim();
   const tokens = new Set<string>();
+  // nodejieba splits non-CJK text into individual characters, so keep normal
+  // whitespace tokens for English/model/path searches and add jieba/CJK grams
+  // for Chinese search.
   for (const token of text.split(/\s+/)) {
     const trimmed = token.trim();
-    if (trimmed && shouldKeepRawQueryToken(trimmed)) {
+    if (trimmed && shouldKeepUntokenizedToken(trimmed)) {
       tokens.add(trimmed);
     }
   }
