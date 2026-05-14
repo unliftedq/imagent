@@ -10,6 +10,9 @@ files:
   - assets/imagent.icns
   - assets/catalog.default.json
   - package.json
+extraResources:
+  - from: ../../LICENSE
+    to: LICENSE
 asar: true
 asarUnpack:
   - "**/node_modules/better-sqlite3/**/*"

@@ -2,7 +2,7 @@
   "name": "@imagent/cli",
   "version": "0.2.0",
   "description": "Local-first image and video generation CLI for imagent.",
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "homepage": "https://github.com/unliftedq/imagent#readme",
   "repository": {
     "type": "git",

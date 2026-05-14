@@ -150,6 +150,7 @@ describe("CLI --help", () => {
     expect(r.status).toBe(1);
     expect(r.stderr).toContain("--out only applies with --wait");
   });
+
 });
 
 describe("CLI MCP server", () => {

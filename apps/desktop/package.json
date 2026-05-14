@@ -2,6 +2,7 @@
   "name": "@imagent/studio",
   "version": "0.2.0",
   "private": true,
+  "license": "Apache-2.0",
   "description": "Imagent Electron desktop application",
   "main": "dist/main/main.mjs",
   "type": "module",
