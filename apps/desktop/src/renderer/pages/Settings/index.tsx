@@ -1,3 +1,5 @@
+import type { ImageModelDef, VideoModelDef } from "@imagent/core";
+import type { AppPreferencesPayload, ProviderId, ProviderSummary } from "@imagent/ipc";
 import {
   Button,
   Icons,
@@ -8,8 +10,6 @@ import {
   type ThemePref,
   useTheme,
 } from "@imagent/ui";
-import type { ImageModelDef, VideoModelDef } from "@imagent/core";
-import type { AppPreferencesPayload, ProviderId, ProviderSummary } from "@imagent/ipc";
 import type * as React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api.js";
@@ -27,12 +27,12 @@ export function SettingsPage() {
     null,
   );
   const [saveTimer, setSaveTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
-  const [imageModelsByProvider, setImageModelsByProvider] = useState<Record<string, ImageModelDef[]>>(
-    {},
-  );
-  const [videoModelsByProvider, setVideoModelsByProvider] = useState<Record<string, VideoModelDef[]>>(
-    {},
-  );
+  const [imageModelsByProvider, setImageModelsByProvider] = useState<
+    Record<string, ImageModelDef[]>
+  >({});
+  const [videoModelsByProvider, setVideoModelsByProvider] = useState<
+    Record<string, VideoModelDef[]>
+  >({});
   const { favoriteKeys, toggleFavorite } = useModelFavorites();
 
   const configuredImageProviders = useMemo(
@@ -52,11 +52,11 @@ export function SettingsPage() {
   }, [refresh]);
 
   useEffect(() => {
-    void loadModels(configuredImageProviders, "image", setImageModelsByProvider);
+    void loadModels<ImageModelDef>(configuredImageProviders, "image", setImageModelsByProvider);
   }, [configuredImageProviders]);
 
   useEffect(() => {
-    void loadModels(configuredVideoProviders, "video", setVideoModelsByProvider);
+    void loadModels<VideoModelDef>(configuredVideoProviders, "video", setVideoModelsByProvider);
   }, [configuredVideoProviders]);
 
   function patch(next: Partial<NonNullable<typeof appPrefs>>) {
@@ -252,7 +252,9 @@ function DefaultModelPicker({
   const modelId = value?.modelId ?? first?.modelId ?? "";
 
   if (providers.length === 0) {
-    return <p className="text-(length:--text-body-sm) text-(--text-muted)">No configured providers.</p>;
+    return (
+      <p className="text-(length:--text-body-sm) text-(--text-muted)">No configured providers.</p>
+    );
   }
 
   return (
@@ -268,35 +270,30 @@ function DefaultModelPicker({
   );
 }
 
-async function loadModels(
-  providers: ProviderSummary[],
-  mode: "image",
-  setModels: (models: Record<string, ImageModelDef[]>) => void,
-): Promise<void>;
-async function loadModels(
-  providers: ProviderSummary[],
-  mode: "video",
-  setModels: (models: Record<string, VideoModelDef[]>) => void,
-): Promise<void>;
-async function loadModels(
+async function loadModels<T extends ImageModelDef | VideoModelDef>(
   providers: ProviderSummary[],
   mode: "image" | "video",
-  setModels: (models: Record<string, Array<ImageModelDef | VideoModelDef>>) => void,
+  setModels: (models: Record<string, T[]>) => void,
 ): Promise<void> {
   if (providers.length === 0) {
     setModels({});
     return;
   }
-  const nextModels: Record<string, Array<ImageModelDef | VideoModelDef>> = {};
-  await Promise.all(
-    providers.map(async (provider) => {
-      const response =
-        mode === "image"
-          ? await api["image.models"]({ providerId: provider.id as ProviderId })
-          : await api["video.models"]({ providerId: provider.id as ProviderId });
-      nextModels[provider.id] = response.models;
-    }),
-  );
+  const nextModels: Record<string, T[]> = {};
+  try {
+    await Promise.all(
+      providers.map(async (provider) => {
+        const response =
+          mode === "image"
+            ? await api["image.models"]({ providerId: provider.id as ProviderId })
+            : await api["video.models"]({ providerId: provider.id as ProviderId });
+        nextModels[provider.id] = response.models as T[];
+      }),
+    );
+  } catch {
+    setModels({});
+    return;
+  }
   setModels(nextModels);
 }
 
