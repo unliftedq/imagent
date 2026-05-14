@@ -52,22 +52,22 @@ export function SettingsPage() {
   }, [refresh]);
 
   useEffect(() => {
-    let cancelled = false;
+    let isCancelled = false;
     void loadModels<ImageModelDef>(configuredImageProviders, "image").then((models) => {
-      if (!cancelled) setImageModelsByProvider(models);
+      if (!isCancelled) setImageModelsByProvider(models);
     });
     return () => {
-      cancelled = true;
+      isCancelled = true;
     };
   }, [configuredImageProviders]);
 
   useEffect(() => {
-    let cancelled = false;
+    let isCancelled = false;
     void loadModels<VideoModelDef>(configuredVideoProviders, "video").then((models) => {
-      if (!cancelled) setVideoModelsByProvider(models);
+      if (!isCancelled) setVideoModelsByProvider(models);
     });
     return () => {
-      cancelled = true;
+      isCancelled = true;
     };
   }, [configuredVideoProviders]);
 
