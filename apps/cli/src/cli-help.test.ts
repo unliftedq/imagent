@@ -35,7 +35,6 @@ describe("CLI --help", () => {
       "asset",
       "models",
       "options",
-      "license",
       "doctor",
       "config",
       "mcp",
@@ -58,7 +57,6 @@ describe("CLI --help", () => {
       "asset",
       "models",
       "options",
-      "license",
       "doctor",
       "config",
       "mcp",
@@ -116,7 +114,6 @@ describe("CLI --help", () => {
     ["video", "task", "cancel", "--help"],
     ["video", "download", "--help"],
     ["mcp", "--help"],
-    ["license", "--help"],
     ["models", "--help"],
     ["options", "--help"],
     ["asset", "add", "--help"],
@@ -154,12 +151,6 @@ describe("CLI --help", () => {
     expect(r.stderr).toContain("--out only applies with --wait");
   });
 
-  it("license prints the Apache-2.0 license text", () => {
-    const r = runCli(["license"]);
-    expect(r.status, `stderr:\n${r.stderr}`).toBe(0);
-    expect(r.stdout).toContain("Apache License");
-    expect(r.stdout).toContain("Version 2.0");
-  });
 });
 
 describe("CLI MCP server", () => {

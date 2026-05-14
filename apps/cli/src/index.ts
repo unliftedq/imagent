@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { readFile } from "node:fs/promises";
 import { Command } from "commander";
 
 import { registerAssetCommands } from "./commands/asset.js";
@@ -40,19 +39,6 @@ async function main(): Promise<void> {
   // Discovery commands (use these first to learn what to pass to image/video).
   registerModelsCommand(program);
   registerOptionsCommand(program);
-
-  program
-    .command("license")
-    .description("Print the Apache-2.0 license text")
-    .action(async () => {
-      try {
-        const license = await readFile(new URL("../LICENSE", import.meta.url), "utf8");
-        process.stdout.write(license.endsWith("\n") ? license : `${license}\n`);
-      } catch (err) {
-        process.stderr.write(`license unavailable: ${(err as Error).message}\n`);
-        process.exitCode = 1;
-      }
-    });
 
   program
     .command("doctor")
