@@ -74,7 +74,9 @@ export function AspectRatioGrid({
             "text-[12px] text-(--text-muted) transition-colors duration-(--motion-fast) " +
             "hover:bg-(--bg) hover:text-(--text) focus-visible:outline-none " +
             "focus-visible:ring-2 focus-visible:ring-(--focus-ring) " +
-            (ratio === value ? "bg-(--bg) text-(--text) shadow-[inset_0_0_0_1px_var(--border)]" : "")
+            (ratio === value
+              ? "bg-(--bg) text-(--text) shadow-[inset_0_0_0_1px_var(--border)]"
+              : "")
           }
         >
           <span

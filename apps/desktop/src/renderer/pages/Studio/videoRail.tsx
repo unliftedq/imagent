@@ -8,13 +8,13 @@ import { useAssetsStore } from "../../state/useAssetsStore.js";
 import { useConfigStore } from "../../state/useConfigStore.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
 import { useJobsStore } from "../../state/useJobsStore.js";
-import { type VideoDraft, useUIStore } from "../../state/useUIStore.js";
+import { useUIStore, type VideoDraft } from "../../state/useUIStore.js";
 import { resolveAssetThumbnailUrl } from "../Assets";
 import { ChatComposerShell } from "./composer.js";
 import {
   AspectRatioGrid,
-  ConfigurationPopoverButton,
   ConfigSection,
+  ConfigurationPopoverButton,
   PanelSelectTrigger,
 } from "./configurationPanel.js";
 import {

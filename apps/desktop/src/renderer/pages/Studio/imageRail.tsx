@@ -12,8 +12,8 @@ import { resolveAssetThumbnailUrl } from "../Assets";
 import { ChatComposerShell } from "./composer.js";
 import {
   AspectRatioGrid,
-  ConfigurationPopoverButton,
   ConfigSection,
+  ConfigurationPopoverButton,
   PanelSelectTrigger,
 } from "./configurationPanel.js";
 import {
