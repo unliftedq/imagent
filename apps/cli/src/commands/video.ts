@@ -529,7 +529,7 @@ async function prepareVideoRequest(
   const provider = runtime.videoRegistry.get(providerId);
   if (!provider) {
     throw new Error(
-      `video provider '${providerId}' is not configured. Run \`imagent config set <vendor>.apiKey ...\` first.`,
+      `video provider '${providerId}' is not configured. Run \`${videoProviderConfigHint(providerId)}\` first.`,
     );
   }
   const resolved = provider.models.get(model);
@@ -575,6 +575,17 @@ function getVideoProvider(runtime: CliRuntime, providerId: string): VideoProvide
   const provider = runtime.videoRegistry.get(providerId);
   if (!provider) throw new Error(`video provider '${providerId}' is not configured`);
   return provider;
+}
+
+function videoProviderConfigHint(providerId: string): string {
+  switch (providerId) {
+    case "azure":
+      return "imagent config set azure.endpoint <url> && imagent config set azure.apiKey <key>";
+    case "bytedance":
+      return "imagent config set bytedance.endpoint <url> && imagent config set bytedance.apiKey <key>";
+    default:
+      return `imagent config set ${providerId}.apiKey <key>`;
+  }
 }
 
 function requireVideoJob(job: Job | null, id: string): Job {
