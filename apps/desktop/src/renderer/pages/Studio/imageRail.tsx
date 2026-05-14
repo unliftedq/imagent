@@ -388,27 +388,26 @@ function ImageConfigurationPanel({
     return null;
   }
 
-  const commitCustomSize = (nextW: string, nextH: string): void => {
-    setW(nextW);
-    setH(nextH);
-    if (!nextW.trim() || !nextH.trim()) return;
+  const commitCustomSize = (nextW: string, nextH: string): boolean => {
+    if (!nextW.trim() || !nextH.trim()) return false;
     const wNum = Number(nextW);
     const hNum = Number(nextH);
     if (!Number.isFinite(wNum) || !Number.isFinite(hNum)) {
       setError("Width and height must be numbers.");
-      return;
+      return false;
     }
     if (!Number.isInteger(wNum) || wNum <= 0 || !Number.isInteger(hNum) || hNum <= 0) {
       setError("Width and height must be positive integers.");
-      return;
+      return false;
     }
     const validationError = validateCustomSize(wNum, hNum, sizeConstraints);
     if (validationError) {
       setError(validationError);
-      return;
+      return false;
     }
     setError(null);
     onChange({ size: `${wNum}x${hNum}` });
+    return true;
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
@@ -474,14 +473,16 @@ function ImageConfigurationPanel({
                 label="Width"
                 value={w}
                 constraints={sizeConstraints.width}
-                onChange={(value) => commitCustomSize(value, h)}
+                onChange={setW}
+                onCommit={(value) => commitCustomSize(value, h)}
                 onKeyDown={handleKeyDown}
               />
               <DimensionRow
                 label="Height"
                 value={h}
                 constraints={sizeConstraints.height}
-                onChange={(value) => commitCustomSize(w, value)}
+                onChange={setH}
+                onCommit={(value) => commitCustomSize(w, value)}
                 onKeyDown={handleKeyDown}
               />
               {error ? (
@@ -652,12 +653,14 @@ function DimensionRow({
   value,
   constraints,
   onChange,
+  onCommit,
   onKeyDown,
 }: {
   label: string;
   value: string;
   constraints: DimensionConstraints;
   onChange: (next: string) => void;
+  onCommit?: (next: string) => void;
   onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
 }) {
   const numeric = Number.parseInt(value, 10);
@@ -679,7 +682,10 @@ function DimensionRow({
         max={constraints.max}
         step={constraints.step}
         value={sliderValue}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          onChange(e.target.value);
+          onCommit?.(e.target.value);
+        }}
         aria-label={`${label} slider`}
         className={
           "h-1 flex-1 cursor-ew-resize appearance-none rounded-full bg-(--surface) " +
@@ -696,6 +702,7 @@ function DimensionRow({
         inputMode="numeric"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onBlur={(e) => onCommit?.(e.target.value)}
         onKeyDown={onKeyDown}
         placeholder={String(DIMENSION_DEFAULT)}
         aria-label={label}
