@@ -78,13 +78,14 @@ export function ReferencePicker({
           title={triggerLabel}
           className={
             "inline-flex size-8 items-center justify-center rounded-(--radius-pill) border " +
-            "bg-(--bg) text-(--text) transition-colors duration-(--motion-fast) " +
-            "hover:border-(--text) focus-visible:outline-none focus-visible:ring-2 " +
-            "focus-visible:ring-(--focus-ring) " +
+            "bg-(--bg) text-(--text-muted) transition-colors duration-(--motion-fast) " +
+            "hover:border-(--text-muted) hover:text-(--text) focus-visible:outline-none " +
+            "focus-visible:ring-2 focus-visible:ring-(--focus-ring) " +
+            "data-[state=open]:border-(--text) data-[state=open]:text-(--text) " +
             (totalReferences > 0 ? "border-(--accent) text-(--accent)" : "border-(--border)")
           }
         >
-          <Icons.Paperclip weight="bold" className="size-3.5" />
+          <Icons.Paperclip weight="duotone" className="size-3.5" />
         </button>
       </Popover.Trigger>
       <Popover.Content className="w-[420px] p-3">

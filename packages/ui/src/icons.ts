@@ -44,6 +44,7 @@ export {
   Plug,
   Plus,
   SealCheck,
+  SlidersHorizontal,
   Speedometer,
   SquaresFour,
   StackPlus,

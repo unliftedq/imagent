@@ -1,16 +1,22 @@
-import type { VideoModelDef, VideoRequest } from "@imagent/core";
+import type { VideoModelCaps, VideoModelDef, VideoRequest } from "@imagent/core";
 import type { ProviderId } from "@imagent/ipc";
 import { IpcClientError } from "@imagent/ipc";
-import { Button, Icons, Select } from "@imagent/ui";
+import { Button, Icons, Popover, Select } from "@imagent/ui";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api.js";
 import { useAssetsStore } from "../../state/useAssetsStore.js";
 import { useConfigStore } from "../../state/useConfigStore.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
 import { useJobsStore } from "../../state/useJobsStore.js";
-import { useUIStore } from "../../state/useUIStore.js";
+import { useUIStore, type VideoDraft } from "../../state/useUIStore.js";
 import { resolveAssetThumbnailUrl } from "../Assets";
-import { ChatComposerShell, ToolbarSelectTrigger } from "./composer.js";
+import { ChatComposerShell } from "./composer.js";
+import {
+  AspectRatioGrid,
+  ConfigSection,
+  ConfigurationPopoverButton,
+  SegmentedControl,
+} from "./configurationPanel.js";
 import {
   createUnifiedModelOptions,
   ProviderModelPicker,
@@ -254,6 +260,18 @@ export function VideoRail() {
       validationError={validationError}
       {...(draft.parentId ? { remixId: draft.parentId, onClearRemix: resetDraft } : {})}
     >
+      <ProviderModelPicker
+        mode="video"
+        options={modelOptions}
+        providerId={draft.providerId}
+        modelId={draft.modelId}
+        favoriteKeys={favoriteKeys}
+        onToggleFavorite={toggleFavorite}
+        onChange={(next) => setDraft({ providerId: next.providerId, modelId: next.modelId })}
+      />
+
+      <VideoConfigurationPanel caps={caps} draft={draft} onChange={setDraft} />
+
       <ReferencePicker
         assetIds={draft.assetIds}
         assetsByKind={assetsByKind}
@@ -272,76 +290,6 @@ export function VideoRail() {
         }
       />
 
-      <ProviderModelPicker
-        mode="video"
-        options={modelOptions}
-        providerId={draft.providerId}
-        modelId={draft.modelId}
-        favoriteKeys={favoriteKeys}
-        onToggleFavorite={toggleFavorite}
-        onChange={(next) => setDraft({ providerId: next.providerId, modelId: next.modelId })}
-      />
-
-      {caps?.durationsSec && caps.durationsSec.length > 0 ? (
-        <Select.Root
-          value={String(draft.durationSec ?? caps.durationsSec[0])}
-          onValueChange={(value) => setDraft({ durationSec: Number.parseInt(value, 10) })}
-        >
-          <ToolbarSelectTrigger
-            ariaLabel="Duration"
-            icon={<Icons.Timer weight="duotone" className="size-3.5" />}
-            className="h-8 w-[88px] rounded-(--radius-pill) bg-(--bg) px-3 py-0 text-[12px]"
-          />
-          <Select.Content>
-            {caps.durationsSec.map((duration) => (
-              <Select.Item key={duration} value={String(duration)}>
-                {duration}s
-              </Select.Item>
-            ))}
-          </Select.Content>
-        </Select.Root>
-      ) : null}
-
-      {caps?.fpsOptions && caps.fpsOptions.length > 0 ? (
-        <Select.Root
-          value={String(draft.fps ?? caps.fpsOptions[0])}
-          onValueChange={(value) => setDraft({ fps: Number.parseInt(value, 10) })}
-        >
-          <ToolbarSelectTrigger
-            ariaLabel="FPS"
-            icon={<Icons.Speedometer weight="duotone" className="size-3.5" />}
-            className="h-8 w-[86px] rounded-(--radius-pill) bg-(--bg) px-3 py-0 text-[12px]"
-          />
-          <Select.Content>
-            {caps.fpsOptions.map((fps) => (
-              <Select.Item key={fps} value={String(fps)}>
-                {fps}
-              </Select.Item>
-            ))}
-          </Select.Content>
-        </Select.Root>
-      ) : null}
-
-      {caps?.resolutions && caps.resolutions.length > 0 ? (
-        <Select.Root
-          value={draft.resolution ?? caps.resolutions[0]}
-          onValueChange={(value) => setDraft({ resolution: value })}
-        >
-          <ToolbarSelectTrigger
-            ariaLabel="Resolution"
-            icon={<Icons.Monitor weight="duotone" className="size-3.5" />}
-            className="h-8 w-[116px] rounded-(--radius-pill) bg-(--bg) px-3 py-0 text-[12px]"
-          />
-          <Select.Content>
-            {caps.resolutions.map((resolution) => (
-              <Select.Item key={resolution} value={resolution}>
-                {resolution}
-              </Select.Item>
-            ))}
-          </Select.Content>
-        </Select.Root>
-      ) : null}
-
       {caps?.supportsFirstFrame ? (
         <FirstFrameToolbarPicker
           value={draft.firstFrame ?? null}
@@ -350,5 +298,83 @@ export function VideoRail() {
         />
       ) : null}
     </ChatComposerShell>
+  );
+}
+
+function VideoConfigurationPanel({
+  caps,
+  draft,
+  onChange,
+}: {
+  caps: VideoModelCaps | undefined;
+  draft: VideoDraft;
+  onChange: (patch: Partial<VideoDraft>) => void;
+}) {
+  const hasAspectRatios = !!caps?.aspectRatios?.length;
+  const hasDurations = !!caps?.durationsSec?.length;
+  const hasFps = !!caps?.fpsOptions?.length;
+  const hasResolutions = !!caps?.resolutions?.length;
+
+  if (!hasAspectRatios && !hasDurations && !hasFps && !hasResolutions) {
+    return null;
+  }
+
+  return (
+    <Popover.Root>
+      <Popover.Trigger asChild>
+        <ConfigurationPopoverButton label="Video configuration" />
+      </Popover.Trigger>
+      <Popover.Content align="start" className="w-[420px] p-0">
+        <div className="flex max-h-[70vh] flex-col gap-5 overflow-y-auto p-5">
+          <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-(--text)">
+            Configuration
+          </h2>
+
+          {hasAspectRatios ? (
+            <ConfigSection title="Aspect Ratio">
+              <AspectRatioGrid
+                ratios={caps?.aspectRatios ?? []}
+                value={draft.aspectRatio ?? caps?.aspectRatios?.[0]}
+                onChange={(aspectRatio) => onChange({ aspectRatio })}
+              />
+            </ConfigSection>
+          ) : null}
+
+          {hasResolutions ? (
+            <ConfigSection title="Resolution">
+              <SegmentedControl
+                ariaLabel="Resolution"
+                options={caps?.resolutions ?? []}
+                value={draft.resolution ?? caps?.resolutions?.[0]}
+                onChange={(resolution) => onChange({ resolution })}
+              />
+            </ConfigSection>
+          ) : null}
+
+          {hasDurations ? (
+            <ConfigSection title="Duration">
+              <SegmentedControl
+                ariaLabel="Duration"
+                options={caps?.durationsSec ?? []}
+                value={draft.durationSec ?? caps?.durationsSec?.[0]}
+                formatLabel={(duration) => `${duration}s`}
+                onChange={(durationSec) => onChange({ durationSec })}
+              />
+            </ConfigSection>
+          ) : null}
+
+          {hasFps ? (
+            <ConfigSection title="FPS">
+              <SegmentedControl
+                ariaLabel="FPS"
+                options={caps?.fpsOptions ?? []}
+                value={draft.fps ?? caps?.fpsOptions?.[0]}
+                onChange={(fps) => onChange({ fps })}
+              />
+            </ConfigSection>
+          ) : null}
+        </div>
+      </Popover.Content>
+    </Popover.Root>
   );
 }

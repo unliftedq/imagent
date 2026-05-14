@@ -322,6 +322,49 @@
     background-color: var(--accent-soft);
     color: var(--text);
   }
+
+  /* Scrollbars — overlay style. The track is transparent (no permanent
+   * gutter); the thumb only fades in when the scroll container is
+   * hovered/focused or while the thumb itself is being interacted with.
+   * `overflow: auto` already hides the bar when content fits, so combined
+   * the user only ever sees a scrollbar when it's actually needed AND
+   * they're pointing at the area that scrolls. Firefox uses the
+   * `scrollbar-*` properties; WebKit/Chromium (Electron) uses the
+   * pseudo-elements below. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  *:hover,
+  *:focus-within {
+    scrollbar-color: color-mix(in oklch, var(--text-muted) 45%, transparent) transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+    background: transparent;
+  }
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    border: 2px solid transparent;
+    background-clip: content-box;
+    border-radius: 9999px;
+    transition: background-color 120ms var(--ease-out, ease-out);
+  }
+  *:hover > ::-webkit-scrollbar-thumb,
+  *:focus-within > ::-webkit-scrollbar-thumb,
+  :hover::-webkit-scrollbar-thumb {
+    background-color: color-mix(in oklch, var(--text-muted) 45%, transparent);
+  }
+  ::-webkit-scrollbar-thumb:hover,
+  ::-webkit-scrollbar-thumb:active {
+    background-color: color-mix(in oklch, var(--text-muted) 75%, transparent);
+  }
+
   /* Reduced motion */
   @media (prefers-reduced-motion: reduce) {
     *,
