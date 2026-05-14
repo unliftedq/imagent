@@ -318,20 +318,21 @@ function resolveImageSelection(
     };
   }
 
+  if (modelOverride) {
+    for (const [providerId, provider] of registry) {
+      if (provider.models.has(modelOverride)) return { providerId, model: modelOverride };
+    }
+  }
+
   if (
+    !modelOverride &&
     configuredDefault &&
     registry.get(configuredDefault.providerId)?.models.has(configuredDefault.modelId)
   ) {
     return {
       providerId: configuredDefault.providerId,
-      model: modelOverride ?? configuredDefault.modelId,
+      model: configuredDefault.modelId,
     };
-  }
-
-  if (modelOverride) {
-    for (const [providerId, provider] of registry) {
-      if (provider.models.has(modelOverride)) return { providerId, model: modelOverride };
-    }
   }
 
   const first = registry.entries().next().value;

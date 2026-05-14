@@ -529,7 +529,7 @@ async function prepareVideoRequest(
   const provider = runtime.videoRegistry.get(providerId);
   if (!provider) {
     throw new Error(
-      `video provider '${providerId}' is not configured. Run \`imagent config set bytedance.apiKey ...\` first.`,
+      `video provider '${providerId}' is not configured. Run \`imagent config set <vendor>.apiKey ...\` first.`,
     );
   }
   const resolved = provider.models.get(model);
@@ -748,20 +748,21 @@ function resolveVideoSelection(
     };
   }
 
+  if (modelOverride) {
+    for (const [providerId, provider] of registry) {
+      if (provider.models.has(modelOverride)) return { providerId, model: modelOverride };
+    }
+  }
+
   if (
+    !modelOverride &&
     configuredDefault &&
     registry.get(configuredDefault.providerId)?.models.has(configuredDefault.modelId)
   ) {
     return {
       providerId: configuredDefault.providerId,
-      model: modelOverride ?? configuredDefault.modelId,
+      model: configuredDefault.modelId,
     };
-  }
-
-  if (modelOverride) {
-    for (const [providerId, provider] of registry) {
-      if (provider.models.has(modelOverride)) return { providerId, model: modelOverride };
-    }
   }
 
   const first = registry.entries().next().value;

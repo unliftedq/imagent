@@ -52,11 +52,23 @@ export function SettingsPage() {
   }, [refresh]);
 
   useEffect(() => {
-    void loadModels<ImageModelDef>(configuredImageProviders, "image", setImageModelsByProvider);
+    let cancelled = false;
+    void loadModels<ImageModelDef>(configuredImageProviders, "image").then((models) => {
+      if (!cancelled) setImageModelsByProvider(models);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [configuredImageProviders]);
 
   useEffect(() => {
-    void loadModels<VideoModelDef>(configuredVideoProviders, "video", setVideoModelsByProvider);
+    let cancelled = false;
+    void loadModels<VideoModelDef>(configuredVideoProviders, "video").then((models) => {
+      if (!cancelled) setVideoModelsByProvider(models);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [configuredVideoProviders]);
 
   function patch(next: Partial<NonNullable<typeof appPrefs>>) {
@@ -273,28 +285,25 @@ function DefaultModelPicker({
 async function loadModels<T extends ImageModelDef | VideoModelDef>(
   providers: ProviderSummary[],
   mode: "image" | "video",
-  setModels: (models: Record<string, T[]>) => void,
-): Promise<void> {
+): Promise<Record<string, T[]>> {
   if (providers.length === 0) {
-    setModels({});
-    return;
+    return {};
   }
   const nextModels: Record<string, T[]> = {};
-  try {
-    await Promise.all(
-      providers.map(async (provider) => {
+  await Promise.all(
+    providers.map(async (provider) => {
+      try {
         const response =
           mode === "image"
             ? await api["image.models"]({ providerId: provider.id as ProviderId })
             : await api["video.models"]({ providerId: provider.id as ProviderId });
         nextModels[provider.id] = response.models as T[];
-      }),
-    );
-  } catch {
-    setModels({});
-    return;
-  }
-  setModels(nextModels);
+      } catch {
+        // Keep successfully loaded providers available if one provider fails.
+      }
+    }),
+  );
+  return nextModels;
 }
 
 function SegmentedTheme({
