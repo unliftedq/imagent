@@ -9,12 +9,13 @@ import { useGalleryStore } from "../../state/useGalleryStore.js";
 import { useJobsStore } from "../../state/useJobsStore.js";
 import { type ImageDraft, useUIStore } from "../../state/useUIStore.js";
 import { resolveAssetThumbnailUrl } from "../Assets";
-import { ChatComposerShell } from "./composer.js";
+import { ChatComposerShell, ToolbarSelectTrigger } from "./composer.js";
 import {
   AspectRatioGrid,
   ConfigSection,
   ConfigurationPopoverButton,
-  PanelSelectTrigger,
+  SegmentedControl,
+  SizePresetGrid,
 } from "./configurationPanel.js";
 import {
   createUnifiedModelOptions,
@@ -178,6 +179,23 @@ export function ImageRail() {
     }
   }, [caps?.outputFormats, draft.outputFormat, selectedModel?.defaults, setDraft]);
 
+  useEffect(() => {
+    // Clamp output count to whatever the resolved model supports. Switching to
+    // a model with a lower `maxOutputs` shouldn't leave the draft in an
+    // invalid state — also fall back to the model's `defaults.count` when the
+    // current value is < 1.
+    const max = Math.max(1, caps?.maxOutputs ?? 1);
+    const fallback =
+      (selectedModel?.defaults as { count?: number } | undefined)?.count ?? 1;
+    if (!Number.isFinite(draft.count) || draft.count < 1) {
+      setDraft({ count: Math.min(max, Math.max(1, fallback)) });
+      return;
+    }
+    if (draft.count > max) {
+      setDraft({ count: max });
+    }
+  }, [caps?.maxOutputs, draft.count, selectedModel?.defaults, setDraft]);
+
   const generate = async (): Promise<void> => {
     setValidationError(null);
     if (!draft.prompt.trim()) {
@@ -290,6 +308,23 @@ export function ImageRail() {
       validationError={validationError}
       {...(draft.parentId ? { remixId: draft.parentId, onClearRemix: resetDraft } : {})}
     >
+      <ProviderModelPicker
+        mode="image"
+        options={modelOptions}
+        providerId={draft.providerId}
+        modelId={draft.modelId}
+        favoriteKeys={favoriteKeys}
+        onToggleFavorite={toggleFavorite}
+        onChange={(next) => setDraft({ providerId: next.providerId, modelId: next.modelId })}
+      />
+
+      <ImageConfigurationPanel
+        caps={caps}
+        draft={draft}
+        sizeConstraints={sizeConstraints}
+        onChange={setDraft}
+      />
+
       <ReferencePicker
         assetIds={draft.assetIds}
         assetsByKind={assetsByKind}
@@ -309,24 +344,44 @@ export function ImageRail() {
         }
       />
 
-      <ProviderModelPicker
-        mode="image"
-        options={modelOptions}
-        providerId={draft.providerId}
-        modelId={draft.modelId}
-        favoriteKeys={favoriteKeys}
-        onToggleFavorite={toggleFavorite}
-        onChange={(next) => setDraft({ providerId: next.providerId, modelId: next.modelId })}
-      />
-
-      <ImageConfigurationPanel
-        caps={caps}
-        draft={draft}
+      <ImageOutputCountSelect
+        count={draft.count}
         outputMax={outputMax}
-        sizeConstraints={sizeConstraints}
-        onChange={setDraft}
+        onChange={(count) => setDraft({ count })}
       />
     </ChatComposerShell>
+  );
+}
+
+function ImageOutputCountSelect({
+  count,
+  outputMax,
+  onChange,
+}: {
+  count: number;
+  outputMax: number;
+  onChange: (count: number) => void;
+}) {
+  if (outputMax <= 1) return null;
+
+  return (
+    <Select.Root
+      value={String(count)}
+      onValueChange={(value) => onChange(Number.parseInt(value, 10) || 1)}
+    >
+      <ToolbarSelectTrigger
+        ariaLabel="Output count"
+        icon={<Icons.StackPlus weight="duotone" className="size-3.5" />}
+        className="h-8 w-[86px] rounded-(--radius-pill) bg-(--bg) px-3 py-0 text-[12px]"
+      />
+      <Select.Content>
+        {Array.from({ length: outputMax }, (_, index) => index + 1).map((nextCount) => (
+          <Select.Item key={nextCount} value={String(nextCount)}>
+            {nextCount}x
+          </Select.Item>
+        ))}
+      </Select.Content>
+    </Select.Root>
   );
 }
 
@@ -355,13 +410,11 @@ const MAX_FORMATTED_ASPECT_RATIO = 3;
 function ImageConfigurationPanel({
   caps,
   draft,
-  outputMax,
   sizeConstraints,
   onChange,
 }: {
   caps: ImageModelCaps | undefined;
   draft: ImageDraft;
-  outputMax: number;
   sizeConstraints: CustomSizeConstraints;
   onChange: (patch: Partial<ImageDraft>) => void;
 }) {
@@ -372,10 +425,11 @@ function ImageConfigurationPanel({
   const hasAspectRatios = !!caps?.aspectRatios?.length;
   const hasQualities = !!caps?.qualities?.length;
   const hasFormats = !!caps?.outputFormats?.length;
-  const hasCount = outputMax > 1;
   const isPreset = !!draft.size && presets.includes(draft.size);
-  const customParts = !isPreset ? parseCustomSize(draft.size) : null;
-  const isCustom = customParts !== null;
+  const customParts = parseCustomSize(draft.size);
+  const draftUsesCustomSize = allowCustom && (presets.length === 0 || (!!draft.size && !isPreset));
+  const [customSizeActive, setCustomSizeActive] = useState(draftUsesCustomSize);
+  const isCustom = allowCustom && (customSizeActive || draftUsesCustomSize);
 
   const [w, setW] = useState(customParts?.w ?? String(DIMENSION_DEFAULT));
   const [h, setH] = useState(customParts?.h ?? String(DIMENSION_DEFAULT));
@@ -388,7 +442,15 @@ function ImageConfigurationPanel({
     setError(null);
   }, [open, customParts?.w, customParts?.h]);
 
-  if (!hasSize && !hasAspectRatios && !hasQualities && !hasFormats && !hasCount) {
+  useEffect(() => {
+    // Custom mode is sticky: once the user is in Custom, typing a value that
+    // happens to match a preset (e.g. 1024x1024) should not eject them back to
+    // the preset row. We only force Custom ON here; leaving Custom happens via
+    // `selectPresetSize`.
+    if (draftUsesCustomSize) setCustomSizeActive(true);
+  }, [draftUsesCustomSize]);
+
+  if (!hasSize && !hasAspectRatios && !hasQualities && !hasFormats) {
     return null;
   }
 
@@ -421,6 +483,16 @@ function ImageConfigurationPanel({
     }
   };
 
+  const selectPresetSize = (size: string): void => {
+    setCustomSizeActive(false);
+    onChange({ size });
+  };
+
+  const selectCustomSize = (): void => {
+    setCustomSizeActive(true);
+    commitCustomSize(w, h);
+  };
+
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
@@ -432,6 +504,17 @@ function ImageConfigurationPanel({
             Configuration
           </h2>
 
+          {hasQualities ? (
+            <ConfigSection title="Quality">
+              <SegmentedControl
+                ariaLabel="Quality"
+                options={caps?.qualities ?? []}
+                value={draft.quality ?? caps?.qualities?.[0]}
+                onChange={(quality) => onChange({ quality })}
+              />
+            </ConfigSection>
+          ) : null}
+
           {hasAspectRatios ? (
             <ConfigSection title="Aspect Ratio">
               <AspectRatioGrid
@@ -442,32 +525,20 @@ function ImageConfigurationPanel({
             </ConfigSection>
           ) : null}
 
-          {presets.length > 0 ? (
+          {hasSize ? (
             <ConfigSection title="Size">
-              <Select.Root
-                value={isPreset ? (draft.size ?? presets[0]) : "custom"}
-                onValueChange={(size) => {
-                  if (size === "custom") {
-                    commitCustomSize(w, h);
-                  } else {
-                    onChange({ size });
-                  }
-                }}
-              >
-                <PanelSelectTrigger ariaLabel="Size" />
-                <Select.Content>
-                  {presets.map((preset) => (
-                    <Select.Item key={preset} value={preset}>
-                      {preset}
-                    </Select.Item>
-                  ))}
-                  {allowCustom ? <Select.Item value="custom">Custom</Select.Item> : null}
-                </Select.Content>
-              </Select.Root>
+              <SizePresetGrid
+                presets={presets}
+                value={draft.size}
+                allowCustom={allowCustom}
+                customActive={isCustom}
+                onChange={selectPresetSize}
+                onSelectCustom={selectCustomSize}
+              />
             </ConfigSection>
           ) : null}
 
-          {allowCustom ? (
+          {isCustom ? (
             <ConfigSection
               title="Dimensions"
               description={customSizeHint(sizeConstraints)}
@@ -497,57 +568,14 @@ function ImageConfigurationPanel({
             </ConfigSection>
           ) : null}
 
-          {hasQualities ? (
-            <ConfigSection title="Quality">
-              <Select.Root
-                value={draft.quality ?? caps?.qualities?.[0]}
-                onValueChange={(quality) => onChange({ quality })}
-              >
-                <PanelSelectTrigger ariaLabel="Quality" />
-                <Select.Content>
-                  {(caps?.qualities ?? []).map((quality) => (
-                    <Select.Item key={quality} value={quality}>
-                      {quality}
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select.Root>
-            </ConfigSection>
-          ) : null}
-
           {hasFormats ? (
             <ConfigSection title="Format">
-              <Select.Root
+              <SegmentedControl
+                ariaLabel="Format"
+                options={caps?.outputFormats ?? []}
                 value={draft.outputFormat ?? caps?.outputFormats?.[0]}
-                onValueChange={(outputFormat) => onChange({ outputFormat })}
-              >
-                <PanelSelectTrigger ariaLabel="Format" />
-                <Select.Content>
-                  {(caps?.outputFormats ?? []).map((format) => (
-                    <Select.Item key={format} value={format}>
-                      {format}
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select.Root>
-            </ConfigSection>
-          ) : null}
-
-          {hasCount ? (
-            <ConfigSection title="Outputs">
-              <Select.Root
-                value={String(draft.count)}
-                onValueChange={(value) => onChange({ count: Number.parseInt(value, 10) || 1 })}
-              >
-                <PanelSelectTrigger ariaLabel="Output count" />
-                <Select.Content>
-                  {Array.from({ length: outputMax }, (_, index) => index + 1).map((count) => (
-                    <Select.Item key={count} value={String(count)}>
-                      {count}x
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select.Root>
+                onChange={(outputFormat) => onChange({ outputFormat })}
+              />
             </ConfigSection>
           ) : null}
         </div>

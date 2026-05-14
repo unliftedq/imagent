@@ -15,7 +15,7 @@ import {
   AspectRatioGrid,
   ConfigSection,
   ConfigurationPopoverButton,
-  PanelSelectTrigger,
+  SegmentedControl,
 } from "./configurationPanel.js";
 import {
   createUnifiedModelOptions,
@@ -260,6 +260,18 @@ export function VideoRail() {
       validationError={validationError}
       {...(draft.parentId ? { remixId: draft.parentId, onClearRemix: resetDraft } : {})}
     >
+      <ProviderModelPicker
+        mode="video"
+        options={modelOptions}
+        providerId={draft.providerId}
+        modelId={draft.modelId}
+        favoriteKeys={favoriteKeys}
+        onToggleFavorite={toggleFavorite}
+        onChange={(next) => setDraft({ providerId: next.providerId, modelId: next.modelId })}
+      />
+
+      <VideoConfigurationPanel caps={caps} draft={draft} onChange={setDraft} />
+
       <ReferencePicker
         assetIds={draft.assetIds}
         assetsByKind={assetsByKind}
@@ -277,18 +289,6 @@ export function VideoRail() {
           pushToast({ title: "Reference failed", description: message, variant: "error" })
         }
       />
-
-      <ProviderModelPicker
-        mode="video"
-        options={modelOptions}
-        providerId={draft.providerId}
-        modelId={draft.modelId}
-        favoriteKeys={favoriteKeys}
-        onToggleFavorite={toggleFavorite}
-        onChange={(next) => setDraft({ providerId: next.providerId, modelId: next.modelId })}
-      />
-
-      <VideoConfigurationPanel caps={caps} draft={draft} onChange={setDraft} />
 
       {caps?.supportsFirstFrame ? (
         <FirstFrameToolbarPicker
@@ -342,55 +342,35 @@ function VideoConfigurationPanel({
 
           {hasResolutions ? (
             <ConfigSection title="Resolution">
-              <Select.Root
+              <SegmentedControl
+                ariaLabel="Resolution"
+                options={caps?.resolutions ?? []}
                 value={draft.resolution ?? caps?.resolutions?.[0]}
-                onValueChange={(resolution) => onChange({ resolution })}
-              >
-                <PanelSelectTrigger ariaLabel="Resolution" />
-                <Select.Content>
-                  {(caps?.resolutions ?? []).map((resolution) => (
-                    <Select.Item key={resolution} value={resolution}>
-                      {resolution}
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select.Root>
+                onChange={(resolution) => onChange({ resolution })}
+              />
             </ConfigSection>
           ) : null}
 
           {hasDurations ? (
             <ConfigSection title="Duration">
-              <Select.Root
-                value={String(draft.durationSec ?? caps?.durationsSec?.[0])}
-                onValueChange={(value) => onChange({ durationSec: Number.parseInt(value, 10) })}
-              >
-                <PanelSelectTrigger ariaLabel="Duration" />
-                <Select.Content>
-                  {(caps?.durationsSec ?? []).map((duration) => (
-                    <Select.Item key={duration} value={String(duration)}>
-                      {duration}s
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select.Root>
+              <SegmentedControl
+                ariaLabel="Duration"
+                options={caps?.durationsSec ?? []}
+                value={draft.durationSec ?? caps?.durationsSec?.[0]}
+                formatLabel={(duration) => `${duration}s`}
+                onChange={(durationSec) => onChange({ durationSec })}
+              />
             </ConfigSection>
           ) : null}
 
           {hasFps ? (
             <ConfigSection title="FPS">
-              <Select.Root
-                value={String(draft.fps ?? caps?.fpsOptions?.[0])}
-                onValueChange={(value) => onChange({ fps: Number.parseInt(value, 10) })}
-              >
-                <PanelSelectTrigger ariaLabel="FPS" />
-                <Select.Content>
-                  {(caps?.fpsOptions ?? []).map((fps) => (
-                    <Select.Item key={fps} value={String(fps)}>
-                      {fps}
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select.Root>
+              <SegmentedControl
+                ariaLabel="FPS"
+                options={caps?.fpsOptions ?? []}
+                value={draft.fps ?? caps?.fpsOptions?.[0]}
+                onChange={(fps) => onChange({ fps })}
+              />
             </ConfigSection>
           ) : null}
         </div>
