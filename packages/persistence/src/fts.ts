@@ -1,10 +1,5 @@
-import { createRequire } from "node:module";
 import type { Database as DatabaseType } from "better-sqlite3";
-
-const require = createRequire(import.meta.url);
-const nodejieba = require("nodejieba") as {
-  cutForSearch(input: string): string[];
-};
+import nodejieba from "nodejieba";
 
 const CJK_RE = /[\p{Script=Han}]+/gu;
 const HAS_CJK_RE = /[\p{Script=Han}]/u;
@@ -24,6 +19,8 @@ function cjkNgrams(input: string): string[] {
 }
 
 function shouldKeepUntokenizedToken(token: string): boolean {
+  // Keep normal whitespace tokens because jieba emits ASCII words as
+  // characters; keep single CJK characters so one-character searches work.
   return !HAS_CJK_RE.test(token) || Array.from(token).length === 1;
 }
 
