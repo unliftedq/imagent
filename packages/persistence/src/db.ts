@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import Database, { type Database as DatabaseType } from "better-sqlite3";
+import { registerFtsFunctions } from "./fts.js";
 
 /**
  * Migration descriptor. Each migration runs in a single transaction and bumps
@@ -35,6 +36,7 @@ export function openDatabase(filePath: string, options: OpenDbOptions = {}): Dat
   db.pragma("journal_mode = WAL");
   db.pragma("busy_timeout = 5000");
   db.pragma("foreign_keys = ON");
+  registerFtsFunctions(db);
   if (options.migrate !== false) {
     migrate(db, options.migrations ?? BUILTIN_MIGRATIONS);
   }
@@ -76,10 +78,12 @@ function loadBuiltinMigrations(): readonly Migration[] {
   // trip the experimental warning.
   const seaInit = readSeaAsset("001_init.sql");
   const seaFts = readSeaAsset("002_fts.sql");
-  if (seaInit && seaFts) {
+  const seaJiebaFts = readSeaAsset("003_jieba_fts.sql");
+  if (seaInit && seaFts && seaJiebaFts) {
     return [
       { version: 1, name: "001_init", sql: seaInit },
       { version: 2, name: "002_fts", sql: seaFts },
+      { version: 3, name: "003_jieba_fts", sql: seaJiebaFts },
     ];
   }
 
@@ -111,9 +115,11 @@ function loadBuiltinMigrations(): readonly Migration[] {
   if (!dir) return [];
   const init = readFileSync(path.join(dir, "001_init.sql"), "utf8");
   const fts = readFileSync(path.join(dir, "002_fts.sql"), "utf8");
+  const jiebaFts = readFileSync(path.join(dir, "003_jieba_fts.sql"), "utf8");
   return [
     { version: 1, name: "001_init", sql: init },
     { version: 2, name: "002_fts", sql: fts },
+    { version: 3, name: "003_jieba_fts", sql: jiebaFts },
   ];
 }
 

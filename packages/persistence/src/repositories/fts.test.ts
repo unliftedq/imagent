@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Asset, GalleryItem } from "@imagent/core";
 import { openDatabase } from "../db.js";
+import { ftsMatchQuery } from "../fts.js";
 import { AssetRepository } from "./assets.repository.js";
 import { GalleryRepository } from "./gallery.repository.js";
 
@@ -139,6 +140,43 @@ describe("FTS5 query planning", () => {
       const detail = plan.map((p) => p.detail).join("\n");
       expect(detail).toMatch(/VIRTUAL TABLE INDEX/i);
       expect(detail).not.toMatch(/SCAN assets\b(?! USING)/i);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("segments Chinese gallery text for FTS MATCH queries", () => {
+    const db = openDatabase(dbPath);
+    try {
+      const repo = new GalleryRepository(db);
+      repo.create(makeGalleryItem("cat", { prompt: "一只橘猫坐在窗台上" }));
+      repo.create(makeGalleryItem("dog", { prompt: "一只小狗在草地上奔跑" }));
+
+      const rows = db
+        .prepare(
+          `SELECT g.id FROM gallery_items g
+             JOIN gallery_items_fts f ON g.rowid = f.rowid
+             WHERE f.gallery_items_fts MATCH ?
+             ORDER BY g.id`,
+        )
+        .all(ftsMatchQuery("橘猫")) as Array<{ id: string }>;
+
+      expect(rows.map((r) => r.id)).toEqual(["cat"]);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("segments Chinese asset text for repository search", () => {
+    const db = openDatabase(dbPath);
+    try {
+      const repo = new AssetRepository(db);
+      repo.create(makeAsset("cat", { name: "赛博猫角色", description: "霓虹城市里的主角" }));
+      repo.create(makeAsset("dog", { name: "森林小狗角色", description: "水彩童话风格" }));
+
+      const hits = repo.list({ search: "猫角色" });
+
+      expect(hits.map((a) => a.id)).toEqual(["cat"]);
     } finally {
       db.close();
     }

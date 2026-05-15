@@ -1,5 +1,6 @@
 import type { Asset, AssetFile, AssetKind } from "@imagent/core";
 import type { DatabaseType } from "../db.js";
+import { ftsMatchQuery } from "../fts.js";
 
 interface AssetRow {
   id: string;
@@ -109,7 +110,7 @@ export class AssetRepository {
         "SELECT a.* FROM assets a JOIN assets_fts f ON a.rowid = f.rowid " +
         `WHERE f.assets_fts MATCH ?${where.length ? ` AND ${where.join(" AND ")}` : ""} ` +
         "ORDER BY a.updated_at DESC";
-      params.unshift(opts.search);
+      params.unshift(ftsMatchQuery(opts.search));
     } else {
       sql = `SELECT a.* FROM assets a ${
         where.length ? `WHERE ${where.join(" AND ")}` : ""
@@ -155,7 +156,7 @@ export class AssetRepository {
       countSql =
         "SELECT COUNT(*) AS n FROM assets a JOIN assets_fts f ON a.rowid = f.rowid " +
         `WHERE f.assets_fts MATCH ?${where.length ? ` AND ${where.join(" AND ")}` : ""}`;
-      params.unshift(opts.search);
+      params.unshift(ftsMatchQuery(opts.search));
     } else {
       const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
       baseSql = `SELECT a.* FROM assets a ${whereSql} ORDER BY a.updated_at DESC`;

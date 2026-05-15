@@ -6,6 +6,7 @@
   "useCodeCache": true,
   "assets": {
     "001_init.sql": "../../packages/persistence/src/migrations/001_init.sql",
-    "002_fts.sql": "../../packages/persistence/src/migrations/002_fts.sql"
+    "002_fts.sql": "../../packages/persistence/src/migrations/002_fts.sql",
+    "003_jieba_fts.sql": "../../packages/persistence/src/migrations/003_jieba_fts.sql"
   }
 }
