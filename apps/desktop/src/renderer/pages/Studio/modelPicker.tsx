@@ -53,8 +53,8 @@ export function ProviderModelPicker({
           <span className="min-w-0 truncate font-semibold">{triggerLabel}</span>
         </button>
       </Popover.Trigger>
-      <Popover.Content className="w-[420px] p-2">
-        <div className="flex max-h-[460px] flex-col gap-2 overflow-y-auto">
+      <Popover.Content className="flex w-[420px] flex-col p-2">
+        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
           {favorites.length > 0 ? (
             <ModelPickerSection title="Favorites">
               {favorites.map((option) => (

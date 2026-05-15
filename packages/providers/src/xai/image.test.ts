@@ -16,8 +16,10 @@ const PNG_BYTES = new Uint8Array([
 interface FakeModelOptions {
   /** Override the doGenerate result. */
   bytes?: Uint8Array;
-  /** Override the doGenerate behaviour completely. */
-  doGenerate?: (opts: { n?: number; abortSignal?: AbortSignal }) => Promise<{
+  /** Override the doGenerate behaviour completely. Receives the full opts
+   * object generateImage() forwards (prompt, n, abortSignal, size,
+   * aspectRatio, providerOptions, ...). */
+  doGenerate?: (opts: Record<string, unknown>) => Promise<{
     images: Uint8Array[];
     warnings: never[];
     response: { timestamp: Date; modelId: string; headers: undefined };
@@ -25,9 +27,11 @@ interface FakeModelOptions {
 }
 
 function makeFakeModel(modelId: string, opts: FakeModelOptions = {}): ImageModel {
-  const stub = vi.fn(async ({ n, abortSignal }: { n?: number; abortSignal?: AbortSignal }) => {
+  const stub = vi.fn(async (allOpts: Record<string, unknown>) => {
+    const abortSignal = allOpts.abortSignal as AbortSignal | undefined;
     if (abortSignal?.aborted) throw new Error("aborted");
-    if (opts.doGenerate) return opts.doGenerate({ n, abortSignal });
+    if (opts.doGenerate) return opts.doGenerate(allOpts);
+    const n = allOpts.n as number | undefined;
     const count = typeof n === "number" && n > 0 ? n : 1;
     const one = opts.bytes ?? PNG_BYTES;
     const images = Array.from({ length: count }, () => one);
@@ -90,7 +94,8 @@ describe("XaiImageProvider", () => {
   it("AbortSignal propagates: aborted signal surfaces as ProviderError", async () => {
     const factory = vi.fn((id: string) =>
       makeFakeModel(id, {
-        doGenerate: async ({ abortSignal }) => {
+        doGenerate: async (opts) => {
+          const abortSignal = opts.abortSignal as AbortSignal | undefined;
           if (abortSignal?.aborted) {
             const err = new Error("operation was aborted");
             (err as { name?: string }).name = "AbortError";
@@ -142,5 +147,53 @@ describe("XaiImageProvider", () => {
   // shape and our wrapper converts it).
   it("ProviderAbortError class is importable", () => {
     expect(typeof ProviderAbortError).toBe("function");
+  });
+
+  it("forwards aspectRatio and quality→providerOptions.xai.resolution", async () => {
+    let capturedArgs: Record<string, unknown> | undefined;
+    const factory = vi.fn((id: string) =>
+      makeFakeModel(id, {
+        doGenerate: async (opts) => {
+          capturedArgs = opts as unknown as Record<string, unknown>;
+          return {
+            images: [PNG_BYTES],
+            warnings: [] as never[],
+            response: { timestamp: new Date(), modelId: id, headers: undefined },
+          };
+        },
+      }),
+    );
+    const p = makeProvider(factory);
+    await p.generate({ ...baseRequest, aspectRatio: "16:9", quality: "2k" });
+    // generateImage() unpacks our top-level args and passes them to
+    // ImageModelV3.doGenerate as a single options object. We assert the
+    // SDK sees both knobs.
+    expect(capturedArgs?.aspectRatio).toBe("16:9");
+    const opts = capturedArgs?.providerOptions as
+      | { xai?: { resolution?: string } }
+      | undefined;
+    expect(opts?.xai?.resolution).toBe("2k");
+  });
+
+  it("applies catalog default quality `1k` when caller omits it", async () => {
+    let capturedArgs: Record<string, unknown> | undefined;
+    const factory = vi.fn((id: string) =>
+      makeFakeModel(id, {
+        doGenerate: async (opts) => {
+          capturedArgs = opts as unknown as Record<string, unknown>;
+          return {
+            images: [PNG_BYTES],
+            warnings: [] as never[],
+            response: { timestamp: new Date(), modelId: id, headers: undefined },
+          };
+        },
+      }),
+    );
+    const p = makeProvider(factory);
+    await p.generate(baseRequest);
+    const opts = capturedArgs?.providerOptions as
+      | { xai?: { resolution?: string } }
+      | undefined;
+    expect(opts?.xai?.resolution).toBe("1k");
   });
 });

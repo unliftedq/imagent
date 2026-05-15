@@ -98,7 +98,7 @@ export class FluxImageProvider implements ImageProvider {
     const merged = applyImageDefaults(req, model);
     validateImageRequestAgainstModel(this.id, merged, model);
 
-    // BFL endpoints are model-named (`/v1/flux-pro-1.1`, etc.).
+    // BFL endpoints are model-named (`/v1/flux-2-pro`, etc.).
     const url = `${this.baseUrl}/v1/${encodeURIComponent(model.id)}`;
     const body = await this.buildSubmitBody(merged);
     const submitOpts: { signal?: AbortSignal; schema: typeof FluxSubmitResponseSchema } = {

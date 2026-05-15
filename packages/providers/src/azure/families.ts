@@ -9,8 +9,8 @@ import type { ImageModelDef } from "@imagent/core";
  *   - `mai-images` — Microsoft MAI-Image-2 / MAI-Image-2e. Routed via
  *     `/mai/v1/images/generations` with raw `width`/`height` parameters and
  *     PNG-only output.
- *   - `flux-bfl` — Black Forest Labs FLUX models (FLUX.2 [pro|flex],
- *     FLUX.1 Kontext [pro], FLUX1.1 [pro]). Routed via the BFL
+ *   - `flux-bfl` — Black Forest Labs FLUX models (FLUX.2 family:
+ *     [pro|max|flex|Klein 9B|Klein 4B]). Routed via the BFL
  *     provider-specific API at
  *     `/providers/blackforestlabs/v1/<path>?api-version=preview`. Async
  *     submit + poll, Bearer auth.
@@ -36,8 +36,6 @@ export const FOUNDRY_FLUX_MODELS: ReadonlyMap<string, { path: string; bodyModel:
   new Map([
     ["flux-2-pro", { path: "flux-2-pro", bodyModel: "FLUX.2-pro" }],
     ["flux-2-flex", { path: "flux-2-flex", bodyModel: "FLUX.2-flex" }],
-    ["flux-kontext-pro", { path: "flux-kontext-pro", bodyModel: "FLUX.1-Kontext-pro" }],
-    ["flux-pro-1.1", { path: "flux-pro-1.1", bodyModel: "FLUX-1.1-pro" }],
   ]);
 
 /**

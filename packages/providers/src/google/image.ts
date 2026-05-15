@@ -174,7 +174,14 @@ export class GoogleImageProvider implements ImageProvider {
       responseModalities: ["IMAGE"],
     };
     if (signal) config.abortSignal = signal;
-    if (merged.aspectRatio) config.imageConfig = { aspectRatio: merged.aspectRatio };
+    // Nano Banana takes both `aspectRatio` and `imageSize` (1K/2K/4K/512)
+    // inside the same `imageConfig` block. We surface `imageSize` to users
+    // as `quality` because catalog-wise it's the quality knob for these
+    // models — Gemini 3.x supports it, Gemini 2.5 Flash Image does not.
+    const imageConfig: Record<string, unknown> = {};
+    if (merged.aspectRatio) imageConfig.aspectRatio = merged.aspectRatio;
+    if (merged.quality) imageConfig.imageSize = merged.quality;
+    if (Object.keys(imageConfig).length > 0) config.imageConfig = imageConfig;
 
     let response: Awaited<
       ReturnType<NonNullable<GoogleGenAIClientLike["models"]["generateContent"]>>

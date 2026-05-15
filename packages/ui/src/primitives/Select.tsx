@@ -43,8 +43,15 @@ export const SelectContent = forwardRef<
       <SelectPrimitive.Content
         ref={ref}
         position={position}
+        // `collisionPadding` keeps the popover off the window edges; the
+        // height cap stops long option lists from overflowing the viewport
+        // (Radix injects `--radix-select-content-available-height` only when
+        // `position="popper"`). With overflow hidden + a bounded height the
+        // built-in ScrollUp/Down buttons handle scrolling.
+        collisionPadding={8}
         className={cn(
           "z-50 min-w-[var(--radix-select-trigger-width)] overflow-hidden " +
+            "max-h-[var(--radix-select-content-available-height)] " +
             "rounded-(--radius-md) border border-(--border) bg-(--bg) " +
             "shadow-[0_4px_24px_-8px_rgba(0,0,0,0.08)]",
           className,

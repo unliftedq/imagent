@@ -117,7 +117,7 @@ const FLUX_POLL_BACKOFF = 1.6;
  *   - `mai-images` (MAI-Image-2 / MAI-Image-2e):
  *     `{endpoint}/mai/v1/images/generations` — raw HTTP, `api-key: <key>`
  *     header, body `{model, prompt, width, height}`, PNG-only response.
- *   - `flux-bfl` (FLUX.2 [pro|flex], FLUX.1 Kontext [pro], FLUX1.1 [pro]):
+ *   - `flux-bfl` (FLUX.2 [pro|flex]):
  *     `{endpoint}/providers/blackforestlabs/v1/<path>?api-version=preview`
  *     on the same Foundry host as everything else. `Authorization: Bearer
  *     <key>`. Async submit + poll (mirrors BFL's direct contract) with

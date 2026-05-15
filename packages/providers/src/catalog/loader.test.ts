@@ -94,8 +94,10 @@ describe("loadCatalog", () => {
 
     const videoCaps = loaded.models.video["veo-3.0-generate-001"]?.capabilities;
     expect(videoCaps?.resolutions).toEqual(["720p"]);
-    expect(videoCaps?.supportsFirstFrame).toBe(true);
-    expect(videoCaps?.supportsLastFrame).toBe(true);
+    // Bundled defaults for Veo 3 stable: first/last frame are not wired through
+    // the provider and not supported by the stable model (Veo 3.1 preview only).
+    expect(videoCaps?.supportsFirstFrame).toBe(false);
+    expect(videoCaps?.supportsLastFrame).toBe(false);
   });
 
   it("can read the bundled default from a packaged asset path", async () => {

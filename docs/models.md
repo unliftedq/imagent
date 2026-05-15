@@ -87,18 +87,6 @@ This page summarizes the bundled default model catalog in `packages/providers/sr
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Supported; max 4 input images.
 
-### Black Forest Labs: `flux-kontext-pro`
-
-- **Size controls:** Common `WIDTHxHEIGHT` presets plus arbitrary-size support; custom width/height must be 256–1440 pixels and multiples of 32.
-- **Output controls:** Max outputs 1.
-- **Reference-image support:** Supported; max 1 input image.
-
-### Black Forest Labs: `flux-pro-1.1`
-
-- **Size controls:** Common `WIDTHxHEIGHT` presets plus arbitrary-size support; custom width/height must be 256–1440 pixels and multiples of 32.
-- **Output controls:** Max outputs 1.
-- **Reference-image support:** Not supported.
-
 ### ByteDance / Volcano Ark: `doubao-seedream-4-0-250828`
 
 - **Size / ratio controls:** Resolution tokens `1K`, `2K`, `4K`.

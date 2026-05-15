@@ -117,11 +117,23 @@ export class XaiImageProvider implements ImageProvider {
     if (merged.size && /^\d+x\d+$/.test(merged.size)) {
       args.size = merged.size as `${number}x${number}`;
     }
+    // Grok Imagine rejects `size`; aspectRatio is the primary dimensional knob
+    // (forwarded by `@ai-sdk/xai` as `aspect_ratio`). We also surface `quality`
+    // ("1k"/"2k") to users and route it through `providerOptions.xai.resolution`,
+    // which is the SDK's xAI-specific resolution enum.
+    if (merged.aspectRatio && /^[\w.]+:[\w.]+$/.test(merged.aspectRatio)) {
+      args.aspectRatio = merged.aspectRatio as `${number}:${number}`;
+    }
+    const xaiOpts: Record<string, unknown> = {};
+    if (merged.quality) xaiOpts.resolution = merged.quality;
     if (merged.references.length > 0) {
       const dataUrls = (await loadImageReferences(merged.references, this.id)).map(imageDataUrl);
+      xaiOpts.referenceImages = dataUrls;
+    }
+    if (Object.keys(xaiOpts).length > 0) {
       (args as Record<string, unknown>).providerOptions = {
         ...((args as { providerOptions?: Record<string, unknown> }).providerOptions ?? {}),
-        xai: { referenceImages: dataUrls },
+        xai: xaiOpts,
       };
     }
     if (signal) args.abortSignal = signal;

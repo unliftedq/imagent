@@ -14,19 +14,27 @@ export const PopoverClose = PopoverPrimitive.Close;
 export const PopoverContent = forwardRef<
   ElementRef<typeof PopoverPrimitive.Content>,
   ComponentPropsWithoutRef<typeof PopoverPrimitive.Content>
->(function PopoverContent({ className, align = "start", sideOffset = 8, ...rest }, ref) {
+>(function PopoverContent(
+  { className, align = "start", sideOffset = 8, collisionPadding = 8, ...rest },
+  ref,
+) {
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Content
         ref={ref}
         align={align}
         sideOffset={sideOffset}
+        collisionPadding={collisionPadding}
         className={cn(
           "z-50 rounded-(--radius-md) border border-(--border) " +
             "bg-(--bg) text-(--text) " +
             // Clay system: no shadow on content surfaces beyond the documented
             // hairline border.
             "p-3 outline-none " +
+            // Never exceed the space Radix measured between the trigger and
+            // the viewport edge — otherwise long popovers overflow off-screen
+            // and the bottom rows become unreachable.
+            "max-h-[var(--radix-popover-content-available-height)] overflow-hidden " +
             "data-[state=open]:animate-in data-[state=closed]:animate-out " +
             "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
           className,
