@@ -91,6 +91,18 @@ export const GOOGLE_IMAGE_MODELS: Record<string, ImageModelDef> = {
     },
     defaults: { aspectRatio: "1:1", count: 1 },
   },
+  "gemini-3.1-flash-image-preview": {
+    id: "gemini-3.1-flash-image-preview",
+    displayName: "Nano Banana 2 (preview)",
+    capabilities: {
+      aspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
+      qualities: ["512", "1K", "2K", "4K"],
+      maxReferences: 14,
+      maxOutputs: 1,
+      supportsStyleRef: true,
+    },
+    defaults: { aspectRatio: "1:1", quality: "1K", count: 1 },
+  },
 };
 
 export const FLUX_IMAGE_MODELS: Record<string, ImageModelDef> = {
@@ -190,11 +202,12 @@ export const XAI_IMAGE_MODELS: Record<string, ImageModelDef> = {
     displayName: "Grok Imagine",
     capabilities: {
       aspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
+      qualities: ["1k", "2k"],
       maxReferences: 5,
       maxOutputs: 10,
       supportsStyleRef: true,
     },
-    defaults: { aspectRatio: "1:1", count: 1 },
+    defaults: { aspectRatio: "1:1", quality: "1k", count: 1 },
   },
 };
 

@@ -69,6 +69,45 @@ describe("GoogleImageProvider", () => {
       model: "gemini-2.5-flash-image",
       contents: baseRequest.prompt,
     });
+    // gemini-2.5-flash-image has no `qualities` cap, so no imageSize is sent.
+    expect(params.config?.imageConfig?.imageSize).toBeUndefined();
+  });
+
+  it("Nano Banana 2 forwards `quality` to imageConfig.imageSize (1K/2K/4K/512)", async () => {
+    const client = makeFakeClient();
+    client.models.generateContent.mockResolvedValue({
+      candidates: [
+        { content: { parts: [{ inlineData: { data: PNG_B64, mimeType: "image/png" } }] } },
+      ],
+    });
+    const p = makeProvider(client);
+    await p.generate({
+      ...baseRequest,
+      model: "gemini-3.1-flash-image-preview",
+      quality: "2K",
+    });
+    const [params] = client.models.generateContent.mock.calls[0] ?? [];
+    expect(params).toBeDefined();
+    expect(params.config?.imageConfig).toEqual({
+      aspectRatio: "1:1",
+      imageSize: "2K",
+    });
+  });
+
+  it("Nano Banana 2 applies default quality `1K` when caller omits it", async () => {
+    const client = makeFakeClient();
+    client.models.generateContent.mockResolvedValue({
+      candidates: [
+        { content: { parts: [{ inlineData: { data: PNG_B64, mimeType: "image/png" } }] } },
+      ],
+    });
+    const p = makeProvider(client);
+    await p.generate({
+      ...baseRequest,
+      model: "gemini-3.1-flash-image-preview",
+    });
+    const [params] = client.models.generateContent.mock.calls[0] ?? [];
+    expect(params.config?.imageConfig?.imageSize).toBe("1K");
   });
 
   it("SDK error surfaces as ProviderError", async () => {

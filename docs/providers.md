@@ -66,7 +66,7 @@ The `azure` provider id covers every image model family hosted by an Azure AI Fo
 
 - **Azure OpenAI image models** — `gpt-image-2`, `gpt-image-1.5`, `gpt-image-1-mini`. Routed via `/openai/v1/images/generations` on the `*.services.ai.azure.com` host.
 - **Microsoft MAI-Image models** — `MAI-Image-2`, `MAI-Image-2e`. Routed via `/mai/v1/images/generations` with raw `width`/`height`. PNG-only output, no reference images.
-- **Black Forest Labs FLUX models** — `flux-2-pro`, `flux-2-flex`, `flux-kontext-pro`, `flux-pro-1.1`. Routed via the BFL provider-specific Foundry API at `/providers/blackforestlabs/v1/<path>?api-version=preview` on the same host.
+- **Black Forest Labs FLUX models** — `flux-2-pro`, `flux-2-flex`. Routed via the BFL provider-specific Foundry API at `/providers/blackforestlabs/v1/<path>?api-version=preview` on the same host.
 
 The provider dispatches automatically by looking up each deployment's canonical `modelId`, so the only thing you do per family is map your deployment names — there's nothing else to configure.
 
@@ -99,7 +99,7 @@ Config routing example mixing families on the same resource:
         { "id": "my-prod-mai-image-2", "modelId": "MAI-Image-2" },
         { "id": "my-prod-mai-image-2e", "modelId": "MAI-Image-2e" },
         { "id": "my-prod-flux-2-pro", "modelId": "flux-2-pro" },
-        { "id": "my-prod-flux-kontext-pro", "modelId": "flux-kontext-pro" }
+        { "id": "my-prod-flux-2-flex", "modelId": "flux-2-flex" }
       ]
     }
   }
@@ -126,7 +126,7 @@ imagent image generate "obsidian glass cathedral on a wind-swept cliff" \
 
 **MAI Image constraints:** both `width` and `height` must be ≥ 768 pixels and `width × height` must be ≤ 1,048,576 (i.e. 1024×1024). Either dimension may exceed 1024 if the total stays within the limit.
 
-**FLUX on Azure Foundry:** map your Azure deployment to the canonical FLUX id you deployed — `flux-2-pro`, `flux-2-flex`, `flux-kontext-pro`, or `flux-pro-1.1`. FLUX.2 [flex] needs Microsoft's [registration approval](https://customervoice.microsoft.com/Pages/ResponsePage.aspx?id=v4j5cvGGr0GRqy180BHbR7en2Ais5pxKtso_Pz4b1_xUMzM2TDBZRko3QldSSFlWREhQSEpSSEdKVyQlQCN0PWcu) before deployment.
+**FLUX on Azure Foundry:** map your Azure deployment to the canonical FLUX id you deployed — `flux-2-pro` or `flux-2-flex`. FLUX.2 [flex] needs Microsoft's [registration approval](https://customervoice.microsoft.com/Pages/ResponsePage.aspx?id=v4j5cvGGr0GRqy180BHbR7en2Ais5pxKtso_Pz4b1_xUMzM2TDBZRko3QldSSFlWREhQSEpSSEdKVyQlQCN0PWcu) before deployment.
 
 ### Google AI Studio (`google`)
 
