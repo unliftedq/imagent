@@ -14,14 +14,12 @@
             "2048x1152",
             "1152x2048",
             "3840x2160",
-            "2160x3840",
-            "auto"
+            "2160x3840"
           ],
           "qualities": [
             "low",
             "medium",
-            "high",
-            "auto"
+            "high"
           ],
           "outputFormats": [
             "png",
@@ -60,8 +58,7 @@
           "qualities": [
             "low",
             "medium",
-            "high",
-            "auto"
+            "high"
           ],
           "outputFormats": [
             "png",
@@ -92,8 +89,7 @@
           "qualities": [
             "low",
             "medium",
-            "high",
-            "auto"
+            "high"
           ],
           "outputFormats": [
             "png",

@@ -16,20 +16,20 @@ This page summarizes the bundled default model catalog in `packages/providers/sr
 
 ### OpenAI / Azure OpenAI: `gpt-image-2`
 
-- **Size / ratio controls:** Standard presets `1024x1024`, `1536x1024`, `1024x1536`, `auto`; arbitrary `WIDTHxHEIGHT` also supported when dimensions are divisible by 16, aspect ratio is between 1:3 and 3:1, and resolution is within current OpenAI limits (catalog records max edge/pixel limits from current API docs).
-- **Output controls:** `quality`: `low`, `medium`, `high`, `auto`; `outputFormat`: `png`, `jpeg`, `webp`; max outputs 10.
+- **Size / ratio controls:** Standard presets `1024x1024`, `1536x1024`, `1024x1536`; arbitrary `WIDTHxHEIGHT` also supported when dimensions are divisible by 16, aspect ratio is between 1:3 and 3:1, and resolution is within current OpenAI limits (catalog records max edge/pixel limits from current API docs).
+- **Output controls:** `quality`: `low`, `medium`, `high`; `outputFormat`: `png`, `jpeg`, `webp`; max outputs 10.
 - **Reference-image support:** Supported; max 16 images; each PNG/JPEG/WebP reference must be under 50 MB.
 
 ### OpenAI / Azure OpenAI: `gpt-image-1.5`
 
 - **Size / ratio controls:** `1024x1024`, `1024x1536`, `1536x1024`.
-- **Output controls:** `quality`: `low`, `medium`, `high`, `auto`; `outputFormat`: `png`, `jpeg`, `webp`; max outputs 10.
+- **Output controls:** `quality`: `low`, `medium`, `high`; `outputFormat`: `png`, `jpeg`, `webp`; max outputs 10.
 - **Reference-image support:** Supported; max 16 images; each PNG/JPEG/WebP reference must be under 50 MB.
 
 ### OpenAI / Azure OpenAI: `gpt-image-1-mini`
 
 - **Size / ratio controls:** `1024x1024`, `1024x1536`, `1536x1024`.
-- **Output controls:** `quality`: `low`, `medium`, `high`, `auto`; `outputFormat`: `png`, `jpeg`, `webp`; max outputs 10.
+- **Output controls:** `quality`: `low`, `medium`, `high`; `outputFormat`: `png`, `jpeg`, `webp`; max outputs 10.
 - **Reference-image support:** Supported; max 16 images; each PNG/JPEG/WebP reference must be under 50 MB.
 
 ### Azure Foundry / Microsoft MAI Image: `MAI-Image-2` / `MAI-Image-2e`

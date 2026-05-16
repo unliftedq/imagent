@@ -3,6 +3,7 @@ import { Icons } from "@imagent/ui";
 import type { ProviderId } from "@imagent/ipc";
 import { api } from "../../lib/api.js";
 import { useUIStore } from "../../state/useUIStore.js";
+import { pickModelLogo } from "./modelLogo.js";
 
 interface ProviderEntry {
   providerId: ProviderId;
@@ -111,6 +112,7 @@ function ModelRowView({
   onConfigureProvider: () => void;
 }) {
   const anyConfigured = row.providers.some((p) => p.configured);
+  const logo = pickModelLogo(row.id);
   return (
     <li
       className={`flex flex-col gap-3 rounded-(--radius-lg) border border-(--border) bg-(--bg) p-5 ${
@@ -118,15 +120,37 @@ function ModelRowView({
       }`}
     >
       <div className="flex items-center justify-between gap-4">
-        <div className="flex flex-col gap-0.5">
-          <span className="text-(length:--text-title-sm) font-semibold text-(--text)">
-            {row.displayName ?? row.id}
+        <div className="flex items-center gap-3">
+          <span
+            className={
+              "flex size-9 shrink-0 items-center justify-center rounded-(--radius-md) " +
+              "border border-(--border) bg-white"
+            }
+          >
+            {logo ? (
+              <img
+                src={logo.src}
+                alt={logo.alt}
+                className="size-5"
+                draggable={false}
+              />
+            ) : (
+              <Icons.Brain
+                weight="duotone"
+                className="size-5 text-(--text-muted)"
+              />
+            )}
           </span>
-          {row.displayName ? (
-            <code className="font-(family-name:--font-mono) text-(length:--text-caption) text-(--text-muted)">
-              {row.id}
-            </code>
-          ) : null}
+          <div className="flex flex-col gap-0.5">
+            <span className="text-(length:--text-title-sm) font-semibold text-(--text)">
+              {row.displayName ?? row.id}
+            </span>
+            {row.displayName ? (
+              <code className="font-(family-name:--font-mono) text-(length:--text-caption) text-(--text-muted)">
+                {row.id}
+              </code>
+            ) : null}
+          </div>
         </div>
         {!anyConfigured ? (
           <button

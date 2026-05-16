@@ -19,8 +19,9 @@ import {
 } from "./definitions.js";
 
 export function ProviderListRow({
-  icon,
-  iconClassName,
+  iconSrc,
+  iconAlt,
+  fallbackIcon,
   name,
   description,
   summary,
@@ -28,8 +29,12 @@ export function ProviderListRow({
   onConfigure,
   onTest,
 }: {
-  icon: React.ComponentType<{ className?: string; weight?: "regular" | "bold" | "fill" }>;
-  iconClassName?: string;
+  iconSrc?: string;
+  iconAlt?: string;
+  fallbackIcon?: React.ComponentType<{
+    className?: string;
+    weight?: "regular" | "bold" | "fill";
+  }>;
   name: string;
   description: string;
   summary?: ProviderSummary;
@@ -40,7 +45,7 @@ export function ProviderListRow({
   const configured = summary?.configured ?? false;
   return (
     <div className="flex items-center gap-4 border-t border-(--border-faint) px-5 py-4 first:border-t-0">
-      <ProviderIcon icon={icon} iconClassName={iconClassName} />
+      <ProviderIcon iconSrc={iconSrc} iconAlt={iconAlt} fallbackIcon={fallbackIcon} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-(length:--text-title-sm) font-semibold text-(--text)">{name}</h2>
@@ -132,8 +137,9 @@ export function ProviderConfigModal({
           </div>
           <div className="flex items-start gap-4 pr-10">
             <ProviderIcon
-              icon={isCustom ? Icons.Plug : (builtIn?.icon ?? Icons.Plug)}
-              iconClassName={builtIn?.iconClassName}
+              iconSrc={isCustom ? undefined : builtIn?.iconSrc}
+              iconAlt={isCustom ? undefined : builtIn?.iconAlt}
+              fallbackIcon={Icons.Plug}
             />
             <div>
               <Dialog.Title className="text-(length:--text-title-lg) font-semibold text-(--text)">
@@ -394,15 +400,27 @@ function SecretField({
 }
 
 export function ProviderIcon({
-  icon: Icon,
-  iconClassName,
+  iconSrc,
+  iconAlt,
+  fallbackIcon: Fallback,
 }: {
-  icon: React.ComponentType<{ className?: string; weight?: "regular" | "bold" | "fill" }>;
-  iconClassName?: string;
+  iconSrc?: string;
+  iconAlt?: string;
+  fallbackIcon?: React.ComponentType<{
+    className?: string;
+    weight?: "regular" | "bold" | "fill";
+  }>;
 }) {
+  if (iconSrc) {
+    return (
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-(--radius-md) border border-(--border) bg-white">
+        <img src={iconSrc} alt={iconAlt ?? ""} className="size-5" draggable={false} />
+      </span>
+    );
+  }
   return (
     <span className="flex size-10 shrink-0 items-center justify-center rounded-(--radius-md) bg-(--surface-raised) text-(--text)">
-      <Icon weight="bold" className={iconClassName ? `size-5 ${iconClassName}` : "size-5"} />
+      {Fallback ? <Fallback weight="bold" className="size-5" /> : null}
     </span>
   );
 }
