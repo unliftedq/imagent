@@ -2,6 +2,7 @@ import type { ImageModelCaps, ImageModelDef, ImageRequest } from "@imagent/core"
 import type { ProviderId } from "@imagent/ipc";
 import { Button, Icons, Popover, Select } from "@imagent/ui";
 import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
+import { useT, type MessageKey } from "../../i18n/index.js";
 import { api } from "../../lib/api.js";
 import { useAssetsStore } from "../../state/useAssetsStore.js";
 import { useConfigStore } from "../../state/useConfigStore.js";
@@ -31,6 +32,7 @@ export function ImageRail() {
   const resetDraft = useUIStore((state) => state.resetStudioDraft);
   const navigate = useUIStore((state) => state.navigate);
   const pushToast = useUIStore((state) => state.pushToast);
+  const t = useT();
 
   const summaries = useConfigStore((state) => state.summaries);
   const appPrefs = useConfigStore((state) => state.appPrefs);
@@ -106,7 +108,7 @@ export function ImageRail() {
       setModelsByProvider(nextModels);
       if (failures.length > 0) {
         pushToast({
-          title: "Could not load some image models",
+          title: t("studio.modelPicker.couldNotLoadImage"),
           description: failures.slice(0, 2).join("\n"),
           variant: "error",
         });
@@ -199,15 +201,15 @@ export function ImageRail() {
   const generate = async (): Promise<void> => {
     setValidationError(null);
     if (!draft.prompt.trim()) {
-      setValidationError("Prompt is required.");
+      setValidationError(t("studio.composer.promptRequired"));
       return;
     }
     if (!draft.providerId || !draft.modelId) {
-      setValidationError("Choose a provider and model first.");
+      setValidationError(t("studio.composer.chooseProvider"));
       return;
     }
     if (caps?.maxOutputs && typeof draft.count === "number" && draft.count > caps.maxOutputs) {
-      setValidationError(`Model accepts at most ${caps.maxOutputs} outputs (got ${draft.count}).`);
+      setValidationError(t("studio.maxOutputsError", { max: caps.maxOutputs, count: draft.count }));
       return;
     }
 
@@ -267,8 +269,8 @@ export function ImageRail() {
         configuredProviders.find((provider) => provider.id === draft.providerId)?.displayName ??
         draft.providerId;
       pushToast({
-        title: `${providerLabel} generation failed`,
-        description: message || "Provider returned no error message.",
+        title: t("studio.generationFailed", { provider: providerLabel }),
+        description: message || t("providers.tested.noErrorMessage"),
         variant: "error",
       });
     } finally {
@@ -281,12 +283,12 @@ export function ImageRail() {
       <div className="rounded-(--radius-md) border border-(--border) bg-(--surface-raised) p-4 text-center">
         <Icons.Plug weight="duotone" className="mx-auto size-8 text-(--text-muted)" />
         <h2 className="mt-2 text-[15px] font-semibold tracking-[-0.01em] text-(--text)">
-          No providers
+          {t("studio.noProviders")}
         </h2>
-        <p className="mt-1 text-[12px] text-(--text-muted)">Add an API key to start generating.</p>
+        <p className="mt-1 text-[12px] text-(--text-muted)">{t("studio.noProvidersDesc")}</p>
         <div className="mt-3 inline-flex">
           <Button size="sm" onClick={() => navigate("providers")}>
-            Open Providers
+            {t("studio.openProviders")}
           </Button>
         </div>
       </div>
@@ -302,7 +304,7 @@ export function ImageRail() {
       prompt={draft.prompt}
       onPromptChange={(prompt) => setDraft({ prompt })}
       onSubmit={() => void generate()}
-      placeholder="Describe the image you want to generate"
+      placeholder={t("studio.composer.imagePlaceholder")}
       submitting={submitting}
       disabled={!draft.prompt.trim()}
       validationError={validationError}
@@ -340,7 +342,7 @@ export function ImageRail() {
         maxReferencesHint={caps?.maxReferences}
         onRequestCreateAsset={() => navigate("assets")}
         onError={(message) =>
-          pushToast({ title: "Reference failed", description: message, variant: "error" })
+          pushToast({ title: t("studio.referenceFailed"), description: message, variant: "error" })
         }
       />
 
@@ -362,6 +364,7 @@ function ImageOutputCountSelect({
   outputMax: number;
   onChange: (count: number) => void;
 }) {
+  const t = useT();
   if (outputMax <= 1) return null;
 
   return (
@@ -370,7 +373,7 @@ function ImageOutputCountSelect({
       onValueChange={(value) => onChange(Number.parseInt(value, 10) || 1)}
     >
       <ToolbarSelectTrigger
-        ariaLabel="Output count"
+        ariaLabel={t("studio.outputCount")}
         icon={<Icons.StackPlus weight="duotone" className="size-3.5" />}
         className="h-8 w-[86px] rounded-(--radius-pill) bg-(--bg) px-3 py-0 text-[12px]"
       />
@@ -419,6 +422,7 @@ function ImageConfigurationPanel({
   onChange: (patch: Partial<ImageDraft>) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const t = useT();
   const presets = caps?.sizes ?? [];
   const allowCustom = caps?.supportsArbitrarySize === true;
   const hasSize = presets.length > 0 || allowCustom;
@@ -459,14 +463,14 @@ function ImageConfigurationPanel({
     const wNum = Number(nextW);
     const hNum = Number(nextH);
     if (!Number.isFinite(wNum) || !Number.isFinite(hNum)) {
-      setError("Width and height must be numbers.");
+      setError(t("assets.validation.widthHeightNumeric"));
       return false;
     }
     if (!Number.isInteger(wNum) || wNum <= 0 || !Number.isInteger(hNum) || hNum <= 0) {
-      setError("Width and height must be positive integers.");
+      setError(t("assets.validation.widthHeightPositive"));
       return false;
     }
-    const validationError = validateCustomSize(wNum, hNum, sizeConstraints);
+    const validationError = validateCustomSize(wNum, hNum, sizeConstraints, t);
     if (validationError) {
       setError(validationError);
       return false;
@@ -496,18 +500,18 @@ function ImageConfigurationPanel({
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
-        <ConfigurationPopoverButton label="Image configuration" />
+        <ConfigurationPopoverButton label={t("studio.imageConfig")} />
       </Popover.Trigger>
       <Popover.Content align="start" className="w-[420px] p-0">
         <div className="flex max-h-[70vh] flex-col gap-5 overflow-y-auto p-5">
           <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-(--text)">
-            Configuration
+            {t("studio.configuration")}
           </h2>
 
           {hasQualities ? (
-            <ConfigSection title="Quality">
+            <ConfigSection title={t("studio.quality")}>
               <SegmentedControl
-                ariaLabel="Quality"
+                ariaLabel={t("studio.quality")}
                 options={caps?.qualities ?? []}
                 value={draft.quality ?? caps?.qualities?.[0]}
                 onChange={(quality) => onChange({ quality })}
@@ -516,7 +520,7 @@ function ImageConfigurationPanel({
           ) : null}
 
           {hasAspectRatios ? (
-            <ConfigSection title="Aspect Ratio">
+            <ConfigSection title={t("studio.aspectRatio")}>
               <AspectRatioGrid
                 ratios={caps?.aspectRatios ?? []}
                 value={draft.aspectRatio ?? caps?.aspectRatios?.[0]}
@@ -526,7 +530,7 @@ function ImageConfigurationPanel({
           ) : null}
 
           {hasSize ? (
-            <ConfigSection title="Size">
+            <ConfigSection title={t("studio.size")}>
               <SizePresetGrid
                 presets={presets}
                 value={draft.size}
@@ -540,12 +544,12 @@ function ImageConfigurationPanel({
 
           {isCustom ? (
             <ConfigSection
-              title="Dimensions"
+              title={t("studio.dimensions")}
               description={customSizeHint(sizeConstraints)}
               trailing={isCustom ? <Icons.Check weight="bold" className="size-3.5" /> : null}
             >
               <DimensionRow
-                label="Width"
+                label={t("assets.width")}
                 value={w}
                 constraints={sizeConstraints.width}
                 onChange={setW}
@@ -553,7 +557,7 @@ function ImageConfigurationPanel({
                 onKeyDown={handleKeyDown}
               />
               <DimensionRow
-                label="Height"
+                label={t("assets.height")}
                 value={h}
                 constraints={sizeConstraints.height}
                 onChange={setH}
@@ -569,9 +573,9 @@ function ImageConfigurationPanel({
           ) : null}
 
           {hasFormats ? (
-            <ConfigSection title="Format">
+            <ConfigSection title={t("studio.format")}>
               <SegmentedControl
-                ariaLabel="Format"
+                ariaLabel={t("studio.format")}
                 options={caps?.outputFormats ?? []}
                 value={draft.outputFormat ?? caps?.outputFormats?.[0]}
                 onChange={(outputFormat) => onChange({ outputFormat })}
@@ -616,38 +620,42 @@ function customSizeConstraints(caps: ImageModelCaps | undefined): CustomSizeCons
   };
 }
 
+type TFn = (key: MessageKey, params?: Record<string, string | number>) => string;
+
 function isCustomSizeAllowed(
   dimensions: { width: number; height: number },
   constraints: CustomSizeConstraints,
 ): boolean {
-  return validateCustomSize(dimensions.width, dimensions.height, constraints) === null;
+  const noopT: TFn = (key) => key;
+  return validateCustomSize(dimensions.width, dimensions.height, constraints, noopT) === null;
 }
 
 function validateCustomSize(
   width: number,
   height: number,
   constraints: CustomSizeConstraints,
+  t: TFn,
 ): string | null {
   if (width <= 0) {
-    return "Width must be greater than 0.";
+    return t("assets.validation.widthPositive");
   }
   if (height <= 0) {
-    return "Height must be greater than 0.";
+    return t("assets.validation.heightPositive");
   }
   if (width < constraints.width.min || width > constraints.width.max) {
-    return `Width must be between ${constraints.width.min} and ${constraints.width.max}.`;
+    return t("studio.widthRange", { min: constraints.width.min, max: constraints.width.max });
   }
   if (height < constraints.height.min || height > constraints.height.max) {
-    return `Height must be between ${constraints.height.min} and ${constraints.height.max}.`;
+    return t("studio.heightRange", { min: constraints.height.min, max: constraints.height.max });
   }
   if (constraints.width.step > 1 && width % constraints.width.step !== 0) {
-    return `Width must be a multiple of ${constraints.width.step}.`;
+    return t("studio.widthStep", { step: constraints.width.step });
   }
   if (constraints.height.step > 1 && height % constraints.height.step !== 0) {
-    return `Height must be a multiple of ${constraints.height.step}.`;
+    return t("studio.heightStep", { step: constraints.height.step });
   }
   if (constraints.maxPixels !== undefined && width * height > constraints.maxPixels) {
-    return `Width × height must be at most ${constraints.maxPixels.toLocaleString()} pixels.`;
+    return t("studio.maxPixels", { max: constraints.maxPixels.toLocaleString() });
   }
 
   const aspectRatio = width / height;
@@ -655,13 +663,13 @@ function validateCustomSize(
     constraints.minAspectRatio !== undefined &&
     aspectRatio + ASPECT_RATIO_EPSILON < constraints.minAspectRatio
   ) {
-    return `Aspect ratio must be at least ${formatAspectRatio(constraints.minAspectRatio)}.`;
+    return t("studio.minAspectRatio", { min: formatAspectRatio(constraints.minAspectRatio) });
   }
   if (
     constraints.maxAspectRatio !== undefined &&
     aspectRatio - ASPECT_RATIO_EPSILON > constraints.maxAspectRatio
   ) {
-    return `Aspect ratio must be at most ${formatAspectRatio(constraints.maxAspectRatio)}.`;
+    return t("studio.maxAspectRatio", { max: formatAspectRatio(constraints.maxAspectRatio) });
   }
   return null;
 }
@@ -718,8 +726,7 @@ function DimensionRow({
           onChange(e.target.value);
           onCommit?.(e.target.value);
         }}
-        aria-label={`${label} slider`}
-        className={
+        aria-label={`${label} slider`}        className={
           "h-1 flex-1 cursor-ew-resize appearance-none rounded-full bg-(--surface) " +
           "accent-(--accent) " +
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--accent)/40"

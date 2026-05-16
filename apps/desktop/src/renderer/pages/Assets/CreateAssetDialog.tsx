@@ -2,10 +2,18 @@ import type { Asset, AssetKind, GalleryItem } from "@imagent/core";
 import { IpcClientError } from "@imagent/ipc";
 import { Button, Dialog, Icons, Input, Textarea } from "@imagent/ui";
 import { useEffect, useState } from "react";
+import { useT, type MessageKey } from "../../i18n/index.js";
 import { useAssetsStore } from "../../state/useAssetsStore.js";
 import { useUIStore } from "../../state/useUIStore.js";
 import { AssetField } from "./AssetField.js";
 import { KINDS } from "./constants.js";
+
+const KIND_SINGULAR_KEYS: Record<AssetKind, MessageKey> = {
+  character: "assets.kind.character",
+  object: "assets.kind.object",
+  background: "assets.kind.background",
+  style: "assets.kind.style",
+};
 
 interface CreateDialogProps {
   open: boolean;
@@ -41,6 +49,7 @@ export function CreateAssetDialog({
   onCreated,
   gallerySource = null,
 }: CreateDialogProps) {
+  const t = useT();
   const create = useAssetsStore((s) => s.create);
   const createFromGalleryItem = useAssetsStore((s) => s.createFromGalleryItem);
   const pushToast = useUIStore((s) => s.pushToast);
@@ -87,8 +96,8 @@ export function CreateAssetDialog({
     if (!file) return;
     if (extras.length > 0) {
       pushToast({
-        title: "One reference image allowed",
-        description: "Only the first selected image was attached.",
+        title: t("studio.oneReferenceAllowed"),
+        description: t("studio.onlyFirstAttached"),
         variant: "warning",
       });
     }
@@ -118,16 +127,16 @@ export function CreateAssetDialog({
   const submit = async (): Promise<void> => {
     setError(null);
     if (!name.trim()) {
-      setError("Name is required.");
+      setError(t("assets.validation.nameRequired"));
       return;
     }
     const usingGallerySource = Boolean(gallerySource) && files.length === 0;
     if (kind !== "style" && files.length === 0 && !usingGallerySource) {
-      setError(`${kind} assets require one reference image.`);
+      setError(t("assets.validation.kindNeedsReference", { kind: t(KIND_SINGULAR_KEYS[kind]) }));
       return;
     }
     if (kind === "style" && files.length === 0 && !usingGallerySource && !promptSnippet.trim()) {
-      setError("Style assets require one reference image OR a prompt snippet.");
+      setError(t("assets.validation.styleNeedsReference"));
       return;
     }
 
@@ -177,16 +186,16 @@ export function CreateAssetDialog({
     <Dialog.Root open={open} onOpenChange={(v) => (v ? null : onClose())}>
       <Dialog.Content className="max-w-2xl">
         <Dialog.Title className="text-(length:--text-title-lg) font-semibold text-(--text)">
-          New asset
+          {t("assets.newAssetTitle")}
         </Dialog.Title>
         <Dialog.Description className="mt-1 text-(length:--text-body-sm) text-(--text-muted)">
           {gallerySource
-            ? "Save this gallery item as a reusable reference."
-            : `Create a reusable ${kind === "style" ? "style" : kind} that can be picked from any generation.`}
+            ? t("assets.dialog.galleryDesc")
+            : t("assets.dialog.createDesc", { kind: t(KIND_SINGULAR_KEYS[kind]).toLowerCase() })}
         </Dialog.Description>
 
         <div className="mt-4 flex flex-col gap-4">
-          <AssetField label="Kind">
+          <AssetField label={t("assets.kind")}>
             <div className="flex gap-1 rounded-(--radius-pill) bg-(--surface) p-1">
               {KINDS.map((k) => (
                 <button
@@ -201,13 +210,13 @@ export function CreateAssetDialog({
                       : "text-(--text-muted) hover:text-(--text)")
                   }
                 >
-                  {k}
+                  {t(KIND_SINGULAR_KEYS[k])}
                 </button>
               ))}
             </div>
           </AssetField>
 
-          <AssetField label="Name">
+          <AssetField label={t("assets.name")}>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -216,25 +225,25 @@ export function CreateAssetDialog({
             />
           </AssetField>
 
-          <AssetField label="Description (optional)">
+          <AssetField label={t("assets.description")}>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Notes about this asset…"
+              placeholder={t("assets.notes")}
               rows={2}
             />
           </AssetField>
 
           {kind === "style" ? (
-            <AssetField label="Prompt snippet (optional)">
+            <AssetField label={t("assets.promptSnippetOptional")}>
               <Textarea
                 value={promptSnippet}
                 onChange={(e) => setPromptSnippet(e.target.value)}
-                placeholder="e.g. soft pastel watercolor, hand-drawn lines"
+                placeholder={t("assets.promptSnippetPlaceholder")}
                 rows={2}
               />
               <span className="text-(length:--text-caption) text-(--text-faint)">
-                Used when the model lacks reference support. Reference image takes precedence.
+                {t("assets.promptSnippetHint")}
               </span>
             </AssetField>
           ) : null}
@@ -282,7 +291,7 @@ export function CreateAssetDialog({
                       {attachedFile.name}
                     </div>
                     <div className="text-(length:--text-caption) text-(--text-muted)">
-                      Reference image attached. Drop or browse to replace.
+                      {t("assets.referenceAttached")}
                     </div>
                   </div>
                 </div>
@@ -300,18 +309,20 @@ export function CreateAssetDialog({
                       {attachedGallerySource.relPath}
                     </div>
                     <div className="text-(length:--text-caption) text-(--text-muted)">
-                      Gallery reference attached. Drop or browse to replace.
+                      {t("assets.galleryReferenceAttached")}
                     </div>
                   </div>
                 </div>
               ) : (
                 <>
                   <p className="text-(length:--text-caption) text-(--text-muted)">
-                    Drag one reference image here, or
-                    <span className="ml-1 text-(--text) underline underline-offset-2">browse</span>
+                    {t("assets.dragHere")}
+                    <span className="ml-1 text-(--text) underline underline-offset-2">
+                      {t("assets.browse")}
+                    </span>
                   </p>
                   <p className="mt-1 text-(length:--text-caption) text-(--text-faint)">
-                    One reference image per asset. None attached.
+                    {t("assets.noReferenceAttached")}
                   </p>
                 </>
               )}
@@ -342,10 +353,10 @@ export function CreateAssetDialog({
 
         <div className="mt-6 flex items-center justify-end gap-2">
           <Button variant="ghost" onClick={onClose} disabled={submitting}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button onClick={() => void submit()} disabled={submitting}>
-            {submitting ? "Saving…" : "Create asset"}
+            {submitting ? t("common.saving") : t("assets.createAsset")}
           </Button>
         </div>
       </Dialog.Content>

@@ -196,6 +196,7 @@ export type SecretsWrite = z.infer<typeof SecretsWriteSchema>;
 
 export const AppPreferencesPayloadSchema = z.object({
   theme: z.enum(["light", "dark", "system"]),
+  locale: z.enum(["system", "en", "zh"]),
   defaultImageModel: z.object({ providerId: z.string(), modelId: z.string() }).nullable(),
   defaultVideoModel: z.object({ providerId: z.string(), modelId: z.string() }).nullable(),
   defaultOutputDir: z.string().nullable(),
@@ -301,6 +302,13 @@ export const contract = {
     output: z.object({ paths: z.array(z.string()) }),
   },
   "system.resetConfig": { input: z.void(), output: z.void() },
+  /**
+   * Best-effort system locale (e.g. `en-US`, `zh-CN`). Returns Electron's
+   * `app.getLocale()` from the main process. The renderer combines this
+   * with the user's `locale` preference to resolve the effective UI
+   * language (see `i18n/` in the desktop renderer).
+   */
+  "system.locale": { input: z.void(), output: z.object({ locale: z.string() }) },
 
   // Image / Video
   "image.generate": {

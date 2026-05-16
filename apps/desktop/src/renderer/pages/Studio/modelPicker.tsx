@@ -3,6 +3,7 @@ import type { ProviderId, ProviderSummary } from "@imagent/ipc";
 import { Icons, Popover } from "@imagent/ui";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
+import { useT } from "../../i18n/index.js";
 import type { StudioMode } from "../../state/useUIStore.js";
 import { MODEL_FAVORITES_LS_KEY, type ModelFavoriteKey, type UnifiedModelOption } from "./types.js";
 
@@ -24,12 +25,13 @@ export function ProviderModelPicker({
   onChange: (next: { providerId: ProviderId; modelId: string }) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const t = useT();
   const current = options.find(
     (option) => option.providerId === providerId && option.modelId === modelId,
   );
   const favorites = options.filter((option) => favoriteKeys.has(modelFavoriteKey(mode, option)));
   const providers = uniqueProviders(options);
-  const triggerLabel = current?.modelId ?? "Choose model";
+  const triggerLabel = current?.modelId ?? t("studio.chooseModel");
 
   const choose = (option: UnifiedModelOption): void => {
     onChange({ providerId: option.providerId, modelId: option.modelId });
@@ -56,7 +58,7 @@ export function ProviderModelPicker({
       <Popover.Content className="flex w-[420px] flex-col p-2">
         <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
           {favorites.length > 0 ? (
-            <ModelPickerSection title="Favorites">
+            <ModelPickerSection title={t("gallery.favorites")}>
               {favorites.map((option) => (
                 <ModelPickerRow
                   key={`fav:${option.providerId}:${option.modelId}`}
@@ -122,6 +124,7 @@ function ModelPickerRow({
   onChoose: () => void;
   onToggleFavorite: (key: ModelFavoriteKey) => void;
 }) {
+  const t = useT();
   const favoriteKey = modelFavoriteKey(mode, option);
 
   return (
@@ -146,7 +149,7 @@ function ModelPickerRow({
       </button>
       <button
         type="button"
-        aria-label={favorite ? "Unfavorite model" : "Favorite model"}
+        aria-label={favorite ? t("studio.modelPicker.unfavorite") : t("studio.modelPicker.favorite")}
         onClick={(event) => {
           event.stopPropagation();
           onToggleFavorite(favoriteKey);

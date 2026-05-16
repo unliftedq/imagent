@@ -1,6 +1,7 @@
 import type { GalleryItem } from "@imagent/core";
 import { Button, Icons, Popover } from "@imagent/ui";
 import type { DragEvent } from "react";
+import { useT } from "../../i18n/index.js";
 import { resolveGalleryUrl } from "./utils.js";
 
 export function FirstFrameToolbarPicker({
@@ -12,6 +13,8 @@ export function FirstFrameToolbarPicker({
   onChange: (value: string | null) => void;
   recentFrames: GalleryItem[];
 }) {
+  const t = useT();
+
   const onDrop = (event: DragEvent<HTMLElement>): void => {
     event.preventDefault();
     const file = event.dataTransfer.files[0];
@@ -20,7 +23,7 @@ export function FirstFrameToolbarPicker({
     if (typeof path === "string" && path.length > 0) onChange(path);
   };
 
-  const label = value ? (value.split(/[\\/]/).pop() ?? value) : "First frame";
+  const label = value ? (value.split(/[\\/]/).pop() ?? value) : t("studio.firstFrame");
 
   return (
     <Popover.Root>
@@ -41,10 +44,10 @@ export function FirstFrameToolbarPicker({
       <Popover.Content className="w-[340px]">
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-[12px] font-semibold text-(--text)">First frame</span>
+            <span className="text-[12px] font-semibold text-(--text)">{t("studio.firstFrame")}</span>
             {value ? (
               <Button size="sm" variant="ghost" onClick={() => onChange(null)}>
-                Clear
+                {t("common.clear")}
               </Button>
             ) : null}
           </div>
@@ -58,11 +61,11 @@ export function FirstFrameToolbarPicker({
               "px-3 py-3 text-center text-[12px] text-(--text-muted)"
             }
           >
-            {value ? <span className="truncate">{label}</span> : <span>Drop image here</span>}
+            {value ? <span className="truncate">{label}</span> : <span>{t("studio.dropImageHere")}</span>}
           </button>
           {recentFrames.length === 0 ? (
             <div className="rounded-(--radius-md) border border-(--border-faint) px-3 py-4 text-center text-[12px] text-(--text-muted)">
-              No recent images.
+              {t("studio.noRecentImages")}
             </div>
           ) : (
             <div className="grid max-h-[220px] grid-cols-4 gap-1.5 overflow-y-auto">

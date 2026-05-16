@@ -86,6 +86,12 @@ export type DefaultModelPreference = z.infer<typeof DefaultModelPreferenceSchema
 
 export const AppPreferencesSchema = z.object({
   theme: z.enum(["light", "dark", "system"]).default("system"),
+  /**
+   * UI display language. `"system"` follows Electron's `app.getLocale()` —
+   * any `zh-*` locale resolves to Chinese, everything else falls back to
+   * English. Explicit `"en"`/`"zh"` overrides the system locale.
+   */
+  locale: z.enum(["system", "en", "zh"]).default("system"),
   defaultImageModel: DefaultModelPreferenceSchema.nullable().default(null),
   defaultVideoModel: DefaultModelPreferenceSchema.nullable().default(null),
   defaultOutputDir: z.string().nullable().default(null),

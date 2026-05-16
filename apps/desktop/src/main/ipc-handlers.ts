@@ -611,6 +611,13 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       await runtime.refresh();
     },
 
+    "system.locale": async () => {
+      // Electron's app.getLocale() returns an IETF-style tag like `en-US`,
+      // `zh-CN`, `zh-Hant-TW`. We pass it through unchanged so the renderer
+      // can decide how to bucket it.
+      return { locale: app.getLocale() };
+    },
+
     "workspace.kv.get": async ({ key }) => kv.get(key),
     "workspace.kv.set": async ({ key, value }) => {
       kv.set(key, value);

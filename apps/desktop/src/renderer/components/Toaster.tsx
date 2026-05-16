@@ -7,6 +7,7 @@ import {
   ToastTitle,
   ToastViewport,
 } from "@imagent/ui";
+import { useT } from "../i18n/index.js";
 import { useUIStore, type ToastEntry } from "../state/useUIStore.js";
 
 /**
@@ -35,6 +36,7 @@ function ToastEntryView({
   toast: ToastEntry;
   onDismiss: () => void;
 }) {
+  const t = useT();
   const accent = ACCENT_BY_VARIANT[toast.variant];
   const Icon = ICON_BY_VARIANT[toast.variant];
   return (
@@ -60,7 +62,7 @@ function ToastEntryView({
       </div>
       <ToastClose
         className="-mr-1 -mt-1 inline-flex size-7 shrink-0 items-center justify-center rounded-(--radius-sm) text-(--text-muted) hover:bg-(--surface) hover:text-(--text)"
-        aria-label="Dismiss"
+        aria-label={t("common.dismiss")}
       >
         <Icons.X weight="bold" className="size-4" />
       </ToastClose>

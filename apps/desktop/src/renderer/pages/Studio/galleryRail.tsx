@@ -2,6 +2,7 @@ import type { Asset, AssetKind, GalleryItem } from "@imagent/core";
 import { Icons } from "@imagent/ui";
 import type { DragEvent, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
+import { useT } from "../../i18n/index.js";
 import { useAssetsStore } from "../../state/useAssetsStore.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
 import { type StudioMode, useUIStore } from "../../state/useUIStore.js";
@@ -75,6 +76,7 @@ export function StudioGalleryRail({
   const [assetFilter, setAssetFilter] = useState<AssetFilter>("all");
   const [assetDialogItem, setAssetDialogItem] = useState<GalleryItem | null>(null);
   const [assetDialogKind, setAssetDialogKind] = useState<AssetKind>("character");
+  const t = useT();
 
   useEffect(() => {
     void refreshGallery();
@@ -97,8 +99,8 @@ export function StudioGalleryRail({
   const openSaveAsAssetDialog = (item: GalleryItem): void => {
     if (item.kind === "video" && !item.thumbPath) {
       pushToast({
-        title: "Thumbnail unavailable",
-        description: "This video item needs a thumbnail before it can become an asset.",
+        title: t("gallery.toast.thumbnailUnavailable"),
+        description: t("gallery.toast.thumbnailUnavailableDesc"),
         variant: "warning",
       });
       return;
@@ -124,13 +126,13 @@ export function StudioGalleryRail({
   if (collapsed) {
     return (
       <aside
-        aria-label="Studio library collapsed"
+        aria-label={t("studio.libraryCollapsed")}
         className="flex h-full w-[44px] shrink-0 flex-col items-center border-l border-(--border) bg-(--bg) py-3"
       >
         <button
           type="button"
-          aria-label="Expand library"
-          title="Expand library"
+          aria-label={t("studio.expandLibrary")}
+          title={t("studio.expandLibrary")}
           onClick={() => onCollapsedChange(false)}
           className="inline-flex size-8 items-center justify-center rounded-(--radius-sm) text-(--text-muted) hover:bg-(--surface) hover:text-(--text) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring)"
         >
@@ -138,7 +140,7 @@ export function StudioGalleryRail({
         </button>
         <div className="mt-4 flex -rotate-90 items-center gap-2 whitespace-nowrap text-[12px] font-semibold text-(--text-muted)">
           <Icons.SquaresFour weight="duotone" className="size-4" />
-          Library
+          {t("studio.library")}
         </div>
       </aside>
     );
@@ -146,15 +148,15 @@ export function StudioGalleryRail({
 
   return (
     <aside
-      aria-label="Studio library"
+      aria-label={t("studio.library")}
       className="flex h-full w-[var(--rail-gallery,300px)] shrink-0 flex-col min-h-0 overflow-hidden border-l border-(--border) bg-(--bg)"
     >
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
-        <span className="text-[15px] font-semibold tracking-[-0.01em] text-(--text)">Library</span>
+        <span className="text-[15px] font-semibold tracking-[-0.01em] text-(--text)">{t("studio.library")}</span>
         <button
           type="button"
-          aria-label="Collapse library"
-          title="Collapse library"
+          aria-label={t("studio.collapseLibrary")}
+          title={t("studio.collapseLibrary")}
           onClick={() => onCollapsedChange(true)}
           className="inline-flex size-7 items-center justify-center rounded-(--radius-sm) text-(--text-muted) hover:bg-(--surface) hover:text-(--text) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring)"
         >
@@ -164,10 +166,10 @@ export function StudioGalleryRail({
 
       <div className="grid grid-cols-2 gap-1 px-4 pb-3">
         <TabButton active={tab === "gallery"} onClick={() => setTab("gallery")}>
-          Gallery
+          {t("nav.gallery")}
         </TabButton>
         <TabButton active={tab === "assets"} onClick={() => setTab("assets")}>
-          Assets
+          {t("nav.assets")}
         </TabButton>
       </div>
 
@@ -175,18 +177,18 @@ export function StudioGalleryRail({
         <>
           <div className="flex items-center gap-1 px-4 pb-3">
             <FilterChip active={galleryFilter === "all"} onClick={() => setGalleryFilter("all")}>
-              All
+              {t("gallery.all")}
             </FilterChip>
             <FilterChip
               active={galleryFilter === "newest"}
               onClick={() => setGalleryFilter("newest")}
             >
-              Newest
+              {t("studio.filterNewest")}
             </FilterChip>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
             {filteredGallery.length === 0 ? (
-              <EmptyRailState>No items yet — generate something to see it here.</EmptyRailState>
+              <EmptyRailState>{t("studio.emptyGalleryRail")}</EmptyRailState>
             ) : (
               <div className="grid grid-cols-2 gap-2">
                 {filteredGallery.map((item) => (
@@ -195,7 +197,7 @@ export function StudioGalleryRail({
               </div>
             )}
           </div>
-          <RailFooterButton onClick={onViewAll}>View all gallery</RailFooterButton>
+          <RailFooterButton onClick={onViewAll}>{t("studio.viewAllGallery")}</RailFooterButton>
         </>
       ) : (
         <>
@@ -206,13 +208,13 @@ export function StudioGalleryRail({
                 active={assetFilter === filter}
                 onClick={() => setAssetFilter(filter)}
               >
-                {assetFilterLabel(filter)}
+                {assetFilterLabel(filter, t)}
               </FilterChip>
             ))}
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
             {filteredAssets.length === 0 ? (
-              <EmptyRailState>No assets yet — create one to reuse it here.</EmptyRailState>
+              <EmptyRailState>{t("studio.emptyAssetsRail")}</EmptyRailState>
             ) : (
               <div className="grid grid-cols-2 gap-2">
                 {filteredAssets.map((asset) => (
@@ -221,7 +223,7 @@ export function StudioGalleryRail({
               </div>
             )}
           </div>
-          <RailFooterButton onClick={onViewAssets}>Open assets</RailFooterButton>
+          <RailFooterButton onClick={onViewAssets}>{t("studio.openAssets")}</RailFooterButton>
         </>
       )}
       <CreateAssetDialog
@@ -234,8 +236,8 @@ export function StudioGalleryRail({
           setTab("assets");
           setAssetFilter(asset.kind);
           pushToast({
-            title: "Asset saved",
-            description: `${asset.name} is available in Assets.`,
+            title: t("gallery.toast.assetSaved"),
+            description: t("gallery.toast.assetSavedDesc", { name: asset.name }),
             variant: "success",
           });
         }}
@@ -252,6 +254,7 @@ function GalleryThumb({
   item: GalleryItem;
   onSaveAsAsset: (item: GalleryItem) => void;
 }) {
+  const t = useT();
   const src =
     item.kind === "video"
       ? item.thumbPath
@@ -301,8 +304,8 @@ function GalleryThumb({
       </button>
       <button
         type="button"
-        aria-label="Save as asset"
-        title="Save as asset"
+        aria-label={t("gallery.preview.saveAsAsset")}
+        title={t("gallery.preview.saveAsAsset")}
         onClick={() => onSaveAsAsset(item)}
         className={
           "absolute left-1 top-1 inline-flex size-6 items-center justify-center " +
@@ -329,6 +332,7 @@ function GalleryThumb({
 }
 
 function AssetThumb({ asset }: { asset: Asset }) {
+  const t = useT();
   const src = resolveAssetThumbnailUrl(asset);
 
   return (
@@ -339,7 +343,7 @@ function AssetThumb({ asset }: { asset: Asset }) {
         setDragData(event, { source: "asset", id: asset.id, kind: asset.kind })
       }
       title={asset.name}
-      aria-label={`${assetKindLabel(asset.kind)} asset ${asset.name}`}
+      aria-label={t("studio.assetAriaLabel", { kind: assetKindLabel(asset.kind, t), name: asset.name })}
       className="group flex min-w-0 flex-col overflow-hidden rounded-(--radius-sm) border border-(--border) bg-(--surface-sunken) text-left transition-colors duration-(--motion-fast) hover:border-(--border-strong) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring)"
     >
       <span className="relative aspect-square w-full bg-(--surface)">
@@ -357,7 +361,7 @@ function AssetThumb({ asset }: { asset: Asset }) {
           </span>
         )}
         <span className="absolute bottom-1 left-1 rounded-(--radius-pill) bg-black/55 px-1.5 py-0.5 text-[9px] font-semibold text-white">
-          {assetKindLabel(asset.kind)}
+          {assetKindLabel(asset.kind, t)}
         </span>
       </span>
       <span className="truncate px-2 py-1.5 text-[11px] text-(--text)">{asset.name}</span>
@@ -450,20 +454,22 @@ function Badge({ className, children }: { className: string; children: ReactNode
   );
 }
 
-function assetFilterLabel(filter: AssetFilter): string {
-  return filter === "all" ? "All" : assetKindLabel(filter);
+type TFn = ReturnType<typeof useT>;
+
+function assetFilterLabel(filter: AssetFilter, t: TFn): string {
+  return filter === "all" ? t("gallery.all") : assetKindLabel(filter, t);
 }
 
-function assetKindLabel(kind: AssetKind): string {
+function assetKindLabel(kind: AssetKind, t: TFn): string {
   switch (kind) {
     case "character":
-      return "Character";
+      return t("assets.kind.character");
     case "object":
-      return "Object";
+      return t("assets.kind.object");
     case "background":
-      return "Background";
+      return t("assets.kind.background");
     case "style":
-      return "Style";
+      return t("assets.kind.style");
   }
 }
 

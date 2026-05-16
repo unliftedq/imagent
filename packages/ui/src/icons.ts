@@ -54,6 +54,7 @@ export {
   Sun,
   TiktokLogo,
   Timer,
+  Translate,
   Trash,
   UploadSimple,
   UserCircle,
