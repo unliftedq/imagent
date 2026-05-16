@@ -4,4 +4,4 @@
  * compiled binary at M8 and reading package metadata from inside that binary
  * would be awkward.
  */
-export const CLI_VERSION = "0.2.0";
+export const CLI_VERSION = "0.2.1";
