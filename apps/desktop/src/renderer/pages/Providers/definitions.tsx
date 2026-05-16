@@ -5,20 +5,21 @@ import type {
   ProviderRoutingPayload,
   SecretsWrite,
 } from "@imagent/ipc";
-import { Icons } from "@imagent/ui";
-import { useId } from "react";
-
-type ProviderIconComponent = React.ComponentType<{
-  className?: string;
-  weight?: "regular" | "bold" | "fill";
-}>;
+import azureUrl from "../../assets/logos/azure.svg?url";
+import bflUrl from "../../assets/logos/bfl.svg?url";
+import bytedanceUrl from "../../assets/logos/bytedance.svg?url";
+import googleUrl from "../../assets/logos/google.svg?url";
+import openaiUrl from "../../assets/logos/openai.svg?url";
+import xaiUrl from "../../assets/logos/xai.svg?url";
 
 export interface BuiltInProvider {
   id: string;
   name: string;
   description: string;
-  icon: ProviderIconComponent;
-  iconClassName?: string;
+  /** URL of the provider's brand SVG (downloaded from Lobehub's CDN). */
+  iconSrc: string;
+  /** Accessible label for the logo. */
+  iconAlt: string;
   endpointLabel?: string;
   endpointPlaceholder?: string;
   mappingLabel?: string;
@@ -47,14 +48,15 @@ export const BUILT_IN_PROVIDERS: readonly BuiltInProvider[] = [
     id: "openai",
     name: "OpenAI",
     description: "GPT Image models through the OpenAI API.",
-    icon: Icons.OpenAiLogo,
+    iconSrc: openaiUrl,
+    iconAlt: "OpenAI",
   },
   {
     id: "azure",
     name: "Azure",
     description: "Azure Foundry deployments — GPT Image, MAI Image, and FLUX families on one resource.",
-    icon: AzureBrandIcon,
-    iconClassName: "text-[#0078D4]",
+    iconSrc: azureUrl,
+    iconAlt: "Azure",
     endpointLabel: "Endpoint",
     endpointPlaceholder: "https://my-resource.services.ai.azure.com",
     mappingLabel: "Deployment",
@@ -63,20 +65,22 @@ export const BUILT_IN_PROVIDERS: readonly BuiltInProvider[] = [
     id: "google",
     name: "Google AI Studio",
     description: "Imagen, Nano Banana, and Veo with a shared Google API key.",
-    icon: Icons.GoogleLogo,
-    iconClassName: "text-[#4285F4]",
+    iconSrc: googleUrl,
+    iconAlt: "Google",
   },
   {
     id: "flux-bfl",
     name: "Black Forest Labs",
     description: "Black Forest Labs image generation models.",
-    icon: FluxBrandIcon,
+    iconSrc: bflUrl,
+    iconAlt: "Black Forest Labs",
   },
   {
     id: "bytedance",
     name: "ByteDance",
     description: "Seedream and Seedance through BytePlus ModelArk endpoints.",
-    icon: ByteDanceBrandIcon,
+    iconSrc: bytedanceUrl,
+    iconAlt: "ByteDance",
     endpointLabel: "Endpoint",
     endpointPlaceholder: "https://ark.cn-beijing.volces.com/api/v3",
   },
@@ -84,126 +88,13 @@ export const BUILT_IN_PROVIDERS: readonly BuiltInProvider[] = [
     id: "xai",
     name: "xAI",
     description: "Grok image and video generation APIs.",
-    icon: Icons.XLogo,
+    iconSrc: xaiUrl,
+    iconAlt: "xAI",
   },
 ] as const;
 
 export const BUILT_IN_IDS: ReadonlySet<string> = new Set(BUILT_IN_PROVIDERS.map((p) => p.id));
 const PROVIDER_ID_RE = /^[a-z0-9][a-z0-9_-]*$/;
-
-function AzureBrandIcon({
-  className,
-}: {
-  className?: string;
-  weight?: "regular" | "bold" | "fill";
-}) {
-  const baseId = useId().replaceAll(":", "");
-  const leftGradientId = `${baseId}-azure-left`;
-  const shadowGradientId = `${baseId}-azure-shadow`;
-  const rightGradientId = `${baseId}-azure-right`;
-
-  return (
-    <svg
-      viewBox="0 0 128 128"
-      aria-hidden="true"
-      className={className}
-      fill="none"
-      preserveAspectRatio="xMidYMid meet"
-    >
-      <defs>
-        <linearGradient
-          id={leftGradientId}
-          x1="60.919"
-          y1="9.602"
-          x2="18.667"
-          y2="134.423"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="#114A8B" />
-          <stop offset="1" stopColor="#0669BC" />
-        </linearGradient>
-        <linearGradient
-          id={shadowGradientId}
-          x1="74.117"
-          y1="67.772"
-          x2="64.344"
-          y2="71.076"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopOpacity=".3" />
-          <stop offset=".071" stopOpacity=".2" />
-          <stop offset=".321" stopOpacity=".1" />
-          <stop offset=".623" stopOpacity=".05" />
-          <stop offset="1" stopOpacity="0" />
-        </linearGradient>
-        <linearGradient
-          id={rightGradientId}
-          x1="68.742"
-          y1="5.961"
-          x2="115.122"
-          y2="129.525"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="#3CCBF4" />
-          <stop offset="1" stopColor="#2892DF" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M46.09.002h40.685L44.541 125.137a6.485 6.485 0 0 1-6.146 4.413H6.733a6.482 6.482 0 0 1-5.262-2.699 6.474 6.474 0 0 1-.876-5.848L39.944 4.414A6.488 6.488 0 0 1 46.09 0z"
-        fill={`url(#${leftGradientId})`}
-        transform="translate(.587 4.468) scale(.91904)"
-      />
-      <path
-        d="M97.28 81.607H37.987a2.743 2.743 0 0 0-1.874 4.751l38.1 35.562a5.991 5.991 0 0 0 4.087 1.61h33.574z"
-        fill="#0078d4"
-      />
-      <path
-        d="M46.09.002A6.434 6.434 0 0 0 39.93 4.5L.644 120.897a6.469 6.469 0 0 0 6.106 8.653h32.48a6.942 6.942 0 0 0 5.328-4.531l7.834-23.089 27.985 26.101a6.618 6.618 0 0 0 4.165 1.519h36.396l-15.963-45.616-46.533.011L86.922.002z"
-        fill={`url(#${shadowGradientId})`}
-        transform="translate(.587 4.468) scale(.91904)"
-      />
-      <path
-        d="M98.055 4.408A6.476 6.476 0 0 0 91.917.002H46.575a6.478 6.478 0 0 1 6.137 4.406l39.35 116.594a6.476 6.476 0 0 1-6.137 8.55h45.344a6.48 6.48 0 0 0 6.136-8.55z"
-        fill={`url(#${rightGradientId})`}
-        transform="translate(.587 4.468) scale(.91904)"
-      />
-    </svg>
-  );
-}
-
-function FluxBrandIcon({
-  className,
-}: {
-  className?: string;
-  weight?: "regular" | "bold" | "fill";
-}) {
-  return (
-    <svg viewBox="0 0 196 140" aria-hidden="true" className={className} fill="none">
-      <path
-        d="M139.8 59.8h-20.9L98.1 30.5 33 122h20.9l44.2-62.2h20.8L74.8 122h20.9l44.1-62.2 56.2 79.2h-15.7v.1h-17.2v-17l-23.3-32.9-23.2 32.8v17.1H62.7v.1H41.8v-.1H0L98.1 1l41.7 58.8Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
-function ByteDanceBrandIcon({
-  className,
-}: {
-  className?: string;
-  weight?: "regular" | "bold" | "fill";
-}) {
-  return (
-    <svg viewBox="0 0 32 32" aria-hidden="true" className={className} fill="none">
-      <image
-        href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAB8UlEQVR4Ae3BMYiWdRwA4Of3fn/1AiEbrNlukihqCcK1hCIMB0Hv0vv0IDKHCGoJShAnW6LpwE7vLowMPm64hqhoaAoigjbBMZukqDRR+d5fd7TY+fm+75cHLvc8Nm3aEP1kOid1dTQ5lNZU7td0hnDKVp/o4ljuwFe2mbSquB/9fAjncBDfazObjxv6Qtgt9Kwq1hzOFxUL1ht601J8ZpRX8zFhGc/pYib3qC0LO92hWFNsx6PW63nYKP18QljBLm1mk5umVOYxYZ1iXEdyr3ARO7R5OkPtfVucRBihGMfRfB0fYYs2Mzmh8jGmNSi66GfPbR/gLV30cyeWsUeLos1Mbhcu2GqfZmnNbO5WW8GkDopmTwrf4RntwrF8Xu1zPKKjotkJoatnpS/RM4Zi41T+h8oDVhnfFaQNUhlH+gZP4YZ2qXYaCxpUujur8pL0u3Y3pb7iPdzQoNKuVntHeM25uK1NumroBQuxZD60KZqk68Jhi7Gsm0vCy5biso6Ke7uCV5yPH3XzrT8dMIjfjKEYJf3kL/sM4hddDM0LbxjELWMq7rbilimDuKZdLb2rcsZCpFFqP6t87b/SNX9YVdwpfaj2tk9jqN3fakcsxkCTxZjDnHso/nUVxzFnKTTqofarNGUxfvBA7M8JmzZtkH8ASdiM3y2FE6YAAAAASUVORK5CYII="
-        width="32"
-        height="32"
-        preserveAspectRatio="xMidYMid meet"
-      />
-    </svg>
-  );
-}
 
 export function providerDef(id: string): BuiltInProvider | undefined {
   return BUILT_IN_PROVIDERS.find((p) => p.id === id);

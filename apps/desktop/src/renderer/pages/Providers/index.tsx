@@ -143,8 +143,8 @@ export function ProvidersPage() {
         {BUILT_IN_PROVIDERS.map((provider) => (
           <ProviderListRow
             key={provider.id}
-            icon={provider.icon}
-            iconClassName={provider.iconClassName}
+            iconSrc={provider.iconSrc}
+            iconAlt={provider.iconAlt}
             name={summariesById.get(provider.id)?.displayName ?? provider.name}
             description={provider.description}
             summary={summariesById.get(provider.id)}
@@ -157,7 +157,7 @@ export function ProvidersPage() {
         {customProviderIds.map((id) => (
           <ProviderListRow
             key={id}
-            icon={Icons.Plug}
+            fallbackIcon={Icons.Plug}
             name={catalog?.providers[id]?.displayName ?? summariesById.get(id)?.displayName ?? id}
             description="OpenAI Images API-compatible custom endpoint."
             summary={summariesById.get(id)}
@@ -168,7 +168,7 @@ export function ProvidersPage() {
         ))}
 
         <div className="flex items-center gap-4 border-t border-(--border-faint) px-5 py-4 text-left transition-colors duration-(--duration-fast) hover:bg-(--surface)">
-          <ProviderIcon icon={Icons.Plus} />
+          <ProviderIcon fallbackIcon={Icons.Plus} />
           <span className="flex min-w-0 flex-1 flex-col gap-0.5">
             <span className="text-(length:--text-title-sm) font-semibold text-(--text)">
               OpenAI compatible
