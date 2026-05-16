@@ -152,6 +152,10 @@ function mergeCatalogs(base: ModelCatalog, overlay: ModelCatalogOverlay): ModelC
         providerOverlay.video === undefined
           ? current.video
           : mergeOfferings(current.video, providerOverlay.video),
+      modelOverrides:
+        providerOverlay.modelOverrides === undefined
+          ? current.modelOverrides
+          : mergeRecordsByKey(current.modelOverrides, providerOverlay.modelOverrides),
     };
   }
 
@@ -167,6 +171,20 @@ function mergeOfferings<T extends { id: string }>(base: T[] | undefined, overlay
     byId.set(offering.id, mergeRecord(byId.get(offering.id), offering));
   }
   return [...byId.values()];
+}
+
+function mergeRecordsByKey<T extends object>(
+  base: Record<string, T> | undefined,
+  overlay: Record<string, T>,
+): Record<string, T> {
+  const merged: Record<string, T> = {};
+  for (const [id, record] of Object.entries(base ?? {})) {
+    merged[id] = deepClone(record);
+  }
+  for (const [id, record] of Object.entries(overlay)) {
+    merged[id] = mergeRecord(merged[id], record);
+  }
+  return merged;
 }
 
 function mergeRecord<T extends object>(base: T | undefined, overlay: object): T {

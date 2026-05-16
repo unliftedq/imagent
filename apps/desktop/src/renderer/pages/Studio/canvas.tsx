@@ -623,7 +623,11 @@ function JobErrorBlock({
         <p
           className={
             "min-w-0 flex-1 text-[11.5px] leading-[1.4] text-(--text) " +
-            (expanded ? "whitespace-pre-wrap break-words" : "truncate")
+            (expanded
+              ? "whitespace-pre-wrap break-words"
+              : hasMore
+                ? "truncate"
+                : "whitespace-normal break-words")
           }
         >
           {expanded ? text : oneLine}
