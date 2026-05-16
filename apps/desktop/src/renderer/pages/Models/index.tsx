@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Icons } from "@imagent/ui";
 import type { ProviderId } from "@imagent/ipc";
+import { useT } from "../../i18n/index.js";
 import { api } from "../../lib/api.js";
 import { useUIStore } from "../../state/useUIStore.js";
 import { pickModelLogo } from "./modelLogo.js";
@@ -26,6 +27,7 @@ interface ModelList {
 type Tab = "image" | "video";
 
 export function ModelsPage() {
+  const t = useT();
   const navigate = useUIStore((s) => s.navigate);
   const pushToast = useUIStore((s) => s.pushToast);
   const [tab, setTab] = useState<Tab>("image");
@@ -38,13 +40,13 @@ export function ModelsPage() {
         setList(out);
       } catch (err) {
         pushToast({
-          title: "Failed to load models",
+          title: t("models.failedToLoad"),
           description: (err as Error)?.message ?? String(err),
           variant: "error",
         });
       }
     })();
-  }, [pushToast]);
+  }, [pushToast, t]);
 
   const rows = useMemo(() => {
     if (!list) return [];
@@ -61,32 +63,30 @@ export function ModelsPage() {
       <header className="mb-8 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-(length:--text-display-sm) font-display font-medium tracking-(--text-display-sm--letter-spacing) text-(--text)">
-            Models
+            {t("models.title")}
           </h1>
           <p className="mt-2 text-(length:--text-body-md) text-(--text)">
-            Catalog of every model the studio knows about, grouped by id. Green badges mark
-            providers whose auth is saved; gray badges mark providers where the same model would
-            work once you configure them.
+            {t("models.subtitle")}
           </p>
         </div>
       </header>
 
       <div className="mb-4 inline-flex rounded-(--radius-md) border border-(--border) bg-(--surface) p-1">
         <TabButton active={tab === "image"} onClick={() => setTab("image")}>
-          Image · {totals.image}
+          {t("common.image")} · {totals.image}
         </TabButton>
         <TabButton active={tab === "video"} onClick={() => setTab("video")}>
-          Video · {totals.video}
+          {t("common.video")} · {totals.video}
         </TabButton>
       </div>
 
       {!list ? (
-        <p className="text-(length:--text-body-sm) text-(--text-muted)">Loading…</p>
+        <p className="text-(length:--text-body-sm) text-(--text-muted)">{t("common.loading")}</p>
       ) : rows.length === 0 ? (
         <div className="rounded-(--radius-md) border border-dashed border-(--border) p-8 text-center">
           <Icons.Brain weight="duotone" className="mx-auto size-8 text-(--text-muted)" />
           <p className="mt-2 text-(length:--text-body-sm) text-(--text-muted)">
-            No {tab} models in the catalog.
+            {tab === "image" ? t("models.noImageModels") : t("models.noVideoModels")}
           </p>
         </div>
       ) : (
@@ -111,6 +111,7 @@ function ModelRowView({
   row: ModelRow;
   onConfigureProvider: () => void;
 }) {
+  const t = useT();
   const anyConfigured = row.providers.some((p) => p.configured);
   const logo = pickModelLogo(row.id);
   return (
@@ -158,7 +159,7 @@ function ModelRowView({
             onClick={onConfigureProvider}
             className="text-(length:--text-caption) text-(--accent) underline-offset-2 hover:underline"
           >
-            Configure provider
+            {t("models.configureProvider")}
           </button>
         ) : null}
       </div>
@@ -177,7 +178,7 @@ function ModelRowView({
             }
           >
             <span className="size-1.5 rounded-(--radius-full) bg-(--text-faint)" />
-            Add provider mapping
+            {t("models.addProviderMapping")}
           </span>
         )}
       </div>
