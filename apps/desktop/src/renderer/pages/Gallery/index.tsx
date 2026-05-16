@@ -8,6 +8,7 @@ import {
 import type { Asset, AssetKind, GalleryItem } from "@imagent/core";
 import { useEffect, useMemo, useState } from "react";
 import { BoardSidebarItem, Button, GalleryItemCard, Icons, Input, Tooltip } from "@imagent/ui";
+import { useT } from "../../i18n/index.js";
 import { api } from "../../lib/api.js";
 import { useBoardsStore } from "../../state/useBoardsStore.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
@@ -50,6 +51,8 @@ export function GalleryPage() {
 
   const navigate = useUIStore((s) => s.navigate);
 
+  const t = useT();
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
@@ -71,11 +74,11 @@ export function GalleryPage() {
   }, [activeFilter]);
 
   useEffect(() => {
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       const trimmed = searchInput.trim();
       setQuery({ search: trimmed.length > 0 ? trimmed : undefined });
     }, 300);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchInput]);
 
@@ -93,12 +96,12 @@ export function GalleryPage() {
     try {
       await addItem(boardSentinel, itemId);
       pushToast({
-        title: "Added to board",
+        title: t("gallery.toast.addedToBoard"),
         variant: "success",
       });
     } catch (err) {
       pushToast({
-        title: "Could not add to board",
+        title: t("gallery.toast.couldNotAddToBoard"),
         description: (err as Error)?.message ?? String(err),
         variant: "error",
       });
@@ -148,7 +151,7 @@ export function GalleryPage() {
       });
     } catch (err) {
       pushToast({
-        title: "Remix failed",
+        title: t("gallery.toast.remixFailed"),
         description: (err as Error)?.message ?? String(err),
         variant: "error",
       });
@@ -164,7 +167,7 @@ export function GalleryPage() {
       setCreatingBoard(false);
     } catch (err) {
       pushToast({
-        title: "Could not create board",
+        title: t("gallery.toast.couldNotCreateBoard"),
         description: (err as Error)?.message ?? String(err),
         variant: "error",
       });
@@ -174,8 +177,8 @@ export function GalleryPage() {
   const openSaveAsAssetDialog = (item: GalleryItem): void => {
     if (item.kind === "video" && !item.thumbPath) {
       pushToast({
-        title: "Thumbnail unavailable",
-        description: "This video item needs a thumbnail before it can become an asset.",
+        title: t("gallery.toast.thumbnailUnavailable"),
+        description: t("gallery.toast.thumbnailUnavailableDesc"),
         variant: "warning",
       });
       return;
@@ -186,8 +189,8 @@ export function GalleryPage() {
   const onAssetCreated = (asset: Asset): void => {
     setAssetDialogItem(null);
     pushToast({
-      title: "Asset saved",
-      description: `${asset.name} is available in Assets.`,
+      title: t("gallery.toast.assetSaved"),
+      description: t("gallery.toast.assetSavedDesc", { name: asset.name }),
       variant: "success",
     });
   };
@@ -212,11 +215,11 @@ export function GalleryPage() {
       <div className="grid h-full grid-cols-[220px_minmax(0,1fr)] gap-0">
         <aside className="flex flex-col gap-1 border-r border-(--border) bg-(--bg) p-3">
           <div className="px-2 pb-2 pt-1 text-(length:--text-caption-uppercase) font-semibold uppercase tracking-[1.5px] text-(--text-muted)">
-            Library
+            {t("gallery.library")}
           </div>
           <BoardSidebarItem
             id={BOARD_ALL}
-            label="All"
+            label={t("gallery.all")}
             count={allTotal}
             active={activeFilter === BOARD_ALL}
             acceptsDrop={false}
@@ -224,14 +227,14 @@ export function GalleryPage() {
           />
           <BoardSidebarItem
             id={BOARD_FAVORITES}
-            label="Favorites"
+            label={t("gallery.favorites")}
             active={activeFilter === BOARD_FAVORITES}
             acceptsDrop={false}
             onClick={() => setActiveFilter(BOARD_FAVORITES)}
           />
           <div className="my-2 h-px bg-(--border-faint)" />
           <div className="px-2 pb-1 text-(length:--text-caption-uppercase) font-semibold uppercase tracking-[1.5px] text-(--text-muted)">
-            Boards
+            {t("gallery.boards")}
           </div>
           {boards.map((b) => (
             <BoardRow
@@ -254,7 +257,7 @@ export function GalleryPage() {
                   "focus:outline-none focus:border-(--text)"
                 }
                 value={newBoardName}
-                placeholder="Board name"
+                placeholder={t("gallery.boardName.placeholder")}
                 onChange={(e) => setNewBoardName(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") void handleCreateBoard();
@@ -280,7 +283,7 @@ export function GalleryPage() {
               }
             >
               <Icons.Plus weight="bold" className="size-4" />
-              New board
+              {t("gallery.newBoard")}
             </button>
           )}
         </aside>
@@ -293,7 +296,7 @@ export function GalleryPage() {
                 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-(--text-muted)"
               />
               <Input
-                placeholder="Search prompts or file names…"
+                placeholder={t("gallery.search.placeholder")}
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 className="h-10 pl-9 pr-9 text-(length:--text-body)"
@@ -302,7 +305,7 @@ export function GalleryPage() {
                 <button
                   type="button"
                   onClick={() => setSearchInput("")}
-                  aria-label="Clear search"
+                  aria-label={t("common.clearSearch")}
                   className={
                     "absolute right-2 top-1/2 inline-flex size-6 -translate-y-1/2 items-center " +
                     "justify-center rounded-(--radius-pill) text-(--text-muted) " +
@@ -313,10 +316,10 @@ export function GalleryPage() {
                 </button>
               ) : null}
             </div>
-            <Tooltip content="Matches prompts (FTS) and file names. Use multiple words to AND-combine.">
+            <Tooltip content={t("gallery.search.helpTooltip")}>
               <button
                 type="button"
-                aria-label="Search syntax help"
+                aria-label={t("gallery.search.syntaxHelp")}
                 className={
                   "inline-flex size-7 items-center justify-center rounded-(--radius-pill) " +
                   "text-(--text-muted) transition-colors duration-(--duration-fast) " +
@@ -328,7 +331,7 @@ export function GalleryPage() {
             </Tooltip>
             {query.search ? (
               <span className="text-(length:--text-caption) text-(--text-muted)">
-                {total} match{total === 1 ? "" : "es"}
+                {t(total === 1 ? "gallery.match" : "gallery.matches", { count: total })}
               </span>
             ) : null}
           </div>
@@ -394,7 +397,7 @@ export function GalleryPage() {
           {items.length < total ? (
             <div className="mt-6 flex items-center justify-center">
               <Button variant="secondary" size="sm" onClick={() => setQuery({ limit: query.limit + 60 })}>
-                Load more ({total - items.length} remaining)
+                {t("gallery.loadMore", { remaining: total - items.length })}
               </Button>
             </div>
           ) : null}
@@ -441,6 +444,7 @@ function GalleryEmptyState({
   onResetFilter: () => void;
   onGoToStudio: () => void;
 }) {
+  const t = useT();
   if (hasSearch) {
     return (
       <div className="mx-auto mt-16 flex w-full max-w-[420px] flex-col items-center text-center">
@@ -451,13 +455,13 @@ function GalleryEmptyState({
           />
         </div>
         <h2 className="text-(length:--text-title) font-semibold tracking-[-0.01em] text-(--text)">
-          No matches
+          {t("gallery.empty.search.title")}
         </h2>
         <p className="mt-1.5 max-w-[320px] text-(length:--text-body-sm) leading-5 text-(--text-muted)">
-          Try a different keyword. Search looks across prompts and file names.
+          {t("gallery.empty.search.body")}
         </p>
         <Button variant="secondary" size="sm" className="mt-5" onClick={onClearSearch}>
-          Clear search
+          {t("common.clearSearch")}
         </Button>
       </div>
     );
@@ -470,15 +474,15 @@ function GalleryEmptyState({
           <Icons.Folder weight="duotone" className="size-6 text-(--text-muted)" />
         </div>
         <h2 className="text-(length:--text-title) font-semibold tracking-[-0.01em] text-(--text)">
-          {activeFilter === BOARD_FAVORITES ? "No favorites yet" : "This board is empty"}
+          {activeFilter === BOARD_FAVORITES ? t("gallery.empty.favorites.title") : t("gallery.empty.board.title")}
         </h2>
         <p className="mt-1.5 max-w-[320px] text-(length:--text-body-sm) leading-5 text-(--text-muted)">
           {activeFilter === BOARD_FAVORITES
-            ? "Tap the heart on any image to keep it close at hand."
-            : "Drag any gallery item onto this board from the All view."}
+            ? t("gallery.empty.favorites.body")
+            : t("gallery.empty.board.body")}
         </p>
         <Button variant="secondary" size="sm" className="mt-5" onClick={onResetFilter}>
-          Show all items
+          {t("gallery.empty.showAll")}
         </Button>
       </div>
     );
@@ -501,15 +505,14 @@ function GalleryEmptyState({
         />
       </div>
       <h2 className="text-(length:--text-display) font-semibold tracking-[-0.01em] text-(--text)">
-        Your gallery is quiet
+        {t("gallery.empty.all.title")}
       </h2>
       <p className="mt-2 max-w-[340px] text-(length:--text-body-sm) leading-5 text-(--text-muted)">
-        Generated images and videos will collect here. Open Studio to create
-        the first one — every item is searchable and remixable later.
+        {t("gallery.empty.all.body")}
       </p>
       <div className="mt-6 inline-flex items-center gap-2">
         <Button onClick={onGoToStudio} leadingIcon={<Icons.MagicWand weight="bold" className="size-4" />}>
-          Open Studio
+          {t("gallery.empty.openStudio")}
         </Button>
       </div>
     </div>
