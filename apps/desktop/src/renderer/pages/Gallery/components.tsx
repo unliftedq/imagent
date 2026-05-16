@@ -1,8 +1,9 @@
+import type { Board, GalleryItem } from "@imagent/core";
+import { BoardSidebarItem, Icons } from "@imagent/ui";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
-import { BoardSidebarItem, Icons } from "@imagent/ui";
-import type { Board, GalleryItem } from "@imagent/core";
+import { useT } from "../../i18n/index.js";
 import { api } from "../../lib/api.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
 import { resolveGalleryUrl } from "../Studio";
@@ -25,12 +26,12 @@ export function BoardRow({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(board.name);
   const [menuOpen, setMenuOpen] = useState(false);
+  const t = useT();
 
   if (editing) {
     return (
       <div className="flex items-center gap-1 px-2 py-1">
         <input
-          autoFocus
           className={
             "flex-1 rounded-(--radius-sm) border border-(--border) " +
             "bg-(--bg) px-2 py-1 text-(length:--text-body-sm) text-(--text) " +
@@ -78,7 +79,7 @@ export function BoardRow({
                 e.stopPropagation();
                 setMenuOpen(true);
               }}
-              aria-label="Board actions"
+              aria-label={t("gallery.preview.boardActions")}
             >
               <Icons.Gear weight="bold" className="size-3.5" />
             </button>
@@ -112,7 +113,7 @@ export function BoardRow({
             <span className="inline-flex size-4 shrink-0 items-center justify-center text-(--text-muted)">
               <Icons.Pencil weight="bold" className="size-4" />
             </span>
-            Rename
+            {t("gallery.board.rename")}
           </DropdownMenu.Item>
           <DropdownMenu.Separator className="my-1 h-px bg-(--border-faint)" />
           <DropdownMenu.Item
@@ -127,7 +128,7 @@ export function BoardRow({
             <span className="inline-flex size-4 shrink-0 items-center justify-center text-(--danger)">
               <Icons.Trash weight="bold" className="size-4" />
             </span>
-            Delete board
+            {t("gallery.board.delete")}
           </DropdownMenu.Item>
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
@@ -162,10 +163,9 @@ export function LightboxPreview({
   const [copied, setCopied] = useState(false);
   const removeItem = useGalleryStore((s) => s.remove);
   const toggleFav = useGalleryStore((s) => s.toggleFavorite);
-  const cachedItem = useGalleryStore((s) =>
-    s.items.find((it) => it.id === itemId) ?? null,
-  );
+  const cachedItem = useGalleryStore((s) => s.items.find((it) => it.id === itemId) ?? null);
   const mediaPreviewStyle = data ? getMediaPreviewStyle(data.item) : undefined;
+  const t = useT();
 
   // Show the cached row from the store immediately so the lightbox never
   // flashes "Loading…" — gallery.show() then enriches with lineage + assets.
@@ -238,11 +238,11 @@ export function LightboxPreview({
             if (e.target === e.currentTarget) onClose();
           }}
         >
-          <Dialog.Title className="sr-only">Gallery item preview</Dialog.Title>
+          <Dialog.Title className="sr-only">{t("gallery.preview.title")}</Dialog.Title>
           {/* Close button — top-right. */}
           <button
             type="button"
-            aria-label="Close preview"
+            aria-label={t("gallery.preview.close")}
             onClick={onClose}
             className={
               "absolute right-4 top-4 z-10 inline-flex size-9 items-center justify-center " +
@@ -314,29 +314,27 @@ export function LightboxPreview({
                   }
                 >
                   <LightboxAction
-                    icon={
-                      <Icons.MagicWand weight="bold" className="size-4" />
-                    }
-                    label="Remix"
+                    icon={<Icons.MagicWand weight="bold" className="size-4" />}
+                    label={t("gallery.preview.remix")}
                     onClick={() => onRemix(data.item.id)}
                   />
                   <LightboxAction
                     icon={
                       <Icons.Heart
                         weight={data.item.favorited ? "fill" : "regular"}
-                        className={
-                          data.item.favorited
-                            ? "size-4 text-(--danger)"
-                            : "size-4"
-                        }
+                        className={data.item.favorited ? "size-4 text-(--danger)" : "size-4"}
                       />
                     }
-                    label={data.item.favorited ? "Unfavorite" : "Favorite"}
+                    label={
+                      data.item.favorited
+                        ? t("gallery.preview.unfavorite")
+                        : t("gallery.preview.favorite")
+                    }
                     onClick={() => void toggleFav(data.item.id)}
                   />
                   <LightboxAction
                     icon={<Icons.StackPlus weight="bold" className="size-4" />}
-                    label="Save as asset"
+                    label={t("gallery.preview.saveAsAsset")}
                     onClick={() => onSaveAsAsset(data.item)}
                   />
                   <LightboxAction
@@ -347,12 +345,12 @@ export function LightboxPreview({
                         <Icons.Paperclip weight="bold" className="size-4" />
                       )
                     }
-                    label={copied ? "Copied!" : "Copy prompt"}
+                    label={copied ? t("common.copied") : t("gallery.preview.copyPrompt")}
                     onClick={() => void copyPrompt(data.item.prompt)}
                   />
                   <LightboxAction
                     icon={<Icons.Folder weight="bold" className="size-4" />}
-                    label="Reveal"
+                    label={t("gallery.preview.reveal")}
                     onClick={() => {
                       void api["system.openPath"]({ path: data.item.relPath });
                     }}
@@ -360,16 +358,16 @@ export function LightboxPreview({
                   <span className="mx-0.5 h-5 w-px bg-white/12" aria-hidden="true" />
                   <LightboxAction
                     icon={<Icons.Info weight="bold" className="size-4" />}
-                    label={showInfo ? "Hide info" : "Info"}
+                    label={showInfo ? t("gallery.preview.hideInfo") : t("gallery.preview.info")}
                     onClick={() => setShowInfo((v) => !v)}
                     active={showInfo}
                   />
                   <LightboxAction
                     icon={<Icons.Trash weight="bold" className="size-4" />}
-                    label="Delete"
+                    label={t("common.delete")}
                     danger
                     onClick={() => {
-                      if (window.confirm("Delete this item?")) {
+                      if (window.confirm(t("gallery.preview.deleteConfirm"))) {
                         void removeItem(data.item.id);
                         onClose();
                       }
@@ -388,21 +386,21 @@ export function LightboxPreview({
                   }
                 >
                   <div className="text-(length:--text-caption-uppercase) font-semibold uppercase tracking-[1.5px] text-white/55">
-                    Prompt
+                    {t("gallery.preview.prompt")}
                   </div>
                   <p className="mt-1.5 whitespace-pre-wrap text-(length:--text-body-sm) leading-5">
                     {data.item.prompt}
                   </p>
                   <dl className="mt-4 grid grid-cols-[72px_minmax(0,1fr)] gap-x-3 gap-y-1 text-(length:--text-body-sm)">
-                    <dt className="text-white/55">Provider</dt>
+                    <dt className="text-white/55">{t("gallery.preview.provider")}</dt>
                     <dd className="text-white">{data.item.providerId}</dd>
-                    <dt className="text-white/55">Model</dt>
+                    <dt className="text-white/55">{t("gallery.preview.model")}</dt>
                     <dd className="text-white">{data.item.model}</dd>
-                    <dt className="text-white/55">File</dt>
+                    <dt className="text-white/55">{t("gallery.preview.file")}</dt>
                     <dd className="break-all font-(family-name:--font-mono) text-(length:--text-caption) text-white/85">
                       {data.item.relPath}
                     </dd>
-                    <dt className="text-white/55">Params</dt>
+                    <dt className="text-white/55">{t("gallery.preview.params")}</dt>
                     <dd className="break-all font-(family-name:--font-mono) text-(length:--text-caption) text-white/70">
                       {data.item.paramsJson}
                     </dd>
@@ -410,7 +408,7 @@ export function LightboxPreview({
                   {data.assets.length > 0 ? (
                     <div className="mt-4">
                       <div className="text-(length:--text-caption-uppercase) font-semibold uppercase tracking-[1.5px] text-white/55">
-                        Used assets
+                        {t("gallery.preview.usedAssets")}
                       </div>
                       <ul className="mt-2 flex flex-wrap gap-1.5">
                         {data.assets.map((a) => (
@@ -421,9 +419,7 @@ export function LightboxPreview({
                               "border border-white/10 bg-white/8 px-2 py-0.5 text-(length:--text-caption)"
                             }
                           >
-                            <span className="font-semibold">
-                              {a.name ?? a.assetId.slice(0, 8)}
-                            </span>
+                            <span className="font-semibold">{a.name ?? a.assetId.slice(0, 8)}</span>
                             <span className="text-white/55">({a.role})</span>
                           </li>
                         ))}
@@ -433,18 +429,20 @@ export function LightboxPreview({
                   {data.parent || data.children.length > 0 || data.siblings.length > 0 ? (
                     <div className="mt-4">
                       <div className="text-(length:--text-caption-uppercase) font-semibold uppercase tracking-[1.5px] text-white/55">
-                        Lineage
+                        {t("gallery.preview.lineage")}
                       </div>
                       {data.parent ? (
                         <div className="mt-2">
-                          <div className="text-(length:--text-caption) text-white/55">parent</div>
+                          <div className="text-(length:--text-caption) text-white/55">
+                            {t("gallery.preview.parent")}
+                          </div>
                           <LineageTile item={data.parent} />
                         </div>
                       ) : null}
                       {data.siblings.length > 0 ? (
                         <div className="mt-2">
                           <div className="text-(length:--text-caption) text-white/55">
-                            siblings
+                            {t("gallery.preview.siblings")}
                           </div>
                           <div className="grid grid-cols-3 gap-2">
                             {data.siblings.map((s) => (
@@ -456,7 +454,7 @@ export function LightboxPreview({
                       {data.children.length > 0 ? (
                         <div className="mt-2">
                           <div className="text-(length:--text-caption) text-white/55">
-                            children
+                            {t("gallery.preview.children")}
                           </div>
                           <div className="grid grid-cols-3 gap-2">
                             {data.children.map((c) => (
@@ -472,7 +470,7 @@ export function LightboxPreview({
             </>
           ) : (
             <div className="flex flex-1 items-center justify-center text-(length:--text-body-sm) text-white/70">
-              Loading…
+              {t("common.loading")}
             </div>
           )}
         </Dialog.Content>
@@ -640,10 +638,7 @@ function ZoomablePreviewImage({
   };
 
   return (
-    <div
-      ref={containerRef}
-      className="relative flex h-full w-full items-center justify-center"
-    >
+    <div ref={containerRef} className="relative flex h-full w-full items-center justify-center">
       <img
         ref={imgRef}
         src={src}
@@ -719,11 +714,7 @@ function LineageTile({ item }: { item: GalleryItem }) {
       className="relative aspect-square overflow-hidden rounded-(--radius-sm) border border-(--border)"
     >
       {src ? (
-        <img
-          src={src}
-          alt={item.prompt}
-          className="block h-full w-full object-cover"
-        />
+        <img src={src} alt={item.prompt} className="block h-full w-full object-cover" />
       ) : (
         <div className="flex h-full w-full items-center justify-center bg-(--surface) text-(--text-muted)">
           <Icons.FilmReel weight="duotone" className="size-5" />

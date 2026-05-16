@@ -2,9 +2,17 @@ import type { Asset } from "@imagent/core";
 import { IpcClientError } from "@imagent/ipc";
 import { Button, Dialog, Icons, Input, Textarea } from "@imagent/ui";
 import { useEffect, useState } from "react";
+import { type MessageKey, useT } from "../../i18n/index.js";
 import { useUIStore } from "../../state/useUIStore.js";
 import { AssetField } from "./AssetField.js";
 import { resolveDataUrl } from "./utils.js";
+
+const KIND_SINGULAR_KEYS: Record<Asset["kind"], MessageKey> = {
+  character: "assets.kind.character",
+  object: "assets.kind.object",
+  background: "assets.kind.background",
+  style: "assets.kind.style",
+};
 
 interface DrawerProps {
   asset: Asset | null;
@@ -27,6 +35,7 @@ export function AssetDrawer({
   onPermanentlyDelete,
   onSave,
 }: DrawerProps) {
+  const t = useT();
   const pushToast = useUIStore((s) => s.pushToast);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -55,10 +64,10 @@ export function AssetDrawer({
         description: description.trim() || null,
         ...(asset.kind === "style" ? { promptSnippet: promptSnippet.trim() || null } : {}),
       });
-      pushToast({ title: "Saved", variant: "success" });
+      pushToast({ title: t("assets.toast.saved"), variant: "success" });
     } catch (err) {
       pushToast({
-        title: "Save failed",
+        title: t("assets.toast.saveFailed"),
         description: err instanceof IpcClientError ? err.message : (err as Error)?.message,
         variant: "error",
       });
@@ -100,11 +109,13 @@ export function AssetDrawer({
                         "px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[1.5px] text-(--text)"
                       }
                     >
-                      {assetKindLabel(asset.kind)}
+                      {t(KIND_SINGULAR_KEYS[asset.kind])}
                     </span>
                     {isArchived ? (
                       <span className="text-(length:--text-caption) text-(--text-muted)">
-                        Archived {new Date(asset.archivedAt!).toLocaleDateString()}
+                        {t("assets.archivedOn", {
+                          date: new Date(asset.archivedAt!).toLocaleDateString(),
+                        })}
                       </span>
                     ) : null}
                   </div>
@@ -115,7 +126,7 @@ export function AssetDrawer({
             <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 py-5">
               <section className="flex flex-col gap-3">
                 <div className="text-(length:--text-caption-uppercase) font-semibold uppercase tracking-[1.5px] text-(--text-muted)">
-                  Reference
+                  {t("assets.drawer.reference")}
                 </div>
                 {reference ? (
                   <div className="overflow-hidden rounded-(--radius-md) border border-(--border) bg-(--surface-sunken)">
@@ -130,8 +141,8 @@ export function AssetDrawer({
                     <Icons.FileImage weight="duotone" className="size-8 text-(--text-faint)" />
                     <p className="text-(length:--text-caption) text-(--text-muted)">
                       {asset.kind === "style"
-                        ? "No reference image. This style can rely on the prompt snippet below."
-                        : "No reference image attached."}
+                        ? t("studio.noReferenceImageStyle")
+                        : t("studio.noReferenceImage")}
                     </p>
                   </div>
                 )}
@@ -150,12 +161,12 @@ export function AssetDrawer({
 
               <section className="flex flex-col gap-4 border-t border-(--border-faint) pt-5">
                 <div className="text-(length:--text-caption-uppercase) font-semibold uppercase tracking-[1.5px] text-(--text-muted)">
-                  Details
+                  {t("assets.drawer.details")}
                 </div>
-                <AssetField label="Name">
+                <AssetField label={t("assets.name")}>
                   <Input value={name} onChange={(e) => setName(e.target.value)} />
                 </AssetField>
-                <AssetField label="Description">
+                <AssetField label={t("assets.descriptionLabel")}>
                   <Textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
@@ -163,15 +174,14 @@ export function AssetDrawer({
                   />
                 </AssetField>
                 {asset.kind === "style" ? (
-                  <AssetField label="Prompt snippet">
+                  <AssetField label={t("assets.promptSnippet")}>
                     <Textarea
                       value={promptSnippet}
                       onChange={(e) => setPromptSnippet(e.target.value)}
                       rows={3}
                     />
                     <span className="text-(length:--text-caption) text-(--text-faint)">
-                      Reference is preferred when the model supports refs; otherwise this snippet is
-                      appended to the prompt.
+                      {t("assets.promptSnippetDrawerHint")}
                     </span>
                   </AssetField>
                 ) : null}
@@ -182,18 +192,18 @@ export function AssetDrawer({
               {confirmHardDelete ? (
                 <div className="flex items-center justify-between gap-3">
                   <span className="min-w-0 text-(length:--text-caption) text-(--danger)">
-                    Delete this asset permanently?
+                    {t("assets.deletePermConfirm")}
                   </span>
                   <div className="flex shrink-0 items-center gap-2">
                     <Button variant="ghost" size="sm" onClick={() => setConfirmHardDelete(false)}>
-                      Cancel
+                      {t("common.cancel")}
                     </Button>
                     <Button
                       variant="danger"
                       size="sm"
                       onClick={() => void onPermanentlyDelete(asset.id)}
                     >
-                      Confirm delete
+                      {t("assets.confirmDelete")}
                     </Button>
                   </div>
                 </div>
@@ -205,7 +215,7 @@ export function AssetDrawer({
                     className="text-(--danger) hover:bg-(--danger-soft)"
                     onClick={() => setConfirmHardDelete(true)}
                   >
-                    Delete permanently
+                    {t("assets.deletePermanently")}
                   </Button>
                   <div className="flex shrink-0 items-center gap-2">
                     {isArchived ? (
@@ -217,7 +227,7 @@ export function AssetDrawer({
                         }
                         onClick={() => void onRestore(asset.id)}
                       >
-                        Restore
+                        {t("assets.restore")}
                       </Button>
                     ) : (
                       <Button
@@ -226,11 +236,11 @@ export function AssetDrawer({
                         leadingIcon={<Icons.Trash weight="bold" className="size-4" />}
                         onClick={() => void onArchive(asset.id)}
                       >
-                        Archive
+                        {t("assets.archive")}
                       </Button>
                     )}
                     <Button size="sm" onClick={() => void save()} disabled={!dirty}>
-                      Save changes
+                      {t("assets.saveChanges")}
                     </Button>
                   </div>
                 </div>
@@ -241,19 +251,6 @@ export function AssetDrawer({
       </Dialog.Sheet>
     </Dialog.Root>
   );
-}
-
-function assetKindLabel(kind: Asset["kind"]): string {
-  switch (kind) {
-    case "character":
-      return "Character";
-    case "object":
-      return "Object";
-    case "background":
-      return "Background";
-    case "style":
-      return "Style";
-  }
 }
 
 function formatBytes(bytes: number): string {

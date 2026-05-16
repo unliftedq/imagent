@@ -1,9 +1,9 @@
-import openaiUrl from "../../assets/logos/openai.svg?url";
-import microsoftUrl from "../../assets/logos/microsoft.svg?url";
-import googleUrl from "../../assets/logos/google.svg?url";
-import nanoBananaUrl from "../../assets/logos/nanobanana.svg?url";
 import bflUrl from "../../assets/logos/bfl.svg?url";
 import bytedanceUrl from "../../assets/logos/bytedance.svg?url";
+import googleUrl from "../../assets/logos/google.svg?url";
+import microsoftUrl from "../../assets/logos/microsoft.svg?url";
+import nanoBananaUrl from "../../assets/logos/nanobanana.svg?url";
+import openaiUrl from "../../assets/logos/openai.svg?url";
 import xaiUrl from "../../assets/logos/xai.svg?url";
 
 export interface ModelLogo {

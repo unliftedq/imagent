@@ -2,12 +2,9 @@ import type { Asset, AssetKind } from "@imagent/core";
 import { Icons, Popover } from "@imagent/ui";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { useT } from "../../i18n/index.js";
 import { api } from "../../lib/api.js";
-import {
-  ASSET_REFERENCE_KINDS,
-  IMAGE_FILE_FILTERS,
-  type ReferenceKind,
-} from "./types.js";
+import { ASSET_REFERENCE_KINDS, IMAGE_FILE_FILTERS, type ReferenceKind } from "./types.js";
 import { fileName, uniqueStrings } from "./utils.js";
 
 export function ReferencePicker({
@@ -33,10 +30,14 @@ export function ReferencePicker({
 }) {
   const [open, setOpen] = useState(false);
   const [activeKind, setActiveKind] = useState<ReferenceKind | null>(null);
+  const t = useT();
   const totalAssets = ASSET_REFERENCE_KINDS.reduce((sum, kind) => sum + assetIds[kind].length, 0);
   const totalReferences = totalAssets + references.length;
   const overHint = typeof maxReferencesHint === "number" && totalReferences > maxReferencesHint;
-  const triggerLabel = totalReferences > 0 ? `References (${totalReferences})` : "Add reference";
+  const triggerLabel =
+    totalReferences > 0
+      ? `${t("studio.references")} (${totalReferences})`
+      : t("studio.addReference");
 
   const chooseLocalImages = async (): Promise<void> => {
     try {
@@ -106,9 +107,13 @@ export function ReferencePicker({
         ) : (
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-[12px] font-semibold text-(--text)">References</span>
+              <span className="text-[12px] font-semibold text-(--text)">
+                {t("studio.references")}
+              </span>
               {overHint ? (
-                <span className="text-[11px] text-(--warning)">Max {maxReferencesHint}</span>
+                <span className="text-[11px] text-(--warning)">
+                  {t("studio.maxReferences", { max: String(maxReferencesHint) })}
+                </span>
               ) : null}
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -124,7 +129,7 @@ export function ReferencePicker({
                 kind="other"
                 count={references.length}
                 onClick={() => setActiveKind("other")}
-              />
+              />{" "}
             </div>
             {totalReferences > 0 ? (
               <SelectedReferences
@@ -163,6 +168,7 @@ function ReferenceKindPanel({
   onChooseLocal: () => void;
   onCreateAsset: () => void;
 }) {
+  const t = useT();
   const isOther = kind === "other";
 
   return (
@@ -174,9 +180,11 @@ function ReferenceKindPanel({
           className="inline-flex h-7 items-center gap-1 rounded-(--radius-sm) px-2 text-[12px] text-(--text-muted) hover:bg-(--surface) hover:text-(--text)"
         >
           <Icons.CaretRight weight="bold" className="size-3 rotate-180" />
-          References
+          {t("studio.references")}
         </button>
-        <span className="text-[12px] font-semibold text-(--text)">{referenceKindLabel(kind)}</span>
+        <span className="text-[12px] font-semibold text-(--text)">
+          {referenceKindLabel(kind, t)}
+        </span>
       </div>
 
       <button
@@ -189,13 +197,13 @@ function ReferenceKindPanel({
         }
       >
         <Icons.FolderOpen weight="duotone" className="size-4 text-(--text-muted)" />
-        Upload local image
+        {t("studio.uploadLocalImage")}
       </button>
 
       {isOther ? (
         references.length === 0 ? (
           <div className="rounded-(--radius-md) border border-(--border-faint) px-3 py-5 text-center text-[12px] text-(--text-muted)">
-            No local references yet.
+            {t("studio.noLocalReferences")}
           </div>
         ) : (
           <div className="flex flex-col gap-1.5">
@@ -212,13 +220,13 @@ function ReferenceKindPanel({
         )
       ) : assets.length === 0 ? (
         <div className="rounded-(--radius-md) border border-(--border-faint) px-3 py-5 text-center text-[12px] text-(--text-muted)">
-          <p>No {referenceKindLabel(kind).toLowerCase()} assets yet.</p>
+          <p>{t("studio.noKindAssets", { kind: referenceKindLabel(kind, t).toLowerCase() })}</p>
           <button
             type="button"
             onClick={onCreateAsset}
             className="mt-2 text-(--text) underline underline-offset-2"
           >
-            Create asset
+            {t("assets.createAsset")}
           </button>
         </div>
       ) : (
@@ -267,6 +275,7 @@ function ReferenceMenuButton({
   count: number;
   onClick: () => void;
 }) {
+  const t = useT();
   return (
     <button
       type="button"
@@ -281,7 +290,7 @@ function ReferenceMenuButton({
       <span className="flex min-w-0 items-center gap-2">
         {referenceKindIcon(kind)}
         <span className="truncate text-[12px] font-semibold text-(--text)">
-          {referenceKindLabel(kind)}
+          {referenceKindLabel(kind, t)}
         </span>
       </span>
       {count > 0 ? (
@@ -331,13 +340,14 @@ function SelectedReferences({
 }
 
 function ReferenceChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  const t = useT();
   return (
     <span className="inline-flex max-w-[180px] items-center gap-1 rounded-(--radius-pill) border border-(--border) bg-(--bg) px-2 py-1 text-[11px] text-(--text)">
       <span className="truncate">{label}</span>
       <button
         type="button"
         onClick={onRemove}
-        aria-label={`Remove ${label}`}
+        aria-label={t("studio.removeReference", { label })}
         className="text-(--text-muted) hover:text-(--danger)"
       >
         <Icons.X weight="bold" className="size-3" />
@@ -346,18 +356,20 @@ function ReferenceChip({ label, onRemove }: { label: string; onRemove: () => voi
   );
 }
 
-function referenceKindLabel(kind: ReferenceKind): string {
+type TFn = ReturnType<typeof useT>;
+
+function referenceKindLabel(kind: ReferenceKind, t: TFn): string {
   switch (kind) {
     case "character":
-      return "Character";
+      return t("assets.kind.character");
     case "object":
-      return "Object";
+      return t("assets.kind.object");
     case "background":
-      return "Background";
+      return t("assets.kind.background");
     case "style":
-      return "Style";
+      return t("assets.kind.style");
     case "other":
-      return "Other";
+      return t("studio.role.other");
   }
 }
 

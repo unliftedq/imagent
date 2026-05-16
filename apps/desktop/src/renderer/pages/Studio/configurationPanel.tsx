@@ -1,5 +1,6 @@
 import { cn, Icons, Select } from "@imagent/ui";
-import { forwardRef, type ComponentPropsWithoutRef, type ReactNode } from "react";
+import { type ComponentPropsWithoutRef, forwardRef, type ReactNode } from "react";
+import { useT } from "../../i18n/index.js";
 
 export interface ConfigurationPopoverButtonProps extends ComponentPropsWithoutRef<"button"> {
   label: string;
@@ -115,6 +116,7 @@ export function SizePresetGrid({
   onChange: (size: string) => void;
   onSelectCustom?: () => void;
 }) {
+  const t = useT();
   const showCustom = allowCustom === true;
   return (
     <div className="grid grid-cols-3 gap-1 rounded-(--radius-md) bg-(--surface) p-1.5">
@@ -129,11 +131,9 @@ export function SizePresetGrid({
       ))}
       {showCustom ? (
         <SizePresetButton
-          label="Custom"
+          label={t("studio.customSize")}
           active={
-            customActive === true ||
-            presets.length === 0 ||
-            (!!value && !presets.includes(value))
+            customActive === true || presets.length === 0 || (!!value && !presets.includes(value))
           }
           custom
           onClick={onSelectCustom}
@@ -170,10 +170,7 @@ function SizePresetButton({
       }
     >
       <span
-        className={cn(
-          "rounded-[3px] border-[1.5px] border-current",
-          custom ? "border-dashed" : "",
-        )}
+        className={cn("rounded-[3px] border-[1.5px] border-current", custom ? "border-dashed" : "")}
         style={custom ? CUSTOM_PRESET_ICON_STYLE : sizePresetIconStyle(value)}
         aria-hidden="true"
       />

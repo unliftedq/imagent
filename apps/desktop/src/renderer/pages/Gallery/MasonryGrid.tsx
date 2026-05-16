@@ -1,9 +1,4 @@
-import {
-  type ReactNode,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
 
 export interface MasonryItemBase {
   id: string;
@@ -59,13 +54,9 @@ export function MasonryGrid<T extends MasonryItemBase>({
   }, []);
 
   const columnCount =
-    containerWidth <= 0
-      ? 1
-      : Math.max(1, Math.floor((containerWidth + gap) / (columnWidth + gap)));
+    containerWidth <= 0 ? 1 : Math.max(1, Math.floor((containerWidth + gap) / (columnWidth + gap)));
   const actualColumnWidth =
-    containerWidth > 0
-      ? (containerWidth - gap * (columnCount - 1)) / columnCount
-      : columnWidth;
+    containerWidth > 0 ? (containerWidth - gap * (columnCount - 1)) / columnCount : columnWidth;
 
   const columnHeights = new Array<number>(columnCount).fill(0);
   const placements = items.map((item) => {
@@ -86,9 +77,7 @@ export function MasonryGrid<T extends MasonryItemBase>({
     return { left, top };
   });
 
-  const totalHeight = columnHeights.length
-    ? Math.max(...columnHeights) - gap
-    : 0;
+  const totalHeight = columnHeights.length ? Math.max(...columnHeights) - gap : 0;
   const ready = containerWidth > 0;
 
   return (

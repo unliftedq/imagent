@@ -1,6 +1,7 @@
 import type { GalleryItem, Job } from "@imagent/core";
 import { Button, Dialog, Icons } from "@imagent/ui";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useT } from "../../i18n/index.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
 import { useJobsStore } from "../../state/useJobsStore.js";
 import type { StudioMode } from "../../state/useUIStore.js";
@@ -101,11 +102,7 @@ export function CanvasArea({ mode }: { mode: StudioMode }) {
           <>
             <CanvasMedia item={display} />
             {siblings.length > 1 ? (
-              <CanvasFilmstrip
-                siblings={siblings}
-                focusedId={display.id}
-                onSelect={pinItem}
-              />
+              <CanvasFilmstrip siblings={siblings} focusedId={display.id} onSelect={pinItem} />
             ) : null}
           </>
         ) : (
@@ -132,10 +129,14 @@ function GeneratingCanvas({
   prompt: string;
   submittedAt: number | null;
 }) {
+  const t = useT();
   const trimmed = prompt.trim();
   const label = trimmed
-    ? `Generating ${mode}: ${trimmed.slice(0, MAX_GENERATING_LABEL_PROMPT_LENGTH)}`
-    : `Generating ${mode}`;
+    ? t("studio.generatingAria", {
+        mode,
+        prompt: trimmed.slice(0, MAX_GENERATING_LABEL_PROMPT_LENGTH),
+      })
+    : t("studio.generatingAriaNoPrompt", { mode });
   const elapsed = useElapsedSeconds(submittedAt, jobId !== null);
 
   return (
@@ -148,10 +149,10 @@ function GeneratingCanvas({
       <div className="studio-generation-grain" aria-hidden="true" />
       <div className="studio-generation-badge">
         <span className="studio-generation-badge-dot" aria-hidden="true" />
-        <span className="studio-generation-badge-label">Generating</span>
+        <span className="studio-generation-badge-label">{t("studio.generatingBadge")}</span>
         <span
           className="studio-generation-badge-elapsed tabular-nums"
-          aria-label={`Elapsed ${elapsed} seconds`}
+          aria-label={t("studio.elapsedSeconds", { elapsed })}
         >
           {formatElapsedClock(elapsed)}
         </span>
@@ -184,6 +185,7 @@ function StudioJobsRail({
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [expandedErrorId, setExpandedErrorId] = useState<string | null>(null);
+  const t = useT();
 
   const modeJobs = studioJobs.filter((job) => job.kind === mode);
   if (modeJobs.length === 0) return null;
@@ -193,12 +195,14 @@ function StudioJobsRail({
     try {
       await cancelJob(id);
       pushToast({
-        title: `${mode === "video" ? "Video" : "Image"} generation cancelled`,
+        title: t("studio.generationCancelled", {
+          mode: mode === "video" ? t("common.video") : t("common.image"),
+        }),
         variant: "info",
       });
     } catch (err) {
       pushToast({
-        title: "Cancel failed",
+        title: t("gallery.toast.cancelFailed"),
         description: (err as Error)?.message ?? String(err),
         variant: "error",
       });
@@ -212,12 +216,14 @@ function StudioJobsRail({
     try {
       await retryJob(id);
       pushToast({
-        title: `${mode === "video" ? "Video" : "Image"} generation resubmitted`,
+        title: t("studio.generationResubmitted", {
+          mode: mode === "video" ? t("common.video") : t("common.image"),
+        }),
         variant: "success",
       });
     } catch (err) {
       pushToast({
-        title: "Retry failed",
+        title: t("studio.retryFailed"),
         description: (err as Error)?.message ?? String(err),
         variant: "error",
       });
@@ -229,10 +235,10 @@ function StudioJobsRail({
   const copyError = async (message: string): Promise<void> => {
     try {
       await navigator.clipboard.writeText(message);
-      pushToast({ title: "Error copied", variant: "success" });
+      pushToast({ title: t("common.errorCopied"), variant: "success" });
     } catch (err) {
       pushToast({
-        title: "Copy failed",
+        title: t("common.copyFailed"),
         description: (err as Error)?.message ?? String(err),
         variant: "error",
       });
@@ -251,21 +257,19 @@ function StudioJobsRail({
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-baseline gap-2">
             <h2 className="text-[12px] font-semibold tracking-[-0.01em] text-(--text)">
-              Studio jobs
+              {t("studio.jobs")}
             </h2>
-            <span className="text-[11px] text-(--text-faint)">
-              Track multiple submissions while you keep composing.
-            </span>
+            <span className="text-[11px] text-(--text-faint)">{t("studio.jobsSubtitle")}</span>
           </div>
           <div className="flex items-center gap-1.5">
             {counts.running > 0 ? (
-              <CountChip tone="accent" label={`${counts.running} running`} />
+              <CountChip tone="accent" label={t("studio.jobsRunning", { count: counts.running })} />
             ) : null}
             {counts.failed > 0 ? (
-              <CountChip tone="danger" label={`${counts.failed} failed`} />
+              <CountChip tone="danger" label={t("studio.jobsFailed", { count: counts.failed })} />
             ) : null}
             {counts.succeeded > 0 && counts.running === 0 && counts.failed === 0 ? (
-              <CountChip tone="muted" label={`${counts.succeeded} done`} />
+              <CountChip tone="muted" label={t("studio.jobsDone", { count: counts.succeeded })} />
             ) : null}
           </div>
         </div>
@@ -328,19 +332,17 @@ function StudioJobsRail({
                   }}
                   className="-mx-1 flex w-[calc(100%+0.5rem)] min-w-0 items-start gap-2 rounded-(--radius-sm) px-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring)"
                   aria-pressed={active}
-                  aria-label={`Focus job: ${trackedJob.prompt}`}
+                  aria-label={t("studio.focusJobAria", { prompt: trackedJob.prompt })}
                 >
                   <span className="line-clamp-2 flex-1 text-[12.5px] leading-[1.35] text-(--text)">
                     {trackedJob.prompt || (
-                      <span className="italic text-(--text-muted)">(no prompt)</span>
+                      <span className="italic text-(--text-muted)">{t("studio.noPrompt")}</span>
                     )}
                   </span>
                 </button>
 
                 {/* State-specific body */}
-                {canCancel ? (
-                  <RunningJobProgress submittedAt={trackedJob.submittedAt} />
-                ) : null}
+                {canCancel ? <RunningJobProgress submittedAt={trackedJob.submittedAt} /> : null}
 
                 {state === "succeeded" && jobResults.length > 0 ? (
                   <JobResultsStrip
@@ -362,9 +364,7 @@ function StudioJobsRail({
                   <JobErrorBlock
                     message={errorMessage}
                     expanded={errorExpanded}
-                    onToggle={() =>
-                      setExpandedErrorId(errorExpanded ? null : trackedJob.id)
-                    }
+                    onToggle={() => setExpandedErrorId(errorExpanded ? null : trackedJob.id)}
                     onCopy={() => {
                       if (errorMessage) void copyError(errorMessage);
                     }}
@@ -375,7 +375,7 @@ function StudioJobsRail({
                 <footer className="-mt-0.5 flex items-center justify-between gap-2">
                   <span className="text-[11px] text-(--text-faint)">
                     {state === "succeeded" && jobResults.length > 1
-                      ? `${jobResults.length} images`
+                      ? t("studio.jobResultCount", { count: jobResults.length })
                       : null}
                   </span>
                   <div className="flex items-center gap-1">
@@ -391,7 +391,7 @@ function StudioJobsRail({
                         }
                       >
                         <Icons.Stop weight="fill" className="size-3" aria-hidden="true" />
-                        {cancellingId === trackedJob.id ? "Stopping…" : "Stop"}
+                        {cancellingId === trackedJob.id ? t("studio.stopping") : t("common.stop")}
                       </button>
                     ) : (
                       <>
@@ -408,10 +408,10 @@ function StudioJobsRail({
                           >
                             <Icons.ArrowClockwise
                               weight="bold"
-                              className={"size-3 " + (isRetrying ? "animate-spin" : "")}
+                              className={`size-3 ${isRetrying ? "animate-spin" : ""}`}
                               aria-hidden="true"
                             />
-                            {isRetrying ? "Retrying…" : "Retry"}
+                            {isRetrying ? t("common.retrying") : t("common.retry")}
                           </button>
                         ) : null}
                         <button
@@ -424,7 +424,7 @@ function StudioJobsRail({
                           }
                         >
                           <Icons.X weight="bold" className="size-3" aria-hidden="true" />
-                          Dismiss
+                          {t("common.dismiss")}
                         </button>
                       </>
                     )}
@@ -466,17 +466,18 @@ function CountChip({ tone, label }: { tone: "accent" | "danger" | "muted"; label
  * the user can act on instead of a misleading percentage.
  */
 function RunningJobProgress({ submittedAt }: { submittedAt: number }) {
+  const t = useT();
   const elapsed = useElapsedSeconds(submittedAt, true);
   return (
     <div className="flex items-center gap-2">
       <div
         className="studio-progress-indeterminate flex-1"
         role="progressbar"
-        aria-label="Generation in progress"
+        aria-label={t("studio.generationInProgress")}
       />
       <span
         className="text-[11px] tabular-nums text-(--text-muted)"
-        aria-label={`Elapsed ${elapsed} seconds`}
+        aria-label={t("studio.elapsedSeconds", { elapsed })}
       >
         {formatElapsedClock(elapsed)}
       </span>
@@ -485,11 +486,12 @@ function RunningJobProgress({ submittedAt }: { submittedAt: number }) {
 }
 
 function JobStateBadge({ state }: { state: Job["state"] | undefined }) {
+  const t = useT();
   if (state === "succeeded") {
     return (
       <span className="inline-flex items-center gap-1 rounded-(--radius-pill) bg-(--success)/12 px-1.5 py-0.5 text-[10.5px] font-medium text-(--success)">
         <Icons.CheckCircle weight="fill" className="size-3" aria-hidden="true" />
-        Done
+        {t("studio.stateDone")}
       </span>
     );
   }
@@ -497,7 +499,7 @@ function JobStateBadge({ state }: { state: Job["state"] | undefined }) {
     return (
       <span className="inline-flex items-center gap-1 rounded-(--radius-pill) bg-(--danger)/12 px-1.5 py-0.5 text-[10.5px] font-medium text-(--danger)">
         <Icons.WarningCircle weight="fill" className="size-3" aria-hidden="true" />
-        Failed
+        {t("studio.stateFailed")}
       </span>
     );
   }
@@ -505,19 +507,15 @@ function JobStateBadge({ state }: { state: Job["state"] | undefined }) {
     return (
       <span className="inline-flex items-center gap-1 rounded-(--radius-pill) bg-(--bg) px-1.5 py-0.5 text-[10.5px] font-medium text-(--text-muted) ring-1 ring-(--border-faint)">
         <Icons.X weight="bold" className="size-3" aria-hidden="true" />
-        Cancelled
+        {t("studio.stateCancelled")}
       </span>
     );
   }
   if (state === "running") {
     return (
       <span className="inline-flex items-center gap-1 rounded-(--radius-pill) bg-(--accent)/12 px-1.5 py-0.5 text-[10.5px] font-medium text-(--accent)">
-        <Icons.CircleNotch
-          weight="bold"
-          className="size-3 animate-spin"
-          aria-hidden="true"
-        />
-        Running
+        <Icons.CircleNotch weight="bold" className="size-3 animate-spin" aria-hidden="true" />
+        {t("studio.stateRunning")}
       </span>
     );
   }
@@ -525,14 +523,14 @@ function JobStateBadge({ state }: { state: Job["state"] | undefined }) {
     return (
       <span className="inline-flex items-center gap-1 rounded-(--radius-pill) bg-(--accent)/8 px-1.5 py-0.5 text-[10.5px] font-medium text-(--accent)">
         <Icons.Timer weight="duotone" className="size-3" aria-hidden="true" />
-        Queued
+        {t("studio.stateQueued")}
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1 rounded-(--radius-pill) bg-(--bg) px-1.5 py-0.5 text-[10.5px] font-medium text-(--text-muted) ring-1 ring-(--border-faint)">
       <Icons.Timer weight="duotone" className="size-3" aria-hidden="true" />
-      Submitted
+      {t("studio.stateSubmitted")}
     </span>
   );
 }
@@ -546,9 +544,10 @@ function JobResultsStrip({
   activeItemId: string | null;
   onSelect: (itemId: string) => void;
 }) {
+  const t = useT();
   return (
     <div className="-mx-0.5 flex items-center gap-1.5 overflow-x-auto pb-0.5">
-      {results.map((item) => {
+      {results.map((item, idx) => {
         const src =
           item.kind === "video"
             ? item.thumbPath
@@ -562,7 +561,7 @@ function JobResultsStrip({
             type="button"
             onClick={() => onSelect(item.id)}
             aria-pressed={focused}
-            aria-label={`Variant ${item.id}`}
+            aria-label={t("studio.variantLabel", { index: idx + 1, total: results.length })}
             className={
               "group relative size-12 shrink-0 overflow-hidden rounded-(--radius-sm) " +
               "border transition-[border-color,transform] duration-(--motion-fast) " +
@@ -608,7 +607,8 @@ function JobErrorBlock({
   onToggle: () => void;
   onCopy: () => void;
 }) {
-  const text = (message ?? "Provider returned no error message.").trim();
+  const t = useT();
+  const text = (message ?? t("studio.noErrorMessage")).trim();
   const oneLine = text.split("\n")[0] ?? text;
   const hasMore = text.length > oneLine.length || text.includes("\n");
 
@@ -639,7 +639,7 @@ function JobErrorBlock({
           onClick={onCopy}
           className="inline-flex h-6 items-center gap-1 rounded-(--radius-pill) px-2 text-[10.5px] font-medium text-(--text-muted) hover:bg-(--surface) hover:text-(--text)"
         >
-          Copy
+          {t("common.copy")}
         </button>
         {hasMore ? (
           <button
@@ -655,7 +655,7 @@ function JobErrorBlock({
               }
               aria-hidden="true"
             />
-            {expanded ? "Hide details" : "Show details"}
+            {expanded ? t("studio.hideDetails") : t("studio.showDetails")}
           </button>
         ) : null}
       </div>
@@ -672,13 +672,14 @@ function CanvasFilmstrip({
   focusedId: string;
   onSelect: (id: string) => void;
 }) {
+  const t = useT();
   return (
     <div
       className={
         "flex max-w-full items-center gap-2 overflow-x-auto rounded-(--radius-pill) " +
         "border border-(--border-faint) bg-(--surface-raised)/85 px-2 py-1.5 backdrop-blur"
       }
-      aria-label="Variants generated for this job"
+      aria-label={t("studio.variantsAria")}
     >
       {siblings.map((item, idx) => {
         const focused = item.id === focusedId;
@@ -694,7 +695,7 @@ function CanvasFilmstrip({
             type="button"
             onClick={() => onSelect(item.id)}
             aria-pressed={focused}
-            aria-label={`Variant ${idx + 1} of ${siblings.length}`}
+            aria-label={t("studio.variantLabel", { index: idx + 1, total: siblings.length })}
             className={
               "relative size-14 shrink-0 overflow-hidden rounded-(--radius-sm) " +
               "border transition-[border-color,transform] duration-(--motion-fast) " +
@@ -732,6 +733,7 @@ function formatSubmittedAt(ts: number): string {
 }
 
 function CancelGenerationControl({ mode, jobId }: { mode: StudioMode; jobId: string | null }) {
+  const t = useT();
   const cancelJob = useJobsStore((state) => state.cancel);
   const pushToast = useUIStore((state) => state.pushToast);
 
@@ -745,12 +747,14 @@ function CancelGenerationControl({ mode, jobId }: { mode: StudioMode; jobId: str
       await cancelJob(jobId);
       setOpen(false);
       pushToast({
-        title: `${mode === "video" ? "Video" : "Image"} generation cancelled`,
+        title: t("studio.generationCancelled", {
+          mode: mode === "video" ? t("common.video") : t("common.image"),
+        }),
         variant: "info",
       });
     } catch (err) {
       pushToast({
-        title: "Cancel failed",
+        title: t("gallery.toast.cancelFailed"),
         description: (err as Error)?.message ?? String(err),
         variant: "error",
       });
@@ -759,29 +763,31 @@ function CancelGenerationControl({ mode, jobId }: { mode: StudioMode; jobId: str
     }
   };
 
+  const modeLower = (mode === "video" ? t("common.video") : t("common.image")).toLowerCase();
+
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
         <button
           type="button"
           className="studio-generation-cancel-button"
-          aria-label="Cancel generation"
-          title="Cancel generation"
+          aria-label={t("gallery.preview.cancelGeneration")}
+          title={t("gallery.preview.cancelGeneration")}
         >
           <Icons.Stop weight="fill" className="size-3" aria-hidden="true" />
-          <span>Stop</span>
+          <span>{t("common.stop")}</span>
         </button>
       </Dialog.Trigger>
       <Dialog.Content className="max-w-[420px]" showClose={false}>
         <Dialog.Title className="text-[15px] font-semibold tracking-[-0.01em] text-(--text)">
-          Stop {mode === "video" ? "video" : "image"} generation?
+          {t("studio.stopGenerationTitle", { mode: modeLower })}
         </Dialog.Title>
         <Dialog.Description className="mt-2 text-[13px] leading-5 text-(--text-muted)">
-          This will end the current job. Any partial result will be discarded.
+          {t("studio.stopGenerationDesc")}
         </Dialog.Description>
         <div className="mt-6 flex items-center justify-end gap-2">
           <Button variant="ghost" size="sm" onClick={() => setOpen(false)} disabled={cancelling}>
-            Keep generating
+            {t("studio.keepGenerating")}
           </Button>
           <Button
             variant="danger"
@@ -789,7 +795,7 @@ function CancelGenerationControl({ mode, jobId }: { mode: StudioMode; jobId: str
             onClick={() => void handleConfirm()}
             disabled={!jobId || cancelling}
           >
-            {cancelling ? "Stopping…" : "Stop generation"}
+            {cancelling ? t("studio.stopping") : t("studio.stopGeneration")}
           </Button>
         </div>
       </Dialog.Content>
@@ -830,13 +836,16 @@ function CanvasMedia({ item, className = "" }: { item: GalleryItem; className?: 
 }
 
 function EmptyCanvas({ mode }: { mode: StudioMode }) {
+  const t = useT();
   const Icon = mode === "video" ? Icons.FilmReel : Icons.Image;
 
   return (
     <div className="flex flex-col items-center gap-2 text-center">
       <Icon weight="duotone" className="size-10 text-(--text-faint)" aria-hidden="true" />
       <p className="text-[12px] text-(--text-muted)">
-        Your {mode === "video" ? "video" : "image"} will appear here.
+        {t("studio.emptyCanvasHint", {
+          mode: (mode === "video" ? t("common.video") : t("common.image")).toLowerCase(),
+        })}
       </p>
     </div>
   );

@@ -2,18 +2,34 @@ import type { Asset } from "@imagent/core";
 import { IpcClientError } from "@imagent/ipc";
 import { AssetCard, Button, Icons, Tabs, Tooltip } from "@imagent/ui";
 import { useEffect, useMemo, useState } from "react";
+import { type MessageKey, useT } from "../../i18n/index.js";
 import { useAssetsStore } from "../../state/useAssetsStore.js";
 import { useUIStore } from "../../state/useUIStore.js";
 import { ArchivedAssetRow } from "./ArchivedAssetRow.js";
 import { AssetDrawer } from "./AssetDrawer.js";
 import { AssetSearchInput } from "./AssetSearchInput.js";
 import { CreateAssetDialog } from "./CreateAssetDialog.js";
-import { ACTIVE_TAB_LS_KEY, type AssetsTab, KIND_LABEL, KINDS, TRASH_TAB } from "./constants.js";
+import { ACTIVE_TAB_LS_KEY, type AssetsTab, KINDS, TRASH_TAB } from "./constants.js";
 import { resolveAssetThumbnailUrl } from "./utils.js";
+
+const KIND_PLURAL_KEYS: Record<(typeof KINDS)[number], MessageKey> = {
+  character: "assets.kind.characters",
+  object: "assets.kind.objects",
+  background: "assets.kind.backgrounds",
+  style: "assets.kind.styles",
+};
+
+const KIND_SINGULAR_KEYS: Record<(typeof KINDS)[number], MessageKey> = {
+  character: "assets.kind.character",
+  object: "assets.kind.object",
+  background: "assets.kind.background",
+  style: "assets.kind.style",
+};
 
 export { resolveAssetThumbnailUrl } from "./utils.js";
 
 export function AssetsPage() {
+  const t = useT();
   const byKind = useAssetsStore((s) => s.byKind);
   const archived = useAssetsStore((s) => s.archived);
   const refresh = useAssetsStore((s) => s.refresh);
@@ -50,10 +66,10 @@ export function AssetsPage() {
   }, [activeTab]);
 
   useEffect(() => {
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       setSearch(search.trim() || undefined);
     }, 300);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [search, setSearch]);
 
   const drawerAsset = useMemo(() => {
@@ -79,13 +95,13 @@ export function AssetsPage() {
       await archiveAsset(id);
       setDrawerId(null);
       pushToast({
-        title: "Moved to Trash",
-        description: "Restore from the Trash tab.",
+        title: t("assets.toast.movedToTrash"),
+        description: t("assets.toast.movedToTrashDesc"),
         variant: "success",
       });
     } catch (err) {
       pushToast({
-        title: "Archive failed",
+        title: t("assets.toast.archiveFailed"),
         description: err instanceof IpcClientError ? err.message : (err as Error)?.message,
         variant: "error",
       });
@@ -95,10 +111,10 @@ export function AssetsPage() {
   const onRestore = async (id: string): Promise<void> => {
     try {
       await restoreAsset(id);
-      pushToast({ title: "Restored", variant: "success" });
+      pushToast({ title: t("assets.toast.restored"), variant: "success" });
     } catch (err) {
       pushToast({
-        title: "Restore failed",
+        title: t("assets.toast.restoreFailed"),
         description: err instanceof IpcClientError ? err.message : (err as Error)?.message,
         variant: "error",
       });
@@ -111,7 +127,7 @@ export function AssetsPage() {
       setDrawerId(null);
     } catch (err) {
       pushToast({
-        title: "Delete failed",
+        title: t("assets.toast.deleteFailed"),
         description: err instanceof IpcClientError ? err.message : (err as Error)?.message,
         variant: "error",
       });
@@ -122,9 +138,9 @@ export function AssetsPage() {
     if (archived.length === 0) return;
     if (
       !window.confirm(
-        `Permanently delete ${archived.length} asset${
-          archived.length === 1 ? "" : "s"
-        }? This removes the files on disk and cannot be undone.`,
+        archived.length === 1
+          ? t("assets.emptyTrashConfirmOne", { count: archived.length })
+          : t("assets.emptyTrashConfirmMany", { count: archived.length }),
       )
     ) {
       return;
@@ -138,7 +154,10 @@ export function AssetsPage() {
       }
     }
     pushToast({
-      title: failures === 0 ? "Trash emptied" : `Trash emptied (${failures} failed)`,
+      title:
+        failures === 0
+          ? t("assets.toast.trashEmptied")
+          : t("assets.toast.trashEmptiedWithFailed", { failures }),
       variant: failures === 0 ? "success" : "warning",
     });
   };
@@ -148,11 +167,9 @@ export function AssetsPage() {
       <header className="flex items-start justify-between gap-4">
         <div className="flex flex-col">
           <h1 className="text-(length:--text-display-sm) font-(family-name:--font-display) text-(--text)">
-            Assets
+            {t("assets.title")}
           </h1>
-          <p className="text-(length:--text-body-sm) text-(--text-muted)">
-            Reusable characters, objects, backgrounds, and styles for your generations.
-          </p>
+          <p className="text-(length:--text-body-sm) text-(--text-muted)">{t("assets.subtitle")}</p>
         </div>
         <Button
           leadingIcon={<Icons.Plus weight="bold" className="size-4" />}
@@ -161,7 +178,7 @@ export function AssetsPage() {
             setCreateOpen(true);
           }}
         >
-          New
+          {t("assets.new")}
         </Button>
       </header>
 
@@ -169,7 +186,7 @@ export function AssetsPage() {
         <Tabs.List>
           {KINDS.map((k) => (
             <Tabs.Trigger key={k} value={k}>
-              {KIND_LABEL[k]}
+              {t(KIND_PLURAL_KEYS[k])}
               <span className="ml-2 rounded-(--radius-pill) bg-(--surface) px-1.5 text-[10px] font-semibold text-(--text-muted) [font-variant-numeric:tabular-nums]">
                 {byKind[k]?.length ?? 0}
               </span>
@@ -177,7 +194,7 @@ export function AssetsPage() {
           ))}
           <Tabs.Trigger value={TRASH_TAB}>
             <Icons.Trash weight="duotone" className="mr-1 size-4" />
-            Trash
+            {t("assets.trash")}
             <span className="ml-2 rounded-(--radius-pill) bg-(--surface) px-1.5 text-[10px] font-semibold text-(--text-muted) [font-variant-numeric:tabular-nums]">
               {archived.length}
             </span>
@@ -188,14 +205,16 @@ export function AssetsPage() {
           <Tabs.Content key={k} value={k} className="mt-4 flex flex-col gap-4">
             <div className="flex items-center gap-3">
               <AssetSearchInput
-                placeholder={`Search ${KIND_LABEL[k].toLowerCase()} by name, notes, or prompt…`}
+                placeholder={t("assets.searchKindPlaceholder", {
+                  kind: t(KIND_PLURAL_KEYS[k]).toLowerCase(),
+                })}
                 value={search}
                 onChange={setSearchInput}
               />
-              <Tooltip content="Searches asset names, descriptions, and prompt snippets.">
+              <Tooltip content={t("assets.searchHelper")}>
                 <button
                   type="button"
-                  aria-label="Search help"
+                  aria-label={t("toast.searchHelp")}
                   className={
                     "inline-flex size-7 items-center justify-center rounded-(--radius-pill) " +
                     "text-(--text-muted) transition-colors duration-(--duration-fast) " +
@@ -207,7 +226,9 @@ export function AssetsPage() {
               </Tooltip>
               {hasSearch ? (
                 <span className="text-(length:--text-caption) text-(--text-muted)">
-                  {byKind[k]?.length ?? 0} match{(byKind[k]?.length ?? 0) === 1 ? "" : "es"}
+                  {(byKind[k]?.length ?? 0) === 1
+                    ? t("assets.match", { count: byKind[k]?.length ?? 0 })
+                    : t("assets.matches", { count: byKind[k]?.length ?? 0 })}
                 </span>
               ) : null}
             </div>
@@ -240,14 +261,16 @@ export function AssetsPage() {
         <Tabs.Content value={TRASH_TAB} className="mt-4 flex flex-col gap-4">
           <div className="flex items-center justify-between gap-3">
             <AssetSearchInput
-              placeholder="Search trash by name, notes, or prompt…"
+              placeholder={t("assets.searchTrashPlaceholder")}
               value={search}
               onChange={setSearchInput}
             />
             <div className="flex items-center gap-3">
               {hasSearch ? (
                 <span className="text-(length:--text-caption) text-(--text-muted)">
-                  {archived.length} match{archived.length === 1 ? "" : "es"}
+                  {archived.length === 1
+                    ? t("assets.match", { count: archived.length })
+                    : t("assets.matches", { count: archived.length })}
                 </span>
               ) : null}
               <Button
@@ -257,7 +280,7 @@ export function AssetsPage() {
                 disabled={archived.length === 0}
                 leadingIcon={<Icons.Trash weight="bold" className="size-4" />}
               >
-                Empty Trash
+                {t("assets.emptyTrash")}
               </Button>
             </div>
           </div>
@@ -272,11 +295,7 @@ export function AssetsPage() {
                   onOpen={() => setDrawerId(a.id)}
                   onRestore={() => void onRestore(a.id)}
                   onPermanentlyDelete={() => {
-                    if (
-                      window.confirm(
-                        `Permanently delete '${a.name}'? Files on disk will be removed.`,
-                      )
-                    ) {
+                    if (window.confirm(t("assets.deleteConfirm", { name: a.name }))) {
                       void onPermanentlyDelete(a.id);
                     }
                   }}
@@ -321,6 +340,7 @@ function AssetsEmptyState({
   onClearSearch: () => void;
   onCreate: () => void;
 }) {
+  const t = useT();
   if (hasSearch) {
     return (
       <div className="mx-auto mt-16 flex w-full max-w-[420px] flex-col items-center text-center">
@@ -328,13 +348,13 @@ function AssetsEmptyState({
           <Icons.MagnifyingGlass weight="duotone" className="size-6 text-(--text-muted)" />
         </div>
         <h2 className="text-(length:--text-title) font-semibold tracking-[-0.01em] text-(--text)">
-          No matches
+          {t("assets.empty.noMatches")}
         </h2>
         <p className="mt-1.5 max-w-[320px] text-(length:--text-body-sm) leading-5 text-(--text-muted)">
-          Try a different keyword. Search looks across names, descriptions, and prompt snippets.
+          {t("assets.empty.noMatchesBody")}
         </p>
         <Button variant="secondary" size="sm" className="mt-5" onClick={onClearSearch}>
-          Clear search
+          {t("common.clearSearch")}
         </Button>
       </div>
     );
@@ -354,16 +374,16 @@ function AssetsEmptyState({
         <AssetKindIcon kind={kind} className="relative size-9 text-(--accent)" />
       </div>
       <h2 className="text-(length:--text-display) font-semibold tracking-[-0.01em] text-(--text)">
-        No {KIND_LABEL[kind].toLowerCase()} yet
+        {t("assets.empty.noKindYet", { kind: t(KIND_PLURAL_KEYS[kind]).toLowerCase() })}
       </h2>
       <p className="mt-2 max-w-[340px] text-(length:--text-body-sm) leading-5 text-(--text-muted)">
         {kind === "style"
-          ? "Save one reference image, a prompt snippet, or both so a visual style is ready when you compose."
-          : `Add reusable ${KIND_LABEL[kind].toLowerCase()} once, then pull them into image and video prompts from Studio.`}
+          ? t("assets.empty.styleBody")
+          : t("assets.empty.kindBody", { kind: t(KIND_PLURAL_KEYS[kind]).toLowerCase() })}
       </p>
       <div className="mt-6 inline-flex items-center gap-2">
         <Button onClick={onCreate} leadingIcon={<Icons.Plus weight="bold" className="size-4" />}>
-          New {kind}
+          {t("assets.empty.newKind", { kind: t(KIND_SINGULAR_KEYS[kind]).toLowerCase() })}
         </Button>
       </div>
     </div>
@@ -377,6 +397,7 @@ function TrashEmptyState({
   hasSearch: boolean;
   onClearSearch: () => void;
 }) {
+  const t = useT();
   if (hasSearch) {
     return (
       <div className="mx-auto mt-16 flex w-full max-w-[420px] flex-col items-center text-center">
@@ -384,13 +405,13 @@ function TrashEmptyState({
           <Icons.MagnifyingGlass weight="duotone" className="size-6 text-(--text-muted)" />
         </div>
         <h2 className="text-(length:--text-title) font-semibold tracking-[-0.01em] text-(--text)">
-          No matches
+          {t("assets.empty.noMatches")}
         </h2>
         <p className="mt-1.5 max-w-[320px] text-(length:--text-body-sm) leading-5 text-(--text-muted)">
-          Try a different keyword or clear search to see every archived asset.
+          {t("assets.empty.trashNoMatchBody")}
         </p>
         <Button variant="secondary" size="sm" className="mt-5" onClick={onClearSearch}>
-          Clear search
+          {t("common.clearSearch")}
         </Button>
       </div>
     );
@@ -402,10 +423,10 @@ function TrashEmptyState({
         <Icons.Trash weight="duotone" className="size-6 text-(--text-muted)" />
       </div>
       <h2 className="text-(length:--text-title) font-semibold tracking-[-0.01em] text-(--text)">
-        Trash is empty
+        {t("assets.empty.trashIsEmpty")}
       </h2>
       <p className="mt-1.5 max-w-[320px] text-(length:--text-body-sm) leading-5 text-(--text-muted)">
-        Archived assets land here and can be restored before they are permanently deleted.
+        {t("assets.empty.trashIsEmptyBody")}
       </p>
     </div>
   );

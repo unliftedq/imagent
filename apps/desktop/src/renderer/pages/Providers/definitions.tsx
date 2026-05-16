@@ -11,6 +11,7 @@ import bytedanceUrl from "../../assets/logos/bytedance.svg?url";
 import googleUrl from "../../assets/logos/google.svg?url";
 import openaiUrl from "../../assets/logos/openai.svg?url";
 import xaiUrl from "../../assets/logos/xai.svg?url";
+import type { MessageKey } from "../../i18n/index.js";
 
 export interface BuiltInProvider {
   id: string;
@@ -54,7 +55,8 @@ export const BUILT_IN_PROVIDERS: readonly BuiltInProvider[] = [
   {
     id: "azure",
     name: "Azure",
-    description: "Azure Foundry deployments — GPT Image, MAI Image, and FLUX families on one resource.",
+    description:
+      "Azure Foundry deployments — GPT Image, MAI Image, and FLUX families on one resource.",
     iconSrc: azureUrl,
     iconAlt: "Azure",
     endpointLabel: "Endpoint",
@@ -230,34 +232,76 @@ export function validateModal(
   activeModal: ActiveModal,
   form: ModalState,
   secrets: MaskedSecrets,
+  t: (key: MessageKey) => string,
 ): string | null {
   if (activeModal.kind === "custom") {
     if (!PROVIDER_ID_RE.test(form.providerId)) {
-      return "Provider ID must be lowercase letters, numbers, hyphens, or underscores.";
+      return t("providers.validation.providerId");
     }
     if (BUILT_IN_IDS.has(form.providerId)) {
-      return "Custom provider ID cannot reuse a built-in provider.";
+      return t("providers.validation.reservedId");
     }
-    if (!form.displayName.trim()) return "Display name is required.";
-    if (!form.baseUrl.trim()) return "Base URL is required.";
+    if (!form.displayName.trim()) return t("providers.validation.displayNameRequired");
+    if (!form.baseUrl.trim()) return t("providers.validation.baseUrlRequired");
   }
 
   if (activeModal.id === "azure" && !form.endpoint.trim()) {
-    return "Azure endpoint is required.";
+    return t("providers.validation.azureEndpointRequired");
   }
   if (activeModal.id === "bytedance" && !form.endpoint.trim()) {
-    return "ByteDance endpoint is required.";
+    return t("providers.validation.bytedanceEndpointRequired");
   }
 
   const masked = maskForModal(activeModal, form.providerId, secrets);
   const keyRequired = activeModal.kind !== "custom";
-  if (keyRequired && !masked && !form.apiKey.trim()) return "API key is required.";
+  if (keyRequired && !masked && !form.apiKey.trim())
+    return t("providers.validation.apiKeyRequired");
 
   if (activeModal.id === "azure" || activeModal.kind === "custom") {
     const usable = form.mappings.filter((row) => row.id.trim() && row.modelId.trim());
-    if (usable.length === 0) return "Add at least one model mapping.";
+    if (usable.length === 0) return t("providers.validation.atLeastOneMapping");
   }
   return null;
+}
+
+/** Returns the translated display name for a built-in provider id, or `id` as fallback. */
+export function providerDisplayName(id: string, t: (key: MessageKey) => string): string {
+  switch (id) {
+    case "openai":
+      return t("providers.def.openai.name");
+    case "azure":
+      return t("providers.def.azure.name");
+    case "google":
+      return t("providers.def.google.name");
+    case "flux-bfl":
+      return t("providers.def.fluxBfl.name");
+    case "bytedance":
+      return t("providers.def.bytedance.name");
+    case "xai":
+      return t("providers.def.xai.name");
+    default:
+      return id;
+  }
+}
+
+/** Returns the translated description for a built-in provider id. */
+export function providerDescription(id: string, t: (key: MessageKey) => string): string {
+  switch (id) {
+    case "openai":
+      return t("providers.def.openai.description");
+    case "azure":
+      return t("providers.def.azure.description");
+    case "google":
+      return t("providers.def.google.description");
+    case "flux-bfl":
+      return t("providers.def.fluxBfl.description");
+    case "bytedance":
+      return t("providers.def.bytedance.description");
+    case "xai":
+      return t("providers.def.xai.description");
+    default:
+      return "";
+  }
 }
 
 /**
@@ -286,7 +330,7 @@ export function buildSecretsPatch(activeModal: ActiveModal, form: ModalState): S
       patch.xai = { apiKey };
       break;
     case "azure":
-      patch["azure"] = { apiKey };
+      patch.azure = { apiKey };
       break;
     case "bytedance":
       patch.bytedance = { apiKey };
@@ -336,11 +380,7 @@ export function prefsWithMappings(
       ...existing,
       ...(endpoint ? { endpoint } : {}),
       ...(baseUrl ? { baseUrl } : {}),
-      ...(activeModal.id === "azure"
-        ? image.length > 0
-          ? { image }
-          : { image: [] }
-        : {}),
+      ...(activeModal.id === "azure" ? (image.length > 0 ? { image } : { image: [] }) : {}),
     };
     (next as unknown as Record<string, ProviderRoutingPayload>)[providerId] = merged;
   }
@@ -366,7 +406,7 @@ export function maskForModal(
     case "openai":
       return secrets.openai?.apiKey ?? null;
     case "azure":
-      return secrets["azure"]?.apiKey ?? null;
+      return secrets.azure?.apiKey ?? null;
     case "google":
       return secrets.google?.apiKey ?? null;
     case "flux-bfl":

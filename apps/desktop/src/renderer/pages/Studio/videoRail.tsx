@@ -1,8 +1,9 @@
 import type { VideoModelCaps, VideoModelDef, VideoRequest } from "@imagent/core";
 import type { ProviderId } from "@imagent/ipc";
 import { IpcClientError } from "@imagent/ipc";
-import { Button, Icons, Popover, Select } from "@imagent/ui";
+import { Button, Icons, Popover } from "@imagent/ui";
 import { useEffect, useMemo, useState } from "react";
+import { useT } from "../../i18n/index.js";
 import { api } from "../../lib/api.js";
 import { useAssetsStore } from "../../state/useAssetsStore.js";
 import { useConfigStore } from "../../state/useConfigStore.js";
@@ -32,6 +33,7 @@ export function VideoRail() {
   const resetDraft = useUIStore((state) => state.resetVideoDraft);
   const navigate = useUIStore((state) => state.navigate);
   const pushToast = useUIStore((state) => state.pushToast);
+  const t = useT();
 
   const summaries = useConfigStore((state) => state.summaries);
   const appPrefs = useConfigStore((state) => state.appPrefs);
@@ -78,7 +80,8 @@ export function VideoRail() {
     if (draft.providerId !== defaultId) {
       setDraft({
         providerId: defaultId,
-        modelId: defaultId === defaultVideoModel?.providerId ? defaultVideoModel.modelId : undefined,
+        modelId:
+          defaultId === defaultVideoModel?.providerId ? defaultVideoModel.modelId : undefined,
       });
     }
   }, [configuredVideoProviders, appPrefs?.defaultVideoModel, draft.providerId, setDraft]);
@@ -106,7 +109,7 @@ export function VideoRail() {
       setModelsByProvider(nextModels);
       if (failures.length > 0) {
         pushToast({
-          title: "Could not load some video models",
+          title: t("studio.modelPicker.couldNotLoadVideo"),
           description: failures.slice(0, 2).join("\n"),
           variant: "error",
         });
@@ -160,11 +163,11 @@ export function VideoRail() {
   const submit = async (): Promise<void> => {
     setValidationError(null);
     if (!draft.prompt.trim()) {
-      setValidationError("Prompt is required.");
+      setValidationError(t("studio.composer.promptRequired"));
       return;
     }
     if (!draft.providerId || !draft.modelId) {
-      setValidationError("Choose a provider and model first.");
+      setValidationError(t("studio.composer.chooseProvider"));
       return;
     }
 
@@ -218,7 +221,7 @@ export function VideoRail() {
       const message =
         err instanceof IpcClientError ? `${err.message}` : ((err as Error)?.message ?? String(err));
       pushToast({
-        title: "Video submit failed",
+        title: t("studio.composer.videoSubmitFailed"),
         description: message,
         variant: "error",
       });
@@ -232,14 +235,12 @@ export function VideoRail() {
       <div className="rounded-(--radius-md) border border-(--border) bg-(--surface-raised) p-4 text-center">
         <Icons.FilmReel weight="duotone" className="mx-auto size-8 text-(--text-muted)" />
         <h2 className="mt-2 text-[15px] font-semibold tracking-[-0.01em] text-(--text)">
-          No video provider
+          {t("studio.noVideoProvider")}
         </h2>
-        <p className="mt-1 text-[12px] text-(--text-muted)">
-          Configure ByteDance to start generating videos.
-        </p>
+        <p className="mt-1 text-[12px] text-(--text-muted)">{t("studio.noVideoProviderDesc")}</p>
         <div className="mt-3 inline-flex">
           <Button size="sm" onClick={() => navigate("providers")}>
-            Open Providers
+            {t("studio.openProviders")}
           </Button>
         </div>
       </div>
@@ -254,7 +255,7 @@ export function VideoRail() {
       prompt={draft.prompt}
       onPromptChange={(prompt) => setDraft({ prompt })}
       onSubmit={() => void submit()}
-      placeholder="Describe the video you want to generate"
+      placeholder={t("studio.composer.videoPlaceholder")}
       submitting={submitting}
       disabled={!draft.prompt.trim()}
       validationError={validationError}
@@ -286,7 +287,7 @@ export function VideoRail() {
         thumbnailUrl={(asset) => resolveAssetThumbnailUrl(asset)}
         onRequestCreateAsset={() => navigate("assets")}
         onError={(message) =>
-          pushToast({ title: "Reference failed", description: message, variant: "error" })
+          pushToast({ title: t("studio.referenceFailed"), description: message, variant: "error" })
         }
       />
 
@@ -310,6 +311,7 @@ function VideoConfigurationPanel({
   draft: VideoDraft;
   onChange: (patch: Partial<VideoDraft>) => void;
 }) {
+  const t = useT();
   const hasAspectRatios = !!caps?.aspectRatios?.length;
   const hasDurations = !!caps?.durationsSec?.length;
   const hasFps = !!caps?.fpsOptions?.length;
@@ -322,16 +324,16 @@ function VideoConfigurationPanel({
   return (
     <Popover.Root>
       <Popover.Trigger asChild>
-        <ConfigurationPopoverButton label="Video configuration" />
+        <ConfigurationPopoverButton label={t("studio.videoConfig")} />
       </Popover.Trigger>
       <Popover.Content align="start" className="w-[420px] p-0">
         <div className="flex max-h-[70vh] flex-col gap-5 overflow-y-auto p-5">
           <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-(--text)">
-            Configuration
+            {t("studio.configuration")}
           </h2>
 
           {hasAspectRatios ? (
-            <ConfigSection title="Aspect Ratio">
+            <ConfigSection title={t("studio.aspectRatio")}>
               <AspectRatioGrid
                 ratios={caps?.aspectRatios ?? []}
                 value={draft.aspectRatio ?? caps?.aspectRatios?.[0]}
@@ -341,9 +343,9 @@ function VideoConfigurationPanel({
           ) : null}
 
           {hasResolutions ? (
-            <ConfigSection title="Resolution">
+            <ConfigSection title={t("studio.resolution")}>
               <SegmentedControl
-                ariaLabel="Resolution"
+                ariaLabel={t("studio.resolution")}
                 options={caps?.resolutions ?? []}
                 value={draft.resolution ?? caps?.resolutions?.[0]}
                 onChange={(resolution) => onChange({ resolution })}
@@ -352,9 +354,9 @@ function VideoConfigurationPanel({
           ) : null}
 
           {hasDurations ? (
-            <ConfigSection title="Duration">
+            <ConfigSection title={t("studio.duration")}>
               <SegmentedControl
-                ariaLabel="Duration"
+                ariaLabel={t("studio.duration")}
                 options={caps?.durationsSec ?? []}
                 value={draft.durationSec ?? caps?.durationsSec?.[0]}
                 formatLabel={(duration) => `${duration}s`}
@@ -364,9 +366,9 @@ function VideoConfigurationPanel({
           ) : null}
 
           {hasFps ? (
-            <ConfigSection title="FPS">
+            <ConfigSection title={t("studio.fps")}>
               <SegmentedControl
-                ariaLabel="FPS"
+                ariaLabel={t("studio.fps")}
                 options={caps?.fpsOptions ?? []}
                 value={draft.fps ?? caps?.fpsOptions?.[0]}
                 onChange={(fps) => onChange({ fps })}

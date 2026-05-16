@@ -1,5 +1,6 @@
 import type { DragEvent } from "react";
 import { useState } from "react";
+import { useT } from "../../i18n/index.js";
 import type { StudioMode } from "../../state/useUIStore.js";
 import { type StudioReferenceRole, useUIStore } from "../../state/useUIStore.js";
 import { CanvasArea } from "./canvas.js";
@@ -28,6 +29,7 @@ export function StudioPage() {
     StudioReferenceDragData,
     { source: "gallery" }
   > | null>(null);
+  const t = useT();
 
   const draft = studioMode === "image" ? imageDraft : videoDraft;
   const setDraft = studioMode === "image" ? setImageDraft : setVideoDraft;
@@ -49,7 +51,7 @@ export function StudioPage() {
       const kind = data.kind as keyof typeof draft.assetIds;
       const current = draft.assetIds[kind] ?? [];
       if (current.includes(data.id)) {
-        pushToast({ title: "Reference already added", variant: "info" });
+        pushToast({ title: t("studio.referenceAlreadyAdded"), variant: "info" });
         return;
       }
       setDraft({
@@ -58,7 +60,10 @@ export function StudioPage() {
           [kind]: [...current, data.id],
         },
       });
-      pushToast({ title: `Added ${referenceTypeLabel(data.kind)} reference`, variant: "success" });
+      pushToast({
+        title: t("studio.referenceAddedAs", { kind: roleLabel(data.kind, t) }),
+        variant: "success",
+      });
       return;
     }
 
@@ -76,7 +81,7 @@ export function StudioPage() {
     });
     setPendingGalleryReference(null);
     pushToast({
-      title: `Added gallery reference as ${referenceTypeLabel(role)}`,
+      title: t("studio.galleryReferenceAddedAs", { kind: roleLabel(role, t) }),
       variant: "success",
     });
   };
@@ -91,7 +96,7 @@ export function StudioPage() {
       }}
     >
       <section
-        aria-label="Studio session drop area"
+        aria-label={t("studio.dropArea")}
         className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-(--bg)"
         onDragOver={onDragOver}
         onDrop={onDrop}
@@ -135,6 +140,7 @@ function GalleryReferenceRoleDialog({
   onSelect: (role: StudioReferenceRole) => void;
   onCancel: () => void;
 }) {
+  const t = useT();
   if (!open) return null;
 
   return (
@@ -142,14 +148,16 @@ function GalleryReferenceRoleDialog({
       <div className="w-full max-w-[360px] rounded-(--radius-lg) border border-(--border) bg-(--surface-raised) p-4 shadow-[0_24px_70px_-30px_rgba(0,0,0,0.65)]">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-[14px] font-semibold text-(--text)">Choose reference type</h2>
+            <h2 className="text-[14px] font-semibold text-(--text)">
+              {t("studio.referenceChooseType")}
+            </h2>
             <p className="mt-1 text-[12px] text-(--text-muted)">
-              Gallery items can be added to the current session with a typed role.
+              {t("studio.referenceChooseTypeBody")}
             </p>
           </div>
           <button
             type="button"
-            aria-label="Cancel reference type selection"
+            aria-label={t("studio.referenceCancel")}
             onClick={onCancel}
             className="inline-flex size-7 items-center justify-center rounded-(--radius-sm) text-(--text-muted) hover:bg-(--surface) hover:text-(--text) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring)"
           >
@@ -174,30 +182,33 @@ function RoleButton({
   referenceRole: StudioReferenceRole;
   onSelect: (role: StudioReferenceRole) => void;
 }) {
+  const t = useT();
   return (
     <button
       type="button"
       onClick={() => onSelect(referenceRole)}
       className="inline-flex h-10 items-center justify-center rounded-(--radius-md) border border-(--border) bg-(--bg) px-3 text-[12px] font-semibold text-(--text) transition-colors duration-(--motion-fast) hover:border-(--border-strong) hover:bg-(--surface) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring)"
     >
-      {referenceTypeLabel(referenceRole)}
+      {roleLabel(referenceRole, t)}
     </button>
   );
 }
 
-function referenceTypeLabel(role: StudioReferenceRole): string {
+type TFn = ReturnType<typeof useT>;
+
+function roleLabel(role: StudioReferenceRole, t: TFn): string {
   switch (role) {
     case "character":
-      return "character";
+      return t("studio.role.character");
     case "object":
-      return "object";
+      return t("studio.role.object");
     case "background":
-      return "background";
+      return t("studio.role.background");
     case "style":
-      return "style";
+      return t("studio.role.style");
     case "freeform":
-      return "other";
+      return t("studio.role.other");
     default:
-      return "other";
+      return t("studio.role.other");
   }
 }

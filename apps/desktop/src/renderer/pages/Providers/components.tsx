@@ -9,13 +9,16 @@ import {
   Tooltip,
 } from "@imagent/ui";
 import { useState } from "react";
+import { type MessageKey, useT } from "../../i18n/index.js";
 import {
-  mappingRow,
-  providerDef,
-  updateMapping,
   type ActiveModal,
   type MappingRowState,
   type ModalState,
+  mappingRow,
+  providerDef,
+  providerDescription,
+  providerDisplayName,
+  updateMapping,
 } from "./definitions.js";
 
 export function ProviderListRow({
@@ -42,6 +45,7 @@ export function ProviderListRow({
   onConfigure: () => void;
   onTest: () => void;
 }) {
+  const t = useT();
   const configured = summary?.configured ?? false;
   return (
     <div className="flex items-center gap-4 border-t border-(--border-faint) px-5 py-4 first:border-t-0">
@@ -49,7 +53,9 @@ export function ProviderListRow({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-(length:--text-title-sm) font-semibold text-(--text)">{name}</h2>
-          {summary && summary.kinds.length > 1 ? <KindsBadge text="Image + Video" /> : null}
+          {summary && summary.kinds.length > 1 ? (
+            <KindsBadge text={t("common.imagePlusVideo")} />
+          ) : null}
           {configured ? <ConnectedPill /> : null}
         </div>
         <p className="mt-0.5 text-(length:--text-body-sm) text-(--text-muted)">{description}</p>
@@ -62,9 +68,9 @@ export function ProviderListRow({
             size="sm"
             onClick={onTest}
             disabled={status.kind === "testing"}
-            leadingIcon={statusIcon(status)}
+            leadingIcon={statusIcon(status, t)}
           >
-            Test
+            {t("providers.test")}
           </Button>
         ) : null}
         <Button
@@ -73,7 +79,7 @@ export function ProviderListRow({
           size="sm"
           onClick={onConfigure}
         >
-          {configured ? "Update" : "Connect"}
+          {configured ? t("common.update") : t("common.connect")}
         </Button>
       </div>
     </div>
@@ -101,20 +107,29 @@ export function ProviderConfigModal({
   onClose: () => void;
   onSave: () => void;
 }) {
+  const t = useT();
   const builtIn = activeModal?.kind === "built-in" ? providerDef(activeModal.id) : null;
   const customId = activeModal?.kind === "custom" ? activeModal.id : null;
   const isCustom = activeModal?.kind === "custom";
   const canEditProviderId = activeModal?.kind === "custom" && activeModal.id === null;
   const usesEndpoint = builtIn?.endpointLabel !== undefined;
   const usesMappings = activeModal?.id === "azure" || isCustom;
+  const isDeploymentMapping = builtIn?.mappingLabel === "Deployment";
   const title = isCustom
     ? customId
-      ? "Update Custom Provider"
-      : "Connect Custom Provider"
-    : `Connect ${builtIn?.name ?? "Provider"}`;
+      ? t("providers.customUpdate")
+      : t("providers.customConnect")
+    : t("providers.connect", {
+        name:
+          activeModal?.kind === "built-in"
+            ? providerDisplayName(activeModal.id, t)
+            : t("providers.providerHeading"),
+      });
   const description = isCustom
-    ? "Use an OpenAI Images API-compatible endpoint and map its model ids to canonical catalog models."
-    : (builtIn?.description ?? "Configure provider access.");
+    ? t("providers.customDialogDescription")
+    : activeModal?.kind === "built-in"
+      ? providerDescription(activeModal.id, t)
+      : t("providers.configureAccess");
 
   return (
     <Dialog.Root open={activeModal !== null} onOpenChange={(open) => (!open ? onClose() : null)}>
@@ -126,13 +141,13 @@ export function ProviderConfigModal({
               variant="ghost"
               size="sm"
               className="size-8 p-0"
-              aria-label="Back"
+              aria-label={t("common.back")}
               onClick={onClose}
             >
               <Icons.CaretRight weight="bold" className="size-4 rotate-180" />
             </Button>
             <span className="text-(length:--text-caption-uppercase) tracking-[1.5px] text-(--text-muted)">
-              Provider
+              {t("providers.providerHeading")}
             </span>
           </div>
           <div className="flex items-start gap-4 pr-10">
@@ -156,8 +171,8 @@ export function ProviderConfigModal({
           {isCustom ? (
             <div className="grid gap-4 sm:grid-cols-2">
               <Field
-                label="Provider ID"
-                helperText="Lowercase letters, numbers, hyphens, and underscores."
+                label={t("providers.providerId")}
+                helperText={t("providers.providerId.helper")}
               >
                 <Input
                   value={form.providerId}
@@ -166,10 +181,10 @@ export function ProviderConfigModal({
                   onChange={(e) => setForm((s) => ({ ...s, providerId: e.target.value.trim() }))}
                 />
               </Field>
-              <Field label="Display name">
+              <Field label={t("providers.displayName")}>
                 <Input
                   value={form.displayName}
-                  placeholder="My Provider"
+                  placeholder={t("providers.displayName.placeholder")}
                   onChange={(e) => setForm((s) => ({ ...s, displayName: e.target.value }))}
                 />
               </Field>
@@ -177,7 +192,7 @@ export function ProviderConfigModal({
           ) : null}
 
           {usesEndpoint ? (
-            <Field label={builtIn?.endpointLabel ?? "Endpoint"}>
+            <Field label={t("providers.endpoint")}>
               <Input
                 value={form.endpoint}
                 placeholder={builtIn?.endpointPlaceholder}
@@ -187,10 +202,7 @@ export function ProviderConfigModal({
           ) : null}
 
           {isCustom ? (
-            <Field
-              label="Base URL"
-              helperText="Include the OpenAI-compatible /v1 path when your provider requires it."
-            >
+            <Field label={t("providers.baseUrl")} helperText={t("providers.baseUrl.helper")}>
               <Input
                 value={form.baseUrl}
                 placeholder="https://api.example.com/v1"
@@ -200,23 +212,35 @@ export function ProviderConfigModal({
           ) : null}
 
           <SecretField
-            label="API key"
-            placeholder={maskedApiKey ?? (isCustom ? "optional" : "paste your key here")}
+            label={t("providers.apiKey")}
+            placeholder={
+              maskedApiKey ??
+              (isCustom ? t("common.optional") : t("providers.apiKey.placeholderPaste"))
+            }
             value={form.apiKey}
             onChange={(apiKey) => setForm((s) => ({ ...s, apiKey }))}
             helperText={
               maskedApiKey
-                ? `Stored: ${maskedApiKey}. Leave empty to keep it.`
+                ? t("providers.apiKey.stored", { masked: maskedApiKey })
                 : isCustom
-                  ? "Optional for endpoints that inject authentication upstream."
-                  : "Required before this provider can be tested."
+                  ? t("providers.apiKey.helperCustom")
+                  : t("providers.apiKey.helperRequired")
             }
           />
 
           {usesMappings ? (
             <MappingEditor
-              label={activeModal?.id === "azure" ? "Deployment mappings" : "Model mappings"}
-              mappingLabel={builtIn?.mappingLabel ?? "Provider model"}
+              label={
+                activeModal?.id === "azure"
+                  ? t("providers.deploymentMappings")
+                  : t("providers.modelMappings")
+              }
+              mappingLabel={
+                isDeploymentMapping
+                  ? t("providers.mappings.deployment")
+                  : t("providers.mappings.providerModel")
+              }
+              isDeployment={isDeploymentMapping}
               rows={form.mappings}
               modelOptions={imageModelOptions}
               disabled={!catalogReady || imageModelOptions.length === 0}
@@ -227,7 +251,7 @@ export function ProviderConfigModal({
 
         <div className="flex items-center justify-end gap-2 border-t border-(--border-faint) px-6 py-4">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             type="button"
@@ -238,7 +262,7 @@ export function ProviderConfigModal({
               saving ? <Icons.CircleNotch weight="bold" className="size-4 animate-spin" /> : null
             }
           >
-            Continue
+            {t("common.continue")}
           </Button>
         </div>
       </Dialog.Content>
@@ -249,6 +273,7 @@ export function ProviderConfigModal({
 function MappingEditor({
   label,
   mappingLabel,
+  isDeployment,
   rows,
   modelOptions,
   disabled,
@@ -256,11 +281,13 @@ function MappingEditor({
 }: {
   label: string;
   mappingLabel: string;
+  isDeployment: boolean;
   rows: MappingRowState[];
   modelOptions: Array<{ id: string; label: string }>;
   disabled: boolean;
   onChange: (rows: MappingRowState[]) => void;
 }) {
+  const t = useT();
   const defaultModelId = modelOptions[0]?.id ?? "";
   return (
     <section className="flex flex-col gap-3">
@@ -268,7 +295,7 @@ function MappingEditor({
         <div>
           <h3 className="text-(length:--text-title-sm) font-semibold text-(--text)">{label}</h3>
           <p className="mt-0.5 text-(length:--text-caption) text-(--text-muted)">
-            Each provider-facing id inherits capabilities and defaults from the selected model.
+            {t("providers.mappings.subtitle")}
           </p>
         </div>
         <Button
@@ -279,7 +306,7 @@ function MappingEditor({
           leadingIcon={<Icons.Plus weight="bold" className="size-4" />}
           onClick={() => onChange([...rows, mappingRow("", defaultModelId)])}
         >
-          Add
+          {t("common.add")}
         </Button>
       </div>
       <div className="flex flex-col gap-2">
@@ -291,18 +318,24 @@ function MappingEditor({
             <Field label={mappingLabel}>
               <Input
                 value={row.id}
-                placeholder={mappingLabel === "Deployment" ? "deployment-name" : "model-id"}
-                onChange={(e) => updateMapping(rows, onChange, index, { id: e.target.value.trim() })}
+                placeholder={
+                  isDeployment
+                    ? t("providers.mappings.deploymentPlaceholder")
+                    : t("providers.mappings.modelIdPlaceholder")
+                }
+                onChange={(e) =>
+                  updateMapping(rows, onChange, index, { id: e.target.value.trim() })
+                }
               />
             </Field>
-            <Field label="Canonical model">
+            <Field label={t("providers.mappings.canonicalModel")}>
               <Select.Root
                 value={row.modelId}
                 onValueChange={(modelId) => updateMapping(rows, onChange, index, { modelId })}
                 disabled={disabled}
               >
                 <Select.Trigger>
-                  <Select.Value placeholder="Choose model" />
+                  <Select.Value placeholder={t("providers.mappings.chooseModel")} />
                 </Select.Trigger>
                 <Select.Content>
                   {modelOptions.map((model) => (
@@ -319,7 +352,7 @@ function MappingEditor({
                 variant="ghost"
                 size="sm"
                 className="size-11 p-0"
-                aria-label="Remove mapping"
+                aria-label={t("providers.mappings.removeMapping")}
                 onClick={() => onChange(rows.filter((_, i) => i !== index))}
               >
                 <Icons.X weight="bold" className="size-4" />
@@ -426,10 +459,11 @@ export function ProviderIcon({
 }
 
 function ConnectedPill() {
+  const t = useT();
   return (
     <span className="inline-flex items-center gap-1 rounded-(--radius-pill) border border-(--success)/30 bg-(--success-soft)/60 px-2 py-0.5 text-(length:--text-caption) text-(--success)">
       <Icons.CheckCircle weight="fill" className="size-3.5 text-(--success)" />
-      Connected
+      {t("common.connected")}
     </span>
   );
 }
@@ -442,13 +476,22 @@ function KindsBadge({ text }: { text: string }) {
   );
 }
 
-function statusIcon(status: ProviderTestStatus) {
+function statusIcon(
+  status: ProviderTestStatus,
+  t: (key: MessageKey, params?: Record<string, string | number>) => string,
+) {
   if (status.kind === "testing") {
     return <Icons.CircleNotch weight="bold" className="size-4 animate-spin" />;
   }
   if (status.kind === "ok") {
     return (
-      <Tooltip content={status.sampleModelId ? `Connected with ${status.sampleModelId}` : "Connected"}>
+      <Tooltip
+        content={
+          status.sampleModelId
+            ? t("providers.connectedWith", { model: status.sampleModelId })
+            : t("common.connected")
+        }
+      >
         <Icons.CheckCircle weight="fill" className="size-4 text-(--success)" />
       </Tooltip>
     );

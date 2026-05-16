@@ -1,10 +1,6 @@
 import { Icons, Select } from "@imagent/ui";
-import {
-  type KeyboardEvent,
-  type ReactNode,
-  useEffect,
-  useRef,
-} from "react";
+import { type KeyboardEvent, type ReactNode, useEffect, useRef } from "react";
+import { useT } from "../../i18n/index.js";
 import type { StudioMode } from "../../state/useUIStore.js";
 import { autosizeComposer } from "./utils.js";
 
@@ -15,6 +11,7 @@ export function StudioModeSwitch({
   mode: StudioMode;
   onModeChange: (mode: StudioMode) => void;
 }) {
+  const t = useT();
   return (
     <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-center bg-(--bg)/95 backdrop-blur">
       <div className="grid grid-cols-2 gap-1 rounded-(--radius-lg) border border-(--border) bg-(--surface) p-1">
@@ -23,14 +20,14 @@ export function StudioModeSwitch({
           icon={<Icons.Image weight="duotone" className="size-4" />}
           onClick={() => onModeChange("image")}
         >
-          Image
+          {t("studio.modeImage")}
         </ModeSwitchButton>
         <ModeSwitchButton
           active={mode === "video"}
           icon={<Icons.FilmReel weight="duotone" className="size-4" />}
           onClick={() => onModeChange("video")}
         >
-          Video
+          {t("studio.modeVideo")}
         </ModeSwitchButton>
       </div>
     </header>
@@ -95,6 +92,7 @@ export function ChatComposerShell({
   children: ReactNode;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const t = useT();
 
   useEffect(() => {
     autosizeComposer(textareaRef.current);
@@ -107,7 +105,8 @@ export function ChatComposerShell({
     }
   };
 
-  const actionLabel = mode === "video" ? "Submit video" : "Generate image";
+  const actionLabel =
+    mode === "video" ? t("studio.composer.submit") : t("studio.composer.generate");
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-5">
@@ -126,7 +125,7 @@ export function ChatComposerShell({
                 "bg-(--accent-soft) px-2.5 py-1 text-[11px] font-semibold text-(--accent)"
               }
             >
-              Remix {remixId.slice(0, 8)}...
+              {t("studio.remixBadge", { id: remixId.slice(0, 8) })}
             </span>
             {onClearRemix ? (
               <button
@@ -134,7 +133,7 @@ export function ChatComposerShell({
                 onClick={onClearRemix}
                 className="text-[12px] text-(--text-muted) underline-offset-2 hover:text-(--text) hover:underline"
               >
-                Clear
+                {t("common.clear")}
               </button>
             ) : null}
           </div>
