@@ -57,6 +57,7 @@ import {
 import { app, type BrowserWindow, dialog, type IpcMain, shell } from "electron";
 import sharp from "sharp";
 import type { RuntimeServices } from "./job-runner-bootstrap.js";
+import type { Updater } from "./updater.js";
 
 void _unused;
 
@@ -68,6 +69,7 @@ export interface IpcDeps {
   paths: PathResolver;
   logger: Logger;
   runtime: RuntimeServices;
+  updater: Updater;
   /** All currently-open windows. Used to address `system.chooseDirectory` to the right one. */
   getMainWindow: () => BrowserWindow | null;
 }
@@ -79,7 +81,8 @@ export interface IpcDeps {
  * `webContents` targets via `IpcServer.addEventTarget`.
  */
 export function setupIpc(deps: IpcDeps): IpcServer {
-  const { ipcMain, configStore, secretsStore, paths, logger, runtime, getMainWindow } = deps;
+  const { ipcMain, configStore, secretsStore, paths, logger, runtime, updater, getMainWindow } =
+    deps;
   const kv = new KvRepository(deps.db);
   const galleryRepo = new GalleryRepository(deps.db);
   const boardRepo = new BoardRepository(deps.db);
@@ -529,6 +532,14 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       assetsDir: paths.assetsDir(),
       logsDir: paths.logsDir(),
     }),
+
+    "updater.check": async () => updater.check(),
+    "updater.download": async () => updater.download(),
+    "updater.cancel": async () => updater.cancel(),
+    "updater.install": async () => {
+      await updater.install();
+    },
+    "updater.status": async () => updater.status(),
 
     "catalog.get": async () => runtime.catalog,
     "catalog.set": async (input) => {

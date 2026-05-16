@@ -149,7 +149,7 @@ export type ProviderRoutingPayload = z.infer<typeof IpcProviderRoutingSchema>;
 
 export const ProviderPreferencesPayloadSchema = z.object({
   openai: IpcProviderRoutingSchema,
-  "azure": IpcProviderRoutingSchema,
+  azure: IpcProviderRoutingSchema,
   google: IpcProviderRoutingSchema,
   "flux-bfl": IpcProviderRoutingSchema,
   bytedance: IpcProviderRoutingSchema,
@@ -167,7 +167,7 @@ export type ProviderPreferencesPayload = z.infer<typeof ProviderPreferencesPaylo
 const MaskedKey = z.object({ apiKey: z.string().nullable() });
 export const MaskedSecretsSchema = z.object({
   openai: MaskedKey.optional(),
-  "azure": MaskedKey.optional(),
+  azure: MaskedKey.optional(),
   google: MaskedKey.optional(),
   "flux-bfl": MaskedKey.optional(),
   bytedance: MaskedKey.optional(),
@@ -183,14 +183,12 @@ export type MaskedSecrets = z.infer<typeof MaskedSecretsSchema>;
 const WriteKey = z.object({ apiKey: z.string().min(1) }).partial();
 export const SecretsWriteSchema = z.object({
   openai: WriteKey.optional(),
-  "azure": WriteKey.optional(),
+  azure: WriteKey.optional(),
   google: WriteKey.optional(),
   "flux-bfl": WriteKey.optional(),
   bytedance: WriteKey.optional(),
   xai: WriteKey.optional(),
-  customOpenAI: z
-    .record(ProviderIdSchema, z.object({ apiKey: z.string().min(1) }))
-    .optional(),
+  customOpenAI: z.record(ProviderIdSchema, z.object({ apiKey: z.string().min(1) })).optional(),
 });
 export type SecretsWrite = z.infer<typeof SecretsWriteSchema>;
 
@@ -216,6 +214,77 @@ export const AppVersionInfoSchema = z.object({
   dataDir: z.string(),
 });
 export type AppVersionInfo = z.infer<typeof AppVersionInfoSchema>;
+
+/**
+ * App update check / download / install (auto-updater).
+ *
+ * The updater reads the latest GitHub release for `unliftedq/imagent`,
+ * compares its tag against `app.getVersion()`, and — when newer — downloads
+ * the platform-appropriate installer (DMG / NSIS / AppImage) to a temp file
+ * and launches it. Auto-update flow:
+ *
+ *   1. renderer calls `updater.check()` → `UpdateCheckResult`
+ *   2. if `status === "available"`, renderer calls `updater.download()`
+ *      and listens to `updater.progress` push events
+ *   3. once `state === "ready"`, renderer calls `updater.install()` —
+ *      the main process launches the installer and quits the app.
+ *
+ * `updater.cancel()` aborts an in-flight download. `updater.status()` returns
+ * the most recently observed state so a freshly-rendered Settings page can
+ * re-attach UI to a download already in progress.
+ */
+export const UpdateAssetSchema = z.object({
+  name: z.string(),
+  url: z.string(),
+  size: z.number().int().nonnegative(),
+});
+export type UpdateAsset = z.infer<typeof UpdateAssetSchema>;
+
+export const UpdateCheckResultSchema = z.discriminatedUnion("status", [
+  z.object({
+    status: z.literal("uptodate"),
+    currentVersion: z.string(),
+    latestVersion: z.string().nullable(),
+  }),
+  z.object({
+    status: z.literal("available"),
+    currentVersion: z.string(),
+    latestVersion: z.string(),
+    releaseUrl: z.string(),
+    releaseNotes: z.string().nullable(),
+    publishedAt: z.string().nullable(),
+    asset: UpdateAssetSchema.nullable(),
+  }),
+  z.object({
+    status: z.literal("error"),
+    currentVersion: z.string(),
+    message: z.string(),
+  }),
+]);
+export type UpdateCheckResult = z.infer<typeof UpdateCheckResultSchema>;
+
+export const UpdateProgressStateSchema = z.enum([
+  "idle",
+  "checking",
+  "downloading",
+  "ready",
+  "installing",
+  "error",
+]);
+export type UpdateProgressState = z.infer<typeof UpdateProgressStateSchema>;
+
+export const UpdateStatusPayloadSchema = z.object({
+  state: UpdateProgressStateSchema,
+  /** Bytes downloaded; 0 outside of `downloading`/`ready`. */
+  bytes: z.number().int().nonnegative(),
+  /** Total bytes from Content-Length; 0 if unknown. */
+  total: z.number().int().nonnegative(),
+  /** Version tag this state pertains to (e.g. `0.3.0`); null when idle. */
+  version: z.string().nullable(),
+  /** Last error message; populated when `state === "error"`. */
+  message: z.string().nullable(),
+});
+export type UpdateStatusPayload = z.infer<typeof UpdateStatusPayloadSchema>;
 
 export const StoragePathsSchema = z.object({
   dataDir: z.string(),
@@ -268,6 +337,13 @@ export const contract = {
   },
   "app.version": { input: z.void(), output: AppVersionInfoSchema },
   "app.storagePaths": { input: z.void(), output: StoragePathsSchema },
+
+  // Auto-updater. See UpdateCheckResultSchema for the full flow.
+  "updater.check": { input: z.void(), output: UpdateCheckResultSchema },
+  "updater.download": { input: z.void(), output: UpdateStatusPayloadSchema },
+  "updater.cancel": { input: z.void(), output: UpdateStatusPayloadSchema },
+  "updater.install": { input: z.void(), output: z.void() },
+  "updater.status": { input: z.void(), output: UpdateStatusPayloadSchema },
 
   // Catalog (Phase 2). The runtime catalog file lives at `~/.imagent/catalog.json`
   // and is user-editable. `catalog.get` returns the loaded snapshot;

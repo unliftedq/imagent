@@ -15,6 +15,7 @@ export {
   CheckCircle,
   CircleNotch,
   Circuitry,
+  CloudArrowDown,
   Crop,
   Cube,
   Eye,

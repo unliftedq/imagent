@@ -7,6 +7,7 @@ import { app, BrowserWindow, ipcMain, net, protocol } from "electron";
 import { createDesktopPathResolver } from "./app-paths.js";
 import { setupIpc } from "./ipc-handlers.js";
 import { bootstrapRuntime, type RuntimeServices } from "./job-runner-bootstrap.js";
+import { createUpdater } from "./updater.js";
 
 const isDev = !app.isPackaged && process.env.NODE_ENV !== "production";
 
@@ -159,6 +160,7 @@ async function bootstrap(): Promise<RuntimeServices> {
     paths,
     logger,
   });
+  const updater = createUpdater({ logger });
   const ipcServer = setupIpc({
     ipcMain,
     db,
@@ -167,12 +169,14 @@ async function bootstrap(): Promise<RuntimeServices> {
     paths,
     logger,
     runtime,
+    updater,
     getMainWindow: () => mainWindow,
   });
 
   // Forward JobRunner events to all renderer windows.
   const forward =
-    (channel: "job.progress" | "job.completed" | "job.failed") => (payload: unknown) => {
+    (channel: "job.progress" | "job.completed" | "job.failed" | "updater.progress") =>
+    (payload: unknown) => {
       for (const win of BrowserWindow.getAllWindows()) {
         win.webContents.send(channel, payload);
       }
@@ -180,11 +184,22 @@ async function bootstrap(): Promise<RuntimeServices> {
   runtime.jobRunner.on("job.progress", forward("job.progress"));
   runtime.jobRunner.on("job.completed", forward("job.completed"));
   runtime.jobRunner.on("job.failed", forward("job.failed"));
+  updater.on("progress", forward("updater.progress"));
 
   // Make sure newly-created windows can also receive emit() events.
   app.on("browser-window-created", (_e, win) => {
     ipcServer.addEventTarget(win.webContents);
   });
+
+  // Best-effort startup update check, deferred so it doesn't slow first paint.
+  // Network errors are swallowed by `updater.check` and surfaced via events.
+  if (!isDev) {
+    setTimeout(() => {
+      void updater.check().catch((err) => {
+        logger.warn("[main] startup update check failed", { err: String(err) });
+      });
+    }, 15_000);
+  }
 
   return runtime;
 }

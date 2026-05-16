@@ -87,6 +87,34 @@ export const en = {
   "settings.about.node": "Node",
   "settings.about.platform": "Platform",
 
+  // Updates
+  "settings.section.updates": "Updates",
+  "settings.updates.currentVersion": "Current version",
+  "settings.updates.latestVersion": "Latest version",
+  "settings.updates.publishedAt": "Released",
+  "settings.updates.checking": "Checking for updates…",
+  "settings.updates.upToDate": "You're on the latest version.",
+  "settings.updates.available": "Version {version} is available.",
+  "settings.updates.noAssetForPlatform":
+    "No installer is published for your platform yet. Open the release page to download manually.",
+  "settings.updates.downloading": "Downloading {percent}%",
+  "settings.updates.ready": "Update ready to install.",
+  "settings.updates.installing": "Launching installer…",
+  "settings.updates.checkFailed": "Update check failed: {message}",
+  "settings.updates.downloadFailed": "Download failed: {message}",
+  "settings.updates.installFailed": "Install failed: {message}",
+  "settings.updates.installNote":
+    "Installing will quit Imagent and launch the installer. Save your work first.",
+  "settings.updates.releaseNotes": "Release notes",
+  "settings.updates.lastCheckedNever": "Never checked.",
+  "settings.updates.lastChecked": "Last checked {when}.",
+  "settings.updates.check": "Check for updates",
+  "settings.updates.recheck": "Check again",
+  "settings.updates.download": "Download update",
+  "settings.updates.install": "Install and restart",
+  "settings.updates.cancel": "Cancel download",
+  "settings.updates.openRelease": "Open release page",
+
   // Providers page
   "providers.title": "Providers",
   "providers.subtitle":

@@ -1,5 +1,6 @@
 import { GalleryItemSchema, JobSchema, JobStateSchema } from "@imagent/core";
 import { z } from "zod";
+import { UpdateStatusPayloadSchema } from "./contract.js";
 
 /**
  * Push-event channels the main process emits to the renderer (architecture.md §8).
@@ -26,6 +27,11 @@ export const events = {
     /** Stringified ConfigFile so the renderer can re-parse without sharing zod. */
     configJson: z.string(),
   }),
+  /**
+   * Auto-updater state transitions. Mirrors `updater.status` output so a
+   * subscriber can drive UI without polling.
+   */
+  "updater.progress": UpdateStatusPayloadSchema,
 } as const;
 
 export type EventMap = typeof events;
