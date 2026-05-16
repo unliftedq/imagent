@@ -144,7 +144,9 @@ export function CreateAssetDialog({
     try {
       const created = usingGallerySource
         ? await createFromGalleryItem({
-            itemId: gallerySource?.itemId,
+            // `usingGallerySource` was set only when `gallerySource` exists, so
+            // the non-null assertion is safe here.
+            itemId: (gallerySource as NonNullable<typeof gallerySource>).itemId,
             kind,
             name: name.trim(),
             description: description.trim() || null,

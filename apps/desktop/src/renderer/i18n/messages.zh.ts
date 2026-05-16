@@ -19,12 +19,12 @@ type Dict = Record<keyof typeof en, string>;
 
 export const zh: Dict = {
   // App shell / routes
-  "nav.studio": "Studio",
-  "nav.gallery": "Gallery",
-  "nav.assets": "Assets",
-  "nav.models": "Models",
-  "nav.providers": "Providers",
-  "nav.settings": "Settings",
+  "nav.studio": "工作室",
+  "nav.gallery": "画廊",
+  "nav.assets": "素材",
+  "nav.models": "模型",
+  "nav.providers": "服务商",
+  "nav.settings": "设置",
 
   // Common labels
   "common.loading": "加载中…",
