@@ -4,7 +4,7 @@ import { createFileConfigStore, createFileSecretsStore } from "@imagent/config";
 import type { Logger } from "@imagent/core";
 import { ensureDataDir, openDatabase } from "@imagent/persistence";
 import { app, BrowserWindow, ipcMain, net, protocol } from "electron";
-import { createDesktopPathResolver, defaultCatalogAssetPath } from "./app-paths.js";
+import { createDesktopPathResolver } from "./app-paths.js";
 import { setupIpc } from "./ipc-handlers.js";
 import { bootstrapRuntime, type RuntimeServices } from "./job-runner-bootstrap.js";
 
@@ -157,7 +157,6 @@ async function bootstrap(): Promise<RuntimeServices> {
     configStore,
     secretsStore,
     paths,
-    defaultCatalogPath: defaultCatalogAssetPath(),
     logger,
   });
   const ipcServer = setupIpc({

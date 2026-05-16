@@ -15,7 +15,13 @@ export interface CatalogLoaderOptions {
   path?: string;
   /** Override the bundled fallback (test seam). */
   bundled?: ModelCatalog;
-  /** Optional packaged asset path for the bundled fallback (desktop builds). */
+  /**
+   * Optional external catalog file to use as the bundled fallback. When set,
+   * read from disk in preference to the JSON inlined at module-load time; on
+   * read failure, falls back to the inlined copy with a warning. Primarily a
+   * test seam — production callers should rely on the inlined bundle that
+   * ships with the `@imagent/providers` package.
+   */
   bundledPath?: string;
   logger?: { info(msg: string): void; warn(msg: string): void };
 }
@@ -146,6 +152,10 @@ function mergeCatalogs(base: ModelCatalog, overlay: ModelCatalogOverlay): ModelC
         providerOverlay.video === undefined
           ? current.video
           : mergeOfferings(current.video, providerOverlay.video),
+      modelOverrides:
+        providerOverlay.modelOverrides === undefined
+          ? current.modelOverrides
+          : mergeRecordsByKey(current.modelOverrides, providerOverlay.modelOverrides),
     };
   }
 
@@ -161,6 +171,20 @@ function mergeOfferings<T extends { id: string }>(base: T[] | undefined, overlay
     byId.set(offering.id, mergeRecord(byId.get(offering.id), offering));
   }
   return [...byId.values()];
+}
+
+function mergeRecordsByKey<T extends object>(
+  base: Record<string, T> | undefined,
+  overlay: Record<string, T>,
+): Record<string, T> {
+  const merged: Record<string, T> = {};
+  for (const [id, record] of Object.entries(base ?? {})) {
+    merged[id] = deepClone(record);
+  }
+  for (const [id, record] of Object.entries(overlay)) {
+    merged[id] = mergeRecord(merged[id], record);
+  }
+  return merged;
 }
 
 function mergeRecord<T extends object>(base: T | undefined, overlay: object): T {

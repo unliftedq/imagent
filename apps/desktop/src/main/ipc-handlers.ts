@@ -217,38 +217,56 @@ export function setupIpc(deps: IpcDeps): IpcServer {
           reject(new IpcHandlerError("internal", "image job completed without resultItemId"));
           return;
         }
-        const item = galleryRepo.get(j.resultItemId);
-        if (!item) {
+        const primary = galleryRepo.get(j.resultItemId);
+        if (!primary) {
           reject(
             new IpcHandlerError("internal", `image job: gallery item ${j.resultItemId} missing`),
           );
           return;
         }
 
-        // M6: write gallery_item_assets rows for every contributing slot asset.
-        for (const att of resolution.attachments) {
-          try {
-            galleryRepo.addAssetLink({
-              itemId: item.id,
-              assetId: att.assetId,
-              role: att.role,
-            });
-          } catch (err) {
-            logger.warn("addAssetLink failed", {
-              itemId: item.id,
-              assetId: att.assetId,
-              err: String(err),
-            });
+        // Multi-output fan-out: every gallery item persisted for this job
+        // shares the same `job_id`. Apply asset links + gallery.changed to
+        // each so the renderer sees all outputs, not just the primary.
+        let allItems: GalleryItem[];
+        try {
+          allItems = galleryRepo.listByJob(j.id);
+        } catch (err) {
+          logger.warn("listByJob failed", { jobId: j.id, err: String(err) });
+          allItems = [primary];
+        }
+        if (allItems.length === 0) allItems = [primary];
+
+        // M6: write gallery_item_assets rows for every contributing slot asset
+        // — applied to every output of this job.
+        for (const item of allItems) {
+          for (const att of resolution.attachments) {
+            try {
+              galleryRepo.addAssetLink({
+                itemId: item.id,
+                assetId: att.assetId,
+                role: att.role,
+              });
+            } catch (err) {
+              logger.warn("addAssetLink failed", {
+                itemId: item.id,
+                assetId: att.assetId,
+                err: String(err),
+              });
+            }
           }
         }
 
-        // Notify any other windows via gallery.changed.
-        try {
-          server.emit("gallery.changed", { id: item.id, op: "created", item });
-        } catch (err) {
-          logger.warn("gallery.changed emit failed", { err: String(err) });
+        // Notify any other windows via gallery.changed — emit one event per
+        // output so the renderer's gallery store learns about every item.
+        for (const item of allItems) {
+          try {
+            server.emit("gallery.changed", { id: item.id, op: "created", item });
+          } catch (err) {
+            logger.warn("gallery.changed emit failed", { err: String(err) });
+          }
         }
-        resolve(item);
+        resolve(primary);
       };
 
       const settleFailed = (j: Job): void => {

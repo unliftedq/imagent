@@ -53,6 +53,12 @@ describe("loadCatalog", () => {
       },
       providers: {
         openai: { image: [{ id: "custom-route", modelId: "custom-model" }] },
+        azure: {
+          modelOverrides: {
+            "gpt-image-2": { defaults: { quality: "high" } },
+            "custom-model": { capabilities: { maxOutputs: 1 } },
+          },
+        },
       },
     };
     await fs.writeFile(userPath, JSON.stringify(overlay, null, 2));
@@ -63,6 +69,16 @@ describe("loadCatalog", () => {
     expect(loaded.models.image["custom-model"]?.displayName).toBe("Custom");
     expect(loaded.models.image["gpt-image-2"]?.displayName).toBe("GPT Image 2 Override");
     expect(loaded.models.image["gpt-image-2"]?.defaults?.quality).toBe("high");
+    expect(loaded.providers.azure?.modelOverrides?.["gpt-image-2"]?.capabilities?.maxOutputs).toBe(
+      1,
+    );
+    expect(loaded.providers.azure?.modelOverrides?.["gpt-image-2"]?.defaults?.quality).toBe("high");
+    expect(
+      loaded.providers.azure?.modelOverrides?.["gpt-image-1.5"]?.capabilities?.maxOutputs,
+    ).toBe(1);
+    expect(loaded.providers.azure?.modelOverrides?.["custom-model"]?.capabilities?.maxOutputs).toBe(
+      1,
+    );
     expect(Object.keys(loaded.models.video).length).toBeGreaterThan(0);
   });
 

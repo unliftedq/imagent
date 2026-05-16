@@ -326,71 +326,78 @@ export class JobRunner extends EventEmitter {
     try {
       const result = await provider.generate(req, signal);
       this.throwIfPersistedCancelled(job.id, req.providerId);
-      // Take the first output (count > 1 is documented but M2 persists one
-      // item per generate call; multi-result fan-out lands in M5).
-      const out = result.outputs[0];
-      if (!out) {
+      if (result.outputs.length === 0) {
         throw new ProviderError("provider returned 0 outputs", { vendorId: req.providerId });
       }
 
-      const ext = mimeToExt(out.mimeType);
-      const itemId = this.deps.idFactory();
+      const overrides = this.intentOverrides.get(job.id) ?? {};
       const now = this.deps.now();
       const date = new Date(now);
       const dir = this.deps.files.galleryDir(date);
       await this.deps.ensureDir(dir);
-      const absPath = this.deps.files.galleryItemFile(itemId, ext, date);
-      await this.deps.writeFile(absPath, out.bytes);
 
-      const relPath = relativeToData(absPath, this.deps.files.dataDir);
-      this.throwIfPersistedCancelled(job.id, req.providerId);
+      const items: GalleryItem[] = [];
+      for (const out of result.outputs) {
+        this.throwIfPersistedCancelled(job.id, req.providerId);
+        const ext = mimeToExt(out.mimeType);
+        const itemId = this.deps.idFactory();
+        const absPath = this.deps.files.galleryItemFile(itemId, ext, date);
+        await this.deps.writeFile(absPath, out.bytes);
+        const relPath = relativeToData(absPath, this.deps.files.dataDir);
+        const item = this.deps.gallery.create({
+          id: itemId,
+          kind: "image",
+          parentId: overrides.parentId ?? null,
+          prompt: req.prompt,
+          providerId: req.providerId,
+          model: req.model,
+          paramsJson: JSON.stringify({
+            size: req.size,
+            aspectRatio: req.aspectRatio,
+            count: req.count,
+            raw: { ...(req.raw ?? {}), ...(out.raw ?? {}) },
+          }),
+          relPath,
+          thumbPath: null,
+          durationMs: null,
+          width: out.width ?? null,
+          height: out.height ?? null,
+          bytes: out.bytes.byteLength,
+          jobId: job.id,
+          favorited: false,
+          createdAt: now,
+        });
+        items.push(item);
 
-      const overrides = this.intentOverrides.get(job.id) ?? {};
-      const item = this.deps.gallery.create({
-        id: itemId,
-        kind: "image",
-        parentId: overrides.parentId ?? null,
-        prompt: req.prompt,
-        providerId: req.providerId,
-        model: req.model,
-        paramsJson: JSON.stringify({
-          size: req.size,
-          aspectRatio: req.aspectRatio,
-          count: req.count,
-          raw: { ...(req.raw ?? {}), ...(out.raw ?? {}) },
-        }),
-        relPath,
-        thumbPath: null,
-        durationMs: null,
-        width: out.width ?? null,
-        height: out.height ?? null,
-        bytes: out.bytes.byteLength,
-        jobId: job.id,
-        favorited: false,
-        createdAt: now,
-      });
-
-      // Best-effort board attach; persists `board_items` row idempotently.
-      if (overrides.boardId && this.deps.boards) {
-        try {
-          if (!this.deps.boards.hasItem(overrides.boardId, item.id)) {
-            this.deps.boards.appendItem(overrides.boardId, item.id);
+        // Best-effort board attach; persists `board_items` rows idempotently
+        // for every output of a multi-image job.
+        if (overrides.boardId && this.deps.boards) {
+          try {
+            if (!this.deps.boards.hasItem(overrides.boardId, item.id)) {
+              this.deps.boards.appendItem(overrides.boardId, item.id);
+            }
+          } catch (err) {
+            this.deps.logger.warn("appendItem failed", {
+              id: job.id,
+              boardId: overrides.boardId,
+              err: String(err),
+            });
           }
-        } catch (err) {
-          this.deps.logger.warn("appendItem failed", {
-            id: job.id,
-            boardId: overrides.boardId,
-            err: String(err),
-          });
         }
       }
       this.intentOverrides.delete(job.id);
       this.throwIfPersistedCancelled(job.id, req.providerId);
 
+      // The "primary" item (resultItemId) is the first persisted output;
+      // additional outputs are discoverable via `gallery_items.job_id`.
+      const primary = items[0];
+      if (!primary) {
+        throw new ProviderError("provider returned 0 outputs", { vendorId: req.providerId });
+      }
       const updated = this.deps.jobs.updateState(job.id, {
         state: "succeeded",
         progress: 1,
-        resultItemId: item.id,
+        resultItemId: primary.id,
         finishedAt: now,
       });
       this.running.delete(job.id);

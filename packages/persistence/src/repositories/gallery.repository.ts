@@ -179,4 +179,18 @@ export class GalleryRepository {
       .all(parentId) as GalleryRow[];
     return rows.map(rowToItem);
   }
+
+  /**
+   * Return every gallery item produced by a single job, ordered oldest →
+   * newest so the primary (first persisted) item appears first. Used by
+   * Studio to render multi-output image jobs as a thumbnail strip.
+   */
+  listByJob(jobId: string): GalleryItem[] {
+    const rows = this.db
+      .prepare(
+        "SELECT * FROM gallery_items WHERE job_id = ? ORDER BY created_at ASC, id ASC",
+      )
+      .all(jobId) as GalleryRow[];
+    return rows.map(rowToItem);
+  }
 }
