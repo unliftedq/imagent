@@ -378,13 +378,13 @@ function SegmentedTheme({
   labels: { light: string; dark: string; system: string };
 }) {
   const opts: Array<{ id: ThemePref; label: string; icon: React.ReactNode }> = [
-    { id: "light", label: labels.light, icon: <Icons.Sun weight="duotone" className="size-4" /> },
-    { id: "dark", label: labels.dark, icon: <Icons.Moon weight="duotone" className="size-4" /> },
     {
       id: "system",
       label: labels.system,
       icon: <Icons.Gear weight="duotone" className="size-4" />,
     },
+    { id: "light", label: labels.light, icon: <Icons.Sun weight="duotone" className="size-4" /> },
+    { id: "dark", label: labels.dark, icon: <Icons.Moon weight="duotone" className="size-4" /> },
   ];
   return (
     <div className="inline-flex items-center gap-1 rounded-(--radius-pill) bg-(--surface) p-1">
