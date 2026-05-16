@@ -95,6 +95,33 @@ export const zh: Dict = {
   "settings.about.node": "Node",
   "settings.about.platform": "平台",
 
+  // Updates
+  "settings.section.updates": "应用更新",
+  "settings.updates.currentVersion": "当前版本",
+  "settings.updates.latestVersion": "最新版本",
+  "settings.updates.publishedAt": "发布时间",
+  "settings.updates.checking": "正在检查更新…",
+  "settings.updates.upToDate": "已是最新版本。",
+  "settings.updates.available": "发现新版本 {version}。",
+  "settings.updates.noAssetForPlatform":
+    "尚未提供适配当前系统的安装包，请点击下方按钮前往发布页手动下载。",
+  "settings.updates.downloading": "下载中 {percent}%",
+  "settings.updates.ready": "更新已就绪，可安装。",
+  "settings.updates.installing": "正在启动安装程序…",
+  "settings.updates.checkFailed": "检查更新失败：{message}",
+  "settings.updates.downloadFailed": "下载失败：{message}",
+  "settings.updates.installFailed": "安装失败：{message}",
+  "settings.updates.installNote": "安装时将退出 Imagent 并启动安装程序，请提前保存工作。",
+  "settings.updates.releaseNotes": "更新说明",
+  "settings.updates.lastCheckedNever": "尚未检查。",
+  "settings.updates.lastChecked": "上次检查于 {when}。",
+  "settings.updates.check": "检查更新",
+  "settings.updates.recheck": "重新检查",
+  "settings.updates.download": "下载更新",
+  "settings.updates.install": "安装并重启",
+  "settings.updates.cancel": "取消下载",
+  "settings.updates.openRelease": "打开发布页",
+
   // Providers page
   "providers.title": "服务商",
   "providers.subtitle":
