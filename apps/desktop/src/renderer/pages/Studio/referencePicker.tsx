@@ -4,11 +4,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { useT } from "../../i18n/index.js";
 import { api } from "../../lib/api.js";
-import {
-  ASSET_REFERENCE_KINDS,
-  IMAGE_FILE_FILTERS,
-  type ReferenceKind,
-} from "./types.js";
+import { ASSET_REFERENCE_KINDS, IMAGE_FILE_FILTERS, type ReferenceKind } from "./types.js";
 import { fileName, uniqueStrings } from "./utils.js";
 
 export function ReferencePicker({
@@ -38,7 +34,10 @@ export function ReferencePicker({
   const totalAssets = ASSET_REFERENCE_KINDS.reduce((sum, kind) => sum + assetIds[kind].length, 0);
   const totalReferences = totalAssets + references.length;
   const overHint = typeof maxReferencesHint === "number" && totalReferences > maxReferencesHint;
-  const triggerLabel = totalReferences > 0 ? `${t("studio.references")} (${totalReferences})` : t("studio.addReference");
+  const triggerLabel =
+    totalReferences > 0
+      ? `${t("studio.references")} (${totalReferences})`
+      : t("studio.addReference");
 
   const chooseLocalImages = async (): Promise<void> => {
     try {
@@ -108,9 +107,13 @@ export function ReferencePicker({
         ) : (
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-[12px] font-semibold text-(--text)">{t("studio.references")}</span>
+              <span className="text-[12px] font-semibold text-(--text)">
+                {t("studio.references")}
+              </span>
               {overHint ? (
-                <span className="text-[11px] text-(--warning)">{t("studio.maxReferences", { max: String(maxReferencesHint) })}</span>
+                <span className="text-[11px] text-(--warning)">
+                  {t("studio.maxReferences", { max: String(maxReferencesHint) })}
+                </span>
               ) : null}
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -126,7 +129,8 @@ export function ReferencePicker({
                 kind="other"
                 count={references.length}
                 onClick={() => setActiveKind("other")}
-              />            </div>
+              />{" "}
+            </div>
             {totalReferences > 0 ? (
               <SelectedReferences
                 assetIds={assetIds}
@@ -178,7 +182,9 @@ function ReferenceKindPanel({
           <Icons.CaretRight weight="bold" className="size-3 rotate-180" />
           {t("studio.references")}
         </button>
-        <span className="text-[12px] font-semibold text-(--text)">{referenceKindLabel(kind, t)}</span>
+        <span className="text-[12px] font-semibold text-(--text)">
+          {referenceKindLabel(kind, t)}
+        </span>
       </div>
 
       <button

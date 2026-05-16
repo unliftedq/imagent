@@ -1,7 +1,7 @@
 import type { VideoModelCaps, VideoModelDef, VideoRequest } from "@imagent/core";
 import type { ProviderId } from "@imagent/ipc";
 import { IpcClientError } from "@imagent/ipc";
-import { Button, Icons, Popover, Select } from "@imagent/ui";
+import { Button, Icons, Popover } from "@imagent/ui";
 import { useEffect, useMemo, useState } from "react";
 import { useT } from "../../i18n/index.js";
 import { api } from "../../lib/api.js";
@@ -80,7 +80,8 @@ export function VideoRail() {
     if (draft.providerId !== defaultId) {
       setDraft({
         providerId: defaultId,
-        modelId: defaultId === defaultVideoModel?.providerId ? defaultVideoModel.modelId : undefined,
+        modelId:
+          defaultId === defaultVideoModel?.providerId ? defaultVideoModel.modelId : undefined,
       });
     }
   }, [configuredVideoProviders, appPrefs?.defaultVideoModel, draft.providerId, setDraft]);
@@ -236,9 +237,7 @@ export function VideoRail() {
         <h2 className="mt-2 text-[15px] font-semibold tracking-[-0.01em] text-(--text)">
           {t("studio.noVideoProvider")}
         </h2>
-        <p className="mt-1 text-[12px] text-(--text-muted)">
-          {t("studio.noVideoProviderDesc")}
-        </p>
+        <p className="mt-1 text-[12px] text-(--text-muted)">{t("studio.noVideoProviderDesc")}</p>
         <div className="mt-3 inline-flex">
           <Button size="sm" onClick={() => navigate("providers")}>
             {t("studio.openProviders")}

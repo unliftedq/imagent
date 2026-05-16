@@ -7,6 +7,7 @@ import { useConfigStore } from "../../state/useConfigStore.js";
 import { useUIStore } from "../../state/useUIStore.js";
 import { ProviderConfigModal, ProviderIcon, ProviderListRow } from "./components.js";
 import {
+  type ActiveModal,
   BUILT_IN_IDS,
   BUILT_IN_PROVIDERS,
   buildSecretsPatch,
@@ -14,13 +15,12 @@ import {
   formFromCustom,
   formFromProvider,
   imageModelsForSelect,
+  type ModalState,
   maskForModal,
   prefsWithMappings,
   providerDescription,
   providerDisplayName,
   validateModal,
-  type ActiveModal,
-  type ModalState,
 } from "./definitions.js";
 
 export function ProvidersPage() {
@@ -97,7 +97,10 @@ export function ProvidersPage() {
       await saveProviderPrefs(nextPrefs);
 
       pushToast({
-        title: activeModal.kind === "custom" ? t("providers.toast.customSaved") : t("providers.toast.saved"),
+        title:
+          activeModal.kind === "custom"
+            ? t("providers.toast.customSaved")
+            : t("providers.toast.saved"),
         description: form.displayName || form.providerId,
         variant: "success",
       });
@@ -147,7 +150,9 @@ export function ProvidersPage() {
             key={provider.id}
             iconSrc={provider.iconSrc}
             iconAlt={provider.iconAlt}
-            name={summariesById.get(provider.id)?.displayName ?? providerDisplayName(provider.id, t)}
+            name={
+              summariesById.get(provider.id)?.displayName ?? providerDisplayName(provider.id, t)
+            }
             description={providerDescription(provider.id, t)}
             summary={summariesById.get(provider.id)}
             status={statusFor(provider.id)}

@@ -8,7 +8,7 @@ import {
   ToastViewport,
 } from "@imagent/ui";
 import { useT } from "../i18n/index.js";
-import { useUIStore, type ToastEntry } from "../state/useUIStore.js";
+import { type ToastEntry, useUIStore } from "../state/useUIStore.js";
 
 /**
  * App-level toast renderer. Subscribes to `useUIStore.toasts` and renders one
@@ -29,13 +29,7 @@ export function Toaster() {
   );
 }
 
-function ToastEntryView({
-  toast,
-  onDismiss,
-}: {
-  toast: ToastEntry;
-  onDismiss: () => void;
-}) {
+function ToastEntryView({ toast, onDismiss }: { toast: ToastEntry; onDismiss: () => void }) {
   const t = useT();
   const accent = ACCENT_BY_VARIANT[toast.variant];
   const Icon = ICON_BY_VARIANT[toast.variant];

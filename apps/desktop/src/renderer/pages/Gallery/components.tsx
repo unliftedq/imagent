@@ -1,8 +1,8 @@
+import type { Board, GalleryItem } from "@imagent/core";
+import { BoardSidebarItem, Icons } from "@imagent/ui";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
-import { BoardSidebarItem, Icons } from "@imagent/ui";
-import type { Board, GalleryItem } from "@imagent/core";
 import { useT } from "../../i18n/index.js";
 import { api } from "../../lib/api.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
@@ -32,7 +32,6 @@ export function BoardRow({
     return (
       <div className="flex items-center gap-1 px-2 py-1">
         <input
-          autoFocus
           className={
             "flex-1 rounded-(--radius-sm) border border-(--border) " +
             "bg-(--bg) px-2 py-1 text-(length:--text-body-sm) text-(--text) " +
@@ -164,9 +163,7 @@ export function LightboxPreview({
   const [copied, setCopied] = useState(false);
   const removeItem = useGalleryStore((s) => s.remove);
   const toggleFav = useGalleryStore((s) => s.toggleFavorite);
-  const cachedItem = useGalleryStore((s) =>
-    s.items.find((it) => it.id === itemId) ?? null,
-  );
+  const cachedItem = useGalleryStore((s) => s.items.find((it) => it.id === itemId) ?? null);
   const mediaPreviewStyle = data ? getMediaPreviewStyle(data.item) : undefined;
   const t = useT();
 
@@ -317,9 +314,7 @@ export function LightboxPreview({
                   }
                 >
                   <LightboxAction
-                    icon={
-                      <Icons.MagicWand weight="bold" className="size-4" />
-                    }
+                    icon={<Icons.MagicWand weight="bold" className="size-4" />}
                     label={t("gallery.preview.remix")}
                     onClick={() => onRemix(data.item.id)}
                   />
@@ -327,14 +322,14 @@ export function LightboxPreview({
                     icon={
                       <Icons.Heart
                         weight={data.item.favorited ? "fill" : "regular"}
-                        className={
-                          data.item.favorited
-                            ? "size-4 text-(--danger)"
-                            : "size-4"
-                        }
+                        className={data.item.favorited ? "size-4 text-(--danger)" : "size-4"}
                       />
                     }
-                    label={data.item.favorited ? t("gallery.preview.unfavorite") : t("gallery.preview.favorite")}
+                    label={
+                      data.item.favorited
+                        ? t("gallery.preview.unfavorite")
+                        : t("gallery.preview.favorite")
+                    }
                     onClick={() => void toggleFav(data.item.id)}
                   />
                   <LightboxAction
@@ -424,9 +419,7 @@ export function LightboxPreview({
                               "border border-white/10 bg-white/8 px-2 py-0.5 text-(length:--text-caption)"
                             }
                           >
-                            <span className="font-semibold">
-                              {a.name ?? a.assetId.slice(0, 8)}
-                            </span>
+                            <span className="font-semibold">{a.name ?? a.assetId.slice(0, 8)}</span>
                             <span className="text-white/55">({a.role})</span>
                           </li>
                         ))}
@@ -440,7 +433,9 @@ export function LightboxPreview({
                       </div>
                       {data.parent ? (
                         <div className="mt-2">
-                          <div className="text-(length:--text-caption) text-white/55">{t("gallery.preview.parent")}</div>
+                          <div className="text-(length:--text-caption) text-white/55">
+                            {t("gallery.preview.parent")}
+                          </div>
                           <LineageTile item={data.parent} />
                         </div>
                       ) : null}
@@ -643,10 +638,7 @@ function ZoomablePreviewImage({
   };
 
   return (
-    <div
-      ref={containerRef}
-      className="relative flex h-full w-full items-center justify-center"
-    >
+    <div ref={containerRef} className="relative flex h-full w-full items-center justify-center">
       <img
         ref={imgRef}
         src={src}
@@ -722,11 +714,7 @@ function LineageTile({ item }: { item: GalleryItem }) {
       className="relative aspect-square overflow-hidden rounded-(--radius-sm) border border-(--border)"
     >
       {src ? (
-        <img
-          src={src}
-          alt={item.prompt}
-          className="block h-full w-full object-cover"
-        />
+        <img src={src} alt={item.prompt} className="block h-full w-full object-cover" />
       ) : (
         <div className="flex h-full w-full items-center justify-center bg-(--surface) text-(--text-muted)">
           <Icons.FilmReel weight="duotone" className="size-5" />

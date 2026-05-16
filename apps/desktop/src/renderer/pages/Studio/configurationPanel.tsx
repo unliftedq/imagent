@@ -1,5 +1,5 @@
 import { cn, Icons, Select } from "@imagent/ui";
-import { forwardRef, type ComponentPropsWithoutRef, type ReactNode } from "react";
+import { type ComponentPropsWithoutRef, forwardRef, type ReactNode } from "react";
 import { useT } from "../../i18n/index.js";
 
 export interface ConfigurationPopoverButtonProps extends ComponentPropsWithoutRef<"button"> {
@@ -133,9 +133,7 @@ export function SizePresetGrid({
         <SizePresetButton
           label={t("studio.customSize")}
           active={
-            customActive === true ||
-            presets.length === 0 ||
-            (!!value && !presets.includes(value))
+            customActive === true || presets.length === 0 || (!!value && !presets.includes(value))
           }
           custom
           onClick={onSelectCustom}
@@ -172,10 +170,7 @@ function SizePresetButton({
       }
     >
       <span
-        className={cn(
-          "rounded-[3px] border-[1.5px] border-current",
-          custom ? "border-dashed" : "",
-        )}
+        className={cn("rounded-[3px] border-[1.5px] border-current", custom ? "border-dashed" : "")}
         style={custom ? CUSTOM_PRESET_ICON_STYLE : sizePresetIconStyle(value)}
         aria-hidden="true"
       />

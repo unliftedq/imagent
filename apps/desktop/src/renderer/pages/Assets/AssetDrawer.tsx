@@ -2,7 +2,7 @@ import type { Asset } from "@imagent/core";
 import { IpcClientError } from "@imagent/ipc";
 import { Button, Dialog, Icons, Input, Textarea } from "@imagent/ui";
 import { useEffect, useState } from "react";
-import { useT, type MessageKey } from "../../i18n/index.js";
+import { type MessageKey, useT } from "../../i18n/index.js";
 import { useUIStore } from "../../state/useUIStore.js";
 import { AssetField } from "./AssetField.js";
 import { resolveDataUrl } from "./utils.js";

@@ -64,14 +64,17 @@ export const en = {
   "settings.language.system": "System",
   "settings.language.english": "English",
   "settings.language.chinese": "中文",
-  "settings.language.helper": "Choose a display language for the app. \"System\" follows your operating system.",
+  "settings.language.helper":
+    'Choose a display language for the app. "System" follows your operating system.',
   "settings.theme.light": "Light",
   "settings.theme.dark": "Dark",
   "settings.theme.system": "System",
   "settings.defaultImageModel": "Default image model",
-  "settings.defaultImageModel.helper": "Used when image generation starts without an explicit provider/model.",
+  "settings.defaultImageModel.helper":
+    "Used when image generation starts without an explicit provider/model.",
   "settings.defaultVideoModel": "Default video model",
-  "settings.defaultVideoModel.helper": "Used when video generation starts without an explicit provider/model.",
+  "settings.defaultVideoModel.helper":
+    "Used when video generation starts without an explicit provider/model.",
   "settings.generationConcurrency": "Generation concurrency",
   "settings.generationConcurrency.helper": "How many jobs may run in parallel.",
   "settings.defaultOutputDir": "Default output directory",
@@ -86,16 +89,19 @@ export const en = {
 
   // Providers page
   "providers.title": "Providers",
-  "providers.subtitle": "Connect generation providers, then map provider-facing model ids or deployments to the canonical catalog models they implement.",
+  "providers.subtitle":
+    "Connect generation providers, then map provider-facing model ids or deployments to the canonical catalog models they implement.",
   "providers.connect": "Connect {name}",
   "providers.openaiCompatible": "OpenAI compatible",
-  "providers.openaiCompatible.description": "Add a custom provider with its own base URL and model mappings.",
+  "providers.openaiCompatible.description":
+    "Add a custom provider with its own base URL and model mappings.",
   "providers.customDescription": "OpenAI Images API-compatible custom endpoint.",
   "providers.test": "Test",
   "providers.connectedWith": "Connected with {model}",
   "providers.customConnect": "Connect Custom Provider",
   "providers.customUpdate": "Update Custom Provider",
-  "providers.customDialogDescription": "Use an OpenAI Images API-compatible endpoint and map its model ids to canonical catalog models.",
+  "providers.customDialogDescription":
+    "Use an OpenAI Images API-compatible endpoint and map its model ids to canonical catalog models.",
   "providers.configureAccess": "Configure provider access.",
   "providers.providerHeading": "Provider",
   "providers.providerId": "Provider ID",
@@ -104,7 +110,8 @@ export const en = {
   "providers.displayName.placeholder": "My Provider",
   "providers.endpoint": "Endpoint",
   "providers.baseUrl": "Base URL",
-  "providers.baseUrl.helper": "Include the OpenAI-compatible /v1 path when your provider requires it.",
+  "providers.baseUrl.helper":
+    "Include the OpenAI-compatible /v1 path when your provider requires it.",
   "providers.apiKey": "API key",
   "providers.apiKey.placeholderPaste": "paste your key here",
   "providers.apiKey.stored": "Stored: {masked}. Leave empty to keep it.",
@@ -114,7 +121,8 @@ export const en = {
   "providers.hideKey": "Hide key",
   "providers.modelMappings": "Model mappings",
   "providers.deploymentMappings": "Deployment mappings",
-  "providers.mappings.subtitle": "Each provider-facing id inherits capabilities and defaults from the selected model.",
+  "providers.mappings.subtitle":
+    "Each provider-facing id inherits capabilities and defaults from the selected model.",
   "providers.mappings.providerModel": "Provider model",
   "providers.mappings.deployment": "Deployment",
   "providers.mappings.modelIdPlaceholder": "model-id",
@@ -126,7 +134,8 @@ export const en = {
   "providers.toast.customSaved": "Custom provider saved",
   "providers.toast.needsAttention": "Provider config needs attention",
   "providers.toast.saveFailed": "Failed to save provider",
-  "providers.validation.providerId": "Provider ID must be lowercase letters, numbers, hyphens, or underscores.",
+  "providers.validation.providerId":
+    "Provider ID must be lowercase letters, numbers, hyphens, or underscores.",
   "providers.validation.reservedId": "Custom provider ID cannot reuse a built-in provider.",
   "providers.validation.displayNameRequired": "Display name is required.",
   "providers.validation.baseUrlRequired": "Base URL is required.",
@@ -141,13 +150,15 @@ export const en = {
   "providers.def.openai.name": "OpenAI",
   "providers.def.openai.description": "GPT Image models through the OpenAI API.",
   "providers.def.azure.name": "Azure",
-  "providers.def.azure.description": "Azure Foundry deployments — GPT Image, MAI Image, and FLUX families on one resource.",
+  "providers.def.azure.description":
+    "Azure Foundry deployments — GPT Image, MAI Image, and FLUX families on one resource.",
   "providers.def.google.name": "Google AI Studio",
   "providers.def.google.description": "Imagen, Nano Banana, and Veo with a shared Google API key.",
   "providers.def.fluxBfl.name": "Black Forest Labs",
   "providers.def.fluxBfl.description": "Black Forest Labs image generation models.",
   "providers.def.bytedance.name": "ByteDance",
-  "providers.def.bytedance.description": "Seedream and Seedance through BytePlus ModelArk endpoints.",
+  "providers.def.bytedance.description":
+    "Seedream and Seedance through BytePlus ModelArk endpoints.",
   "providers.def.xai.name": "xAI",
   "providers.def.xai.description": "Grok image and video generation APIs.",
 
@@ -159,18 +170,21 @@ export const en = {
   "gallery.newBoard": "New board",
   "gallery.boardName.placeholder": "Board name",
   "gallery.search.placeholder": "Search prompts or file names…",
-  "gallery.search.helpTooltip": "Matches prompts (FTS) and file names. Use multiple words to AND-combine.",
+  "gallery.search.helpTooltip":
+    "Matches prompts (FTS) and file names. Use multiple words to AND-combine.",
   "gallery.match": "{count} match",
   "gallery.matches": "{count} matches",
   "gallery.loadMore": "Load more ({remaining} remaining)",
   "gallery.empty.search.title": "No matches",
-  "gallery.empty.search.body": "Try a different keyword. Search looks across prompts and file names.",
+  "gallery.empty.search.body":
+    "Try a different keyword. Search looks across prompts and file names.",
   "gallery.empty.favorites.title": "No favorites yet",
   "gallery.empty.favorites.body": "Tap the heart on any image to keep it close at hand.",
   "gallery.empty.board.title": "This board is empty",
   "gallery.empty.board.body": "Drag any gallery item onto this board from the All view.",
   "gallery.empty.all.title": "Your gallery is quiet",
-  "gallery.empty.all.body": "Generated images and videos will collect here. Open Studio to create the first one — every item is searchable and remixable later.",
+  "gallery.empty.all.body":
+    "Generated images and videos will collect here. Open Studio to create the first one — every item is searchable and remixable later.",
   "gallery.empty.showAll": "Show all items",
   "gallery.empty.openStudio": "Open Studio",
   "gallery.toast.addedToBoard": "Added to board",
@@ -178,7 +192,8 @@ export const en = {
   "gallery.toast.couldNotCreateBoard": "Could not create board",
   "gallery.toast.remixFailed": "Remix failed",
   "gallery.toast.thumbnailUnavailable": "Thumbnail unavailable",
-  "gallery.toast.thumbnailUnavailableDesc": "This video item needs a thumbnail before it can become an asset.",
+  "gallery.toast.thumbnailUnavailableDesc":
+    "This video item needs a thumbnail before it can become an asset.",
   "gallery.toast.assetSaved": "Asset saved",
   "gallery.toast.assetSavedDesc": "{name} is available in Assets.",
   "gallery.toast.deleteFailed": "Delete failed",
@@ -253,7 +268,8 @@ export const en = {
   "studio.referenceAddedAs": "Added {kind} reference",
   "studio.galleryReferenceAddedAs": "Added gallery reference as {kind}",
   "studio.referenceChooseType": "Choose reference type",
-  "studio.referenceChooseTypeBody": "Gallery items can be added to the current session with a typed role.",
+  "studio.referenceChooseTypeBody":
+    "Gallery items can be added to the current session with a typed role.",
   "studio.referenceCancel": "Cancel reference type selection",
   "studio.role.character": "character",
   "studio.role.object": "object",
@@ -264,7 +280,8 @@ export const en = {
   "studio.onlyFirstAttached": "Only the first selected image was attached.",
   "studio.firstFrame": "First frame",
   "studio.noReferenceImage": "No reference image attached.",
-  "studio.noReferenceImageStyle": "No reference image. This style can rely on the prompt snippet below.",
+  "studio.noReferenceImageStyle":
+    "No reference image. This style can rely on the prompt snippet below.",
   "studio.outputCount": "Output count",
   "studio.aspectRatio": "Aspect Ratio",
   "studio.size": "Size",
@@ -301,7 +318,8 @@ export const en = {
   "studio.stateSubmitted": "Submitted",
   "studio.keepGenerating": "Keep generating",
   "studio.stopGenerationTitle": "Stop {mode} generation?",
-  "studio.stopGenerationDesc": "This will end the current job. Any partial result will be discarded.",
+  "studio.stopGenerationDesc":
+    "This will end the current job. Any partial result will be discarded.",
   "studio.stopGeneration": "Stop generation",
   "studio.stopping": "Stopping…",
   "studio.generationInProgress": "Generation in progress",
@@ -368,7 +386,8 @@ export const en = {
   "assets.promptSnippet": "Prompt snippet",
   "assets.promptSnippetOptional": "Prompt snippet (optional)",
   "assets.validation.nameRequired": "Name is required.",
-  "assets.validation.styleNeedsReference": "Style assets require one reference image OR a prompt snippet.",
+  "assets.validation.styleNeedsReference":
+    "Style assets require one reference image OR a prompt snippet.",
   "assets.validation.widthPositive": "Width must be greater than 0.",
   "assets.validation.heightPositive": "Height must be greater than 0.",
   "assets.validation.widthHeightNumeric": "Width and height must be numbers.",
@@ -385,8 +404,10 @@ export const en = {
   "assets.searchKindPlaceholder": "Search {kind} by name, notes, or prompt…",
   "assets.match": "{count} match",
   "assets.matches": "{count} matches",
-  "assets.emptyTrashConfirmOne": "Permanently delete {count} asset? This removes the files on disk and cannot be undone.",
-  "assets.emptyTrashConfirmMany": "Permanently delete {count} assets? This removes the files on disk and cannot be undone.",
+  "assets.emptyTrashConfirmOne":
+    "Permanently delete {count} asset? This removes the files on disk and cannot be undone.",
+  "assets.emptyTrashConfirmMany":
+    "Permanently delete {count} assets? This removes the files on disk and cannot be undone.",
   "assets.deleteConfirm": "Permanently delete '{name}'? Files on disk will be removed.",
   "assets.toast.movedToTrash": "Moved to Trash",
   "assets.toast.movedToTrashDesc": "Restore from the Trash tab.",
@@ -399,19 +420,25 @@ export const en = {
   "assets.toast.saved": "Saved",
   "assets.toast.saveFailed": "Save failed",
   "assets.empty.noMatches": "No matches",
-  "assets.empty.noMatchesBody": "Try a different keyword. Search looks across names, descriptions, and prompt snippets.",
+  "assets.empty.noMatchesBody":
+    "Try a different keyword. Search looks across names, descriptions, and prompt snippets.",
   "assets.empty.noKindYet": "No {kind} yet",
-  "assets.empty.styleBody": "Save one reference image, a prompt snippet, or both so a visual style is ready when you compose.",
-  "assets.empty.kindBody": "Add reusable {kind} once, then pull them into image and video prompts from Studio.",
+  "assets.empty.styleBody":
+    "Save one reference image, a prompt snippet, or both so a visual style is ready when you compose.",
+  "assets.empty.kindBody":
+    "Add reusable {kind} once, then pull them into image and video prompts from Studio.",
   "assets.empty.newKind": "New {kind}",
-  "assets.empty.trashNoMatchBody": "Try a different keyword or clear search to see every archived asset.",
+  "assets.empty.trashNoMatchBody":
+    "Try a different keyword or clear search to see every archived asset.",
   "assets.empty.trashIsEmpty": "Trash is empty",
-  "assets.empty.trashIsEmptyBody": "Archived assets land here and can be restored before they are permanently deleted.",
+  "assets.empty.trashIsEmptyBody":
+    "Archived assets land here and can be restored before they are permanently deleted.",
   "assets.newAssetTitle": "New asset",
   "assets.dialog.galleryDesc": "Save this gallery item as a reusable reference.",
   "assets.dialog.createDesc": "Create a reusable {kind} that can be picked from any generation.",
   "assets.promptSnippetPlaceholder": "e.g. soft pastel watercolor, hand-drawn lines",
-  "assets.promptSnippetHint": "Used when the model lacks reference support. Reference image takes precedence.",
+  "assets.promptSnippetHint":
+    "Used when the model lacks reference support. Reference image takes precedence.",
   "assets.referenceAttached": "Reference image attached. Drop or browse to replace.",
   "assets.galleryReferenceAttached": "Gallery reference attached. Drop or browse to replace.",
   "assets.dragHere": "Drag one reference image here, or",
@@ -421,7 +448,8 @@ export const en = {
   "assets.drawer.reference": "Reference",
   "assets.drawer.details": "Details",
   "assets.descriptionLabel": "Description",
-  "assets.promptSnippetDrawerHint": "Reference is preferred when the model supports refs; otherwise this snippet is appended to the prompt.",
+  "assets.promptSnippetDrawerHint":
+    "Reference is preferred when the model supports refs; otherwise this snippet is appended to the prompt.",
   "assets.restore": "Restore",
   "assets.archive": "Archive",
   "assets.saveChanges": "Save changes",
@@ -432,7 +460,8 @@ export const en = {
 
   // Models
   "models.title": "Models",
-  "models.subtitle": "Catalog of every model the studio knows about, grouped by id. Green badges mark providers whose auth is saved; gray badges mark providers where the same model would work once you configure them.",
+  "models.subtitle":
+    "Catalog of every model the studio knows about, grouped by id. Green badges mark providers whose auth is saved; gray badges mark providers where the same model would work once you configure them.",
   "models.noImageModels": "No image models in the catalog.",
   "models.noVideoModels": "No video models in the catalog.",
   "models.configureProvider": "Configure provider",

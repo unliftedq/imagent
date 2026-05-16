@@ -102,11 +102,7 @@ export function CanvasArea({ mode }: { mode: StudioMode }) {
           <>
             <CanvasMedia item={display} />
             {siblings.length > 1 ? (
-              <CanvasFilmstrip
-                siblings={siblings}
-                focusedId={display.id}
-                onSelect={pinItem}
-              />
+              <CanvasFilmstrip siblings={siblings} focusedId={display.id} onSelect={pinItem} />
             ) : null}
           </>
         ) : (
@@ -136,7 +132,10 @@ function GeneratingCanvas({
   const t = useT();
   const trimmed = prompt.trim();
   const label = trimmed
-    ? t("studio.generatingAria", { mode, prompt: trimmed.slice(0, MAX_GENERATING_LABEL_PROMPT_LENGTH) })
+    ? t("studio.generatingAria", {
+        mode,
+        prompt: trimmed.slice(0, MAX_GENERATING_LABEL_PROMPT_LENGTH),
+      })
     : t("studio.generatingAriaNoPrompt", { mode });
   const elapsed = useElapsedSeconds(submittedAt, jobId !== null);
 
@@ -196,7 +195,9 @@ function StudioJobsRail({
     try {
       await cancelJob(id);
       pushToast({
-        title: t("studio.generationCancelled", { mode: mode === "video" ? t("common.video") : t("common.image") }),
+        title: t("studio.generationCancelled", {
+          mode: mode === "video" ? t("common.video") : t("common.image"),
+        }),
         variant: "info",
       });
     } catch (err) {
@@ -215,7 +216,9 @@ function StudioJobsRail({
     try {
       await retryJob(id);
       pushToast({
-        title: t("studio.generationResubmitted", { mode: mode === "video" ? t("common.video") : t("common.image") }),
+        title: t("studio.generationResubmitted", {
+          mode: mode === "video" ? t("common.video") : t("common.image"),
+        }),
         variant: "success",
       });
     } catch (err) {
@@ -256,9 +259,7 @@ function StudioJobsRail({
             <h2 className="text-[12px] font-semibold tracking-[-0.01em] text-(--text)">
               {t("studio.jobs")}
             </h2>
-            <span className="text-[11px] text-(--text-faint)">
-              {t("studio.jobsSubtitle")}
-            </span>
+            <span className="text-[11px] text-(--text-faint)">{t("studio.jobsSubtitle")}</span>
           </div>
           <div className="flex items-center gap-1.5">
             {counts.running > 0 ? (
@@ -341,9 +342,7 @@ function StudioJobsRail({
                 </button>
 
                 {/* State-specific body */}
-                {canCancel ? (
-                  <RunningJobProgress submittedAt={trackedJob.submittedAt} />
-                ) : null}
+                {canCancel ? <RunningJobProgress submittedAt={trackedJob.submittedAt} /> : null}
 
                 {state === "succeeded" && jobResults.length > 0 ? (
                   <JobResultsStrip
@@ -365,9 +364,7 @@ function StudioJobsRail({
                   <JobErrorBlock
                     message={errorMessage}
                     expanded={errorExpanded}
-                    onToggle={() =>
-                      setExpandedErrorId(errorExpanded ? null : trackedJob.id)
-                    }
+                    onToggle={() => setExpandedErrorId(errorExpanded ? null : trackedJob.id)}
                     onCopy={() => {
                       if (errorMessage) void copyError(errorMessage);
                     }}
@@ -411,7 +408,7 @@ function StudioJobsRail({
                           >
                             <Icons.ArrowClockwise
                               weight="bold"
-                              className={"size-3 " + (isRetrying ? "animate-spin" : "")}
+                              className={`size-3 ${isRetrying ? "animate-spin" : ""}`}
                               aria-hidden="true"
                             />
                             {isRetrying ? t("common.retrying") : t("common.retry")}
@@ -517,11 +514,7 @@ function JobStateBadge({ state }: { state: Job["state"] | undefined }) {
   if (state === "running") {
     return (
       <span className="inline-flex items-center gap-1 rounded-(--radius-pill) bg-(--accent)/12 px-1.5 py-0.5 text-[10.5px] font-medium text-(--accent)">
-        <Icons.CircleNotch
-          weight="bold"
-          className="size-3 animate-spin"
-          aria-hidden="true"
-        />
+        <Icons.CircleNotch weight="bold" className="size-3 animate-spin" aria-hidden="true" />
         {t("studio.stateRunning")}
       </span>
     );
@@ -754,7 +747,9 @@ function CancelGenerationControl({ mode, jobId }: { mode: StudioMode; jobId: str
       await cancelJob(jobId);
       setOpen(false);
       pushToast({
-        title: t("studio.generationCancelled", { mode: mode === "video" ? t("common.video") : t("common.image") }),
+        title: t("studio.generationCancelled", {
+          mode: mode === "video" ? t("common.video") : t("common.image"),
+        }),
         variant: "info",
       });
     } catch (err) {
@@ -848,7 +843,9 @@ function EmptyCanvas({ mode }: { mode: StudioMode }) {
     <div className="flex flex-col items-center gap-2 text-center">
       <Icon weight="duotone" className="size-10 text-(--text-faint)" aria-hidden="true" />
       <p className="text-[12px] text-(--text-muted)">
-        {t("studio.emptyCanvasHint", { mode: (mode === "video" ? t("common.video") : t("common.image")).toLowerCase() })}
+        {t("studio.emptyCanvasHint", {
+          mode: (mode === "video" ? t("common.video") : t("common.image")).toLowerCase(),
+        })}
       </p>
     </div>
   );

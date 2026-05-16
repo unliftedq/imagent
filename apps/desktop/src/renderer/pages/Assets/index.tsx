@@ -2,7 +2,7 @@ import type { Asset } from "@imagent/core";
 import { IpcClientError } from "@imagent/ipc";
 import { AssetCard, Button, Icons, Tabs, Tooltip } from "@imagent/ui";
 import { useEffect, useMemo, useState } from "react";
-import { useT, type MessageKey } from "../../i18n/index.js";
+import { type MessageKey, useT } from "../../i18n/index.js";
 import { useAssetsStore } from "../../state/useAssetsStore.js";
 import { useUIStore } from "../../state/useUIStore.js";
 import { ArchivedAssetRow } from "./ArchivedAssetRow.js";
@@ -169,9 +169,7 @@ export function AssetsPage() {
           <h1 className="text-(length:--text-display-sm) font-(family-name:--font-display) text-(--text)">
             {t("assets.title")}
           </h1>
-          <p className="text-(length:--text-body-sm) text-(--text-muted)">
-            {t("assets.subtitle")}
-          </p>
+          <p className="text-(length:--text-body-sm) text-(--text-muted)">{t("assets.subtitle")}</p>
         </div>
         <Button
           leadingIcon={<Icons.Plus weight="bold" className="size-4" />}

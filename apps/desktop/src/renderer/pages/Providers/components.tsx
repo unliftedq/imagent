@@ -9,16 +9,16 @@ import {
   Tooltip,
 } from "@imagent/ui";
 import { useState } from "react";
-import { useT, type MessageKey } from "../../i18n/index.js";
+import { type MessageKey, useT } from "../../i18n/index.js";
 import {
+  type ActiveModal,
+  type MappingRowState,
+  type ModalState,
   mappingRow,
   providerDef,
   providerDescription,
   providerDisplayName,
   updateMapping,
-  type ActiveModal,
-  type MappingRowState,
-  type ModalState,
 } from "./definitions.js";
 
 export function ProviderListRow({
@@ -53,7 +53,9 @@ export function ProviderListRow({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-(length:--text-title-sm) font-semibold text-(--text)">{name}</h2>
-          {summary && summary.kinds.length > 1 ? <KindsBadge text={t("common.imagePlusVideo")} /> : null}
+          {summary && summary.kinds.length > 1 ? (
+            <KindsBadge text={t("common.imagePlusVideo")} />
+          ) : null}
           {configured ? <ConnectedPill /> : null}
         </div>
         <p className="mt-0.5 text-(length:--text-body-sm) text-(--text-muted)">{description}</p>
@@ -200,10 +202,7 @@ export function ProviderConfigModal({
           ) : null}
 
           {isCustom ? (
-            <Field
-              label={t("providers.baseUrl")}
-              helperText={t("providers.baseUrl.helper")}
-            >
+            <Field label={t("providers.baseUrl")} helperText={t("providers.baseUrl.helper")}>
               <Input
                 value={form.baseUrl}
                 placeholder="https://api.example.com/v1"
@@ -214,7 +213,10 @@ export function ProviderConfigModal({
 
           <SecretField
             label={t("providers.apiKey")}
-            placeholder={maskedApiKey ?? (isCustom ? t("common.optional") : t("providers.apiKey.placeholderPaste"))}
+            placeholder={
+              maskedApiKey ??
+              (isCustom ? t("common.optional") : t("providers.apiKey.placeholderPaste"))
+            }
             value={form.apiKey}
             onChange={(apiKey) => setForm((s) => ({ ...s, apiKey }))}
             helperText={
@@ -228,8 +230,16 @@ export function ProviderConfigModal({
 
           {usesMappings ? (
             <MappingEditor
-              label={activeModal?.id === "azure" ? t("providers.deploymentMappings") : t("providers.modelMappings")}
-              mappingLabel={isDeploymentMapping ? t("providers.mappings.deployment") : t("providers.mappings.providerModel")}
+              label={
+                activeModal?.id === "azure"
+                  ? t("providers.deploymentMappings")
+                  : t("providers.modelMappings")
+              }
+              mappingLabel={
+                isDeploymentMapping
+                  ? t("providers.mappings.deployment")
+                  : t("providers.mappings.providerModel")
+              }
               isDeployment={isDeploymentMapping}
               rows={form.mappings}
               modelOptions={imageModelOptions}
@@ -308,8 +318,14 @@ function MappingEditor({
             <Field label={mappingLabel}>
               <Input
                 value={row.id}
-                placeholder={isDeployment ? t("providers.mappings.deploymentPlaceholder") : t("providers.mappings.modelIdPlaceholder")}
-                onChange={(e) => updateMapping(rows, onChange, index, { id: e.target.value.trim() })}
+                placeholder={
+                  isDeployment
+                    ? t("providers.mappings.deploymentPlaceholder")
+                    : t("providers.mappings.modelIdPlaceholder")
+                }
+                onChange={(e) =>
+                  updateMapping(rows, onChange, index, { id: e.target.value.trim() })
+                }
               />
             </Field>
             <Field label={t("providers.mappings.canonicalModel")}>
@@ -460,13 +476,22 @@ function KindsBadge({ text }: { text: string }) {
   );
 }
 
-function statusIcon(status: ProviderTestStatus, t: (key: MessageKey, params?: Record<string, string | number>) => string) {
+function statusIcon(
+  status: ProviderTestStatus,
+  t: (key: MessageKey, params?: Record<string, string | number>) => string,
+) {
   if (status.kind === "testing") {
     return <Icons.CircleNotch weight="bold" className="size-4 animate-spin" />;
   }
   if (status.kind === "ok") {
     return (
-      <Tooltip content={status.sampleModelId ? t("providers.connectedWith", { model: status.sampleModelId }) : t("common.connected")}>
+      <Tooltip
+        content={
+          status.sampleModelId
+            ? t("providers.connectedWith", { model: status.sampleModelId })
+            : t("common.connected")
+        }
+      >
         <Icons.CheckCircle weight="fill" className="size-4 text-(--success)" />
       </Tooltip>
     );

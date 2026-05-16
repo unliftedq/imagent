@@ -2,7 +2,7 @@ import type { ImageModelCaps, ImageModelDef, ImageRequest } from "@imagent/core"
 import type { ProviderId } from "@imagent/ipc";
 import { Button, Icons, Popover, Select } from "@imagent/ui";
 import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
-import { useT, type MessageKey } from "../../i18n/index.js";
+import { type MessageKey, useT } from "../../i18n/index.js";
 import { api } from "../../lib/api.js";
 import { useAssetsStore } from "../../state/useAssetsStore.js";
 import { useConfigStore } from "../../state/useConfigStore.js";
@@ -73,8 +73,7 @@ export function ImageRail() {
     const defaultProvider = defaultImageModel
       ? configuredProviders.find((provider) => provider.id === defaultImageModel.providerId)
       : undefined;
-    const first =
-      defaultImageModel && defaultProvider ? defaultProvider : configuredProviders[0];
+    const first = defaultImageModel && defaultProvider ? defaultProvider : configuredProviders[0];
     if (!first) return;
     setDraft({
       providerId: first.id,
@@ -187,8 +186,7 @@ export function ImageRail() {
     // invalid state — also fall back to the model's `defaults.count` when the
     // current value is < 1.
     const max = Math.max(1, caps?.maxOutputs ?? 1);
-    const fallback =
-      (selectedModel?.defaults as { count?: number } | undefined)?.count ?? 1;
+    const fallback = (selectedModel?.defaults as { count?: number } | undefined)?.count ?? 1;
     if (!Number.isFinite(draft.count) || draft.count < 1) {
       setDraft({ count: Math.min(max, Math.max(1, fallback)) });
       return;
@@ -726,7 +724,8 @@ function DimensionRow({
           onChange(e.target.value);
           onCommit?.(e.target.value);
         }}
-        aria-label={`${label} slider`}        className={
+        aria-label={`${label} slider`}
+        className={
           "h-1 flex-1 cursor-ew-resize appearance-none rounded-full bg-(--surface) " +
           "accent-(--accent) " +
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--accent)/40"

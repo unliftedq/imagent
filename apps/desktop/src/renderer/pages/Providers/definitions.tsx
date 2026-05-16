@@ -5,13 +5,13 @@ import type {
   ProviderRoutingPayload,
   SecretsWrite,
 } from "@imagent/ipc";
-import type { MessageKey } from "../../i18n/index.js";
 import azureUrl from "../../assets/logos/azure.svg?url";
 import bflUrl from "../../assets/logos/bfl.svg?url";
 import bytedanceUrl from "../../assets/logos/bytedance.svg?url";
 import googleUrl from "../../assets/logos/google.svg?url";
 import openaiUrl from "../../assets/logos/openai.svg?url";
 import xaiUrl from "../../assets/logos/xai.svg?url";
+import type { MessageKey } from "../../i18n/index.js";
 
 export interface BuiltInProvider {
   id: string;
@@ -55,7 +55,8 @@ export const BUILT_IN_PROVIDERS: readonly BuiltInProvider[] = [
   {
     id: "azure",
     name: "Azure",
-    description: "Azure Foundry deployments — GPT Image, MAI Image, and FLUX families on one resource.",
+    description:
+      "Azure Foundry deployments — GPT Image, MAI Image, and FLUX families on one resource.",
     iconSrc: azureUrl,
     iconAlt: "Azure",
     endpointLabel: "Endpoint",
@@ -253,7 +254,8 @@ export function validateModal(
 
   const masked = maskForModal(activeModal, form.providerId, secrets);
   const keyRequired = activeModal.kind !== "custom";
-  if (keyRequired && !masked && !form.apiKey.trim()) return t("providers.validation.apiKeyRequired");
+  if (keyRequired && !masked && !form.apiKey.trim())
+    return t("providers.validation.apiKeyRequired");
 
   if (activeModal.id === "azure" || activeModal.kind === "custom") {
     const usable = form.mappings.filter((row) => row.id.trim() && row.modelId.trim());
@@ -265,26 +267,40 @@ export function validateModal(
 /** Returns the translated display name for a built-in provider id, or `id` as fallback. */
 export function providerDisplayName(id: string, t: (key: MessageKey) => string): string {
   switch (id) {
-    case "openai": return t("providers.def.openai.name");
-    case "azure": return t("providers.def.azure.name");
-    case "google": return t("providers.def.google.name");
-    case "flux-bfl": return t("providers.def.fluxBfl.name");
-    case "bytedance": return t("providers.def.bytedance.name");
-    case "xai": return t("providers.def.xai.name");
-    default: return id;
+    case "openai":
+      return t("providers.def.openai.name");
+    case "azure":
+      return t("providers.def.azure.name");
+    case "google":
+      return t("providers.def.google.name");
+    case "flux-bfl":
+      return t("providers.def.fluxBfl.name");
+    case "bytedance":
+      return t("providers.def.bytedance.name");
+    case "xai":
+      return t("providers.def.xai.name");
+    default:
+      return id;
   }
 }
 
 /** Returns the translated description for a built-in provider id. */
 export function providerDescription(id: string, t: (key: MessageKey) => string): string {
   switch (id) {
-    case "openai": return t("providers.def.openai.description");
-    case "azure": return t("providers.def.azure.description");
-    case "google": return t("providers.def.google.description");
-    case "flux-bfl": return t("providers.def.fluxBfl.description");
-    case "bytedance": return t("providers.def.bytedance.description");
-    case "xai": return t("providers.def.xai.description");
-    default: return "";
+    case "openai":
+      return t("providers.def.openai.description");
+    case "azure":
+      return t("providers.def.azure.description");
+    case "google":
+      return t("providers.def.google.description");
+    case "flux-bfl":
+      return t("providers.def.fluxBfl.description");
+    case "bytedance":
+      return t("providers.def.bytedance.description");
+    case "xai":
+      return t("providers.def.xai.description");
+    default:
+      return "";
   }
 }
 
@@ -314,7 +330,7 @@ export function buildSecretsPatch(activeModal: ActiveModal, form: ModalState): S
       patch.xai = { apiKey };
       break;
     case "azure":
-      patch["azure"] = { apiKey };
+      patch.azure = { apiKey };
       break;
     case "bytedance":
       patch.bytedance = { apiKey };
@@ -364,11 +380,7 @@ export function prefsWithMappings(
       ...existing,
       ...(endpoint ? { endpoint } : {}),
       ...(baseUrl ? { baseUrl } : {}),
-      ...(activeModal.id === "azure"
-        ? image.length > 0
-          ? { image }
-          : { image: [] }
-        : {}),
+      ...(activeModal.id === "azure" ? (image.length > 0 ? { image } : { image: [] }) : {}),
     };
     (next as unknown as Record<string, ProviderRoutingPayload>)[providerId] = merged;
   }
@@ -394,7 +406,7 @@ export function maskForModal(
     case "openai":
       return secrets.openai?.apiKey ?? null;
     case "azure":
-      return secrets["azure"]?.apiKey ?? null;
+      return secrets.azure?.apiKey ?? null;
     case "google":
       return secrets.google?.apiKey ?? null;
     case "flux-bfl":

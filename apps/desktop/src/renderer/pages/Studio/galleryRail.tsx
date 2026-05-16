@@ -152,7 +152,9 @@ export function StudioGalleryRail({
       className="flex h-full w-[var(--rail-gallery,300px)] shrink-0 flex-col min-h-0 overflow-hidden border-l border-(--border) bg-(--bg)"
     >
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
-        <span className="text-[15px] font-semibold tracking-[-0.01em] text-(--text)">{t("studio.library")}</span>
+        <span className="text-[15px] font-semibold tracking-[-0.01em] text-(--text)">
+          {t("studio.library")}
+        </span>
         <button
           type="button"
           aria-label={t("studio.collapseLibrary")}
@@ -343,7 +345,10 @@ function AssetThumb({ asset }: { asset: Asset }) {
         setDragData(event, { source: "asset", id: asset.id, kind: asset.kind })
       }
       title={asset.name}
-      aria-label={t("studio.assetAriaLabel", { kind: assetKindLabel(asset.kind, t), name: asset.name })}
+      aria-label={t("studio.assetAriaLabel", {
+        kind: assetKindLabel(asset.kind, t),
+        name: asset.name,
+      })}
       className="group flex min-w-0 flex-col overflow-hidden rounded-(--radius-sm) border border-(--border) bg-(--surface-sunken) text-left transition-colors duration-(--motion-fast) hover:border-(--border-strong) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring)"
     >
       <span className="relative aspect-square w-full bg-(--surface)">

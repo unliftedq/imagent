@@ -13,7 +13,7 @@
  *  - Sentence-case English maps to natural Chinese without trailing periods
  *    on UI labels (Chinese full-stop "。" is reserved for prose copy).
  */
-import { en } from "./messages.en.js";
+import type { en } from "./messages.en.js";
 
 type Dict = Record<keyof typeof en, string>;
 
@@ -75,17 +75,14 @@ export const zh: Dict = {
   "settings.language.system": "跟随系统",
   "settings.language.english": "English",
   "settings.language.chinese": "中文",
-  "settings.language.helper":
-    "选择应用的显示语言。「跟随系统」会根据操作系统设置自动切换。",
+  "settings.language.helper": "选择应用的显示语言。「跟随系统」会根据操作系统设置自动切换。",
   "settings.theme.light": "浅色",
   "settings.theme.dark": "深色",
   "settings.theme.system": "跟随系统",
   "settings.defaultImageModel": "默认图片模型",
-  "settings.defaultImageModel.helper":
-    "当未指定服务商或模型时，用于图片生成。",
+  "settings.defaultImageModel.helper": "当未指定服务商或模型时，用于图片生成。",
   "settings.defaultVideoModel": "默认视频模型",
-  "settings.defaultVideoModel.helper":
-    "当未指定服务商或模型时，用于视频生成。",
+  "settings.defaultVideoModel.helper": "当未指定服务商或模型时，用于视频生成。",
   "settings.generationConcurrency": "生成并发数",
   "settings.generationConcurrency.helper": "同时运行的任务数量上限。",
   "settings.defaultOutputDir": "默认输出目录",
@@ -104,8 +101,7 @@ export const zh: Dict = {
     "连接生成服务商，然后将服务商侧的模型 ID 或部署名映射到对应的标准目录模型。",
   "providers.connect": "连接 {name}",
   "providers.openaiCompatible": "OpenAI 兼容",
-  "providers.openaiCompatible.description":
-    "添加自定义服务商，配置专属的 Base URL 和模型映射。",
+  "providers.openaiCompatible.description": "添加自定义服务商，配置专属的 Base URL 和模型映射。",
   "providers.customDescription": "OpenAI Images API 兼容的自定义端点。",
   "providers.test": "测试",
   "providers.connectedWith": "已通过 {model} 连接",
@@ -121,8 +117,7 @@ export const zh: Dict = {
   "providers.displayName.placeholder": "My Provider",
   "providers.endpoint": "Endpoint",
   "providers.baseUrl": "Base URL",
-  "providers.baseUrl.helper":
-    "如果服务商需要，请包含 OpenAI 兼容的 /v1 路径。",
+  "providers.baseUrl.helper": "如果服务商需要，请包含 OpenAI 兼容的 /v1 路径。",
   "providers.apiKey": "API 密钥",
   "providers.apiKey.placeholderPaste": "在此粘贴密钥",
   "providers.apiKey.stored": "已存储：{masked}。留空则保留现有密钥。",
@@ -132,8 +127,7 @@ export const zh: Dict = {
   "providers.hideKey": "隐藏密钥",
   "providers.modelMappings": "模型映射",
   "providers.deploymentMappings": "部署映射",
-  "providers.mappings.subtitle":
-    "每个服务商侧的 ID 会从所选模型继承能力和默认值。",
+  "providers.mappings.subtitle": "每个服务商侧的 ID 会从所选模型继承能力和默认值。",
   "providers.mappings.providerModel": "服务商模型",
   "providers.mappings.deployment": "部署",
   "providers.mappings.modelIdPlaceholder": "model-id",
@@ -145,8 +139,7 @@ export const zh: Dict = {
   "providers.toast.customSaved": "自定义服务商已保存",
   "providers.toast.needsAttention": "服务商配置需要检查",
   "providers.toast.saveFailed": "服务商保存失败",
-  "providers.validation.providerId":
-    "Provider ID 只能包含小写字母、数字、连字符或下划线。",
+  "providers.validation.providerId": "Provider ID 只能包含小写字母、数字、连字符或下划线。",
   "providers.validation.reservedId": "自定义 Provider ID 不能与内置服务商重名。",
   "providers.validation.displayNameRequired": "请填写显示名称。",
   "providers.validation.baseUrlRequired": "请填写 Base URL。",
@@ -168,8 +161,7 @@ export const zh: Dict = {
   "providers.def.fluxBfl.name": "Black Forest Labs",
   "providers.def.fluxBfl.description": "Black Forest Labs 图像生成模型。",
   "providers.def.bytedance.name": "ByteDance",
-  "providers.def.bytedance.description":
-    "通过 BytePlus ModelArk 端点调用 Seedream 和 Seedance。",
+  "providers.def.bytedance.description": "通过 BytePlus ModelArk 端点调用 Seedream 和 Seedance。",
   "providers.def.xai.name": "xAI",
   "providers.def.xai.description": "Grok 图像与视频生成 API。",
 
@@ -181,14 +173,12 @@ export const zh: Dict = {
   "gallery.newBoard": "新建看板",
   "gallery.boardName.placeholder": "看板名称",
   "gallery.search.placeholder": "搜索提示词或文件名…",
-  "gallery.search.helpTooltip":
-    "匹配提示词（FTS 全文搜索）和文件名，多个词语之间为 AND 关系。",
+  "gallery.search.helpTooltip": "匹配提示词（FTS 全文搜索）和文件名，多个词语之间为 AND 关系。",
   "gallery.match": "{count} 条结果",
   "gallery.matches": "{count} 条结果",
   "gallery.loadMore": "加载更多（剩余 {remaining} 项）",
   "gallery.empty.search.title": "无匹配结果",
-  "gallery.empty.search.body":
-    "试试换个关键词，搜索范围涵盖提示词和文件名。",
+  "gallery.empty.search.body": "试试换个关键词，搜索范围涵盖提示词和文件名。",
   "gallery.empty.favorites.title": "还没有收藏",
   "gallery.empty.favorites.body": "点击任意图片上的爱心，即可将其加入收藏。",
   "gallery.empty.board.title": "此看板还是空的",
@@ -203,8 +193,7 @@ export const zh: Dict = {
   "gallery.toast.couldNotCreateBoard": "无法创建看板",
   "gallery.toast.remixFailed": "二次创作失败",
   "gallery.toast.thumbnailUnavailable": "缩略图不可用",
-  "gallery.toast.thumbnailUnavailableDesc":
-    "该视频需要先生成缩略图，才能保存为素材。",
+  "gallery.toast.thumbnailUnavailableDesc": "该视频需要先生成缩略图，才能保存为素材。",
   "gallery.toast.assetSaved": "素材已保存",
   "gallery.toast.assetSavedDesc": "{name} 已添加至素材库。",
   "gallery.toast.deleteFailed": "删除失败",
@@ -279,8 +268,7 @@ export const zh: Dict = {
   "studio.referenceAddedAs": "已添加为 {kind} 参考图",
   "studio.galleryReferenceAddedAs": "已将画廊图片添加为 {kind} 参考图",
   "studio.referenceChooseType": "选择参考类型",
-  "studio.referenceChooseTypeBody":
-    "可以将画廊项目以指定角色添加至当前会话。",
+  "studio.referenceChooseTypeBody": "可以将画廊项目以指定角色添加至当前会话。",
   "studio.referenceCancel": "取消参考类型选择",
   "studio.role.character": "角色",
   "studio.role.object": "物体",
@@ -291,8 +279,7 @@ export const zh: Dict = {
   "studio.onlyFirstAttached": "只有第一张选中的图片被附加了。",
   "studio.firstFrame": "首帧",
   "studio.noReferenceImage": "未附加参考图。",
-  "studio.noReferenceImageStyle":
-    "未附加参考图，此风格可依靠下方的提示词片段。",
+  "studio.noReferenceImageStyle": "未附加参考图，此风格可依靠下方的提示词片段。",
   "studio.outputCount": "输出数量",
   "studio.aspectRatio": "宽高比",
   "studio.size": "尺寸",
@@ -396,8 +383,7 @@ export const zh: Dict = {
   "assets.promptSnippet": "提示词片段",
   "assets.promptSnippetOptional": "提示词片段（可选）",
   "assets.validation.nameRequired": "请填写名称。",
-  "assets.validation.styleNeedsReference":
-    "风格素材需要至少一张参考图或一段提示词片段。",
+  "assets.validation.styleNeedsReference": "风格素材需要至少一张参考图或一段提示词片段。",
   "assets.validation.widthPositive": "宽度必须大于 0。",
   "assets.validation.heightPositive": "高度必须大于 0。",
   "assets.validation.widthHeightNumeric": "宽度和高度必须为数字。",
@@ -450,7 +436,8 @@ export const zh: Dict = {
   "assets.drawer.reference": "参考图",
   "assets.drawer.details": "详情",
   "assets.descriptionLabel": "描述",
-  "assets.promptSnippetDrawerHint": "模型支持参考图时优先使用参考图，否则此片段会附加至提示词末尾。",
+  "assets.promptSnippetDrawerHint":
+    "模型支持参考图时优先使用参考图，否则此片段会附加至提示词末尾。",
   "assets.restore": "恢复",
   "assets.archive": "归档",
   "assets.saveChanges": "保存修改",
@@ -461,7 +448,8 @@ export const zh: Dict = {
 
   // Models
   "models.title": "模型",
-  "models.subtitle": "目录中所有已知模型，按 ID 分组。绿色标签表示已配置认证的服务商，灰色标签表示配置后即可使用的服务商。",
+  "models.subtitle":
+    "目录中所有已知模型，按 ID 分组。绿色标签表示已配置认证的服务商，灰色标签表示配置后即可使用的服务商。",
   "models.noImageModels": "目录中没有图片模型。",
   "models.noVideoModels": "目录中没有视频模型。",
   "models.configureProvider": "配置服务商",

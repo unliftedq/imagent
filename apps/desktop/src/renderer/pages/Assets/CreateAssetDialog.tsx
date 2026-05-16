@@ -2,7 +2,7 @@ import type { Asset, AssetKind, GalleryItem } from "@imagent/core";
 import { IpcClientError } from "@imagent/ipc";
 import { Button, Dialog, Icons, Input, Textarea } from "@imagent/ui";
 import { useEffect, useState } from "react";
-import { useT, type MessageKey } from "../../i18n/index.js";
+import { type MessageKey, useT } from "../../i18n/index.js";
 import { useAssetsStore } from "../../state/useAssetsStore.js";
 import { useUIStore } from "../../state/useUIStore.js";
 import { AssetField } from "./AssetField.js";
@@ -144,7 +144,7 @@ export function CreateAssetDialog({
     try {
       const created = usingGallerySource
         ? await createFromGalleryItem({
-            itemId: gallerySource!.itemId,
+            itemId: gallerySource?.itemId,
             kind,
             name: name.trim(),
             description: description.trim() || null,

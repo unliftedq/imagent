@@ -60,7 +60,10 @@ export function StudioPage() {
           [kind]: [...current, data.id],
         },
       });
-      pushToast({ title: t("studio.referenceAddedAs", { kind: roleLabel(data.kind, t) }), variant: "success" });
+      pushToast({
+        title: t("studio.referenceAddedAs", { kind: roleLabel(data.kind, t) }),
+        variant: "success",
+      });
       return;
     }
 
@@ -145,7 +148,9 @@ function GalleryReferenceRoleDialog({
       <div className="w-full max-w-[360px] rounded-(--radius-lg) border border-(--border) bg-(--surface-raised) p-4 shadow-[0_24px_70px_-30px_rgba(0,0,0,0.65)]">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-[14px] font-semibold text-(--text)">{t("studio.referenceChooseType")}</h2>
+            <h2 className="text-[14px] font-semibold text-(--text)">
+              {t("studio.referenceChooseType")}
+            </h2>
             <p className="mt-1 text-[12px] text-(--text-muted)">
               {t("studio.referenceChooseTypeBody")}
             </p>

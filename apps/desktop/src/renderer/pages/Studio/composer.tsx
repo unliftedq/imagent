@@ -1,10 +1,5 @@
 import { Icons, Select } from "@imagent/ui";
-import {
-  type KeyboardEvent,
-  type ReactNode,
-  useEffect,
-  useRef,
-} from "react";
+import { type KeyboardEvent, type ReactNode, useEffect, useRef } from "react";
 import { useT } from "../../i18n/index.js";
 import type { StudioMode } from "../../state/useUIStore.js";
 import { autosizeComposer } from "./utils.js";
@@ -110,7 +105,8 @@ export function ChatComposerShell({
     }
   };
 
-  const actionLabel = mode === "video" ? t("studio.composer.submit") : t("studio.composer.generate");
+  const actionLabel =
+    mode === "video" ? t("studio.composer.submit") : t("studio.composer.generate");
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-5">

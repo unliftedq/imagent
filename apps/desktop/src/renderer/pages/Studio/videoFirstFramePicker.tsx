@@ -44,7 +44,9 @@ export function FirstFrameToolbarPicker({
       <Popover.Content className="w-[340px]">
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-[12px] font-semibold text-(--text)">{t("studio.firstFrame")}</span>
+            <span className="text-[12px] font-semibold text-(--text)">
+              {t("studio.firstFrame")}
+            </span>
             {value ? (
               <Button size="sm" variant="ghost" onClick={() => onChange(null)}>
                 {t("common.clear")}
@@ -61,7 +63,11 @@ export function FirstFrameToolbarPicker({
               "px-3 py-3 text-center text-[12px] text-(--text-muted)"
             }
           >
-            {value ? <span className="truncate">{label}</span> : <span>{t("studio.dropImageHere")}</span>}
+            {value ? (
+              <span className="truncate">{label}</span>
+            ) : (
+              <span>{t("studio.dropImageHere")}</span>
+            )}
           </button>
           {recentFrames.length === 0 ? (
             <div className="rounded-(--radius-md) border border-(--border-faint) px-3 py-4 text-center text-[12px] text-(--text-muted)">

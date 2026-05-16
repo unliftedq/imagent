@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { Icons } from "@imagent/ui";
 import type { ProviderId } from "@imagent/ipc";
+import { Icons } from "@imagent/ui";
+import { useEffect, useMemo, useState } from "react";
 import { useT } from "../../i18n/index.js";
 import { api } from "../../lib/api.js";
 import { useUIStore } from "../../state/useUIStore.js";
@@ -65,9 +65,7 @@ export function ModelsPage() {
           <h1 className="text-(length:--text-display-sm) font-display font-medium tracking-(--text-display-sm--letter-spacing) text-(--text)">
             {t("models.title")}
           </h1>
-          <p className="mt-2 text-(length:--text-body-md) text-(--text)">
-            {t("models.subtitle")}
-          </p>
+          <p className="mt-2 text-(length:--text-body-md) text-(--text)">{t("models.subtitle")}</p>
         </div>
       </header>
 
@@ -129,17 +127,9 @@ function ModelRowView({
             }
           >
             {logo ? (
-              <img
-                src={logo.src}
-                alt={logo.alt}
-                className="size-5"
-                draggable={false}
-              />
+              <img src={logo.src} alt={logo.alt} className="size-5" draggable={false} />
             ) : (
-              <Icons.Brain
-                weight="duotone"
-                className="size-5 text-(--text-muted)"
-              />
+              <Icons.Brain weight="duotone" className="size-5 text-(--text-muted)" />
             )}
           </span>
           <div className="flex flex-col gap-0.5">

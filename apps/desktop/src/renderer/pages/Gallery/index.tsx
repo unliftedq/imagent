@@ -1,13 +1,7 @@
-import {
-  DndContext,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
+import { DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import type { Asset, AssetKind, GalleryItem } from "@imagent/core";
-import { useEffect, useMemo, useState } from "react";
 import { BoardSidebarItem, Button, GalleryItemCard, Icons, Input, Tooltip } from "@imagent/ui";
+import { useEffect, useMemo, useState } from "react";
 import { useT } from "../../i18n/index.js";
 import { api } from "../../lib/api.js";
 import { useBoardsStore } from "../../state/useBoardsStore.js";
@@ -53,9 +47,7 @@ export function GalleryPage() {
 
   const t = useT();
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-  );
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
   useEffect(() => {
     void refresh();
@@ -250,7 +242,6 @@ export function GalleryPage() {
           {creatingBoard ? (
             <div className="flex items-center gap-1 px-2 py-1">
               <input
-                autoFocus
                 className={
                   "flex-1 rounded-(--radius-sm) border border-(--border) " +
                   "bg-(--bg) px-2 py-1 text-(length:--text-body-sm) text-(--text) " +
@@ -396,7 +387,11 @@ export function GalleryPage() {
 
           {items.length < total ? (
             <div className="mt-6 flex items-center justify-center">
-              <Button variant="secondary" size="sm" onClick={() => setQuery({ limit: query.limit + 60 })}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setQuery({ limit: query.limit + 60 })}
+              >
                 {t("gallery.loadMore", { remaining: total - items.length })}
               </Button>
             </div>
@@ -449,10 +444,7 @@ function GalleryEmptyState({
     return (
       <div className="mx-auto mt-16 flex w-full max-w-[420px] flex-col items-center text-center">
         <div className="mb-4 inline-flex size-14 items-center justify-center rounded-(--radius-pill) bg-(--surface)">
-          <Icons.MagnifyingGlass
-            weight="duotone"
-            className="size-6 text-(--text-muted)"
-          />
+          <Icons.MagnifyingGlass weight="duotone" className="size-6 text-(--text-muted)" />
         </div>
         <h2 className="text-(length:--text-title) font-semibold tracking-[-0.01em] text-(--text)">
           {t("gallery.empty.search.title")}
@@ -474,7 +466,9 @@ function GalleryEmptyState({
           <Icons.Folder weight="duotone" className="size-6 text-(--text-muted)" />
         </div>
         <h2 className="text-(length:--text-title) font-semibold tracking-[-0.01em] text-(--text)">
-          {activeFilter === BOARD_FAVORITES ? t("gallery.empty.favorites.title") : t("gallery.empty.board.title")}
+          {activeFilter === BOARD_FAVORITES
+            ? t("gallery.empty.favorites.title")
+            : t("gallery.empty.board.title")}
         </h2>
         <p className="mt-1.5 max-w-[320px] text-(length:--text-body-sm) leading-5 text-(--text-muted)">
           {activeFilter === BOARD_FAVORITES
@@ -499,10 +493,7 @@ function GalleryEmptyState({
           aria-hidden="true"
           className="absolute inset-2 rounded-(--radius-pill) bg-(--accent)/12"
         />
-        <Icons.ImageSquare
-          weight="duotone"
-          className="relative size-9 text-(--accent)"
-        />
+        <Icons.ImageSquare weight="duotone" className="relative size-9 text-(--accent)" />
       </div>
       <h2 className="text-(length:--text-display) font-semibold tracking-[-0.01em] text-(--text)">
         {t("gallery.empty.all.title")}
@@ -511,7 +502,10 @@ function GalleryEmptyState({
         {t("gallery.empty.all.body")}
       </p>
       <div className="mt-6 inline-flex items-center gap-2">
-        <Button onClick={onGoToStudio} leadingIcon={<Icons.MagicWand weight="bold" className="size-4" />}>
+        <Button
+          onClick={onGoToStudio}
+          leadingIcon={<Icons.MagicWand weight="bold" className="size-4" />}
+        >
           {t("gallery.empty.openStudio")}
         </Button>
       </div>

@@ -149,7 +149,9 @@ function ModelPickerRow({
       </button>
       <button
         type="button"
-        aria-label={favorite ? t("studio.modelPicker.unfavorite") : t("studio.modelPicker.favorite")}
+        aria-label={
+          favorite ? t("studio.modelPicker.unfavorite") : t("studio.modelPicker.favorite")
+        }
         onClick={(event) => {
           event.stopPropagation();
           onToggleFavorite(favoriteKey);

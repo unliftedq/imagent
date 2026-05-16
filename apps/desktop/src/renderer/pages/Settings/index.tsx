@@ -310,9 +310,7 @@ function DefaultModelPicker({
   const modelId = value?.modelId ?? first?.modelId ?? "";
 
   if (providers.length === 0) {
-    return (
-      <p className="text-(length:--text-body-sm) text-(--text-muted)">{noProvidersLabel}</p>
-    );
+    return <p className="text-(length:--text-body-sm) text-(--text-muted)">{noProvidersLabel}</p>;
   }
 
   return (
