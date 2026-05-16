@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.2.1 - 2026-05-16
+
+### Highlights
+
+- Studio gets a capability-aware **configuration panel** that replaces the old per-rail settings, so image and video generation share one place to edit size, references, and model-specific options.
+- Defaults are now expressed as **default image model** + **default video model** instead of a single default provider, so users with multiple providers configured can pick exactly which model each surface starts with.
+- The desktop **Providers** and **Models** pages now show real **brand logos** (OpenAI, Azure, Microsoft, Google, xAI, ByteDance, Black Forest Labs, Nano Banana) instead of generic placeholders.
+- SQLite FTS now uses **nodejieba tokenization** so Chinese prompts and asset metadata are searchable word-by-word instead of falling back to substring/trigram matching.
+
+### Studio
+
+- Image and video rails now share a single capability-aware configuration panel that renders only the controls the selected model actually supports (size/aspect, references, count, model-specific options).
+- Reference picker, image rail, and video rail were refactored around the new panel; custom dimension handling and the reference picker are easier to use.
+- Model picker UI was updated alongside the new `Popover` / `Select` primitives in `@imagent/ui`.
+- Canvas state and the studio styles were cleaned up to match the new layout.
+
+### Defaults: image + video models
+
+- `config.json` now stores **`defaults.imageModel`** and **`defaults.videoModel`** instead of a single default provider. Both the desktop **Settings** page and the CLI (`imagent config …`, `imagent image generate`, `imagent video generate`) read and validate against these.
+- The CLI validates that the configured default models exist in the catalog and that the user has a provider mapped to them before falling back; missing or invalid defaults produce a clearer error.
+- IPC contract and server tests updated to round-trip the new default-model fields.
+
+### Catalog & providers
+
+- Catalog override merge no longer silently drops user overrides; the loader, resolver, and schema were tightened with new tests.
+- Azure family routing (`packages/providers/src/azure/families.ts`, `azure/image.ts`) and FLUX image dispatch were updated for the latest catalog entries, and Google and xAI image providers got matching test/behavior fixes.
+- Bundled `catalog.default.json` (and the desktop copy under `apps/desktop/assets/`) refreshed with the current model capabilities.
+- Job runner error output is no longer truncated mid-message, so failures surface their full provider response.
+
+### Persistence: Chinese full-text search
+
+- New migration `003_jieba_fts.sql` rebuilds the FTS index with a **nodejieba**-backed tokenizer for proper Chinese word segmentation.
+- Asset and gallery repositories now tokenize queries the same way at read time, so partial Chinese queries match the way users expect.
+- The CLI single-file binary build (`apps/cli/scripts/build-binary.mjs`, `sea-config.json`) bundles the nodejieba native asset so packaged binaries keep working.
+
 ## 0.2.0 - 2026-05-12
 
 ### Highlights
