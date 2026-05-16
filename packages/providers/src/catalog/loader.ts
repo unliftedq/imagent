@@ -15,7 +15,13 @@ export interface CatalogLoaderOptions {
   path?: string;
   /** Override the bundled fallback (test seam). */
   bundled?: ModelCatalog;
-  /** Optional packaged asset path for the bundled fallback (desktop builds). */
+  /**
+   * Optional external catalog file to use as the bundled fallback. When set,
+   * read from disk in preference to the JSON inlined at module-load time; on
+   * read failure, falls back to the inlined copy with a warning. Primarily a
+   * test seam — production callers should rely on the inlined bundle that
+   * ships with the `@imagent/providers` package.
+   */
   bundledPath?: string;
   logger?: { info(msg: string): void; warn(msg: string): void };
 }

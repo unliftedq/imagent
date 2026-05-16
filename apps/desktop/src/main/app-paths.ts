@@ -20,7 +20,3 @@ export function createDesktopPathResolver(): PathResolver {
   })();
   return createPathResolver(path.join(home, ".imagent"));
 }
-
-export function defaultCatalogAssetPath(): string {
-  return path.join(app.getAppPath(), "assets", "catalog.default.json");
-}

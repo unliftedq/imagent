@@ -87,16 +87,19 @@ export function resolveImageProviderModel(
       `Provider '${providerId}' image model '${offering.id}' references unknown canonical model '${offering.modelId}'`,
     );
   }
+  const providerOverride = catalog.providers[providerId]?.modelOverrides?.[offering.modelId];
   return ImageModelDefSchema.parse({
     id: offering.id,
     baseModelId: offering.modelId,
     displayName: providerDisplayName(offering, base),
     capabilities: {
       ...(base.capabilities ?? {}),
+      ...(providerOverride?.capabilities ?? {}),
       ...(offering.capabilities ?? {}),
     },
     defaults: {
       ...(base.defaults ?? {}),
+      ...(providerOverride?.defaults ?? {}),
       ...(offering.defaults ?? {}),
     },
   });
@@ -113,16 +116,19 @@ export function resolveVideoProviderModel(
       `Provider '${providerId}' video model '${offering.id}' references unknown canonical model '${offering.modelId}'`,
     );
   }
+  const providerOverride = catalog.providers[providerId]?.modelOverrides?.[offering.modelId];
   return VideoModelDefSchema.parse({
     id: offering.id,
     baseModelId: offering.modelId,
     displayName: providerDisplayName(offering, base),
     capabilities: {
       ...(base.capabilities ?? {}),
+      ...(providerOverride?.capabilities ?? {}),
       ...(offering.capabilities ?? {}),
     },
     defaults: {
       ...(base.defaults ?? {}),
+      ...(providerOverride?.defaults ?? {}),
       ...(offering.defaults ?? {}),
     },
   });

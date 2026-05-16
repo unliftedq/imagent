@@ -890,7 +890,18 @@
       ]
     },
     "azure": {
-      "displayName": "Azure"
+      "displayName": "Azure",
+      "modelOverrides": {
+        "gpt-image-2": {
+          "capabilities": { "maxOutputs": 1 }
+        },
+        "gpt-image-1.5": {
+          "capabilities": { "maxOutputs": 1 }
+        },
+        "gpt-image-1-mini": {
+          "capabilities": { "maxOutputs": 1 }
+        }
+      }
     },
     "google": {
       "displayName": "Google AI Studio",

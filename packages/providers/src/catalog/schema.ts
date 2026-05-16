@@ -11,6 +11,27 @@ import {
 import { z } from "zod";
 
 /**
+ * Per-(provider, canonical model) overlay applied during offering resolution.
+ * Lets the bundled catalog encode provider-specific quirks for a base model
+ * (e.g. Azure OpenAI's gpt-image deployments only support `n=1`) without
+ * forking the canonical model entry. Merged between the canonical model and
+ * the offering itself, so offerings can still override further.
+ *
+ * A single keyspace covers both image and video models — they live in
+ * separate maps on the catalog and any given canonical id is one or the
+ * other, never both. The merged caps schema admits fields from either kind;
+ * irrelevant fields are simply stripped when the final `ImageModelDef` /
+ * `VideoModelDef` is parsed.
+ */
+const ModelCapsOverrideSchema = ImageModelCapsOverrideSchema.merge(VideoModelCapsOverrideSchema);
+
+const ProviderModelOverrideSchema = z.object({
+  capabilities: ModelCapsOverrideSchema.optional(),
+  defaults: z.record(z.string(), z.unknown()).optional(),
+});
+export type ProviderModelOverride = z.infer<typeof ProviderModelOverrideSchema>;
+
+/**
  * Re-export the canonical offering schemas from core so consumers that import
  * via @imagent/providers keep working. The single source of truth lives in
  * `@imagent/core/domain/model.ts` because both the catalog and per-user
@@ -27,6 +48,14 @@ export const ProviderCatalogSchema = z.object({
   displayName: z.string().optional(),
   image: z.array(ImageProviderModelSchema).optional(),
   video: z.array(VideoProviderModelSchema).optional(),
+  /**
+   * Provider-specific overrides keyed by canonical model id (matches a key
+   * in `models.image` or `models.video`). Applied during offering resolution
+   * between the canonical caps and any offering-level override; intended for
+   * the bundled catalog to encode vendor quirks (e.g. Azure caps gpt-image
+   * `n=1`).
+   */
+  modelOverrides: z.record(z.string(), ProviderModelOverrideSchema).optional(),
 });
 export type ProviderCatalog = z.infer<typeof ProviderCatalogSchema>;
 

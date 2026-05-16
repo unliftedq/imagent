@@ -92,6 +92,17 @@
 	letter-spacing: 0.01em;
 }
 
+.studio-generation-badge-elapsed {
+	font-size: 11.5px;
+	font-weight: 500;
+	color: var(--text);
+	font-variant-numeric: tabular-nums;
+	padding: 1px 6px;
+	border-radius: 999px;
+	background: color-mix(in oklch, var(--surface-sunken) 70%, transparent);
+	box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--border-faint) 80%, transparent);
+}
+
 .studio-generation-badge-divider {
 	width: 1px;
 	height: 14px;
@@ -141,6 +152,51 @@
 	50% {
 		opacity: 1;
 		transform: scale(1);
+	}
+}
+
+/* ── Studio · indeterminate progress bar ─────────────────────────── *
+ * Used by the Studio jobs rail and the generating canvas badge while
+ * a job is queued or running. A single accent-tinted comet slides
+ * across a quiet track. No numbers — generation timing is captured
+ * by the elapsed clock that pairs with the bar.
+ * ─────────────────────────────────────────────────────────────── */
+
+.studio-progress-indeterminate {
+	position: relative;
+	height: 6px;
+	width: 100%;
+	overflow: hidden;
+	border-radius: 999px;
+	background: color-mix(in oklch, var(--border-faint) 92%, transparent);
+}
+
+.studio-progress-indeterminate::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	width: 42%;
+	border-radius: inherit;
+	background: linear-gradient(
+		90deg,
+		transparent 0%,
+		color-mix(in oklch, var(--accent) 70%, transparent) 25%,
+		var(--accent) 50%,
+		color-mix(in oklch, var(--accent) 70%, transparent) 75%,
+		transparent 100%
+	);
+	animation: studio-progress-slide 1.4s var(--ease-in-out) infinite;
+	will-change: transform;
+}
+
+@keyframes studio-progress-slide {
+	0% {
+		transform: translateX(-110%);
+	}
+	100% {
+		transform: translateX(340%);
 	}
 }
 

@@ -32,6 +32,13 @@ interface JobsState {
   applyCompletedEvent: (j: Job) => void;
   applyFailedEvent: (j: Job) => void;
   cancel: (id: string) => Promise<void>;
+  /**
+   * Re-submit the original generation request behind a failed (or cancelled)
+   * job. Re-uses the persisted `requestJson`, tracks the resulting new job
+   * in the Studio rail, and returns its id. Throws when the source job is
+   * unknown or its persisted request is unusable.
+   */
+  retry: (id: string) => Promise<string>;
   refresh: (query?: JobsQuery) => Promise<void>;
 }
 
@@ -164,6 +171,29 @@ export const useJobsStore = create<JobsState>((set, get) => ({
 
   cancel: async (id) => {
     await api["jobs.cancel"]({ id });
+  },
+
+  retry: async (id) => {
+    const job = get().jobs[id];
+    if (!job) throw new Error(`job ${id} not found`);
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(job.requestJson) as Record<string, unknown>;
+    } catch (err) {
+      throw new Error(`cannot retry: stored request is malformed (${(err as Error).message})`);
+    }
+    const prompt = typeof parsed.prompt === "string" ? parsed.prompt : "";
+    // The persisted request already carries the augmented prompt + merged
+    // references/assetIds. We resubmit it as-is — no `assetSlots` so the
+    // handler won't double-apply slot resolution.
+    if (job.kind === "image") {
+      const { jobId } = await api["image.submit"](parsed as Parameters<typeof api["image.submit"]>[0]);
+      get().trackStudioJob({ id: jobId, kind: "image", prompt, submittedAt: Date.now() });
+      return jobId;
+    }
+    const { jobId } = await api["video.submit"](parsed as Parameters<typeof api["video.submit"]>[0]);
+    get().trackStudioJob({ id: jobId, kind: "video", prompt, submittedAt: Date.now() });
+    return jobId;
   },
 
   refresh: async (query) => {

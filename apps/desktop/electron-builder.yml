@@ -8,7 +8,6 @@ files:
   - assets/imagent.png
   - assets/imagent-macos.png
   - assets/imagent.icns
-  - assets/catalog.default.json
   - package.json
 extraResources:
   - from: ../../LICENSE
