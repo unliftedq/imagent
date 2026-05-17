@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.2 - 2026-05-17
+
+- Desktop app can now check for updates and install them in-app, with a new **Updates** panel in Settings that downloads the right installer for your platform and launches it for you.
+- Full English + Simplified Chinese localization across Studio, Gallery, Assets, Models, Providers, Settings, and the sidebar navigation.
+
 ## 0.2.1 - 2026-05-16
 
 ### Highlights
