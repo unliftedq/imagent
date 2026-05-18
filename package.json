@@ -64,6 +64,10 @@
       "zustand": "^5.0.12"
     }
   },
+  "overrides": {
+    "node-domexception": "npm:@profoundlogic/node-domexception@1.0.2",
+    "prebuild-install": "npm:@scrypted/prebuild-install@7.1.10"
+  },
   "scripts": {
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
