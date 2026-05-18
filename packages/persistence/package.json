@@ -22,7 +22,6 @@
     "@imagent/core": "workspace:*",
     "better-sqlite3": "catalog:",
     "ffmpeg-static": "catalog:",
-    "nodejieba": "catalog:",
     "sharp": "catalog:"
   },
   "devDependencies": {

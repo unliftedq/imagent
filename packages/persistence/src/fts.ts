@@ -1,8 +1,8 @@
 import type { Database as DatabaseType } from "better-sqlite3";
-import nodejieba from "nodejieba";
 
 const CJK_RE = /[\p{Script=Han}]+/gu;
 const HAS_CJK_RE = /[\p{Script=Han}]/u;
+const ZH_WORD_SEGMENTER = new Intl.Segmenter("zh", { granularity: "word" });
 
 function cjkNgrams(input: string): string[] {
   const tokens: string[] = [];
@@ -19,14 +19,23 @@ function cjkNgrams(input: string): string[] {
 }
 
 function shouldKeepUntokenizedToken(token: string): boolean {
-  // Keep normal whitespace tokens because jieba emits ASCII words as
-  // characters; keep single CJK characters so one-character searches work.
+  // Keep normal whitespace tokens for English/model/path searches; keep single
+  // CJK characters so one-character searches work.
   return !HAS_CJK_RE.test(token) || Array.from(token).length === 1;
+}
+
+function segmentWords(text: string): string[] {
+  const tokens: string[] = [];
+  for (const segment of ZH_WORD_SEGMENTER.segment(text)) {
+    const trimmed = segment.segment.trim();
+    if (trimmed && segment.isWordLike) tokens.push(trimmed);
+  }
+  return tokens;
 }
 
 /**
  * SQLite's built-in unicode61 tokenizer does not segment Chinese. Index and
- * query text are expanded with nodejieba search tokens, plus short CJK n-grams
+ * query text are expanded with word segmenter tokens, plus short CJK n-grams
  * so Chinese substring searches remain intuitive.
  */
 export function tokenizeFtsText(raw: string | null | undefined): string {
@@ -39,7 +48,7 @@ export function tokenizeFtsText(raw: string | null | undefined): string {
       tokens.add(trimmed);
     }
   }
-  for (const token of nodejieba.cutForSearch(text)) {
+  for (const token of segmentWords(text)) {
     const trimmed = token.trim();
     if (trimmed) tokens.add(trimmed);
   }
@@ -57,16 +66,15 @@ export function tokenizeFtsText(raw: string | null | undefined): string {
 export function ftsMatchQuery(raw: string): string {
   const text = raw.trim();
   const tokens = new Set<string>();
-  // nodejieba splits non-CJK text into individual characters, so keep normal
-  // whitespace tokens for English/model/path searches and add jieba/CJK grams
-  // for Chinese search.
+  // Keep normal whitespace tokens for English/model/path searches and add
+  // segmented words/CJK grams for Chinese search.
   for (const token of text.split(/\s+/)) {
     const trimmed = token.trim();
     if (trimmed && shouldKeepUntokenizedToken(trimmed)) {
       tokens.add(trimmed);
     }
   }
-  for (const token of nodejieba.cutForSearch(text)) {
+  for (const token of segmentWords(text)) {
     const trimmed = token.trim();
     if (trimmed) tokens.add(trimmed);
   }

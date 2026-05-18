@@ -56,7 +56,6 @@
     "chalk": "catalog:",
     "commander": "catalog:",
     "ffmpeg-static": "catalog:",
-    "nodejieba": "catalog:",
     "openai": "catalog:",
     "sharp": "catalog:",
     "zod": "catalog:"

@@ -1,4 +1,4 @@
--- 003_jieba_fts.sql — rebuild FTS5 indexes with nodejieba-tokenized text.
+-- 003_jieba_fts.sql — rebuild FTS5 indexes with segmented text.
 
 DROP TRIGGER IF EXISTS gallery_items_ai;
 DROP TRIGGER IF EXISTS gallery_items_ad;
