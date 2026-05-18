@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.3 - 2026-05-18
+
+- Replaced the native Chinese tokenizer dependency with `@node-rs/jieba`, including the FTS migration and CLI binary packaging updates needed to keep Chinese search working in local and packaged builds.
+
 ## 0.2.2 - 2026-05-17
 
 - Desktop app can now check for updates and install them in-app, with a new **Updates** panel in Settings that downloads the right installer for your platform and launches it for you.
