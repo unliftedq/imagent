@@ -51,12 +51,12 @@
     "@ai-sdk/bytedance": "catalog:",
     "@ai-sdk/xai": "catalog:",
     "@google/genai": "catalog:",
+    "@node-rs/jieba": "catalog:",
     "ai": "catalog:",
     "better-sqlite3": "catalog:",
     "chalk": "catalog:",
     "commander": "catalog:",
     "ffmpeg-static": "catalog:",
-    "nodejieba": "catalog:",
     "openai": "catalog:",
     "sharp": "catalog:",
     "zod": "catalog:"

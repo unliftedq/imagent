@@ -1,8 +1,13 @@
+import { createRequire } from "node:module";
 import type { Database as DatabaseType } from "better-sqlite3";
-import nodejieba from "nodejieba";
+
+const require = createRequire(import.meta.url);
+const { Jieba } = require("@node-rs/jieba") as typeof import("@node-rs/jieba");
+const { dict } = require("@node-rs/jieba/dict") as { dict: Uint8Array };
 
 const CJK_RE = /[\p{Script=Han}]+/gu;
 const HAS_CJK_RE = /[\p{Script=Han}]/u;
+const JIEBA = Jieba.withDict(dict);
 
 function cjkNgrams(input: string): string[] {
   const tokens: string[] = [];
@@ -19,14 +24,14 @@ function cjkNgrams(input: string): string[] {
 }
 
 function shouldKeepUntokenizedToken(token: string): boolean {
-  // Keep normal whitespace tokens because jieba emits ASCII words as
-  // characters; keep single CJK characters so one-character searches work.
+  // Keep normal whitespace tokens for English/model/path searches; keep single
+  // CJK characters so one-character searches work.
   return !HAS_CJK_RE.test(token) || Array.from(token).length === 1;
 }
 
 /**
  * SQLite's built-in unicode61 tokenizer does not segment Chinese. Index and
- * query text are expanded with nodejieba search tokens, plus short CJK n-grams
+ * query text are expanded with jieba search tokens, plus short CJK n-grams
  * so Chinese substring searches remain intuitive.
  */
 export function tokenizeFtsText(raw: string | null | undefined): string {
@@ -39,7 +44,7 @@ export function tokenizeFtsText(raw: string | null | undefined): string {
       tokens.add(trimmed);
     }
   }
-  for (const token of nodejieba.cutForSearch(text)) {
+  for (const token of JIEBA.cutForSearch(text, true)) {
     const trimmed = token.trim();
     if (trimmed) tokens.add(trimmed);
   }
@@ -57,16 +62,15 @@ export function tokenizeFtsText(raw: string | null | undefined): string {
 export function ftsMatchQuery(raw: string): string {
   const text = raw.trim();
   const tokens = new Set<string>();
-  // nodejieba splits non-CJK text into individual characters, so keep normal
-  // whitespace tokens for English/model/path searches and add jieba/CJK grams
-  // for Chinese search.
+  // Keep normal whitespace tokens for English/model/path searches and add
+  // jieba/CJK grams for Chinese search.
   for (const token of text.split(/\s+/)) {
     const trimmed = token.trim();
     if (trimmed && shouldKeepUntokenizedToken(trimmed)) {
       tokens.add(trimmed);
     }
   }
-  for (const token of nodejieba.cutForSearch(text)) {
+  for (const token of JIEBA.cutForSearch(text, true)) {
     const trimmed = token.trim();
     if (trimmed) tokens.add(trimmed);
   }
