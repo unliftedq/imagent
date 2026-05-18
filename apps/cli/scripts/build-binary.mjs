@@ -126,6 +126,7 @@ await esbuild.build({
     "better-sqlite3",
     "sharp",
     "ffmpeg-static",
+    "@node-rs/jieba",
     "node-gyp-build",
     "detect-libc",
   ],

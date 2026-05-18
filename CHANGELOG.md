@@ -12,7 +12,7 @@
 - Studio gets a capability-aware **configuration panel** that replaces the old per-rail settings, so image and video generation share one place to edit size, references, and model-specific options.
 - Defaults are now expressed as **default image model** + **default video model** instead of a single default provider, so users with multiple providers configured can pick exactly which model each surface starts with.
 - The desktop **Providers** and **Models** pages now show real **brand logos** (OpenAI, Azure, Microsoft, Google, xAI, ByteDance, Black Forest Labs, Nano Banana) instead of generic placeholders.
-- SQLite FTS now uses built-in Chinese word segmentation so prompts and asset metadata are searchable word-by-word instead of falling back to substring/trigram matching.
+- SQLite FTS now uses **jieba tokenization** so Chinese prompts and asset metadata are searchable word-by-word instead of falling back to substring/trigram matching.
 
 ### Studio
 
@@ -36,7 +36,7 @@
 
 ### Persistence: Chinese full-text search
 
-- New migration `003_jieba_fts.sql` rebuilds the FTS index with Chinese word segmentation.
+- New migration `003_jieba_fts.sql` rebuilds the FTS index with **jieba** tokenization for proper Chinese word segmentation.
 - Asset and gallery repositories now tokenize queries the same way at read time, so partial Chinese queries match the way users expect.
 
 ## 0.2.0 - 2026-05-12

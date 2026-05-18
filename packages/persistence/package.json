@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@imagent/core": "workspace:*",
+    "@node-rs/jieba": "catalog:",
     "better-sqlite3": "catalog:",
     "ffmpeg-static": "catalog:",
     "sharp": "catalog:"
