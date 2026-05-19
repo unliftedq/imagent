@@ -13,8 +13,11 @@ export const ToastViewport = forwardRef<
       ref={ref}
       className={cn(
         // `max-w-sm` is broken in Tailwind v4 default theme (no --container-sm),
-        // so we use a literal cap. Bottom-right anchored stack.
-        "fixed bottom-4 right-4 z-50 flex max-h-screen w-[24rem] max-w-[calc(100vw-2rem)] flex-col gap-2 outline-none",
+        // so we use a literal cap. Bottom-right anchored stack. The z-index
+        // resolves above the dialog tier (`--z-dialog: 100`) via the
+        // `--z-toast` design token so success/failure messages stay visible
+        // when surfaced from inside an open dialog.
+        "fixed bottom-4 right-4 z-(--z-toast) flex max-h-screen w-[24rem] max-w-[calc(100vw-2rem)] flex-col gap-2 outline-none",
         className,
       )}
       {...rest}

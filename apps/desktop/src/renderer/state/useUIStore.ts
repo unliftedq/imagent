@@ -3,11 +3,33 @@ import type { ThemePref } from "@imagent/ui";
 import { create } from "zustand";
 
 /**
- * Five top-level routes. The pre-Quiet-Density
- * `video` route was merged into Studio's `studioMode` tab; old persisted
- * values are migrated transparently in the store initializer below.
+ * Top-level page routes. Settings, Providers, and Models are no longer
+ * pages — they live inside the Settings dialog (see `settingsOpen` /
+ * `settingsSection` below). The pre-Quiet-Density `video` route was
+ * merged into Studio's `studioMode` tab; old persisted values for any
+ * of the removed routes are migrated transparently in the store
+ * initializer below.
  */
-export type Route = "providers" | "settings" | "studio" | "gallery" | "assets" | "models";
+export type Route = "studio" | "gallery" | "assets";
+
+/**
+ * Settings dialog sections. The dialog uses a two-column layout: section
+ * list on the left, content on the right. Order:
+ *  - `general` — personal preferences (language, theme, defaults). First
+ *    because it's what most users touch repeatedly.
+ *  - `providers` — provider access. Setup-critical: a fresh install
+ *    auto-opens here.
+ *  - `models` — model catalogue, depends on providers.
+ *  - `about` — app version + update check.
+ */
+export type SettingsSection = "general" | "providers" | "models" | "about";
+
+export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
+  "general",
+  "providers",
+  "models",
+  "about",
+] as const;
 
 export type StudioMode = "image" | "video";
 
@@ -228,14 +250,14 @@ function persistMode(mode: StudioMode): void {
 }
 
 /**
- * One-time migration: a stored `activeRoute='video'` (or our older
- * `imagent.route.v1='video'`) maps to `{ route: 'studio', studioMode: 'video' }`.
- * Read both possible keys; if either points at the dropped 'video' route,
- * normalise on first boot.
+ * One-time migration:
+ *  - Old `imagent.route.v1='video'` → `{ route: 'studio', studioMode: 'video' }`.
+ *  - Old `providers`/`models`/`settings` routes → `studio` (they are now
+ *    surfaced through the Settings dialog rather than being pages).
  */
 function loadInitialModeAndRoute(): { route: Route; studioMode: StudioMode } {
   if (typeof window === "undefined") {
-    return { route: "providers", studioMode: "image" };
+    return { route: "studio", studioMode: "image" };
   }
   let storedMode: StudioMode = "image";
   try {
@@ -244,24 +266,26 @@ function loadInitialModeAndRoute(): { route: Route; studioMode: StudioMode } {
   } catch {
     // ignore
   }
-  let storedRoute: Route = "providers";
+  let storedRoute: Route = "studio";
   try {
     const r = window.localStorage.getItem(ROUTE_LS_KEY);
-    if (
-      r === "studio" ||
-      r === "gallery" ||
-      r === "assets" ||
-      r === "providers" ||
-      r === "settings"
-    ) {
+    if (r === "studio" || r === "gallery" || r === "assets") {
       storedRoute = r;
     } else if (r === "video") {
-      // Migrate old 'video' route → studio + studioMode='video'.
       storedRoute = "studio";
       storedMode = "video";
       try {
         window.localStorage.setItem(ROUTE_LS_KEY, "studio");
         window.localStorage.setItem(STUDIO_MODE_LS_KEY, "video");
+      } catch {
+        // ignore
+      }
+    } else if (r === "providers" || r === "models" || r === "settings") {
+      // Removed routes — fall back to studio. Settings dialog handles
+      // the old destinations now.
+      storedRoute = "studio";
+      try {
+        window.localStorage.setItem(ROUTE_LS_KEY, "studio");
       } catch {
         // ignore
       }
@@ -319,8 +343,12 @@ interface UIState {
   theme: ThemePref;
   toasts: ToastEntry[];
   studioDraft: StudioDraft;
-  /** When true, the renderer should land on /studio at boot (or /providers). */
+  /** When true, the renderer should land on /studio at boot (or auto-open Settings). */
   preferredInitialRoute: Route | null;
+  /** Whether the Settings dialog is currently open. */
+  settingsOpen: boolean;
+  /** Active section within the Settings dialog. */
+  settingsSection: SettingsSection;
   navigate: (route: Route) => void;
   setStudioMode: (mode: StudioMode) => void;
   setTheme: (theme: ThemePref) => void;
@@ -337,6 +365,11 @@ interface UIState {
    * draft and switch to the matching mode. Both kinds land on /studio. */
   applyRemix: (payload: RemixPayload) => void;
   setPreferredInitialRoute: (r: Route | null) => void;
+  /** Open the Settings dialog, optionally jumping to a specific section. */
+  openSettings: (section?: SettingsSection) => void;
+  /** Close the Settings dialog. The active section is preserved for next time. */
+  closeSettings: () => void;
+  setSettingsSection: (section: SettingsSection) => void;
 }
 
 const { route: INITIAL_ROUTE, studioMode: INITIAL_MODE } = loadInitialModeAndRoute();
@@ -351,6 +384,8 @@ export const useUIStore = create<UIState>((set, get) => ({
     video: loadVideoDraftFromStorage(),
   },
   preferredInitialRoute: null,
+  settingsOpen: false,
+  settingsSection: "general",
   navigate: (route) => {
     set({ route });
     persistRoute(route);
@@ -462,4 +497,11 @@ export const useUIStore = create<UIState>((set, get) => ({
     }
   },
   setPreferredInitialRoute: (r) => set({ preferredInitialRoute: r }),
+  openSettings: (section) =>
+    set((s) => ({
+      settingsOpen: true,
+      settingsSection: section ?? s.settingsSection,
+    })),
+  closeSettings: () => set({ settingsOpen: false }),
+  setSettingsSection: (section) => set({ settingsSection: section }),
 }));

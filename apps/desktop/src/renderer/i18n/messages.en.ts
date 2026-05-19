@@ -56,6 +56,9 @@ export const en = {
   // Settings page
   "settings.title": "Settings",
   "settings.subtitle": "Workspace defaults. Changes save automatically.",
+  "settings.section.general": "General",
+  "settings.section.providers": "Providers",
+  "settings.section.models": "Models",
   "settings.section.appearance": "Appearance",
   "settings.section.language": "Language",
   "settings.section.theme": "Theme",
@@ -271,8 +274,8 @@ export const en = {
 
   // Studio
   "studio.dropArea": "Studio session drop area",
-  "studio.libraryCollapsed": "Studio library collapsed",
-  "studio.library": "Studio library",
+  "studio.libraryCollapsed": "Library collapsed",
+  "studio.library": "Library",
   "studio.expandLibrary": "Expand library",
   "studio.collapseLibrary": "Collapse library",
   "studio.modeImage": "Image",

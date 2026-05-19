@@ -8,33 +8,309 @@ import type {
 } from "@imagent/ipc";
 import {
   Button,
+  Dialog,
   Icons,
   Input,
-  Panel,
-  PanelBody,
-  PanelHeader,
   type ThemePref,
   useTheme,
 } from "@imagent/ui";
 import type * as React from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { type LocalePref, useI18n } from "../../i18n/index.js";
 import { api } from "../../lib/api.js";
 import { useConfigStore } from "../../state/useConfigStore.js";
+import {
+  SETTINGS_SECTIONS,
+  type SettingsSection,
+  useUIStore,
+} from "../../state/useUIStore.js";
+import { ModelsSection } from "../Models/index.js";
+import { ProvidersSection } from "../Providers/index.js";
 import {
   createUnifiedModelOptions,
   ProviderModelPicker,
   useModelFavorites,
 } from "../Studio/modelPicker.js";
 
-export function SettingsPage() {
-  const { appPrefs, summaries, refresh, saveAppPrefs } = useConfigStore();
+/**
+ * Subpage descriptor — when set, the right pane's title bar swaps to show a
+ * back button + the subpage title, and the section renders its own
+ * subpage content instead of the default list. Sections register a
+ * subpage by calling `useSettingsSubpage().setSubpage(...)`. This avoids
+ * stacking a second Dialog on top of the Settings dialog for nested
+ * flows like "Connect provider".
+ */
+export interface SettingsSubpage {
+  title: string;
+  onBack: () => void;
+}
+
+interface SettingsSubpageContextValue {
+  subpage: SettingsSubpage | null;
+  setSubpage: (subpage: SettingsSubpage | null) => void;
+}
+
+const SettingsSubpageContext = createContext<SettingsSubpageContextValue | null>(null);
+
+export function useSettingsSubpage(): SettingsSubpageContextValue {
+  const ctx = useContext(SettingsSubpageContext);
+  if (!ctx) {
+    throw new Error("useSettingsSubpage must be used within SettingsDialog");
+  }
+  return ctx;
+}
+
+/**
+ * Section icon + label metadata. Order:
+ *  - `general` — personal preferences (language, theme, defaults).
+ *  - `providers` — provider access.
+ *  - `models` — model catalogue.
+ *  - `about` — version info + update check.
+ */
+const SECTION_META: Record<
+  SettingsSection,
+  {
+    icon: React.ReactNode;
+    labelKey: Parameters<ReturnType<typeof useI18n>["t"]>[0];
+  }
+> = {
+  general: {
+    icon: <Icons.SlidersHorizontal weight="duotone" className="size-4" />,
+    labelKey: "settings.section.general",
+  },
+  providers: {
+    icon: <Icons.Plug weight="duotone" className="size-4" />,
+    labelKey: "settings.section.providers",
+  },
+  models: {
+    icon: <Icons.Brain weight="duotone" className="size-4" />,
+    labelKey: "settings.section.models",
+  },
+  about: {
+    icon: <Icons.Info weight="duotone" className="size-4" />,
+    labelKey: "settings.section.about",
+  },
+};
+
+/**
+ * Settings dialog. Two-column layout: the left rail lists sections in
+ * setup-flow order; the right pane renders the active section's content.
+ * Providers and Models — previously top-level pages — are now sections
+ * here, so the sidebar nav only carries content-facing routes (Studio,
+ * Gallery, Assets) plus the Settings affordance.
+ *
+ * Open / close + active section are controlled by `useUIStore`
+ * (`settingsOpen`, `settingsSection`) so other callsites can deep-link
+ * into a specific section.
+ */
+export function SettingsDialog() {
+  const open = useUIStore((s) => s.settingsOpen);
+  const section = useUIStore((s) => s.settingsSection);
+  const setSection = useUIStore((s) => s.setSettingsSection);
+  const closeSettings = useUIStore((s) => s.closeSettings);
+  const { t } = useI18n();
+
+  // Subpage state. Reset on dialog close + on section change so the
+  // user can never end up "stuck" in a subpage they can't escape via
+  // the rail.
+  const [subpage, setSubpageState] = useState<SettingsSubpage | null>(null);
+  const setSubpage = useCallback((next: SettingsSubpage | null) => {
+    setSubpageState(next);
+  }, []);
+  useEffect(() => {
+    if (!open) setSubpageState(null);
+  }, [open]);
+  // Clearing on section change is handled implicitly: when the rail
+  // navigates away, the previous section unmounts and its cleanup
+  // effect calls `setSubpage(null)`.
+
+  const contextValue = useMemo<SettingsSubpageContextValue>(
+    () => ({ subpage, setSubpage }),
+    [subpage, setSubpage],
+  );
+
+  function handleRailNavigate(next: SettingsSection) {
+    if (subpage) {
+      // Bail out of the subpage first; otherwise the new section would
+      // mount underneath a stale header.
+      subpage.onBack();
+    }
+    setSection(next);
+  }
+
+  return (
+    <Dialog.Root
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) closeSettings();
+      }}
+    >
+      <Dialog.Content
+        showClose={false}
+        className={
+          "w-[min(960px,calc(100vw-3rem))] max-w-none p-0 " +
+          "h-[min(640px,calc(100vh-3rem))] overflow-hidden"
+        }
+      >
+        <Dialog.Title className="sr-only">{t("settings.title")}</Dialog.Title>
+        <Dialog.Description className="sr-only">{t("settings.subtitle")}</Dialog.Description>
+
+        <SettingsSubpageContext.Provider value={contextValue}>
+          <div className="grid h-full grid-cols-[220px_minmax(0,1fr)]">
+            {/* Section list */}
+            <aside className="flex h-full flex-col border-r border-(--border) bg-(--surface-sunken)">
+              <header className="px-4 pt-5 pb-3">
+                <h2 className="text-(length:--text-title-md) font-display font-semibold tracking-(--text-display-sm--letter-spacing) text-(--text)">
+                  {t("settings.title")}
+                </h2>
+              </header>
+              <ul className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 pb-3">
+                {SETTINGS_SECTIONS.map((id) => {
+                  const meta = SECTION_META[id];
+                  const active = id === section;
+                  return (
+                    <li key={id}>
+                      <button
+                        type="button"
+                        onClick={() => handleRailNavigate(id)}
+                        aria-current={active ? "true" : undefined}
+                        className={
+                          "flex h-8 w-full items-center gap-2 rounded-(--radius-sm) px-2 text-left " +
+                          "text-[13px] transition-colors duration-(--motion-fast) " +
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring) " +
+                          (active
+                            ? "bg-(--accent-soft) text-(--accent) font-semibold"
+                            : "text-(--text-muted) hover:bg-(--surface) hover:text-(--text)")
+                        }
+                      >
+                        <span
+                          className={
+                            active ? "text-(--accent)" : "text-(--text-muted)"
+                          }
+                        >
+                          {meta.icon}
+                        </span>
+                        <span className="truncate">{t(meta.labelKey)}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </aside>
+
+            {/* Section content */}
+            <section className="flex h-full min-h-0 flex-col">
+              <header className="flex shrink-0 items-center justify-between border-b border-(--border) px-6 py-4">
+                {subpage ? (
+                  <div className="flex min-w-0 items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={subpage.onBack}
+                      aria-label={t("common.back")}
+                      className={
+                        "inline-flex size-8 shrink-0 items-center justify-center rounded-(--radius-sm) " +
+                        "text-(--text-muted) transition-colors duration-(--duration-fast) " +
+                        "hover:bg-(--surface) hover:text-(--text) " +
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring)"
+                      }
+                    >
+                      <Icons.CaretRight weight="bold" className="size-4 rotate-180" />
+                    </button>
+                    <h3 className="truncate text-(length:--text-title-md) font-semibold text-(--text)">
+                      {subpage.title}
+                    </h3>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="text-(--text-muted)">{SECTION_META[section].icon}</span>
+                    <h3 className="text-(length:--text-title-md) font-semibold text-(--text)">
+                      {t(SECTION_META[section].labelKey)}
+                    </h3>
+                  </div>
+                )}
+                <Dialog.Close
+                  aria-label={t("common.close")}
+                  className={
+                    "inline-flex size-8 items-center justify-center rounded-(--radius-sm) " +
+                    "text-(--text-muted) transition-colors duration-(--duration-fast) " +
+                    "hover:bg-(--surface) hover:text-(--text)"
+                  }
+                >
+                  <Icons.X weight="bold" className="size-4" />
+                </Dialog.Close>
+              </header>
+              <div
+                className={
+                  subpage
+                    ? "flex min-h-0 flex-1 flex-col"
+                    : "flex-1 overflow-y-auto px-6 py-5"
+                }
+              >
+                <SectionContent section={section} />
+              </div>
+            </section>
+          </div>
+        </SettingsSubpageContext.Provider>
+      </Dialog.Content>
+    </Dialog.Root>
+  );
+}
+
+function SectionContent({ section }: { section: SettingsSection }) {
+  switch (section) {
+    case "general":
+      return <GeneralSection />;
+    case "providers":
+      return <ProvidersSection />;
+    case "models":
+      return <ModelsSection />;
+    case "about":
+      return <AboutSection />;
+    default: {
+      const _exhaustive: never = section;
+      return _exhaustive;
+    }
+  }
+}
+
+/**
+ * Sub-group within a section. Groups related fields under a small uppercase
+ * caption so a tall section like General still scans cleanly.
+ */
+function SubGroup({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="flex flex-col gap-3">
+      <h4 className="text-(length:--text-caption-uppercase) font-semibold uppercase tracking-[1.5px] text-(--text-muted)">
+        {title}
+      </h4>
+      {children}
+    </section>
+  );
+}
+
+/**
+ * General preferences: language, appearance (theme), and workspace
+ * defaults (default models, concurrency, output dir). Rendered as three
+ * sub-groups in a single scrollable column.
+ */
+function GeneralSection() {
+  const { appPrefs, summaries, saveAppPrefs } = useConfigStore();
   const { setTheme } = useTheme();
   const { t, setPref } = useI18n();
-  const [version, setVersion] = useState<Awaited<ReturnType<(typeof api)["app.version"]>> | null>(
-    null,
-  );
-  const [saveTimer, setSaveTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [imageModelsByProvider, setImageModelsByProvider] = useState<
     Record<string, ImageModelDef[]>
   >({});
@@ -42,6 +318,7 @@ export function SettingsPage() {
     Record<string, VideoModelDef[]>
   >({});
   const { favoriteKeys, toggleFavorite } = useModelFavorites();
+  const [saveTimer, setSaveTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
 
   const configuredImageProviders = useMemo(
     () => summaries.filter((summary) => summary.configured && summary.kinds.includes("image")),
@@ -51,13 +328,6 @@ export function SettingsPage() {
     () => summaries.filter((summary) => summary.configured && summary.kinds.includes("video")),
     [summaries],
   );
-
-  useEffect(() => {
-    void refresh();
-    void api["app.version"]()
-      .then(setVersion)
-      .catch(() => {});
-  }, [refresh]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -81,10 +351,10 @@ export function SettingsPage() {
 
   function patch(next: Partial<NonNullable<typeof appPrefs>>) {
     if (saveTimer) clearTimeout(saveTimer);
-    const t = setTimeout(() => {
+    const id = setTimeout(() => {
       void saveAppPrefs(next);
     }, 400);
-    setSaveTimer(t);
+    setSaveTimer(id);
   }
 
   async function chooseDir() {
@@ -95,205 +365,175 @@ export function SettingsPage() {
   }
 
   if (!appPrefs) {
-    return (
-      <div className="mx-auto max-w-3xl px-8 py-10">
-        <p className="text-(--text-muted)">{t("common.loading")}</p>
-      </div>
-    );
+    return <p className="text-(--text-muted)">{t("common.loading")}</p>;
   }
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 px-8 py-10">
-      <header className="mb-2">
-        <h1 className="text-(length:--text-display-sm) font-display font-medium tracking-(--text-display-sm--letter-spacing) text-(--text)">
-          {t("settings.title")}
-        </h1>
-        <p className="mt-2 text-(length:--text-body-md) text-(--text)">{t("settings.subtitle")}</p>
-      </header>
-
-      <Panel>
-        <PanelHeader>
-          <SectionTitle
-            icon={<Icons.Translate weight="duotone" className="size-5" />}
-            title={t("settings.section.language")}
-          />
-        </PanelHeader>
-        <PanelBody>
-          <div className="flex flex-col gap-2">
-            <SegmentedLanguage
-              value={appPrefs.locale}
-              onChange={(next) => {
-                setPref(next);
-                void saveAppPrefs({ locale: next });
-              }}
-              labels={{
-                system: t("settings.language.system"),
-                en: t("settings.language.english"),
-                zh: t("settings.language.chinese"),
-              }}
-            />
-            <p className="text-(length:--text-caption) text-(--text-muted)">
-              {t("settings.language.helper")}
-            </p>
-          </div>
-        </PanelBody>
-      </Panel>
-
-      <Panel>
-        <PanelHeader>
-          <SectionTitle
-            icon={<Icons.Sun weight="duotone" className="size-5" />}
-            title={t("settings.section.theme")}
-          />
-        </PanelHeader>
-        <PanelBody>
-          <SegmentedTheme
-            value={appPrefs.theme}
+    <div className="flex flex-col gap-7">
+      <SubGroup title={t("settings.section.language")}>
+        <div className="flex flex-col gap-2">
+          <SegmentedLanguage
+            value={appPrefs.locale}
+            onChange={(next) => {
+              setPref(next);
+              void saveAppPrefs({ locale: next });
+            }}
             labels={{
-              light: t("settings.theme.light"),
-              dark: t("settings.theme.dark"),
-              system: t("settings.theme.system"),
-            }}
-            onChange={(t) => {
-              setTheme(t);
-              void saveAppPrefs({ theme: t });
+              system: t("settings.language.system"),
+              en: t("settings.language.english"),
+              zh: t("settings.language.chinese"),
             }}
           />
-        </PanelBody>
-      </Panel>
+          <p className="text-(length:--text-caption) text-(--text-muted)">
+            {t("settings.language.helper")}
+          </p>
+        </div>
+      </SubGroup>
 
-      <Panel>
-        <PanelHeader>
-          <SectionTitle
-            icon={<Icons.Plug weight="duotone" className="size-5" />}
-            title={t("settings.section.defaults")}
-          />
-        </PanelHeader>
-        <PanelBody>
-          <div className="flex flex-col gap-5">
-            <Field
-              label={t("settings.defaultImageModel")}
-              helperText={t("settings.defaultImageModel.helper")}
-            >
-              <DefaultModelPicker
-                mode="image"
-                providers={configuredImageProviders}
-                modelsByProvider={imageModelsByProvider}
-                value={appPrefs.defaultImageModel}
-                favoriteKeys={favoriteKeys}
-                onToggleFavorite={toggleFavorite}
-                onChange={(value) => void saveAppPrefs({ defaultImageModel: value })}
-                noProvidersLabel={t("settings.noConfiguredProviders")}
+      <SubGroup title={t("settings.section.appearance")}>
+        <SegmentedTheme
+          value={appPrefs.theme}
+          labels={{
+            light: t("settings.theme.light"),
+            dark: t("settings.theme.dark"),
+            system: t("settings.theme.system"),
+          }}
+          onChange={(next) => {
+            setTheme(next);
+            void saveAppPrefs({ theme: next });
+          }}
+        />
+      </SubGroup>
+
+      <SubGroup title={t("settings.section.defaults")}>
+        <div className="flex flex-col gap-5">
+          <Field
+            label={t("settings.defaultImageModel")}
+            helperText={t("settings.defaultImageModel.helper")}
+          >
+            <DefaultModelPicker
+              mode="image"
+              providers={configuredImageProviders}
+              modelsByProvider={imageModelsByProvider}
+              value={appPrefs.defaultImageModel}
+              favoriteKeys={favoriteKeys}
+              onToggleFavorite={toggleFavorite}
+              onChange={(value) => void saveAppPrefs({ defaultImageModel: value })}
+              noProvidersLabel={t("settings.noConfiguredProviders")}
+            />
+          </Field>
+
+          <Field
+            label={t("settings.defaultVideoModel")}
+            helperText={t("settings.defaultVideoModel.helper")}
+          >
+            <DefaultModelPicker
+              mode="video"
+              providers={configuredVideoProviders}
+              modelsByProvider={videoModelsByProvider}
+              value={appPrefs.defaultVideoModel}
+              favoriteKeys={favoriteKeys}
+              onToggleFavorite={toggleFavorite}
+              onChange={(value) => void saveAppPrefs({ defaultVideoModel: value })}
+              noProvidersLabel={t("settings.noConfiguredProviders")}
+            />
+          </Field>
+
+          <Field
+            label={t("settings.generationConcurrency")}
+            helperText={t("settings.generationConcurrency.helper")}
+          >
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={1}
+                max={8}
+                step={1}
+                value={appPrefs.generationConcurrency}
+                onChange={(e) => patch({ generationConcurrency: Number(e.target.value) })}
+                className="flex-1 accent-(--accent)"
               />
-            </Field>
+              <span className="w-8 text-center text-(--text) font-mono text-sm">
+                {appPrefs.generationConcurrency}
+              </span>
+            </div>
+          </Field>
 
-            <Field
-              label={t("settings.defaultVideoModel")}
-              helperText={t("settings.defaultVideoModel.helper")}
-            >
-              <DefaultModelPicker
-                mode="video"
-                providers={configuredVideoProviders}
-                modelsByProvider={videoModelsByProvider}
-                value={appPrefs.defaultVideoModel}
-                favoriteKeys={favoriteKeys}
-                onToggleFavorite={toggleFavorite}
-                onChange={(value) => void saveAppPrefs({ defaultVideoModel: value })}
-                noProvidersLabel={t("settings.noConfiguredProviders")}
+          <Field
+            label={t("settings.defaultOutputDir")}
+            helperText={
+              appPrefs.defaultOutputDir
+                ? t("settings.defaultOutputDir.helperSet")
+                : t("settings.defaultOutputDir.helperUnset")
+            }
+          >
+            <div className="flex gap-2">
+              <Input
+                value={appPrefs.defaultOutputDir ?? ""}
+                placeholder={t("settings.defaultOutputDir.placeholder")}
+                readOnly
+                className="flex-1"
               />
-            </Field>
-
-            <Field
-              label={t("settings.generationConcurrency")}
-              helperText={t("settings.generationConcurrency.helper")}
-            >
-              <div className="flex items-center gap-3">
-                <input
-                  type="range"
-                  min={1}
-                  max={8}
-                  step={1}
-                  value={appPrefs.generationConcurrency}
-                  onChange={(e) => patch({ generationConcurrency: Number(e.target.value) })}
-                  className="flex-1 accent-(--accent)"
-                />
-                <span className="w-8 text-center text-(--text) font-mono text-sm">
-                  {appPrefs.generationConcurrency}
-                </span>
-              </div>
-            </Field>
-
-            <Field
-              label={t("settings.defaultOutputDir")}
-              helperText={
-                appPrefs.defaultOutputDir
-                  ? t("settings.defaultOutputDir.helperSet")
-                  : t("settings.defaultOutputDir.helperUnset")
-              }
-            >
-              <div className="flex gap-2">
-                <Input
-                  value={appPrefs.defaultOutputDir ?? ""}
-                  placeholder={t("settings.defaultOutputDir.placeholder")}
-                  readOnly
-                  className="flex-1"
-                />
-                <Button variant="secondary" size="md" onClick={() => void chooseDir()}>
-                  {t("common.choose")}
+              <Button variant="secondary" size="md" onClick={() => void chooseDir()}>
+                {t("common.choose")}
+              </Button>
+              {appPrefs.defaultOutputDir ? (
+                <Button
+                  variant="ghost"
+                  size="md"
+                  onClick={() => void saveAppPrefs({ defaultOutputDir: null })}
+                >
+                  {t("common.reset")}
                 </Button>
-                {appPrefs.defaultOutputDir ? (
-                  <Button
-                    variant="ghost"
-                    size="md"
-                    onClick={() => void saveAppPrefs({ defaultOutputDir: null })}
-                  >
-                    {t("common.reset")}
-                  </Button>
-                ) : null}
-              </div>
-            </Field>
-          </div>
-        </PanelBody>
-      </Panel>
+              ) : null}
+            </div>
+          </Field>
+        </div>
+      </SubGroup>
+    </div>
+  );
+}
 
-      <Panel>
-        <PanelHeader>
-          <SectionTitle
-            icon={<Icons.CloudArrowDown weight="duotone" className="size-5" />}
-            title={t("settings.section.updates")}
-          />
-        </PanelHeader>
-        <PanelBody>
-          <UpdatesPanel currentVersion={version?.app ?? null} />
-        </PanelBody>
-      </Panel>
+/**
+ * About: app version + update check. Version metadata first (the "this is
+ * what you have" answer), then the update controls (the "do something
+ * about it" affordance).
+ */
+function AboutSection() {
+  const { t } = useI18n();
+  const [version, setVersion] = useState<Awaited<ReturnType<(typeof api)["app.version"]>> | null>(
+    null,
+  );
+  useEffect(() => {
+    void api["app.version"]()
+      .then(setVersion)
+      .catch(() => {});
+  }, []);
 
-      <Panel>
-        <PanelHeader>
-          <SectionTitle
-            icon={<Icons.Info weight="duotone" className="size-5" />}
-            title={t("settings.section.about")}
-          />
-        </PanelHeader>
-        <PanelBody>
-          {version ? (
-            <dl className="grid grid-cols-[140px_1fr] gap-y-2 text-(length:--text-body-sm)">
-              <dt className="text-(--text-muted)">{t("settings.about.app")}</dt>
-              <dd className="font-mono text-(--text)">{version.app}</dd>
-              <dt className="text-(--text-muted)">{t("settings.about.electron")}</dt>
-              <dd className="font-mono text-(--text)">{version.electron}</dd>
-              <dt className="text-(--text-muted)">{t("settings.about.node")}</dt>
-              <dd className="font-mono text-(--text)">{version.node}</dd>
-              <dt className="text-(--text-muted)">{t("settings.about.platform")}</dt>
-              <dd className="font-mono text-(--text)">
-                {version.platform} {version.arch}
-              </dd>
-            </dl>
-          ) : (
-            <p className="text-(--text-muted)">{t("common.loading")}</p>
-          )}
-        </PanelBody>
-      </Panel>
+  return (
+    <div className="flex flex-col gap-7">
+      <SubGroup title={t("settings.section.about")}>
+        {version ? (
+          <dl className="grid grid-cols-[140px_1fr] gap-y-2 text-(length:--text-body-sm)">
+            <dt className="text-(--text-muted)">{t("settings.about.app")}</dt>
+            <dd className="font-mono text-(--text)">{version.app}</dd>
+            <dt className="text-(--text-muted)">{t("settings.about.electron")}</dt>
+            <dd className="font-mono text-(--text)">{version.electron}</dd>
+            <dt className="text-(--text-muted)">{t("settings.about.node")}</dt>
+            <dd className="font-mono text-(--text)">{version.node}</dd>
+            <dt className="text-(--text-muted)">{t("settings.about.platform")}</dt>
+            <dd className="font-mono text-(--text)">
+              {version.platform} {version.arch}
+            </dd>
+          </dl>
+        ) : (
+          <p className="text-(--text-muted)">{t("common.loading")}</p>
+        )}
+      </SubGroup>
+
+      <SubGroup title={t("settings.section.updates")}>
+        <UpdatesPanel currentVersion={version?.app ?? null} />
+      </SubGroup>
     </div>
   );
 }
@@ -800,15 +1040,6 @@ function StatusBanner({
     <div className={`flex items-start gap-2 text-(length:--text-body-sm) ${toneClass}`}>
       <span className="mt-[2px] shrink-0">{icon}</span>
       <span>{text}</span>
-    </div>
-  );
-}
-
-function SectionTitle({ icon, title }: { icon: React.ReactNode; title: string }) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-(--text-muted)">{icon}</span>
-      <span className="text-(length:--text-title-md) font-semibold text-(--text)">{title}</span>
     </div>
   );
 }

@@ -31,6 +31,7 @@ export function ImageRail() {
   const setDraft = useUIStore((state) => state.setImageDraft);
   const resetDraft = useUIStore((state) => state.resetStudioDraft);
   const navigate = useUIStore((state) => state.navigate);
+  const openSettings = useUIStore((state) => state.openSettings);
   const pushToast = useUIStore((state) => state.pushToast);
   const t = useT();
 
@@ -285,7 +286,7 @@ export function ImageRail() {
         </h2>
         <p className="mt-1 text-[12px] text-(--text-muted)">{t("studio.noProvidersDesc")}</p>
         <div className="mt-3 inline-flex">
-          <Button size="sm" onClick={() => navigate("providers")}>
+          <Button size="sm" onClick={() => openSettings("providers")}>
             {t("studio.openProviders")}
           </Button>
         </div>
