@@ -27,7 +27,7 @@ body:
     attributes:
       label: imagent version
       description: "`imagent --version`, Settings → About, or a commit SHA."
-      placeholder: "0.2.3"
+      placeholder: "0.2.4"
     validations:
       required: true
 

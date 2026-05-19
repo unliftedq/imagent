@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.4 - 2026-05-19
+
+### Desktop app
+
+- Gallery now auto-loads more results while you scroll, reducing the need to keep clicking **Load more** when browsing larger libraries.
+
+### Community & docs
+
+- Added GitHub issue templates, a pull request template, and a contributor guide to make bug reports, feature requests, and contributions more consistent.
+- Updated the README license section for clarity.
+
 ## 0.2.3 - 2026-05-18
 
 - Replaced the native Chinese tokenizer dependency with `@node-rs/jieba`, including the FTS migration and CLI binary packaging updates needed to keep Chinese search working in local and packaged builds.
