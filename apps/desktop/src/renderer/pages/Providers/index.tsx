@@ -5,7 +5,13 @@ import { useT } from "../../i18n/index.js";
 import { api } from "../../lib/api.js";
 import { useConfigStore } from "../../state/useConfigStore.js";
 import { useUIStore } from "../../state/useUIStore.js";
-import { ProviderConfigModal, ProviderIcon, ProviderListRow } from "./components.js";
+import { useSettingsSubpage } from "../Settings/index.js";
+import {
+  ProviderConfigPanel,
+  providerConfigPanelTitle,
+  ProviderIcon,
+  ProviderListRow,
+} from "./components.js";
 import {
   type ActiveModal,
   BUILT_IN_IDS,
@@ -23,7 +29,16 @@ import {
   validateModal,
 } from "./definitions.js";
 
-export function ProvidersPage() {
+/**
+ * Providers settings section. Rendered inside the Settings dialog;
+ * `SettingsDialog` provides the section heading + scroll container, so this
+ * component only emits the configurable rows. When the user clicks
+ * "Connect" or "Update" on a row, we switch to an inline subpage
+ * (`ProviderConfigPanel`) rather than stacking a second modal on top of
+ * the Settings dialog — the Settings dialog's title bar swaps to a back
+ * affordance via `useSettingsSubpage` for the duration of the subpage.
+ */
+export function ProvidersSection() {
   const {
     providerPrefs,
     summaries,
@@ -37,6 +52,7 @@ export function ProvidersPage() {
   } = useConfigStore();
   const pushToast = useUIStore((s) => s.pushToast);
   const t = useT();
+  const { setSubpage } = useSettingsSubpage();
 
   const [catalog, setCatalog] = useState<ModelCatalogPayload | null>(null);
   const [activeModal, setActiveModal] = useState<ActiveModal | null>(null);
@@ -47,6 +63,14 @@ export function ProvidersPage() {
     void refresh();
     void api["catalog.get"]().then(setCatalog);
   }, [refresh]);
+
+  // Clear any registered subpage on unmount so navigating away via the
+  // settings rail can't leave a stale header behind.
+  useEffect(() => {
+    return () => {
+      setSubpage(null);
+    };
+  }, [setSubpage]);
 
   const summariesById = useMemo(() => new Map(summaries.map((s) => [s.id, s])), [summaries]);
   const imageModelOptions = useMemo(() => imageModelsForSelect(catalog), [catalog]);
@@ -60,14 +84,34 @@ export function ProvidersPage() {
     return [...ids].sort();
   }, [providerPrefs?.customOpenAI, catalog, secrets.customOpenAI]);
 
+  // Driven synchronously alongside `activeModal` so the SettingsDialog
+  // wrapper switches to subpage layout in the same render as the panel
+  // appears — avoids a one-frame jank where the panel briefly inherits
+  // the list-mode padding/scroll.
+  function closePanel() {
+    setActiveModal(null);
+    setForm(emptyModalState());
+    setSubpage(null);
+  }
+
   function openBuiltIn(id: string) {
+    const next: ActiveModal = { kind: "built-in", id };
     setForm(formFromProvider(id, providerDisplayName(id, t), catalog, providerPrefs, secrets));
-    setActiveModal({ kind: "built-in", id });
+    setActiveModal(next);
+    setSubpage({
+      title: providerConfigPanelTitle(next, t),
+      onBack: closePanel,
+    });
   }
 
   function openCustom(id: string | null) {
+    const next: ActiveModal = { kind: "custom", id };
     setForm(formFromCustom(id, catalog, providerPrefs, secrets));
-    setActiveModal({ kind: "custom", id });
+    setActiveModal(next);
+    setSubpage({
+      title: providerConfigPanelTitle(next, t),
+      onBack: closePanel,
+    });
   }
 
   async function saveActiveModal() {
@@ -104,8 +148,7 @@ export function ProvidersPage() {
         description: form.displayName || form.providerId,
         variant: "success",
       });
-      setActiveModal(null);
-      setForm(emptyModalState());
+      closePanel();
     } catch (err) {
       const msg =
         err instanceof IpcClientError ? err.message : ((err as Error)?.message ?? String(err));
@@ -133,80 +176,75 @@ export function ProvidersPage() {
     };
   }
 
-  return (
-    <div className="mx-auto max-w-4xl px-8 py-10">
-      <header className="mb-8">
-        <h1 className="text-(length:--text-display-sm) font-display font-medium tracking-(--text-display-sm--letter-spacing) text-(--text)">
-          {t("providers.title")}
-        </h1>
-        <p className="mt-2 max-w-2xl text-(length:--text-body-md) text-(--text-muted)">
-          {t("providers.subtitle")}
-        </p>
-      </header>
-
-      <div className="flex flex-col overflow-hidden rounded-(--radius-lg) border border-(--border) bg-(--bg)">
-        {BUILT_IN_PROVIDERS.map((provider) => (
-          <ProviderListRow
-            key={provider.id}
-            iconSrc={provider.iconSrc}
-            iconAlt={provider.iconAlt}
-            name={
-              summariesById.get(provider.id)?.displayName ?? providerDisplayName(provider.id, t)
-            }
-            description={providerDescription(provider.id, t)}
-            summary={summariesById.get(provider.id)}
-            status={statusFor(provider.id)}
-            onConfigure={() => openBuiltIn(provider.id)}
-            onTest={() => void testProvider(provider.id)}
-          />
-        ))}
-
-        {customProviderIds.map((id) => (
-          <ProviderListRow
-            key={id}
-            fallbackIcon={Icons.Plug}
-            name={catalog?.providers[id]?.displayName ?? summariesById.get(id)?.displayName ?? id}
-            description={t("providers.customDescription")}
-            summary={summariesById.get(id)}
-            status={statusFor(id)}
-            onConfigure={() => openCustom(id)}
-            onTest={() => void testProvider(id)}
-          />
-        ))}
-
-        <div className="flex items-center gap-4 border-t border-(--border-faint) px-5 py-4 text-left transition-colors duration-(--duration-fast) hover:bg-(--surface)">
-          <ProviderIcon fallbackIcon={Icons.Plus} />
-          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className="text-(length:--text-title-sm) font-semibold text-(--text)">
-              {t("providers.openaiCompatible")}
-            </span>
-            <span className="text-(length:--text-body-sm) text-(--text-muted)">
-              {t("providers.openaiCompatible.description")}
-            </span>
-          </span>
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            leadingIcon={<Icons.Plus weight="bold" className="size-4" />}
-            onClick={() => openCustom(null)}
-          >
-            {t("common.add")}
-          </Button>
-        </div>
-      </div>
-
-      <ProviderConfigModal
+  // Subpage mode — show the config panel in place of the list. The
+  // SettingsDialog title bar handles back navigation via the subpage
+  // registered above.
+  if (activeModal) {
+    return (
+      <ProviderConfigPanel
         activeModal={activeModal}
         form={form}
         setForm={setForm}
         catalogReady={catalog !== null}
         imageModelOptions={imageModelOptions}
         saving={saving}
-        maskedApiKey={activeModal ? maskForModal(activeModal, form.providerId, secrets) : null}
-        onClose={() => setActiveModal(null)}
+        maskedApiKey={maskForModal(activeModal, form.providerId, secrets)}
+        onCancel={closePanel}
         onSave={() => void saveActiveModal()}
       />
+    );
+  }
+
+  return (
+    <div className="flex flex-col overflow-hidden rounded-(--radius-lg) border border-(--border) bg-(--bg)">
+      {BUILT_IN_PROVIDERS.map((provider) => (
+        <ProviderListRow
+          key={provider.id}
+          iconSrc={provider.iconSrc}
+          iconAlt={provider.iconAlt}
+          name={summariesById.get(provider.id)?.displayName ?? providerDisplayName(provider.id, t)}
+          description={providerDescription(provider.id, t)}
+          summary={summariesById.get(provider.id)}
+          status={statusFor(provider.id)}
+          onConfigure={() => openBuiltIn(provider.id)}
+          onTest={() => void testProvider(provider.id)}
+        />
+      ))}
+
+      {customProviderIds.map((id) => (
+        <ProviderListRow
+          key={id}
+          fallbackIcon={Icons.Plug}
+          name={catalog?.providers[id]?.displayName ?? summariesById.get(id)?.displayName ?? id}
+          description={t("providers.customDescription")}
+          summary={summariesById.get(id)}
+          status={statusFor(id)}
+          onConfigure={() => openCustom(id)}
+          onTest={() => void testProvider(id)}
+        />
+      ))}
+
+      <div className="flex items-center gap-4 border-t border-(--border-faint) px-5 py-4 text-left transition-colors duration-(--duration-fast) hover:bg-(--surface)">
+        <ProviderIcon fallbackIcon={Icons.Plus} />
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span className="text-(length:--text-title-sm) font-semibold text-(--text)">
+            {t("providers.openaiCompatible")}
+          </span>
+          <span className="text-(length:--text-body-sm) text-(--text-muted)">
+            {t("providers.openaiCompatible.description")}
+          </span>
+        </span>
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          leadingIcon={<Icons.Plus weight="bold" className="size-4" />}
+          onClick={() => openCustom(null)}
+        >
+          {t("common.add")}
+        </Button>
+      </div>
     </div>
   );
 }
+

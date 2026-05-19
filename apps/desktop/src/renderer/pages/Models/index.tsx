@@ -26,9 +26,14 @@ interface ModelList {
 
 type Tab = "image" | "video";
 
-export function ModelsPage() {
+/**
+ * Models settings section. Catalogue of known models, grouped by kind,
+ * with the providers that can serve each. Rendered inside `SettingsDialog`;
+ * the section heading is provided by the dialog chrome.
+ */
+export function ModelsSection() {
   const t = useT();
-  const navigate = useUIStore((s) => s.navigate);
+  const setSettingsSection = useUIStore((s) => s.setSettingsSection);
   const pushToast = useUIStore((s) => s.pushToast);
   const [tab, setTab] = useState<Tab>("image");
   const [list, setList] = useState<ModelList | null>(null);
@@ -59,16 +64,7 @@ export function ModelsPage() {
   }, [list]);
 
   return (
-    <div className="mx-auto max-w-4xl px-8 py-10">
-      <header className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-(length:--text-display-sm) font-display font-medium tracking-(--text-display-sm--letter-spacing) text-(--text)">
-            {t("models.title")}
-          </h1>
-          <p className="mt-2 text-(length:--text-body-md) text-(--text)">{t("models.subtitle")}</p>
-        </div>
-      </header>
-
+    <>
       <div className="mb-4 inline-flex rounded-(--radius-md) border border-(--border) bg-(--surface) p-1">
         <TabButton active={tab === "image"} onClick={() => setTab("image")}>
           {t("common.image")} · {totals.image}
@@ -93,12 +89,12 @@ export function ModelsPage() {
             <ModelRowView
               key={`${tab}:${row.id}`}
               row={row}
-              onConfigureProvider={() => navigate("providers")}
+              onConfigureProvider={() => setSettingsSection("providers")}
             />
           ))}
         </ul>
       )}
-    </div>
+    </>
   );
 }
 

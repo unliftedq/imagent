@@ -1,7 +1,6 @@
 import type { ProviderSummary } from "@imagent/ipc";
 import {
   Button,
-  Dialog,
   Icons,
   Input,
   type ProviderTestStatus,
@@ -86,7 +85,14 @@ export function ProviderListRow({
   );
 }
 
-export function ProviderConfigModal({
+/**
+ * Provider configuration panel — rendered inline inside the Settings dialog
+ * (no nested Dialog). The caller is responsible for surfacing the title /
+ * back affordance via the Settings dialog's title bar (see
+ * `useSettingsSubpage`). This component renders the form body + the
+ * primary action footer only.
+ */
+export function ProviderConfigPanel({
   activeModal,
   form,
   setForm,
@@ -94,80 +100,46 @@ export function ProviderConfigModal({
   imageModelOptions,
   saving,
   maskedApiKey,
-  onClose,
+  onCancel,
   onSave,
 }: {
-  activeModal: ActiveModal | null;
+  activeModal: ActiveModal;
   form: ModalState;
   setForm: React.Dispatch<React.SetStateAction<ModalState>>;
   catalogReady: boolean;
   imageModelOptions: Array<{ id: string; label: string }>;
   saving: boolean;
   maskedApiKey: string | null;
-  onClose: () => void;
+  onCancel: () => void;
   onSave: () => void;
 }) {
   const t = useT();
-  const builtIn = activeModal?.kind === "built-in" ? providerDef(activeModal.id) : null;
-  const customId = activeModal?.kind === "custom" ? activeModal.id : null;
-  const isCustom = activeModal?.kind === "custom";
-  const canEditProviderId = activeModal?.kind === "custom" && activeModal.id === null;
+  const builtIn = activeModal.kind === "built-in" ? providerDef(activeModal.id) : null;
+  const isCustom = activeModal.kind === "custom";
+  const canEditProviderId = activeModal.kind === "custom" && activeModal.id === null;
   const usesEndpoint = builtIn?.endpointLabel !== undefined;
-  const usesMappings = activeModal?.id === "azure" || isCustom;
+  const usesMappings = activeModal.id === "azure" || isCustom;
   const isDeploymentMapping = builtIn?.mappingLabel === "Deployment";
-  const title = isCustom
-    ? customId
-      ? t("providers.customUpdate")
-      : t("providers.customConnect")
-    : t("providers.connect", {
-        name:
-          activeModal?.kind === "built-in"
-            ? providerDisplayName(activeModal.id, t)
-            : t("providers.providerHeading"),
-      });
   const description = isCustom
     ? t("providers.customDialogDescription")
-    : activeModal?.kind === "built-in"
+    : activeModal.kind === "built-in"
       ? providerDescription(activeModal.id, t)
       : t("providers.configureAccess");
 
   return (
-    <Dialog.Root open={activeModal !== null} onOpenChange={(open) => (!open ? onClose() : null)}>
-      <Dialog.Content showClose className="max-h-[88vh] max-w-2xl overflow-y-auto p-0">
-        <div className="border-b border-(--border-faint) px-6 py-5">
-          <div className="mb-5 flex items-center gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="size-8 p-0"
-              aria-label={t("common.back")}
-              onClick={onClose}
-            >
-              <Icons.CaretRight weight="bold" className="size-4 rotate-180" />
-            </Button>
-            <span className="text-(length:--text-caption-uppercase) tracking-[1.5px] text-(--text-muted)">
-              {t("providers.providerHeading")}
-            </span>
-          </div>
-          <div className="flex items-start gap-4 pr-10">
-            <ProviderIcon
-              iconSrc={isCustom ? undefined : builtIn?.iconSrc}
-              iconAlt={isCustom ? undefined : builtIn?.iconAlt}
-              fallbackIcon={Icons.Plug}
-            />
-            <div>
-              <Dialog.Title className="text-(length:--text-title-lg) font-semibold text-(--text)">
-                {title}
-              </Dialog.Title>
-              <Dialog.Description className="mt-1 text-(length:--text-body-sm) text-(--text-muted)">
-                {description}
-              </Dialog.Description>
-            </div>
-          </div>
+    <div className="flex h-full min-h-0 flex-col">
+      {/* Scrollable form body */}
+      <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="flex items-start gap-4 border-b border-(--border-faint) pb-5">
+          <ProviderIcon
+            iconSrc={isCustom ? undefined : builtIn?.iconSrc}
+            iconAlt={isCustom ? undefined : builtIn?.iconAlt}
+            fallbackIcon={Icons.Plug}
+          />
+          <p className="mt-1 text-(length:--text-body-sm) text-(--text-muted)">{description}</p>
         </div>
 
-        <div className="flex flex-col gap-5 px-6 py-5">
+        <div className="flex flex-col gap-5 pt-5">
           {isCustom ? (
             <div className="grid gap-4 sm:grid-cols-2">
               <Field
@@ -231,7 +203,7 @@ export function ProviderConfigModal({
           {usesMappings ? (
             <MappingEditor
               label={
-                activeModal?.id === "azure"
+                activeModal.id === "azure"
                   ? t("providers.deploymentMappings")
                   : t("providers.modelMappings")
               }
@@ -248,9 +220,12 @@ export function ProviderConfigModal({
             />
           ) : null}
         </div>
+      </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-(--border-faint) px-6 py-4">
-          <Button type="button" variant="ghost" onClick={onClose}>
+      {/* Pinned action footer — flush with the dialog content area's bottom. */}
+      <div className="shrink-0 border-t border-(--border-faint) bg-(--bg) px-6 py-4">
+        <div className="flex items-center justify-end gap-2">
+          <Button type="button" variant="ghost" onClick={onCancel}>
             {t("common.cancel")}
           </Button>
           <Button
@@ -265,9 +240,25 @@ export function ProviderConfigModal({
             {t("common.continue")}
           </Button>
         </div>
-      </Dialog.Content>
-    </Dialog.Root>
+      </div>
+    </div>
   );
+}
+
+/**
+ * Build the i18n'd panel title for a given active modal — used by the
+ * Settings dialog title bar when this panel is the active subpage.
+ */
+export function providerConfigPanelTitle(
+  activeModal: ActiveModal,
+  t: ReturnType<typeof useT>,
+): string {
+  if (activeModal.kind === "custom") {
+    return activeModal.id ? t("providers.customUpdate") : t("providers.customConnect");
+  }
+  return t("providers.connect", {
+    name: providerDisplayName(activeModal.id, t),
+  });
 }
 
 function MappingEditor({

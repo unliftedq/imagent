@@ -161,7 +161,6 @@ async function runGenerate(prompt: string, options: GenerateOptions): Promise<vo
     process.stdout.write(`${chalk.dim("submitting:")} provider=${providerId} model=${model}\n`);
     const id = await runner.start(intent);
     const cleanupCancel = installCancelOnInterrupt(runner, jobs, id);
-    process.stdout.write(`${chalk.dim("job:")} ${id}\n`);
 
     const job = await completed.finally(cleanupCancel);
     if (!job.resultItemId) {

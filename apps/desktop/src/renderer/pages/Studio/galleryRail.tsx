@@ -138,7 +138,7 @@ export function StudioGalleryRail({
         >
           <Icons.CaretRight weight="bold" className="size-4 rotate-180" />
         </button>
-        <div className="mt-4 flex -rotate-90 items-center gap-2 whitespace-nowrap text-[12px] font-semibold text-(--text-muted)">
+        <div className="mt-4 flex rotate-180 items-center gap-2 whitespace-nowrap text-[12px] font-semibold text-(--text-muted) [writing-mode:vertical-rl]">
           <Icons.SquaresFour weight="duotone" className="size-4" />
           {t("studio.library")}
         </div>

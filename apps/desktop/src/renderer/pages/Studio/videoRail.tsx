@@ -32,6 +32,7 @@ export function VideoRail() {
   const setDraft = useUIStore((state) => state.setVideoDraft);
   const resetDraft = useUIStore((state) => state.resetVideoDraft);
   const navigate = useUIStore((state) => state.navigate);
+  const openSettings = useUIStore((state) => state.openSettings);
   const pushToast = useUIStore((state) => state.pushToast);
   const t = useT();
 
@@ -239,7 +240,7 @@ export function VideoRail() {
         </h2>
         <p className="mt-1 text-[12px] text-(--text-muted)">{t("studio.noVideoProviderDesc")}</p>
         <div className="mt-3 inline-flex">
-          <Button size="sm" onClick={() => navigate("providers")}>
+          <Button size="sm" onClick={() => openSettings("providers")}>
             {t("studio.openProviders")}
           </Button>
         </div>

@@ -19,8 +19,8 @@ type Dict = Record<keyof typeof en, string>;
 
 export const zh: Dict = {
   // App shell / routes
-  "nav.studio": "工作室",
-  "nav.gallery": "画廊",
+  "nav.studio": "创作",
+  "nav.gallery": "图库",
   "nav.assets": "素材",
   "nav.models": "模型",
   "nav.providers": "服务商",
@@ -67,6 +67,9 @@ export const zh: Dict = {
   // Settings page
   "settings.title": "设置",
   "settings.subtitle": "工作区默认设置。修改后会自动保存。",
+  "settings.section.general": "通用",
+  "settings.section.providers": "服务商",
+  "settings.section.models": "模型",
   "settings.section.appearance": "外观",
   "settings.section.language": "语言",
   "settings.section.theme": "主题",
@@ -270,8 +273,8 @@ export const zh: Dict = {
 
   // Studio
   "studio.dropArea": "Studio 拖放区域",
-  "studio.libraryCollapsed": "Studio 素材库已折叠",
-  "studio.library": "Studio 素材库",
+  "studio.libraryCollapsed": "素材库已折叠",
+  "studio.library": "素材库",
   "studio.expandLibrary": "展开素材库",
   "studio.collapseLibrary": "收起素材库",
   "studio.modeImage": "图片",
