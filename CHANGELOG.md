@@ -4,12 +4,13 @@
 
 ### Desktop app
 
-- Gallery now auto-loads more results while you scroll, reducing the need to keep clicking **Load more** when browsing larger libraries.
+- Gallery now auto-loads more results while you scroll, prefetching the next page as you approach the end of the current grid so browsing larger libraries feels smoother.
 
 ### Community & docs
 
-- Added GitHub issue templates, a pull request template, and a contributor guide to make bug reports, feature requests, and contributions more consistent.
-- Updated the README license section for clarity.
+- Added dedicated GitHub issue templates for bug reports, feature requests, and provider/model requests so community feedback lands in a more consistent format.
+- Added a pull request template and a contributor guide to document repo setup, validation, and contribution expectations.
+- Clarified the README license section.
 
 ## 0.2.3 - 2026-05-18
 
