@@ -1,0 +1,33 @@
+name: Feature request
+description: Suggest a new capability or improvement for imagent.
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        imagent is intentionally local-first and single-user. See
+        [architecture.md](https://github.com/unliftedq/imagent/blob/main/architecture.md#scope)
+        for the current scope before filing.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do, and what's awkward or impossible today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How might this work from a user's point of view? Command examples or UI sketches welcome.
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Alternatives considered, screenshots, links to similar features elsewhere, etc.

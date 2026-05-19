@@ -1,0 +1,45 @@
+name: Provider or model request
+description: Request a new generation provider, or a new model under an existing provider.
+title: "[Provider]: "
+labels: ["provider", "enhancement", "triage"]
+body:
+  - type: input
+    id: provider
+    attributes:
+      label: Provider
+      placeholder: "e.g. Replicate, Stability AI, Runway"
+    validations:
+      required: true
+
+  - type: input
+    id: model
+    attributes:
+      label: Model ID (optional)
+      placeholder: "e.g. flux-1.1-pro"
+
+  - type: dropdown
+    id: modality
+    attributes:
+      label: Modality
+      multiple: true
+      options:
+        - Image generation
+        - Image editing / inpainting
+        - Video generation
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: docs
+    attributes:
+      label: API documentation
+      description: Link to the official REST or SDK reference.
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Why this provider/model, notable parameters (sizes, durations, sync vs. async), and anything else useful.

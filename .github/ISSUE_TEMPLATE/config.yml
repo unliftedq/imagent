@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://unliftedq.github.io/imagent/docs
+    about: Installation, configuration, providers, models, and troubleshooting.
+  - name: Questions and discussions
+    url: https://github.com/unliftedq/imagent/discussions
+    about: Ask usage questions, share workflows, or propose ideas before filing an issue.
