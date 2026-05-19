@@ -76,7 +76,7 @@ imagent remains in an early stage. Data structures, packaging, and parts of the 
 
 ## License
 
-TBD.
+By contributing to imagent, you agree that your contributions will be licensed under the project's [Apache License 2.0](./LICENSE). You also confirm that you have the right to submit the work under that license.
 
 ## Acknowledgements
 

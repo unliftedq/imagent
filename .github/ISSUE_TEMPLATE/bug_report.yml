@@ -1,0 +1,59 @@
+name: Bug report
+description: Report a defect in the desktop app, CLI, or shared packages.
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please search existing issues first, and **never paste API keys or contents of `~/.imagent/secrets.json`**.
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Affected surface
+      multiple: true
+      options:
+        - Desktop app (@imagent/studio)
+        - CLI (@imagent/cli)
+        - Agent skill (skills/imagent)
+        - Documentation / website
+        - Other / not sure
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: imagent version
+      description: "`imagent --version`, Settings → About, or a commit SHA."
+      placeholder: "0.2.3"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: "macOS 14.5 (Apple Silicon) / Windows 11 / Ubuntu 24.04"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what you got. Include the provider/model if relevant.
+      placeholder: |
+        1. Ran `imagent image generate "..." --provider openai --model gpt-image-1`
+        2. Expected an image to be saved to the gallery.
+        3. Got the error below.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: CLI output, stack traces, or devtools console errors. Redact secrets first.
+      render: shell
