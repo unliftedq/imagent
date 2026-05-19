@@ -1,7 +1,7 @@
 import { DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import type { Asset, AssetKind, GalleryItem } from "@imagent/core";
 import { BoardSidebarItem, Button, GalleryItemCard, Icons, Input, Tooltip } from "@imagent/ui";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../../i18n/index.js";
 import { api } from "../../lib/api.js";
 import { useBoardsStore } from "../../state/useBoardsStore.js";
@@ -43,6 +43,10 @@ export function GalleryPage() {
   const [assetDialogItem, setAssetDialogItem] = useState<GalleryItem | null>(null);
   const [assetDialogKind, setAssetDialogKind] = useState<AssetKind>("character");
 
+  const scrollRef = useRef<HTMLElement | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const loadingMoreRef = useRef(false);
+
   const navigate = useUIStore((s) => s.navigate);
 
   const t = useT();
@@ -73,6 +77,28 @@ export function GalleryPage() {
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchInput]);
+
+  // Auto-load more when the sentinel near the bottom scrolls into view.
+  useEffect(() => {
+    if (items.length >= total) return;
+    loadingMoreRef.current = false;
+    const sentinel = sentinelRef.current;
+    const root = scrollRef.current;
+    if (!sentinel || !root) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry?.isIntersecting) return;
+        if (loadingMoreRef.current) return;
+        if (items.length >= total) return;
+        loadingMoreRef.current = true;
+        setQuery({ limit: query.limit + 60 });
+      },
+      { root, rootMargin: "400px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [items.length, total, query.limit, setQuery]);
 
   const onDragEnd = async (e: DragEndEvent): Promise<void> => {
     if (!e.over) return;
@@ -279,7 +305,7 @@ export function GalleryPage() {
           )}
         </aside>
 
-        <section className="flex-1 overflow-y-auto px-6 py-4">
+        <section ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4">
           <div className="mb-4 flex items-center gap-3">
             <div className="relative w-full max-w-[640px]">
               <Icons.MagnifyingGlass
@@ -386,15 +412,7 @@ export function GalleryPage() {
           )}
 
           {items.length < total ? (
-            <div className="mt-6 flex items-center justify-center">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setQuery({ limit: query.limit + 60 })}
-              >
-                {t("gallery.loadMore", { remaining: total - items.length })}
-              </Button>
-            </div>
+            <div ref={sentinelRef} aria-hidden className="h-8" />
           ) : null}
         </section>
 
