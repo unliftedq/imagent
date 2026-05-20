@@ -89,6 +89,9 @@ export const en = {
   "settings.about.electron": "Electron",
   "settings.about.node": "Node",
   "settings.about.platform": "Platform",
+  "settings.section.legal": "Legal",
+  "settings.legal.privacy": "Privacy Policy",
+  "settings.legal.terms": "Terms of Service",
 
   // Updates
   "settings.section.updates": "Updates",
