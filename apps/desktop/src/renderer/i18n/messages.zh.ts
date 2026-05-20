@@ -97,6 +97,9 @@ export const zh: Dict = {
   "settings.about.electron": "Electron",
   "settings.about.node": "Node",
   "settings.about.platform": "平台",
+  "settings.section.legal": "法律",
+  "settings.legal.privacy": "隐私政策",
+  "settings.legal.terms": "服务条款",
 
   // Updates
   "settings.section.updates": "应用更新",

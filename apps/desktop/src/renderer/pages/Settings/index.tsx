@@ -100,6 +100,11 @@ const SECTION_META: Record<
   },
 };
 
+const LEGAL_LINKS = {
+  privacy: "https://unliftedq.github.io/imagent/privacy",
+  terms: "https://unliftedq.github.io/imagent/terms",
+} as const;
+
 /**
  * Settings dialog. Two-column layout: the left rail lists sections in
  * setup-flow order; the right pane renders the active section's content.
@@ -510,6 +515,14 @@ function AboutSection() {
       .catch(() => {});
   }, []);
 
+  async function openLegalLink(url: (typeof LEGAL_LINKS)[keyof typeof LEGAL_LINKS]) {
+    try {
+      await api["system.openExternal"]({ url });
+    } catch {
+      // ignore
+    }
+  }
+
   return (
     <div className="flex flex-col gap-7">
       <SubGroup title={t("settings.section.about")}>
@@ -529,6 +542,29 @@ function AboutSection() {
         ) : (
           <p className="text-(--text-muted)">{t("common.loading")}</p>
         )}
+      </SubGroup>
+
+      <SubGroup title={t("settings.section.legal")}>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            trailingIcon={<Icons.ArrowSquareOut weight="bold" className="size-4" />}
+            onClick={() => void openLegalLink(LEGAL_LINKS.privacy)}
+          >
+            {t("settings.legal.privacy")}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            trailingIcon={<Icons.ArrowSquareOut weight="bold" className="size-4" />}
+            onClick={() => void openLegalLink(LEGAL_LINKS.terms)}
+          >
+            {t("settings.legal.terms")}
+          </Button>
+        </div>
       </SubGroup>
 
       <SubGroup title={t("settings.section.updates")}>
