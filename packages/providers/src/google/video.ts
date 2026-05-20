@@ -1,26 +1,31 @@
 import {
   ProviderError,
   ProviderHttpError,
-  ProviderRequestError,
   ProviderResponseError,
-  applyVideoDefaults,
   type Logger,
   type ProviderTestResult,
-  type VideoCapabilities,
   type VideoGenerationResult,
   type VideoJobHandle,
   type VideoJobStatus,
   type VideoModelDef,
   type VideoOutput,
-  type VideoProvider,
   type VideoRequest,
-  validateVideoRequestAgainstModel,
 } from "@imagent/core";
 import { GoogleGenAI } from "@google/genai";
+import {
+  BaseVideoProvider,
+  coerceMimeType,
+  decodeBase64,
+  mergeRawOptions,
+  rethrowGenericSdkError,
+  runListProbe,
+} from "../common/index.js";
 import { createHttpClient, type HttpClient } from "../http/index.js";
-import { testFailureFromError } from "../openai/image.js";
-import { DEFAULT_GOOGLE_BASE_URL, listGoogleModelIds, type GoogleGenAIClientLike } from "./image.js";
-import { aggregateVideoCapabilities } from "../bytedance/video.js";
+import {
+  DEFAULT_GOOGLE_BASE_URL,
+  listGoogleModelIds,
+  type GoogleGenAIClientLike,
+} from "./image.js";
 
 /**
  * Minimal SDK surface used by `GoogleVideoProvider`. Tests inject a fake.
@@ -81,23 +86,21 @@ interface GeneratedVideoLike {
  * requires `?key=` for download (which we tack on manually since the SDK's
  * `downloadFile` writes to disk and we want bytes).
  */
-export class GoogleVideoProvider implements VideoProvider {
-  readonly id = "google";
-  readonly displayName = "Google AI Studio";
-  readonly models: ReadonlyMap<string, VideoModelDef>;
-  readonly capabilities: VideoCapabilities;
+export class GoogleVideoProvider extends BaseVideoProvider {
   private readonly client: GoogleGenAIVideoClientLike;
   private readonly http: HttpClient;
   private readonly apiKey: string;
   private readonly baseUrl: string;
-  private readonly logger?: Logger;
 
   constructor(options: GoogleVideoProviderOptions) {
-    this.models = options.models;
-    this.capabilities = aggregateVideoCapabilities(options.models);
+    super({
+      providerId: "google",
+      displayName: "Google AI Studio",
+      models: options.models,
+      ...(options.logger !== undefined ? { logger: options.logger } : {}),
+    });
     this.apiKey = options.apiKey;
     this.baseUrl = (options.baseUrl ?? DEFAULT_GOOGLE_BASE_URL).replace(/\/+$/, "");
-    if (options.logger) this.logger = options.logger;
     if (options.client) {
       this.client = options.client;
     } else {
@@ -114,16 +117,7 @@ export class GoogleVideoProvider implements VideoProvider {
     });
   }
 
-  async submit(req: VideoRequest): Promise<VideoJobHandle> {
-    const model = this.models.get(req.model);
-    if (!model) {
-      throw new ProviderRequestError(`unknown video model '${req.model}' for google`, {
-        vendorId: this.id,
-      });
-    }
-    const merged = applyVideoDefaults(req, model);
-    validateVideoRequestAgainstModel(this.id, merged, model);
-
+  protected async doSubmit(merged: VideoRequest, model: VideoModelDef): Promise<VideoJobHandle> {
     const config: Record<string, unknown> = {};
     if (merged.aspectRatio) config.aspectRatio = merged.aspectRatio;
     if (merged.durationSec !== undefined) config.durationSeconds = merged.durationSec;
@@ -135,16 +129,7 @@ export class GoogleVideoProvider implements VideoProvider {
       if (count !== undefined) config.numberOfVideos = count;
     }
 
-    if (merged.raw && typeof merged.raw === "object") {
-      const rawObj = merged.raw as { parameters?: Record<string, unknown> } & Record<string, unknown>;
-      const params = rawObj.parameters;
-      if (params && typeof params === "object") {
-        Object.assign(config, params);
-      }
-      for (const [k, v] of Object.entries(rawObj)) {
-        if (k !== "parameters") config[k] = v;
-      }
-    }
+    mergeRawOptions(config, merged.raw);
 
     if (!this.client.models.generateVideos) {
       throw new ProviderResponseError("SDK does not expose generateVideos", {
@@ -160,7 +145,7 @@ export class GoogleVideoProvider implements VideoProvider {
         config,
       });
     } catch (err) {
-      throw rethrowGoogleError(err, this.id);
+      rethrowGenericSdkError(err, this.id);
     }
     if (!op.name) {
       throw new ProviderResponseError("Veo submit response missing operation name", {
@@ -198,7 +183,7 @@ export class GoogleVideoProvider implements VideoProvider {
     const inlineBytes = pickInlineVideoBytes(resp);
     if (inlineBytes) {
       const out: VideoOutput = {
-        bytes: decodeBase64ToTyped(inlineBytes.data),
+        bytes: decodeBase64(inlineBytes.data),
         mimeType: inlineBytes.mimeType ?? "video/mp4",
       };
       return { output: out };
@@ -215,7 +200,7 @@ export class GoogleVideoProvider implements VideoProvider {
     const dl = await this.http.getBytes(downloadUrl);
     const out: VideoOutput = {
       bytes: dl.bytes,
-      mimeType: dl.mimeType.startsWith("video/") ? dl.mimeType : "video/mp4",
+      mimeType: coerceMimeType(dl.mimeType, "video/", "video/mp4"),
     };
     return { output: out };
   }
@@ -248,27 +233,13 @@ export class GoogleVideoProvider implements VideoProvider {
    * Auth probe — drain a page from `models.list()` and look for at least one
    * `veo*` entry (or one of the configured ids).
    */
-  async test(_signal?: AbortSignal): Promise<ProviderTestResult> {
-    const started = Date.now();
-    try {
-      const names = await listGoogleModelIds(this.client);
-      const latencyMs = Date.now() - started;
-      if (names.length === 0) {
-        return { ok: false, reason: "model list returned no entries" };
-      }
-      const hasVeo = names.some((n) => /veo/i.test(n));
-      const configured = [...this.models.keys()];
-      const matched = configured.find((id) => names.some((n) => n === id || n.endsWith(`/${id}`) || n.endsWith(id)));
-      const out: ProviderTestResult = matched
-        ? { ok: true, latencyMs, sampleModelId: matched }
-        : hasVeo
-          ? { ok: true, latencyMs }
-          : { ok: true, latencyMs };
-      return out;
-    } catch (err) {
-      this.logger?.debug?.("google video test() failed", { err: String(err) });
-      return testFailureFromError(err);
-    }
+  protected async doTest(_signal?: AbortSignal): Promise<ProviderTestResult> {
+    return runListProbe({
+      listIds: () => listGoogleModelIds(this.client),
+      configuredIds: [...this.models.keys()],
+      matcher: (id, listed) => listed === id || listed.endsWith(`/${id}`) || listed.endsWith(id),
+      failOnEmptyList: true,
+    });
   }
 
   private async fetchOperation(opName: string): Promise<{
@@ -280,7 +251,7 @@ export class GoogleVideoProvider implements VideoProvider {
     try {
       return await this.client.operations.getVideosOperation({ operation: { name: opName } });
     } catch (err) {
-      throw rethrowGoogleError(err, this.id);
+      rethrowGenericSdkError(err, this.id);
     }
   }
 }
@@ -330,17 +301,5 @@ function appendApiKey(url: string, apiKey: string): string {
   return `${url}${sep}key=${encodeURIComponent(apiKey)}`;
 }
 
-function decodeBase64ToTyped(s: string): Uint8Array<ArrayBuffer> {
-  const b = Buffer.from(s, "base64");
-  const ab = new ArrayBuffer(b.byteLength);
-  const out = new Uint8Array(ab);
-  out.set(b);
-  return out;
-}
-
-function rethrowGoogleError(err: unknown, vendorId: string): Error {
-  if (err instanceof Error) {
-    return new ProviderError(err.message, { vendorId, cause: err });
-  }
-  return new ProviderError(String(err), { vendorId });
-}
+// (BaseVideoProvider handles applyVideoDefaults + validateVideoRequestAgainstModel
+// before calling doSubmit, so this file no longer needs to import them.)

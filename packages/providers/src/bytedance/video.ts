@@ -1,23 +1,24 @@
 import {
-  applyVideoDefaults,
   type Logger,
   ProviderError,
-  ProviderRequestError,
   ProviderResponseError,
   type ProviderTestResult,
-  type VideoCapabilities,
   type VideoGenerationResult,
   type VideoJobHandle,
   type VideoJobState,
   type VideoJobStatus,
   type VideoModelDef,
   type VideoOutput,
-  type VideoProvider,
   type VideoRequest,
-  validateVideoRequestAgainstModel,
 } from "@imagent/core";
+import {
+  aggregateVideoCapabilities,
+  BaseVideoProvider,
+  coerceMimeType,
+  mergeRawOptions,
+  runListProbe,
+} from "../common/index.js";
 import { createHttpClient, type HttpClient } from "../http/index.js";
-import { testFailureFromError } from "../openai/image.js";
 import { resolveImageUrlInput } from "../reference-images.js";
 
 export interface ByteDanceVideoProviderOptions {
@@ -64,19 +65,17 @@ const TASKS_PATH = "/contents/generations/tasks";
  * task, fetch downloads the returned `content.video_url`, and cancel attempts
  * a server-side task DELETE.
  */
-export class ByteDanceVideoProvider implements VideoProvider {
-  readonly id = "bytedance";
-  readonly displayName = "ByteDance";
-  readonly models: ReadonlyMap<string, VideoModelDef>;
-  readonly capabilities: VideoCapabilities;
+export class ByteDanceVideoProvider extends BaseVideoProvider {
   private readonly http: HttpClient;
   private readonly baseUrl: string;
-  private readonly logger?: Logger;
 
   constructor(options: ByteDanceVideoProviderOptions) {
-    this.models = options.models;
-    this.capabilities = aggregateVideoCapabilities(options.models);
-    if (options.logger) this.logger = options.logger;
+    super({
+      providerId: "bytedance",
+      displayName: "ByteDance",
+      models: options.models,
+      ...(options.logger !== undefined ? { logger: options.logger } : {}),
+    });
     this.baseUrl = options.endpoint.replace(/\/+$/, "");
     this.http = createHttpClient({
       vendorId: this.id,
@@ -87,16 +86,10 @@ export class ByteDanceVideoProvider implements VideoProvider {
     });
   }
 
-  async submit(req: VideoRequest): Promise<VideoJobHandle> {
-    const modelDef = this.models.get(req.model);
-    if (!modelDef) {
-      throw new ProviderRequestError(`unknown video model '${req.model}' for bytedance`, {
-        vendorId: this.id,
-      });
-    }
-    const merged = applyVideoDefaults(req, modelDef);
-    validateVideoRequestAgainstModel(this.id, merged, modelDef);
-
+  protected async doSubmit(
+    merged: VideoRequest,
+    modelDef: VideoModelDef,
+  ): Promise<VideoJobHandle> {
     const body = await buildCreateTaskBody(merged, modelDef);
     const res = await this.http.post<ArkTaskCreateResponse>(TASKS_PATH, body);
     const taskId = res?.id;
@@ -144,7 +137,7 @@ export class ByteDanceVideoProvider implements VideoProvider {
     const dl = await this.http.getBytes(videoUrl);
     const out: VideoOutput = {
       bytes: dl.bytes,
-      mimeType: dl.mimeType.startsWith("video/") ? dl.mimeType : "video/mp4",
+      mimeType: coerceMimeType(dl.mimeType, "video/", "video/mp4"),
       raw: {
         taskId: status.id ?? handle.providerJobId,
         ...(status.model ? { model: status.model } : {}),
@@ -163,27 +156,20 @@ export class ByteDanceVideoProvider implements VideoProvider {
   }
 
   /** Auth probe via ModelArk's OpenAI-compatible model listing endpoint. */
-  async test(signal?: AbortSignal): Promise<ProviderTestResult> {
-    const started = Date.now();
+  protected async doTest(signal?: AbortSignal): Promise<ProviderTestResult> {
     const probeSignal = signal ?? AbortSignal.timeout(8000);
-    try {
-      const res = await this.http.get<{ data?: Array<{ id?: string }> }>("/models", {
-        signal: probeSignal,
-      });
-      const latencyMs = Date.now() - started;
-      const ids = (res?.data ?? [])
-        .map((m) => m?.id)
-        .filter((s): s is string => typeof s === "string");
-      const configured = [...this.models.keys()];
-      const matched = configured.find((id) => ids.includes(id));
-      const out: ProviderTestResult = matched
-        ? { ok: true, latencyMs, sampleModelId: matched }
-        : { ok: true, latencyMs };
-      return out;
-    } catch (err) {
-      this.logger?.debug?.("bytedance video test() failed", { err: String(err) });
-      return testFailureFromError(err);
-    }
+    return runListProbe({
+      listIds: async (s) => {
+        const opts: { signal?: AbortSignal } = {};
+        if (s) opts.signal = s;
+        const res = await this.http.get<{ data?: Array<{ id?: string }> }>("/models", opts);
+        return (res?.data ?? [])
+          .map((m) => m?.id)
+          .filter((v): v is string => typeof v === "string");
+      },
+      configuredIds: [...this.models.keys()],
+      signal: probeSignal,
+    });
   }
 
   private async fetchTask(handle: VideoJobHandle): Promise<ArkTaskStatusResponse> {
@@ -233,17 +219,6 @@ async function buildContent(req: VideoRequest): Promise<ByteDanceContentPart[]> 
     });
   }
   return content;
-}
-
-function mergeRawOptions(body: Record<string, unknown>, raw: VideoRequest["raw"]): void {
-  if (!raw || typeof raw !== "object") return;
-  const rawObj = raw as { parameters?: Record<string, unknown> } & Record<string, unknown>;
-  if (rawObj.parameters && typeof rawObj.parameters === "object") {
-    Object.assign(body, rawObj.parameters);
-  }
-  for (const [key, value] of Object.entries(rawObj)) {
-    if (key !== "parameters") body[key] = value;
-  }
 }
 
 function taskPath(taskId: string): string {
@@ -324,46 +299,7 @@ function metaNumber(meta: VideoJobHandle["meta"], key: string): number | undefin
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
-export function aggregateVideoCapabilities(
-  models: ReadonlyMap<string, VideoModelDef>,
-): VideoCapabilities {
-  const durationsSec = new Set<number>();
-  const fpsOptions = new Set<number>();
-  const resolutions = new Set<string>();
-  const aspectRatios = new Set<string>();
-  let maxDurationSec = 0;
-  let maxReferences: number | undefined;
-  let maxReferenceSizeMb: number | undefined;
-  let supportsFirstFrame = false;
-  let supportsLastFrame = false;
-  let supportsRefImages = false;
-  for (const m of models.values()) {
-    const c = m.capabilities;
-    if (!c) continue;
-    for (const d of c.durationsSec ?? []) durationsSec.add(d);
-    for (const f of c.fpsOptions ?? []) fpsOptions.add(f);
-    for (const r of c.resolutions ?? []) resolutions.add(r);
-    for (const a of c.aspectRatios ?? []) aspectRatios.add(a);
-    if (c.maxDurationSec !== undefined) maxDurationSec = Math.max(maxDurationSec, c.maxDurationSec);
-    if (c.maxReferences !== undefined)
-      maxReferences = Math.max(maxReferences ?? 0, c.maxReferences);
-    if (c.maxReferenceSizeMb !== undefined) {
-      maxReferenceSizeMb = Math.max(maxReferenceSizeMb ?? 0, c.maxReferenceSizeMb);
-    }
-    supportsFirstFrame ||= c.supportsFirstFrame;
-    supportsLastFrame ||= c.supportsLastFrame;
-    supportsRefImages ||= c.supportsRefImages;
-  }
-  return {
-    durationsSec: [...durationsSec].sort((a, b) => a - b),
-    maxDurationSec,
-    fpsOptions: [...fpsOptions].sort((a, b) => a - b),
-    resolutions: [...resolutions],
-    ...(aspectRatios.size > 0 ? { aspectRatios: [...aspectRatios] } : {}),
-    ...(maxReferences !== undefined ? { maxReferences } : {}),
-    ...(maxReferenceSizeMb !== undefined ? { maxReferenceSizeMb } : {}),
-    supportsFirstFrame,
-    supportsLastFrame,
-    supportsRefImages,
-  };
-}
+// Re-export so vendors that previously cross-imported from here continue to
+// resolve `aggregateVideoCapabilities` without churn. Canonical home is
+// `../common/capabilities.js`.
+export { aggregateVideoCapabilities };

@@ -1,24 +1,25 @@
 import { createXai } from "@ai-sdk/xai";
 import {
   appendImageReferenceInstructions,
-  applyImageDefaults,
-  type ImageCapabilities,
   type ImageGenerationResult,
   type ImageModelDef,
   type ImageOutput,
-  type ImageProvider,
   type ImageRequest,
   type Logger,
   ProviderError,
   ProviderHttpError,
-  ProviderRequestError,
   ProviderResponseError,
   type ProviderTestResult,
-  validateImageRequestAgainstModel,
 } from "@imagent/core";
 import { generateImage, type ImageModel } from "ai";
+import {
+  BaseImageProvider,
+  parseSize,
+  rethrowGenericSdkError,
+  runListProbe,
+  toArrayBufferBytes,
+} from "../common/index.js";
 import { createHttpClient, type HttpClient } from "../http/index.js";
-import { aggregateCapabilities, parseSize, testFailureFromError } from "../openai/image.js";
 import { imageDataUrl, loadImageReferences } from "../reference-images.js";
 
 /** Canonical xAI base URL. OpenAI-compatible. */
@@ -45,30 +46,19 @@ export interface XaiImageProviderOptions {
 /**
  * xAI image provider — uses the Vercel AI SDK (`@ai-sdk/xai` + `ai`) to call
  * Grok Imagine. Default catalog model is `grok-imagine-image`.
- *
- * The Vercel SDK exposes `provider.image(modelId)` returning an `ImageModelV3`,
- * which we feed into `generateImage({ model, prompt, n, size, abortSignal })`.
- * Result `images` is an array of `GeneratedFile` (`uint8Array` / `base64` /
- * `mediaType`); we copy each into a Buffer-backed `Uint8Array<ArrayBuffer>`
- * for our `ImageGenerationResult` shape.
- *
- * The Vercel SDK has no `models.list()` equivalent, so the auth probe in
- * `test()` falls back to a raw `GET /v1/models` via our in-house httpClient.
  */
-export class XaiImageProvider implements ImageProvider {
-  readonly id = "xai";
-  readonly displayName = "xAI";
-  readonly models: ReadonlyMap<string, ImageModelDef>;
-  readonly capabilities: ImageCapabilities;
+export class XaiImageProvider extends BaseImageProvider {
   private readonly modelFactory: XaiImageModelFactory;
   private readonly probeHttp: HttpClient;
   private readonly baseUrl: string;
-  private readonly logger?: Logger;
 
   constructor(options: XaiImageProviderOptions) {
-    this.models = options.models;
-    this.capabilities = aggregateCapabilities(options.models);
-    if (options.logger) this.logger = options.logger;
+    super({
+      providerId: "xai",
+      displayName: "xAI",
+      models: options.models,
+      ...(options.logger !== undefined ? { logger: options.logger } : {}),
+    });
     this.baseUrl = (options.baseUrl ?? DEFAULT_XAI_BASE_URL).replace(/\/+$/, "");
 
     if (options.modelFactory) {
@@ -78,9 +68,6 @@ export class XaiImageProvider implements ImageProvider {
         apiKey: options.apiKey,
         baseURL: this.baseUrl,
       });
-      // `@ai-sdk/xai@4-beta` returns `ImageModelV4` from `provider.image(...)`,
-      // and `ai@7-beta`'s `ImageModel` union accepts V2/V3/V4 — assignment is
-      // direct, no cast needed.
       this.modelFactory = (modelId: string) => provider.image(modelId);
     }
 
@@ -92,21 +79,16 @@ export class XaiImageProvider implements ImageProvider {
     });
   }
 
-  async generate(req: ImageRequest, signal?: AbortSignal): Promise<ImageGenerationResult> {
-    const modelDef = this.models.get(req.model);
-    if (!modelDef) {
-      throw new ProviderRequestError(`unknown model '${req.model}' for ${this.id}`, {
-        vendorId: this.id,
-      });
-    }
-    const merged = applyImageDefaults(req, modelDef);
-    validateImageRequestAgainstModel(this.id, merged, modelDef);
-
+  protected async doGenerate(
+    merged: ImageRequest,
+    modelDef: ImageModelDef,
+    signal?: AbortSignal,
+  ): Promise<ImageGenerationResult> {
     let model: ImageModel;
     try {
       model = this.modelFactory(modelDef.id);
     } catch (err) {
-      throw rethrowSdkError(err, this.id);
+      rethrowXaiSdkError(err, this.id);
     }
 
     const args: Parameters<typeof generateImage>[0] = {
@@ -142,7 +124,7 @@ export class XaiImageProvider implements ImageProvider {
     try {
       result = await generateImage(args);
     } catch (err) {
-      throw rethrowSdkError(err, this.id);
+      rethrowXaiSdkError(err, this.id);
     }
 
     const files = result.images ?? (result.image ? [result.image] : []);
@@ -152,7 +134,7 @@ export class XaiImageProvider implements ImageProvider {
 
     const outputs: ImageOutput[] = [];
     for (const file of files) {
-      const bytes = toAbBytes(file.uint8Array);
+      const bytes = toArrayBufferBytes(file.uint8Array);
       const mimeType = file.mediaType?.startsWith("image/") ? file.mediaType : "image/png";
       outputs.push({
         bytes,
@@ -169,31 +151,24 @@ export class XaiImageProvider implements ImageProvider {
    * 200 with at least one entry → `{ ok: true }`. Annotates `sampleModelId`
    * if any of our configured ids is in the listing.
    */
-  async test(signal?: AbortSignal): Promise<ProviderTestResult> {
-    const started = Date.now();
+  protected async doTest(signal?: AbortSignal): Promise<ProviderTestResult> {
     const probeSignal = signal ?? AbortSignal.timeout(8000);
-    try {
-      const res = await this.probeHttp.get<{ data?: Array<{ id?: string }> }>(
-        `${this.baseUrl}/models`,
-        { signal: probeSignal },
-      );
-      const latencyMs = Date.now() - started;
-      const ids = (res?.data ?? [])
-        .map((m) => m?.id)
-        .filter((s): s is string => typeof s === "string");
-      if (ids.length === 0) {
-        return { ok: false, reason: "no models returned", status: 0 };
-      }
-      const configured = [...this.models.keys()];
-      const matched = configured.find((id) => ids.includes(id));
-      const out: ProviderTestResult = matched
-        ? { ok: true, latencyMs, sampleModelId: matched }
-        : { ok: true, latencyMs };
-      return out;
-    } catch (err) {
-      this.logger?.debug?.("xai test() failed", { err: String(err) });
-      return testFailureFromError(err);
-    }
+    return runListProbe({
+      listIds: async (s) => {
+        const opts: { signal?: AbortSignal } = {};
+        if (s) opts.signal = s;
+        const res = await this.probeHttp.get<{ data?: Array<{ id?: string }> }>(
+          `${this.baseUrl}/models`,
+          opts,
+        );
+        return (res?.data ?? [])
+          .map((m) => m?.id)
+          .filter((v): v is string => typeof v === "string");
+      },
+      configuredIds: [...this.models.keys()],
+      signal: probeSignal,
+      failOnEmptyList: true,
+    });
   }
 }
 
@@ -202,7 +177,7 @@ export class XaiImageProvider implements ImageProvider {
  * surfaces HTTP failures as `APICallError` with a `statusCode` field; other
  * errors come through as plain Error.
  */
-function rethrowSdkError(err: unknown, vendorId: string): never {
+function rethrowXaiSdkError(err: unknown, vendorId: string): never {
   if (err && typeof err === "object") {
     const e = err as { statusCode?: number; status?: number; message?: string; name?: string };
     const status = typeof e.statusCode === "number" ? e.statusCode : e.status;
@@ -216,17 +191,5 @@ function rethrowSdkError(err: unknown, vendorId: string): never {
       throw new ProviderResponseError(e.message ?? "no image generated", { vendorId });
     }
   }
-  if (err instanceof Error) throw new ProviderError(err.message, { vendorId, cause: err });
-  throw new ProviderError(String(err), { vendorId });
-}
-
-/**
- * Copy a possibly SharedArrayBuffer-backed `Uint8Array` into a fresh
- * `Uint8Array<ArrayBuffer>` matching our `ImageOutput.bytes` shape.
- */
-function toAbBytes(src: Uint8Array): Uint8Array<ArrayBuffer> {
-  const ab = new ArrayBuffer(src.byteLength);
-  const out = new Uint8Array(ab);
-  out.set(src);
-  return out;
+  rethrowGenericSdkError(err, vendorId);
 }

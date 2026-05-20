@@ -1,20 +1,15 @@
 import { randomUUID } from "node:crypto";
 import {
   ProviderError,
-  ProviderRequestError,
-  applyVideoDefaults,
   type Logger,
   type ProviderTestResult,
-  type VideoCapabilities,
   type VideoGenerationResult,
   type VideoJobHandle,
   type VideoJobState,
   type VideoJobStatus,
   type VideoModelDef,
   type VideoOutput,
-  type VideoProvider,
   type VideoRequest,
-  validateVideoRequestAgainstModel,
 } from "@imagent/core";
 import { createXai, type XaiProvider } from "@ai-sdk/xai";
 import { experimental_generateVideo, type GenerateVideoResult } from "ai";
@@ -25,10 +20,15 @@ import { experimental_generateVideo, type GenerateVideoResult } from "ai";
  * across SDK minor bumps.
  */
 type XaiVideoModel = ReturnType<XaiProvider["video"]>;
+
+import {
+  BaseVideoProvider,
+  rethrowGenericSdkError,
+  runListProbe,
+  toArrayBufferBytes,
+} from "../common/index.js";
 import { createHttpClient, type HttpClient } from "../http/index.js";
-import { testFailureFromError } from "../openai/image.js";
 import { DEFAULT_XAI_BASE_URL } from "./image.js";
-import { aggregateVideoCapabilities } from "../bytedance/video.js";
 
 /**
  * Test seam — production code passes `(modelId) => createXai({...}).video(modelId)`.
@@ -70,27 +70,21 @@ interface PendingEntry {
  * `fetch` reads the cached result and removes the entry; `cancel` aborts the
  * underlying signal. Entries that never reach `fetch` are dropped on
  * `cancel()`; this keeps the map bounded.
- *
- * The SDK has no `models.list()` equivalent, so the auth probe in `test()`
- * falls back to a raw `GET /v1/models` via the in-house httpClient — same
- * pattern as `image.ts`.
  */
-export class XaiVideoProvider implements VideoProvider {
-  readonly id = "xai";
-  readonly displayName = "xAI";
-  readonly models: ReadonlyMap<string, VideoModelDef>;
-  readonly capabilities: VideoCapabilities;
+export class XaiVideoProvider extends BaseVideoProvider {
   private readonly modelFactory: XaiVideoModelFactory;
   private readonly probeHttp: HttpClient;
   private readonly baseUrl: string;
-  private readonly logger?: Logger;
   /** Pending submissions keyed by synthetic providerJobId. */
   private readonly pending = new Map<string, PendingEntry>();
 
   constructor(options: XaiVideoProviderOptions) {
-    this.models = options.models;
-    this.capabilities = aggregateVideoCapabilities(options.models);
-    if (options.logger) this.logger = options.logger;
+    super({
+      providerId: "xai",
+      displayName: "xAI",
+      models: options.models,
+      ...(options.logger !== undefined ? { logger: options.logger } : {}),
+    });
     this.baseUrl = (options.baseUrl ?? DEFAULT_XAI_BASE_URL).replace(/\/+$/, "");
 
     if (options.modelFactory) {
@@ -111,21 +105,15 @@ export class XaiVideoProvider implements VideoProvider {
     });
   }
 
-  async submit(req: VideoRequest): Promise<VideoJobHandle> {
-    const modelDef = this.models.get(req.model);
-    if (!modelDef) {
-      throw new ProviderRequestError(`unknown video model '${req.model}' for xai`, {
-        vendorId: this.id,
-      });
-    }
-    const merged = applyVideoDefaults(req, modelDef);
-    validateVideoRequestAgainstModel(this.id, merged, modelDef);
-
+  protected async doSubmit(
+    merged: VideoRequest,
+    modelDef: VideoModelDef,
+  ): Promise<VideoJobHandle> {
     let model: XaiVideoModel;
     try {
       model = this.modelFactory(modelDef.id);
     } catch (err) {
-      throw rethrowSdkError(err, this.id);
+      rethrowGenericSdkError(err, this.id);
     }
 
     const providerJobId = randomUUID();
@@ -212,7 +200,7 @@ export class XaiVideoProvider implements VideoProvider {
         vendorId: this.id,
       });
     }
-    const bytes = toAbBytes(file.uint8Array);
+    const bytes = toArrayBufferBytes(file.uint8Array);
     const mimeType = file.mediaType?.startsWith("video/") ? file.mediaType : "video/mp4";
     const out: VideoOutput = { bytes, mimeType };
     if (entry.durationSec !== undefined) {
@@ -245,50 +233,23 @@ export class XaiVideoProvider implements VideoProvider {
    * down to `GET https://api.x.ai/v1/models` via the in-house httpClient —
    * same pattern as `image.ts`.
    */
-  async test(signal?: AbortSignal): Promise<ProviderTestResult> {
-    const started = Date.now();
+  protected async doTest(signal?: AbortSignal): Promise<ProviderTestResult> {
     const probeSignal = signal ?? AbortSignal.timeout(8000);
-    try {
-      const res = await this.probeHttp.get<{ data?: Array<{ id?: string }> }>(
-        `${this.baseUrl}/models`,
-        { signal: probeSignal },
-      );
-      const latencyMs = Date.now() - started;
-      const ids = (res?.data ?? [])
-        .map((m) => m?.id)
-        .filter((s): s is string => typeof s === "string");
-      if (ids.length === 0) {
-        return { ok: false, reason: "no models returned", status: 0 };
-      }
-      const configured = [...this.models.keys()];
-      const matched = configured.find((id) => ids.includes(id));
-      const out: ProviderTestResult = matched
-        ? { ok: true, latencyMs, sampleModelId: matched }
-        : { ok: true, latencyMs };
-      return out;
-    } catch (err) {
-      this.logger?.debug?.("xai video test() failed", { err: String(err) });
-      return testFailureFromError(err);
-    }
+    return runListProbe({
+      listIds: async (s) => {
+        const opts: { signal?: AbortSignal } = {};
+        if (s) opts.signal = s;
+        const res = await this.probeHttp.get<{ data?: Array<{ id?: string }> }>(
+          `${this.baseUrl}/models`,
+          opts,
+        );
+        return (res?.data ?? [])
+          .map((m) => m?.id)
+          .filter((v): v is string => typeof v === "string");
+      },
+      configuredIds: [...this.models.keys()],
+      signal: probeSignal,
+      failOnEmptyList: true,
+    });
   }
-}
-
-/**
- * Map Vercel AI SDK / `ai` errors onto our ProviderError hierarchy. Mirrors
- * the helper in `image.ts`.
- */
-function rethrowSdkError(err: unknown, vendorId: string): never {
-  if (err instanceof Error) throw new ProviderError(err.message, { vendorId, cause: err });
-  throw new ProviderError(String(err), { vendorId });
-}
-
-/**
- * Copy a possibly SharedArrayBuffer-backed `Uint8Array` into a fresh
- * `Uint8Array<ArrayBuffer>` matching our `VideoOutput.bytes` shape.
- */
-function toAbBytes(src: Uint8Array): Uint8Array<ArrayBuffer> {
-  const ab = new ArrayBuffer(src.byteLength);
-  const out = new Uint8Array(ab);
-  out.set(src);
-  return out;
 }

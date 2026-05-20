@@ -1,6 +1,12 @@
 export * from "./registry.js";
 export * from "./http/index.js";
 
+// Shared base classes and helpers — useful for external consumers who want
+// to build a custom provider with the same scaffolding (model lookup,
+// defaults application, request validation, capability aggregation,
+// abort-aware polling). The vendor classes below all extend these.
+export * from "./common/index.js";
+
 // Per-vendor provider classes re-exported for direct testing / overrides.
 // (Per-vendor catalog files were deleted in Phase 2 — canonical models and
 // provider offerings now live in `catalog.default.json` and load via `loadCatalog()`.)

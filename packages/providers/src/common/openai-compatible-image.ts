@@ -105,62 +105,25 @@ export abstract class OpenAICompatibleImageProvider extends BaseImageProvider {
     signal?: AbortSignal,
   ): Promise<ImageGenerationResult> {
     const { body, outputSize, mimeType } = await this.buildBody(merged, model);
-    const opts: { signal?: AbortSignal } = {};
-    if (signal) opts.signal = signal;
-
-    let response: OpenAIImageResponse;
-    try {
-      if (merged.references.length > 0) {
-        if (!this.client.images.edit) {
-          throw new ProviderRequestError(
-            `${this.id} SDK client does not support image references via images.edit API. Ensure you are using an SDK version that includes the edit method.`,
-            { vendorId: this.id },
-          );
-        }
-        response = await this.client.images.edit(body, opts);
-      } else {
-        response = await this.client.images.generate(body, opts);
-      }
-    } catch (err) {
-      this.rethrowSdkError(err, this.id);
-    }
-
-    const data = response?.data ?? [];
-    const outputs: ImageOutput[] = [];
-    const sizeForOutput = outputSize ?? merged.size;
-    const defaultMime = mimeType ?? mimeTypeForOutputFormat(merged.outputFormat);
-
-    for (const entry of data) {
-      if (entry.b64_json) {
-        outputs.push({
-          bytes: decodeBase64(entry.b64_json),
-          mimeType: defaultMime,
-          ...parseSize(sizeForOutput),
-          ...(entry.revised_prompt ? { raw: { revised_prompt: entry.revised_prompt } } : {}),
-        });
-        continue;
-      }
-      if (entry.url) {
-        if (!this.supportsUrlFallback || !this.fetchBytesFromUrl) {
-          throw new ProviderResponseError("response entry missing b64_json", {
-            vendorId: this.id,
-          });
-        }
-        const dl = await this.fetchBytesFromUrl(entry.url, signal);
-        outputs.push({
-          bytes: dl.bytes,
-          mimeType: coerceMimeType(dl.mimeType, "image/", "image/png"),
-          ...parseSize(sizeForOutput),
-        });
-        continue;
-      }
-      throw new ProviderResponseError(
-        this.supportsUrlFallback
-          ? "response entry missing both b64_json and url"
-          : "response entry missing b64_json",
-        { vendorId: this.id },
-      );
-    }
+    const response = await callOpenAIImageEndpoint({
+      client: this.client,
+      body,
+      hasReferences: merged.references.length > 0,
+      vendorId: this.id,
+      rethrowSdkError: this.rethrowSdkError,
+      ...(signal !== undefined ? { signal } : {}),
+    });
+    const outputs = await decodeOpenAIImageResponse(response, {
+      vendorId: this.id,
+      ...(outputSize ?? merged.size
+        ? { sizeForOutput: (outputSize ?? merged.size) as string }
+        : {}),
+      defaultMimeType: mimeType ?? mimeTypeForOutputFormat(merged.outputFormat),
+      ...(this.supportsUrlFallback && this.fetchBytesFromUrl
+        ? { fetchBytesFromUrl: this.fetchBytesFromUrl }
+        : {}),
+      ...(signal !== undefined ? { signal } : {}),
+    });
     if (outputs.length === 0) {
       throw new ProviderError("no image outputs returned", { vendorId: this.id });
     }
@@ -175,6 +138,99 @@ export abstract class OpenAICompatibleImageProvider extends BaseImageProvider {
     merged: ImageRequest,
     model: ImageModelDef,
   ): Promise<OpenAICompatibleBody>;
+}
+
+export interface CallOpenAIImageEndpointOptions {
+  client: OpenAIClientLike;
+  body: Record<string, unknown>;
+  hasReferences: boolean;
+  vendorId: string;
+  rethrowSdkError: (err: unknown, vendorId: string) => never;
+  signal?: AbortSignal;
+}
+
+/**
+ * Dispatch a built body to `images.edit` (when there are references) or
+ * `images.generate` (when there aren't), routing SDK errors through the
+ * vendor-supplied `rethrowSdkError`. Shared by `OpenAICompatibleImageProvider`
+ * and `AzureImageProvider`'s OpenAI-family branch.
+ */
+export async function callOpenAIImageEndpoint(
+  opts: CallOpenAIImageEndpointOptions,
+): Promise<OpenAIImageResponse> {
+  const reqOpts: { signal?: AbortSignal } = {};
+  if (opts.signal) reqOpts.signal = opts.signal;
+  try {
+    if (opts.hasReferences) {
+      if (!opts.client.images.edit) {
+        throw new ProviderRequestError(
+          `${opts.vendorId} SDK client does not support image references via images.edit API. Ensure you are using an SDK version that includes the edit method.`,
+          { vendorId: opts.vendorId },
+        );
+      }
+      return await opts.client.images.edit(opts.body, reqOpts);
+    }
+    return await opts.client.images.generate(opts.body, reqOpts);
+  } catch (err) {
+    opts.rethrowSdkError(err, opts.vendorId);
+  }
+}
+
+export interface DecodeOpenAIImageResponseOptions {
+  vendorId: string;
+  sizeForOutput?: string;
+  defaultMimeType: string;
+  /** Optional URL-fallback bytes fetcher. Omit to reject `url`-only entries. */
+  fetchBytesFromUrl?: (
+    url: string,
+    signal?: AbortSignal,
+  ) => Promise<{ bytes: Uint8Array<ArrayBuffer>; mimeType: string }>;
+  signal?: AbortSignal;
+}
+
+/**
+ * Convert the `response.data[]` from an OpenAI-compatible images endpoint
+ * into `ImageOutput[]`. Honours the optional `fetchBytesFromUrl` hook for
+ * deployments that return `url` instead of `b64_json`.
+ */
+export async function decodeOpenAIImageResponse(
+  response: OpenAIImageResponse,
+  opts: DecodeOpenAIImageResponseOptions,
+): Promise<ImageOutput[]> {
+  const data = response?.data ?? [];
+  const outputs: ImageOutput[] = [];
+  for (const entry of data) {
+    if (entry.b64_json) {
+      outputs.push({
+        bytes: decodeBase64(entry.b64_json),
+        mimeType: opts.defaultMimeType,
+        ...parseSize(opts.sizeForOutput),
+        ...(entry.revised_prompt ? { raw: { revised_prompt: entry.revised_prompt } } : {}),
+      });
+      continue;
+    }
+    if (entry.url) {
+      if (!opts.fetchBytesFromUrl) {
+        throw new ProviderResponseError("response entry missing b64_json", {
+          vendorId: opts.vendorId,
+        });
+      }
+      const dl = await opts.fetchBytesFromUrl(entry.url, opts.signal);
+      outputs.push({
+        bytes: dl.bytes,
+        mimeType: coerceMimeType(dl.mimeType, "image/", "image/png"),
+        ...parseSize(opts.sizeForOutput),
+      });
+      continue;
+    }
+    throw new ProviderResponseError(
+      opts.fetchBytesFromUrl
+        ? "response entry missing both b64_json and url"
+        : "response entry missing b64_json",
+      { vendorId: opts.vendorId },
+    );
+  }
+  return outputs;
 }
 
 /**
