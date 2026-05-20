@@ -143,13 +143,25 @@ export const useJobsStore = create<JobsState>((set, get) => ({
 
   applyCompletedEvent: (j) => {
     const wasActive = get().activeJobId === j.id;
-    set((s) => ({
-      jobs: { ...s.jobs, [j.id]: j },
-      activeJobId:
-        s.activeJobId === j.id
-          ? nextActiveStudioJobId(s.studioJobs, { ...s.jobs, [j.id]: j }, j.id)
-          : s.activeJobId,
-    }));
+    set((s) => {
+      const updatedJobs = { ...s.jobs, [j.id]: j };
+      // Only re-target `activeJobId` when the completed job was the focused
+      // one *and* another job is still running. Otherwise keep focus on the
+      // completed job so the canvas surfaces its result via `selectedResult`
+      // even if a previously-pinned item (or the canvas-pin window event)
+      // doesn't end up overriding the display.
+      if (s.activeJobId !== j.id) {
+        return { jobs: updatedJobs };
+      }
+      const nextRunning = nextActiveStudioJobId(s.studioJobs, updatedJobs, j.id);
+      return {
+        jobs: updatedJobs,
+        activeJobId: nextRunning ?? j.id,
+      };
+    });
+    // Also nudge the canvas's local `pinnedId` to the new result so an
+    // earlier user-pinned item (or a stale pin from another mode) doesn't
+    // mask the freshly-generated output. Harmless when no canvas is mounted.
     if (wasActive && j.resultItemId && typeof window !== "undefined") {
       window.dispatchEvent(
         new CustomEvent<{ id: string }>("imagent:canvas-pin", {
@@ -160,13 +172,20 @@ export const useJobsStore = create<JobsState>((set, get) => ({
   },
 
   applyFailedEvent: (j) => {
-    set((s) => ({
-      jobs: { ...s.jobs, [j.id]: j },
-      activeJobId:
-        s.activeJobId === j.id
-          ? nextActiveStudioJobId(s.studioJobs, { ...s.jobs, [j.id]: j }, j.id)
-          : s.activeJobId,
-    }));
+    set((s) => {
+      const updatedJobs = { ...s.jobs, [j.id]: j };
+      if (s.activeJobId !== j.id) {
+        return { jobs: updatedJobs };
+      }
+      // Mirror `applyCompletedEvent` — keep focus on the terminated job when
+      // no other job is running so the rail card stays highlighted and the
+      // user can act on the failure inline.
+      const nextRunning = nextActiveStudioJobId(s.studioJobs, updatedJobs, j.id);
+      return {
+        jobs: updatedJobs,
+        activeJobId: nextRunning ?? j.id,
+      };
+    });
   },
 
   cancel: async (id) => {
