@@ -1,88 +1,111 @@
-import {
-  AssetSchema,
-  BoardSchema,
-  GalleryItemSchema,
-  GalleryQuerySchema,
-  ImageModelCapsOverrideSchema,
-  ImageModelDefSchema,
-  ImageRequestSchema,
-  JobSchema,
-  JobsQuerySchema,
-  VideoModelCapsOverrideSchema,
-  VideoModelDefSchema,
-  VideoRequestSchema,
-} from "@imagent/core";
 import { z } from "zod";
 
-/**
- * Inline ModelCatalog schema. We deliberately define this here (rather than
- * importing from @imagent/providers) so the IPC package stays free of a
- * dependency on @imagent/providers — the renderer needs the contract types
- * to compile and the renderer must not pull in provider implementations.
- *
- * Shape mirrors `@imagent/providers#ModelCatalogSchema`.
- */
-const IpcImageProviderModelSchema = z.object({
-  id: z.string(),
-  modelId: z.string(),
-  displayName: z.string().optional(),
-  capabilities: ImageModelCapsOverrideSchema.optional(),
-  defaults: z.record(z.string(), z.unknown()).optional(),
-});
+import {
+  AppPreferencesPayloadSchema,
+  AppVersionInfoSchema,
+  ProviderConfigSchema,
+  type AppPreferencesPayload,
+  type AppVersionInfo,
+  type ProviderConfig,
+  type StoragePaths,
+  StoragePathsSchema,
+} from "./contract.app.js";
+import { IpcModelCatalogSchema, type ModelCatalogPayload } from "./contract.catalog.js";
+import {
+  IpcErrorCodeSchema,
+  IpcErrorSchema,
+  IpcResponseSchema,
+  type IpcError,
+  type IpcErrorCode,
+} from "./contract.errors.js";
+import {
+  MaskedSecretsSchema,
+  ProviderIdSchema,
+  ProviderKindSchema,
+  ProviderPreferencesPayloadSchema,
+  ProviderSummarySchema,
+  ProviderTestResultSchema,
+  SecretsWriteSchema,
+  type MaskedSecrets,
+  type ProviderId,
+  type ProviderKind,
+  type ProviderPreferencesPayload,
+  type ProviderRoutingPayload,
+  type ProviderSummary,
+  type ProviderTestResult,
+  type SecretsWrite,
+} from "./contract.providers.js";
+import {
+  appContract,
+  assetsContract,
+  boardsContract,
+  catalogContract,
+  galleryContract,
+  generationContract,
+  jobsContract,
+  KvKeySchema,
+  KvValueSchema,
+  modelsContract,
+  providerContract,
+  systemContract,
+  updaterContract,
+  workspaceContract,
+} from "./contract.sections.js";
+import {
+  type UpdateAsset,
+  UpdateAssetSchema,
+  type UpdateCheckResult,
+  UpdateCheckResultSchema,
+  type UpdateProgressState,
+  UpdateProgressStateSchema,
+  type UpdateStatusPayload,
+  UpdateStatusPayloadSchema,
+} from "./contract.updater.js";
 
-const IpcVideoProviderModelSchema = z.object({
-  id: z.string(),
-  modelId: z.string(),
-  displayName: z.string().optional(),
-  capabilities: VideoModelCapsOverrideSchema.optional(),
-  defaults: z.record(z.string(), z.unknown()).optional(),
-});
-
-const IpcModelCatalogSchema = z.object({
-  version: z.literal(2),
-  models: z.object({
-    image: z.record(z.string(), ImageModelDefSchema),
-    video: z.record(z.string(), VideoModelDefSchema),
-  }),
-  providers: z.record(
-    z.string(),
-    z.object({
-      displayName: z.string().optional(),
-      image: z.array(IpcImageProviderModelSchema).optional(),
-      video: z.array(IpcVideoProviderModelSchema).optional(),
-    }),
-  ),
-  comments: z.string().optional(),
-});
-export type ModelCatalogPayload = z.infer<typeof IpcModelCatalogSchema>;
-
-/**
- * Structured error envelope returned across the IPC boundary. The renderer
- * never sees a thrown Error — it sees `{ ok: false, error }` and the client
- * Proxy unwraps that into a thrown `IpcError` for the caller.
- */
-export const IpcErrorCodeSchema = z.enum([
-  "validation_failed",
-  "not_implemented",
-  "provider_error",
-  "internal",
-  "not_found",
-]);
-export type IpcErrorCode = z.infer<typeof IpcErrorCodeSchema>;
-
-export const IpcErrorSchema = z.object({
-  code: IpcErrorCodeSchema,
-  message: z.string(),
-  details: z.record(z.string(), z.unknown()).optional(),
-});
-export type IpcError = z.infer<typeof IpcErrorSchema>;
-
-/** Server → renderer envelope. Never thrown across IPC. */
-export const IpcResponseSchema = <T extends z.ZodTypeAny>(out: T) =>
-  z.discriminatedUnion("ok", [
-    z.object({ ok: z.literal(true), value: out }),
-    z.object({ ok: z.literal(false), error: IpcErrorSchema }),
-  ]);
+export {
+  AppPreferencesPayloadSchema,
+  AppVersionInfoSchema,
+  IpcErrorCodeSchema,
+  IpcErrorSchema,
+  IpcModelCatalogSchema,
+  IpcResponseSchema,
+  KvKeySchema,
+  KvValueSchema,
+  MaskedSecretsSchema,
+  ProviderConfigSchema,
+  ProviderIdSchema,
+  ProviderKindSchema,
+  ProviderPreferencesPayloadSchema,
+  ProviderSummarySchema,
+  ProviderTestResultSchema,
+  SecretsWriteSchema,
+  StoragePathsSchema,
+  UpdateAssetSchema,
+  UpdateCheckResultSchema,
+  UpdateProgressStateSchema,
+  UpdateStatusPayloadSchema,
+};
+export type {
+  AppPreferencesPayload,
+  AppVersionInfo,
+  IpcError,
+  IpcErrorCode,
+  MaskedSecrets,
+  ModelCatalogPayload,
+  ProviderConfig,
+  ProviderId,
+  ProviderKind,
+  ProviderPreferencesPayload,
+  ProviderRoutingPayload,
+  ProviderSummary,
+  ProviderTestResult,
+  SecretsWrite,
+  StoragePaths,
+  UpdateAsset,
+  UpdateCheckResult,
+  UpdateProgressState,
+  UpdateStatusPayload,
+};
 
 /**
  * Hand-rolled IPC contract — one zod object per method, no tRPC. The renderer
@@ -91,606 +114,19 @@ export const IpcResponseSchema = <T extends z.ZodTypeAny>(out: T) =>
  *
  * Tags reference architecture.md §8 and the milestone where each route lands.
  */
-
-// ---- shared payloads ---------------------------------------------------
-
-export const ProviderIdSchema = z.string().regex(/^[a-z0-9][a-z0-9_-]*$/);
-export type ProviderId = z.infer<typeof ProviderIdSchema>;
-
-/**
- * Which generation kinds a provider participates in. ByteDance spans both
- * `image` and `video` because Seedream + Seedance share Ark credentials
- * under one provider id (architecture.md §4 vendor=provider).
- */
-export const ProviderKindSchema = z.enum(["image", "video"]);
-export type ProviderKind = z.infer<typeof ProviderKindSchema>;
-
-export const ProviderSummarySchema = z.object({
-  id: ProviderIdSchema,
-  displayName: z.string(),
-  configured: z.boolean(),
-  /** Generation kinds this provider supports. */
-  kinds: z.array(ProviderKindSchema),
-  /** When `configured`, the resolved default model for this provider. */
-  defaultModel: z.string().nullable(),
-  modelIds: z.array(z.string()),
-});
-export type ProviderSummary = z.infer<typeof ProviderSummarySchema>;
-
-export const ProviderTestResultSchema = z.union([
-  z.object({
-    ok: z.literal(true),
-    latencyMs: z.number().int().nonnegative(),
-    sampleModelId: z.string().optional(),
-  }),
-  z.object({
-    ok: z.literal(false),
-    reason: z.string(),
-    status: z.number().int().optional(),
-  }),
-]);
-export type ProviderTestResult = z.infer<typeof ProviderTestResultSchema>;
-
-/**
- * Provider preferences block — non-secret per-provider config. The catalog
- * holds canonical (bundled) provider offerings; this payload carries the
- * per-user overlay merged on top at runtime: Azure / ByteDance endpoint URLs,
- * custom OpenAI-compatible base URLs, deployment / model id mappings, and
- * optional displayName overrides. Schema mirrors `config.providers` in shape.
- */
-const IpcProviderRoutingSchema = z.object({
-  displayName: z.string().optional(),
-  endpoint: z.string().optional(),
-  baseUrl: z.string().optional(),
-  image: z.array(IpcImageProviderModelSchema).optional(),
-  video: z.array(IpcVideoProviderModelSchema).optional(),
-});
-export type ProviderRoutingPayload = z.infer<typeof IpcProviderRoutingSchema>;
-
-export const ProviderPreferencesPayloadSchema = z.object({
-  openai: IpcProviderRoutingSchema,
-  azure: IpcProviderRoutingSchema,
-  google: IpcProviderRoutingSchema,
-  "flux-bfl": IpcProviderRoutingSchema,
-  bytedance: IpcProviderRoutingSchema,
-  xai: IpcProviderRoutingSchema,
-  customOpenAI: z.record(ProviderIdSchema, IpcProviderRoutingSchema),
-});
-export type ProviderPreferencesPayload = z.infer<typeof ProviderPreferencesPayloadSchema>;
-
-/**
- * Secrets payload returned to the renderer is **always masked** (first 4 +
- * last 4 chars only). Only carries `apiKey` fields — non-sensitive routing
- * (endpoint, baseUrl, custom OpenAI base URLs) lives in
- * {@link ProviderPreferencesPayloadSchema}.
- */
-const MaskedKey = z.object({ apiKey: z.string().nullable() });
-export const MaskedSecretsSchema = z.object({
-  openai: MaskedKey.optional(),
-  azure: MaskedKey.optional(),
-  google: MaskedKey.optional(),
-  "flux-bfl": MaskedKey.optional(),
-  bytedance: MaskedKey.optional(),
-  xai: MaskedKey.optional(),
-  customOpenAI: z.record(ProviderIdSchema, MaskedKey).optional(),
-});
-export type MaskedSecrets = z.infer<typeof MaskedSecretsSchema>;
-
-/**
- * Plaintext secrets the renderer is allowed to write. Same shape as
- * {@link MaskedSecretsSchema} but with non-empty strings — apiKey only.
- */
-const WriteKey = z.object({ apiKey: z.string().min(1) }).partial();
-export const SecretsWriteSchema = z.object({
-  openai: WriteKey.optional(),
-  azure: WriteKey.optional(),
-  google: WriteKey.optional(),
-  "flux-bfl": WriteKey.optional(),
-  bytedance: WriteKey.optional(),
-  xai: WriteKey.optional(),
-  customOpenAI: z.record(ProviderIdSchema, z.object({ apiKey: z.string().min(1) })).optional(),
-});
-export type SecretsWrite = z.infer<typeof SecretsWriteSchema>;
-
-export const AppPreferencesPayloadSchema = z.object({
-  theme: z.enum(["light", "dark", "system"]),
-  locale: z.enum(["system", "en", "zh"]),
-  defaultImageModel: z.object({ providerId: z.string(), modelId: z.string() }).nullable(),
-  defaultVideoModel: z.object({ providerId: z.string(), modelId: z.string() }).nullable(),
-  defaultOutputDir: z.string().nullable(),
-  generationConcurrency: z.number().int().min(1).max(8),
-  keepPromptHistory: z.boolean(),
-  openAfterGenerate: z.boolean(),
-});
-export type AppPreferencesPayload = z.infer<typeof AppPreferencesPayloadSchema>;
-
-export const AppVersionInfoSchema = z.object({
-  app: z.string(),
-  electron: z.string(),
-  node: z.string(),
-  chrome: z.string().optional(),
-  platform: z.string(),
-  arch: z.string(),
-  dataDir: z.string(),
-});
-export type AppVersionInfo = z.infer<typeof AppVersionInfoSchema>;
-
-/**
- * App update check / download / install (auto-updater).
- *
- * The updater reads the latest GitHub release for `unliftedq/imagent`,
- * compares its tag against `app.getVersion()`, and — when newer — downloads
- * the platform-appropriate installer (DMG / NSIS / AppImage) to a temp file
- * and launches it. Auto-update flow:
- *
- *   1. renderer calls `updater.check()` → `UpdateCheckResult`
- *   2. if `status === "available"`, renderer calls `updater.download()`
- *      and listens to `updater.progress` push events
- *   3. once `state === "ready"`, renderer calls `updater.install()` —
- *      the main process launches the installer and quits the app.
- *
- * `updater.cancel()` aborts an in-flight download. `updater.status()` returns
- * the most recently observed state so a freshly-rendered Settings page can
- * re-attach UI to a download already in progress.
- */
-export const UpdateAssetSchema = z.object({
-  name: z.string(),
-  url: z.string(),
-  size: z.number().int().nonnegative(),
-});
-export type UpdateAsset = z.infer<typeof UpdateAssetSchema>;
-
-export const UpdateCheckResultSchema = z.discriminatedUnion("status", [
-  z.object({
-    status: z.literal("uptodate"),
-    currentVersion: z.string(),
-    latestVersion: z.string().nullable(),
-  }),
-  z.object({
-    status: z.literal("available"),
-    currentVersion: z.string(),
-    latestVersion: z.string(),
-    releaseUrl: z.string(),
-    releaseNotes: z.string().nullable(),
-    publishedAt: z.string().nullable(),
-    asset: UpdateAssetSchema.nullable(),
-  }),
-  z.object({
-    status: z.literal("error"),
-    currentVersion: z.string(),
-    message: z.string(),
-  }),
-]);
-export type UpdateCheckResult = z.infer<typeof UpdateCheckResultSchema>;
-
-export const UpdateProgressStateSchema = z.enum([
-  "idle",
-  "checking",
-  "downloading",
-  "ready",
-  "installing",
-  "error",
-]);
-export type UpdateProgressState = z.infer<typeof UpdateProgressStateSchema>;
-
-export const UpdateStatusPayloadSchema = z.object({
-  state: UpdateProgressStateSchema,
-  /** Bytes downloaded; 0 outside of `downloading`/`ready`. */
-  bytes: z.number().int().nonnegative(),
-  /** Total bytes from Content-Length; 0 if unknown. */
-  total: z.number().int().nonnegative(),
-  /** Version tag this state pertains to (e.g. `0.3.0`); null when idle. */
-  version: z.string().nullable(),
-  /** Last error message; populated when `state === "error"`. */
-  message: z.string().nullable(),
-});
-export type UpdateStatusPayload = z.infer<typeof UpdateStatusPayloadSchema>;
-
-export const StoragePathsSchema = z.object({
-  dataDir: z.string(),
-  configFile: z.string(),
-  /** Path to the user-editable JSON model catalog (`~/.imagent/catalog.json`). */
-  catalogFile: z.string(),
-  secretsJson: z.string(),
-  dbFile: z.string(),
-  galleryDir: z.string(),
-  assetsDir: z.string(),
-  logsDir: z.string(),
-});
-export type StoragePaths = z.infer<typeof StoragePathsSchema>;
-
-/**
- * Legacy combined provider config payload (kept for backward compat with the
- * M1 contract; nothing in M4 calls it). New code uses providers.preferences.*
- * + providers.secrets.* directly.
- */
-export const ProviderConfigSchema = z.object({
-  configJson: z.string(),
-});
-export type ProviderConfig = z.infer<typeof ProviderConfigSchema>;
-
-export const KvKeySchema = z.string().min(1);
-export const KvValueSchema = z.unknown();
-
-// ---- contract map ------------------------------------------------------
-
 export const contract = {
-  // Providers
-  "providers.list": { input: z.void(), output: z.array(ProviderSummarySchema) },
-  "providers.config.get": { input: z.void(), output: ProviderPreferencesPayloadSchema },
-  "providers.config.set": {
-    input: ProviderPreferencesPayloadSchema,
-    output: ProviderPreferencesPayloadSchema,
-  },
-  "providers.secrets.get": { input: z.void(), output: MaskedSecretsSchema },
-  "providers.secrets.set": { input: SecretsWriteSchema, output: MaskedSecretsSchema },
-  "providers.test": {
-    input: z.object({ id: ProviderIdSchema }),
-    output: ProviderTestResultSchema,
-  },
-
-  // App preferences (theme, default provider, output dir, etc.)
-  "app.preferences.get": { input: z.void(), output: AppPreferencesPayloadSchema },
-  "app.preferences.set": {
-    input: AppPreferencesPayloadSchema.partial(),
-    output: AppPreferencesPayloadSchema,
-  },
-  "app.version": { input: z.void(), output: AppVersionInfoSchema },
-  "app.storagePaths": { input: z.void(), output: StoragePathsSchema },
-
-  // Auto-updater. See UpdateCheckResultSchema for the full flow.
-  "updater.check": { input: z.void(), output: UpdateCheckResultSchema },
-  "updater.download": { input: z.void(), output: UpdateStatusPayloadSchema },
-  "updater.cancel": { input: z.void(), output: UpdateStatusPayloadSchema },
-  "updater.install": { input: z.void(), output: z.void() },
-  "updater.status": { input: z.void(), output: UpdateStatusPayloadSchema },
-
-  // Catalog (Phase 2). The runtime catalog file lives at `~/.imagent/catalog.json`
-  // and is user-editable. `catalog.get` returns the loaded snapshot;
-  // `catalog.path` returns its absolute path so the UI / CLI can offer an
-  // "open in editor" affordance.
-  "catalog.get": { input: z.void(), output: IpcModelCatalogSchema },
-  "catalog.set": { input: IpcModelCatalogSchema, output: IpcModelCatalogSchema },
-  "catalog.path": { input: z.void(), output: z.object({ path: z.string() }) },
-
-  // System (shell + dialogs)
-  "system.openExternal": { input: z.object({ url: z.string() }), output: z.void() },
-  "system.openPath": { input: z.object({ path: z.string() }), output: z.void() },
-  "system.chooseDirectory": {
-    input: z.object({ defaultPath: z.string().optional() }).optional(),
-    output: z.object({ path: z.string().nullable() }),
-  },
-  "system.chooseFiles": {
-    input: z
-      .object({
-        defaultPath: z.string().optional(),
-        multiple: z.boolean().optional(),
-        filters: z
-          .array(
-            z.object({
-              name: z.string(),
-              extensions: z.array(z.string()),
-            }),
-          )
-          .optional(),
-      })
-      .optional(),
-    output: z.object({ paths: z.array(z.string()) }),
-  },
-  "system.resetConfig": { input: z.void(), output: z.void() },
-  /**
-   * Best-effort system locale (e.g. `en-US`, `zh-CN`). Returns Electron's
-   * `app.getLocale()` from the main process. The renderer combines this
-   * with the user's `locale` preference to resolve the effective UI
-   * language (see `i18n/` in the desktop renderer).
-   */
-  "system.locale": { input: z.void(), output: z.object({ locale: z.string() }) },
-
-  // Image / Video
-  "image.generate": {
-    /**
-     * Renderer-facing image.generate input. Extends `ImageRequest` with an
-     * optional `assetSlots` map so the renderer can attach assets per kind.
-     * The handler resolves slots into reference paths + style snippets +
-     * `gallery_item_assets` rows before invoking JobRunner.
-     */
-    input: ImageRequestSchema.extend({
-      assetSlots: z
-        .object({
-          character: z.array(z.string()).optional(),
-          object: z.array(z.string()).optional(),
-          background: z.array(z.string()).optional(),
-          style: z.array(z.string()).optional(),
-        })
-        .optional(),
-    }),
-    output: GalleryItemSchema,
-  },
-  /**
-   * Submit an image job and return as soon as the runner accepts it. Studio
-   * uses this non-blocking route so the composer can be reused while jobs run.
-   */
-  "image.submit": {
-    input: ImageRequestSchema.extend({
-      assetSlots: z
-        .object({
-          character: z.array(z.string()).optional(),
-          object: z.array(z.string()).optional(),
-          background: z.array(z.string()).optional(),
-          style: z.array(z.string()).optional(),
-        })
-        .optional(),
-    }),
-    output: z.object({ jobId: z.string() }),
-  },
-  /**
-   * M7: Submit a Seedance (or future) video job. Unlike `image.generate`
-   * which blocks-and-awaits the gallery item, video submission returns
-   * `{ jobId }` immediately — Seedance jobs run for minutes, so the
-   * renderer subscribes to `job.progress`/`job.completed` push events
-   * instead of awaiting the IPC reply.
-   */
-  "video.submit": {
-    input: VideoRequestSchema.extend({
-      assetSlots: z
-        .object({
-          character: z.array(z.string()).optional(),
-          object: z.array(z.string()).optional(),
-          background: z.array(z.string()).optional(),
-          style: z.array(z.string()).optional(),
-        })
-        .optional(),
-      parentId: z.string().optional(),
-    }),
-    output: z.object({ jobId: z.string() }),
-  },
-
-  // Model resolution — returns the deep-merged catalog ← user-override view
-  // for an image provider, the same shape JobRunner & validators consume.
-  "image.models": {
-    input: z.object({ providerId: ProviderIdSchema }),
-    output: z.object({
-      providerId: ProviderIdSchema,
-      defaultModel: z.string().nullable(),
-      models: z.array(ImageModelDefSchema),
-    }),
-  },
-
-  // Same shape, but for video providers (currently ByteDance / Seedance). M7.
-  "video.models": {
-    input: z.object({ providerId: ProviderIdSchema }),
-    output: z.object({
-      providerId: ProviderIdSchema,
-      defaultModel: z.string().nullable(),
-      models: z.array(VideoModelDefSchema),
-    }),
-  },
-
-  /**
-   * Unified, multi-provider catalog view for the Models page. One row per
-   * logical model id — when several providers ship the same id (e.g.
-   * `gpt-image-2` from both `openai` and `azure`), they're merged
-   * into a single entry with `providers[]` listing each routable source and
-   * whether that source is currently configured (auth saved).
-   */
-  "models.list": {
-    input: z.void(),
-    output: z.object({
-      image: z.array(
-        z.object({
-          id: z.string(),
-          displayName: z.string().nullable(),
-          providers: z.array(
-            z.object({
-              providerId: ProviderIdSchema,
-              modelId: z.string(),
-              displayName: z.string(),
-              configured: z.boolean(),
-            }),
-          ),
-        }),
-      ),
-      video: z.array(
-        z.object({
-          id: z.string(),
-          displayName: z.string().nullable(),
-          providers: z.array(
-            z.object({
-              providerId: ProviderIdSchema,
-              modelId: z.string(),
-              displayName: z.string(),
-              configured: z.boolean(),
-            }),
-          ),
-        }),
-      ),
-    }),
-  },
-
-  // Jobs
-  "jobs.list": { input: JobsQuerySchema, output: z.array(JobSchema) },
-  "jobs.cancel": { input: z.object({ id: z.string() }), output: z.void() },
-
-  // Assets (M3 / M6 / M8)
-  "assets.list": {
-    input: z
-      .object({
-        kind: z.enum(["character", "object", "background", "style"]).optional(),
-        includeArchived: z.boolean().optional(),
-        /**
-         * M8: When true, return ONLY archived assets — drives the Trash tab
-         * on the Assets page. Mutually exclusive with `includeArchived`.
-         */
-        archivedOnly: z.boolean().optional(),
-        search: z.string().optional(),
-        limit: z.number().int().positive().optional(),
-        offset: z.number().int().nonnegative().optional(),
-      })
-      .optional(),
-    output: z.object({
-      items: z.array(AssetSchema),
-      total: z.number().int().nonnegative(),
-    }),
-  },
-  "assets.show": {
-    input: z.object({ id: z.string() }),
-    output: AssetSchema,
-  },
-  "assets.create": {
-    input: z.object({
-      kind: z.enum(["character", "object", "background", "style"]),
-      name: z.string().min(1),
-      description: z.string().nullable().optional(),
-      promptSnippet: z.string().nullable().optional(),
-      fileUploads: z
-        .array(
-          z.object({
-            bytes: z.instanceof(Uint8Array),
-            originalName: z.string(),
-            mimeType: z.string(),
-          }),
-        )
-        .max(1)
-        .default([]),
-    }),
-    output: AssetSchema,
-  },
-  "assets.createFromGalleryItem": {
-    input: z.object({
-      itemId: z.string(),
-      kind: z.enum(["character", "object", "background", "style"]),
-      name: z.string().min(1),
-      description: z.string().nullable().optional(),
-      promptSnippet: z.string().nullable().optional(),
-    }),
-    output: AssetSchema,
-  },
-  "assets.update": {
-    input: z.object({
-      id: z.string(),
-      patch: z.object({
-        name: z.string().min(1).optional(),
-        description: z.string().nullable().optional(),
-        promptSnippet: z.string().nullable().optional(),
-      }),
-    }),
-    output: AssetSchema,
-  },
-  /**
-   * `assets.delete` is **permanent** — the row + on-disk files are removed and
-   * cannot be recovered. The Assets page UI surfaces archive-first; this
-   * route is the second-step "Delete permanently" action plus the Trash tab's
-   * row-level "Delete permanently" / "Empty trash" actions. (M8)
-   */
-  "assets.delete": { input: z.object({ id: z.string() }), output: z.void() },
-  /**
-   * Soft-delete an asset (M8). Stamps `archived_at`; reversible. Files on
-   * disk are untouched. AssetPicker filters archived assets out so the user
-   * doesn't see them when picking refs in Studio / Video Studio.
-   */
-  "assets.archive": { input: z.object({ id: z.string() }), output: z.void() },
-  /**
-   * Reverse of `assets.archive` (M8). Idempotent — restoring a live asset is
-   * a no-op.
-   */
-  "assets.restore": { input: z.object({ id: z.string() }), output: z.void() },
-  "assets.uploadFile": {
-    input: z.object({
-      assetId: z.string(),
-      role: z.enum(["reference", "thumbnail"]).default("reference"),
-      bytes: z.instanceof(Uint8Array),
-      originalName: z.string(),
-      mimeType: z.string(),
-    }),
-    output: z.object({ fileId: z.string(), relPath: z.string() }),
-  },
-  "assets.removeFile": {
-    input: z.object({ fileId: z.string() }),
-    output: z.void(),
-  },
-
-  // Boards (M3 / M5)
-  "boards.list": { input: z.void(), output: z.array(BoardSchema) },
-  "boards.create": { input: BoardSchema, output: BoardSchema },
-  "boards.update": {
-    input: z.object({ id: z.string(), patch: BoardSchema.partial() }),
-    output: BoardSchema,
-  },
-  "boards.delete": { input: z.object({ id: z.string() }), output: z.void() },
-  "boards.addItem": {
-    // Position is optional — when omitted, the handler appends at max+1.
-    // Idempotent: a no-op if (boardId, itemId) is already linked.
-    input: z.object({
-      boardId: z.string(),
-      itemId: z.string(),
-      position: z.number().int().optional(),
-    }),
-    output: z.void(),
-  },
-  "boards.removeItem": {
-    input: z.object({ boardId: z.string(), itemId: z.string() }),
-    output: z.void(),
-  },
-  "boards.setCover": {
-    input: z.object({ boardId: z.string(), itemId: z.string().nullable() }),
-    output: z.void(),
-  },
-
-  // Gallery (M3 / M5)
-  "gallery.query": {
-    input: GalleryQuerySchema,
-    output: z.object({ items: z.array(GalleryItemSchema), total: z.number().int() }),
-  },
-  "gallery.show": {
-    input: z.object({ id: z.string() }),
-    output: z.object({
-      item: GalleryItemSchema,
-      parent: GalleryItemSchema.nullable(),
-      children: z.array(GalleryItemSchema),
-      siblings: z.array(GalleryItemSchema),
-      /**
-       * `gallery_item_assets` rows joined with the asset name + kind for the
-       * lineage drawer's "Used assets" block (M6).
-       */
-      assets: z
-        .array(
-          z.object({
-            assetId: z.string(),
-            role: z.string(),
-            name: z.string().nullable(),
-            kind: z.enum(["character", "object", "background", "style"]).nullable(),
-          }),
-        )
-        .default([]),
-    }),
-  },
-  /**
-   * Reconstruct a fresh request from an existing gallery item. Output is a
-   * discriminated union — image parents return an `ImageRequest`, video
-   * parents return a `VideoRequest` (M7). The renderer routes to /studio or
-   * /video respectively based on `kind`.
-   */
-  "gallery.remix": {
-    input: z.object({ itemId: z.string() }),
-    output: z.discriminatedUnion("kind", [
-      z.object({ kind: z.literal("image"), request: ImageRequestSchema }),
-      z.object({ kind: z.literal("video"), request: VideoRequestSchema }),
-    ]),
-  },
-  "gallery.toggleFavorite": {
-    // `favorited` optional — when omitted, the handler toggles the current value.
-    input: z.object({ id: z.string(), favorited: z.boolean().optional() }),
-    output: z.void(),
-  },
-  "gallery.delete": { input: z.object({ id: z.string() }), output: z.void() },
-
-  // Workspace KV (architecture.md §7)
-  "workspace.kv.get": { input: z.object({ key: KvKeySchema }), output: KvValueSchema },
-  "workspace.kv.set": {
-    input: z.object({ key: KvKeySchema, value: KvValueSchema }),
-    output: z.void(),
-  },
-  "workspace.kv.delete": { input: z.object({ key: KvKeySchema }), output: z.void() },
+  ...providerContract,
+  ...appContract,
+  ...updaterContract,
+  ...catalogContract,
+  ...systemContract,
+  ...generationContract,
+  ...modelsContract,
+  ...jobsContract,
+  ...assetsContract,
+  ...boardsContract,
+  ...galleryContract,
+  ...workspaceContract,
 } as const;
 
 export type Contract = typeof contract;
