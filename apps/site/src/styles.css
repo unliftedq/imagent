@@ -744,6 +744,10 @@ code,
   margin-top: 2rem;
 }
 
+.legal-card {
+  margin-top: 2rem;
+}
+
 .changelog-body h2:first-child {
   margin-top: 0;
 }

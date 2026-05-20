@@ -82,6 +82,8 @@ export function Shell({
           <SiteLink to="/">Home</SiteLink>
           <SiteLink to="/docs">Docs</SiteLink>
           <SiteLink to="/changelogs">Changelogs</SiteLink>
+          <SiteLink to="/terms">Terms</SiteLink>
+          <SiteLink to="/privacy">Privacy</SiteLink>
           <a href={githubUrl} target="_blank" rel="noreferrer">
             GitHub
           </a>

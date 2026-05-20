@@ -5,6 +5,8 @@ export type Route =
   | { name: "docs"; path: "/docs" }
   | { name: "doc"; path: string; slug: string }
   | { name: "changelogs"; path: "/changelogs" }
+  | { name: "terms"; path: "/terms" }
+  | { name: "privacy"; path: "/privacy" }
   | { name: "not-found"; path: string };
 
 export type DocPage = {
