@@ -64,4 +64,5 @@ export {
   X,
   XCircle,
   XLogo,
+  Sparkle
 } from "@phosphor-icons/react";
