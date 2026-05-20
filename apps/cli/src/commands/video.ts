@@ -23,12 +23,12 @@ import {
   resolveJobId,
 } from "../support/job-control.js";
 import { buildRunner, loadCliRuntime, type CliRuntime, type RunnerBundle } from "../support/runtime.js";
+import { createSpinner } from "../support/spinner.js";
 import {
   coerceScalar,
   collect,
   excerpt,
   formatRelativeTime,
-  isTty,
   parseKeyValueOptions,
   parsePositiveNumberOption,
 } from "../support/util.js";
@@ -231,16 +231,13 @@ async function runWaitedVideoGenerate(
   outDir: string | undefined,
 ): Promise<void> {
   const intent: GenerationIntent = { kind: "video", request };
-  const tty = isTty();
-  const printProgress = (e: JobProgressEvent): void => {
-    const pct = Math.round((e.progress ?? 0) * 100);
-    if (tty) {
-      process.stdout.write(`\rprogress: ${pct}% (${e.state})    `);
-    } else {
-      process.stdout.write(`progress: ${pct}% (${e.state})\n`);
-    }
+  const spinner = createSpinner({
+    label: `generating video with ${providerId}/${model}`,
+  });
+  const onProgress = (e: JobProgressEvent): void => {
+    spinner.update({ progress: e.progress ?? null, state: e.state });
   };
-  bundle.runner.on("job.progress", printProgress);
+  bundle.runner.on("job.progress", onProgress);
 
   const completed = new Promise<Job>((resolve, reject) => {
     bundle.runner.once("job.completed", (j: Job) => resolve(j));
@@ -253,11 +250,12 @@ async function runWaitedVideoGenerate(
   const id = await bundle.runner.start(intent);
   const cleanupCancel = installCancelOnInterrupt(bundle.runner, bundle.jobs, id);
   process.stdout.write(`${chalk.dim("job:")} ${id}\n`);
+  spinner.start();
 
   const job = await completed.finally(() => {
+    spinner.stop();
     cleanupCancel();
-    bundle.runner.off("job.progress", printProgress);
-    if (tty) process.stdout.write("\n");
+    bundle.runner.off("job.progress", onProgress);
   });
 
   if (!job.resultItemId) {
@@ -317,23 +315,23 @@ async function runVideoDownload(jobId: string | undefined, options: { out?: stri
     const id = resolveJobId(bundle.jobs, jobId);
     requireVideoJob(bundle.jobs.get(id), id);
 
-    const tty = isTty();
-    const printProgress = (e: JobProgressEvent): void => {
+    const spinner = createSpinner({ label: `downloading video ${id.slice(0, 8)}` });
+    const onProgress = (e: JobProgressEvent): void => {
       if (e.id !== id) return;
-      const pct = Math.round((e.progress ?? 0) * 100);
-      if (tty) process.stdout.write(`\rprogress: ${pct}% (${e.state})    `);
-      else process.stdout.write(`progress: ${pct}% (${e.state})\n`);
+      spinner.update({ progress: e.progress ?? null, state: e.state });
     };
-    bundle.runner.on("job.progress", printProgress);
+    bundle.runner.on("job.progress", onProgress);
     const cleanupCancel = installCancelOnInterrupt(bundle.runner, bundle.jobs, id);
+    spinner.start();
     try {
       const job = await bundle.runner.attach(id);
-      if (tty) process.stdout.write("\n");
+      spinner.stop();
       await linkVideoAssetsFromRequest(bundle, job);
       await printDownloadedResult(bundle, job, options.out);
     } finally {
+      spinner.stop();
       cleanupCancel();
-      bundle.runner.off("job.progress", printProgress);
+      bundle.runner.off("job.progress", onProgress);
     }
   } finally {
     bundle.db.close();

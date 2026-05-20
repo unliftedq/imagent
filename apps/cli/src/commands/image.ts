@@ -15,6 +15,7 @@ import type { Command } from "commander";
 import { buildAssetSlots } from "../support/asset-slots.js";
 import { installCancelOnInterrupt } from "../support/job-control.js";
 import { buildRunner, loadCliRuntime } from "../support/runtime.js";
+import { createSpinner } from "../support/spinner.js";
 import { coerceScalar, collect, parseKeyValueOptions, parsePositiveIntegerOption } from "../support/util.js";
 
 interface GenerateOptions {
@@ -162,7 +163,14 @@ async function runGenerate(prompt: string, options: GenerateOptions): Promise<vo
     const id = await runner.start(intent);
     const cleanupCancel = installCancelOnInterrupt(runner, jobs, id);
 
-    const job = await completed.finally(cleanupCancel);
+    const spinner = createSpinner({
+      label: `generating image with ${providerId}/${model}`,
+    });
+    spinner.start();
+    const job = await completed.finally(() => {
+      spinner.stop();
+      cleanupCancel();
+    });
     if (!job.resultItemId) {
       throw new Error("job completed without resultItemId");
     }

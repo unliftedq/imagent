@@ -103,12 +103,18 @@ export const useGalleryStore = create<GalleryState>((set, get) => ({
     if (get().bound) return () => {};
     set({ bound: true });
     const offChanged = api.on("gallery.changed", (payload) => {
-      // CLI-side writes (or another window) flip created/updated/deleted —
-      // refresh proactively. For our single-window M5 desktop, only `created`
-      // matters since the originating window already has the item via
-      // upsertOne(). Cheap blanket refresh keeps things consistent.
+      // For `created` / `updated` ops the payload carries the item itself,
+      // so we upsert it directly into the store. This sidesteps any query
+      // filter that may currently be active (e.g. user came from the
+      // Gallery page with a board / search filter) — without this, the
+      // Studio canvas would never see the newly-generated image because
+      // `refresh()` would re-fetch a filtered slice that excludes it.
+      if ((payload.op === "created" || payload.op === "updated") && payload.item) {
+        get().upsertOne(payload.item);
+        return;
+      }
+      // Delete / fallback: do a blanket refresh so totals stay accurate.
       void get().refresh();
-      void payload;
     });
     return () => {
       offChanged();

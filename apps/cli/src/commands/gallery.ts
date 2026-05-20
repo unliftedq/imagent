@@ -21,10 +21,10 @@ import type { Command } from "commander";
 import { buildAssetSlots, capReferences } from "../support/asset-slots.js";
 import { installCancelOnInterrupt } from "../support/job-control.js";
 import { buildRunner, loadCliRuntime } from "../support/runtime.js";
+import { createSpinner } from "../support/spinner.js";
 import {
   excerpt,
   formatRelativeTime,
-  isTty,
   truncate,
 } from "../support/util.js";
 
@@ -332,13 +332,13 @@ async function runRemix(itemId: string, options: GalleryRemixOptions): Promise<v
       assetIds: [],
     };
     const intent: GenerationIntent = { kind: "video", request: req };
-    const tty = isTty();
-    const printProgress = (e: JobProgressEvent): void => {
-      const pct = Math.round((e.progress ?? 0) * 100);
-      if (tty) process.stdout.write(`\rprogress: ${pct}% (${e.state})    `);
-      else process.stdout.write(`progress: ${pct}% (${e.state})\n`);
+    const spinner = createSpinner({
+      label: `generating video remix with ${providerId}/${parent.model}`,
+    });
+    const onProgress = (e: JobProgressEvent): void => {
+      spinner.update({ progress: e.progress ?? null, state: e.state });
     };
-    runner.on("job.progress", printProgress);
+    runner.on("job.progress", onProgress);
     const completed = new Promise<Job>((resolve, reject) => {
       runner.once("job.completed", (j: Job) => resolve(j));
       runner.once("job.failed", (j: Job) =>
@@ -349,10 +349,11 @@ async function runRemix(itemId: string, options: GalleryRemixOptions): Promise<v
     const jobId = await runner.start(intent);
     const cleanupCancel = installCancelOnInterrupt(runner, jobs, jobId);
     process.stdout.write(`${chalk.dim("job:")} ${jobId}\n`);
+    spinner.start();
     const job = await completed.finally(() => {
+      spinner.stop();
       cleanupCancel();
-      runner.off("job.progress", printProgress);
-      if (tty) process.stdout.write("\n");
+      runner.off("job.progress", onProgress);
     });
     if (!job.resultItemId) throw new Error("job completed without resultItemId");
     db.prepare("UPDATE gallery_items SET parent_id = ? WHERE id = ?").run(parent.id, job.resultItemId);
