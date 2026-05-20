@@ -2,6 +2,11 @@
 
 ## 0.2.4 - 2026-05-19
 
+### CLI
+
+- `imagent image generate`, `imagent video generate --wait`, `imagent video download`, and `imagent gallery remix` now show an animated spinner while waiting for generation to finish. The spinner displays a rotating frame, the active provider/model label, provider progress percent, job state, and elapsed time, so long-running waits no longer feel frozen.
+- Non-TTY runs (CI, piped logs) keep the existing plain-text output and only emit a new line when progress or state actually changes.
+
 ### Desktop app
 
 - Gallery now auto-loads more results while you scroll, prefetching the next page as you approach the end of the current grid so browsing larger libraries feels smoother.
