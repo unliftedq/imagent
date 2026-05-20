@@ -1,3 +1,6 @@
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { ProviderError, type VideoRequest } from "@imagent/core";
 import { describe, expect, it, vi } from "vitest";
 import { BYTEDANCE_VIDEO_MODELS } from "../catalog/test-fixtures.js";
@@ -94,6 +97,46 @@ describe("ByteDanceVideoProvider", () => {
       fps: 24,
       resolution: "720p",
     });
+  });
+
+  it("submit converts local image files to ModelArk data image URLs", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "imagent-bytedance-video-"));
+    try {
+      const firstFrame = path.join(dir, "first.png");
+      await writeFile(firstFrame, new Uint8Array([0x89, 0x50, 0x4e, 0x47]));
+      const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { id: "task-123" }));
+      const p = makeProvider(fetchMock as unknown as typeof fetch);
+
+      await p.submit({
+        ...baseRequest,
+        firstFrame,
+        lastFrame: "data:image/webp;base64,d2VicA==",
+        references: [{ path: "asset-id-123", role: "freeform" }],
+      });
+
+      const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+      const body = JSON.parse(String(init.body));
+      expect(body.content).toEqual([
+        { type: "text", text: "rotating crystal in a misty forest" },
+        {
+          type: "image_url",
+          image_url: { url: "data:image/png;base64,iVBORw==" },
+          role: "first_frame",
+        },
+        {
+          type: "image_url",
+          image_url: { url: "data:image/webp;base64,d2VicA==" },
+          role: "last_frame",
+        },
+        {
+          type: "image_url",
+          image_url: { url: "asset-id-123" },
+          role: "reference_image",
+        },
+      ]);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 
   it("poll maps ModelArk task statuses", async () => {

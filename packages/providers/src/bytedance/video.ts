@@ -1,3 +1,5 @@
+import { readFile, stat } from "node:fs/promises";
+import path from "node:path";
 import {
   applyVideoDefaults,
   type Logger,
@@ -96,7 +98,7 @@ export class ByteDanceVideoProvider implements VideoProvider {
     const merged = applyVideoDefaults(req, modelDef);
     validateVideoRequestAgainstModel(this.id, merged, modelDef);
 
-    const body = buildCreateTaskBody(merged, modelDef);
+    const body = await buildCreateTaskBody(merged, modelDef);
     const res = await this.http.post<ArkTaskCreateResponse>(TASKS_PATH, body);
     const taskId = res?.id;
     if (!taskId) {
@@ -192,10 +194,13 @@ export class ByteDanceVideoProvider implements VideoProvider {
   }
 }
 
-function buildCreateTaskBody(req: VideoRequest, model: VideoModelDef): Record<string, unknown> {
+async function buildCreateTaskBody(
+  req: VideoRequest,
+  model: VideoModelDef,
+): Promise<Record<string, unknown>> {
   const body: Record<string, unknown> = {
     model: model.id,
-    content: buildContent(req),
+    content: await buildContent(req),
   };
   if (req.aspectRatio) body.ratio = req.aspectRatio;
   if (req.durationSec !== undefined) body.duration = req.durationSec;
@@ -205,18 +210,73 @@ function buildCreateTaskBody(req: VideoRequest, model: VideoModelDef): Record<st
   return body;
 }
 
-function buildContent(req: VideoRequest): ByteDanceContentPart[] {
+async function buildContent(req: VideoRequest): Promise<ByteDanceContentPart[]> {
   const content: ByteDanceContentPart[] = [{ type: "text", text: req.prompt }];
   if (req.firstFrame) {
-    content.push({ type: "image_url", image_url: { url: req.firstFrame }, role: "first_frame" });
+    content.push({
+      type: "image_url",
+      image_url: { url: await normalizeImageInput(req.firstFrame) },
+      role: "first_frame",
+    });
   }
   if (req.lastFrame) {
-    content.push({ type: "image_url", image_url: { url: req.lastFrame }, role: "last_frame" });
+    content.push({
+      type: "image_url",
+      image_url: { url: await normalizeImageInput(req.lastFrame) },
+      role: "last_frame",
+    });
   }
   for (const ref of req.references) {
-    content.push({ type: "image_url", image_url: { url: ref.path }, role: "reference_image" });
+    content.push({
+      type: "image_url",
+      image_url: { url: await normalizeImageInput(ref.path) },
+      role: "reference_image",
+    });
   }
   return content;
+}
+
+async function normalizeImageInput(value: string): Promise<string> {
+  if (isPassthroughImageInput(value)) return value;
+
+  try {
+    const fileStat = await stat(value);
+    if (!fileStat.isFile()) return value;
+  } catch (err) {
+    if (isMissingPathError(err)) return value;
+    throw err;
+  }
+
+  const bytes = await readFile(value);
+  const mimeType = imageMimeType(value);
+  return `data:${mimeType};base64,${bytes.toString("base64")}`;
+}
+
+function isPassthroughImageInput(value: string): boolean {
+  return /^[a-z][a-z0-9+.-]*:/i.test(value) || value.startsWith("data:image/");
+}
+
+function isMissingPathError(err: unknown): boolean {
+  const code = (err as NodeJS.ErrnoException | undefined)?.code;
+  return code === "ENOENT" || code === "ENOTDIR";
+}
+
+function imageMimeType(filePath: string): string {
+  switch (path.extname(filePath).toLowerCase()) {
+    case ".jpg":
+    case ".jpeg":
+      return "image/jpeg";
+    case ".webp":
+      return "image/webp";
+    case ".gif":
+      return "image/gif";
+    case ".bmp":
+      return "image/bmp";
+    case ".svg":
+      return "image/svg+xml";
+    default:
+      return "image/png";
+  }
 }
 
 function mergeRawOptions(body: Record<string, unknown>, raw: VideoRequest["raw"]): void {
