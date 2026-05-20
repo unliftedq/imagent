@@ -25,7 +25,7 @@ import {
 } from "./modelPicker.js";
 import { ReferencePicker } from "./referencePicker.js";
 import { nearestNumber, pruneReferenceRoles } from "./utils.js";
-import { FirstFrameToolbarPicker } from "./videoFirstFramePicker.js";
+import { FrameToolbarPicker } from "./videoFramePicker.js";
 
 export function VideoRail() {
   const draft = useUIStore((state) => state.studioDraft.video);
@@ -196,6 +196,7 @@ export function VideoRail() {
       ...(typeof draft.resolution === "string" ? { resolution: draft.resolution } : {}),
       ...(typeof draft.aspectRatio === "string" ? { aspectRatio: draft.aspectRatio } : {}),
       ...(typeof draft.firstFrame === "string" ? { firstFrame: draft.firstFrame } : {}),
+      ...(typeof draft.lastFrame === "string" ? { lastFrame: draft.lastFrame } : {}),
       references: draft.references.map((path) => ({
         path,
         role: draft.referenceRoles[path] ?? ("freeform" as const),
@@ -293,10 +294,26 @@ export function VideoRail() {
       />
 
       {caps?.supportsFirstFrame ? (
-        <FirstFrameToolbarPicker
+        <FrameToolbarPicker
+          kind="first"
           value={draft.firstFrame ?? null}
           onChange={(value) => setDraft({ firstFrame: value ?? undefined })}
           recentFrames={items.filter((item) => item.kind === "image").slice(0, 12)}
+          onError={(message) =>
+            pushToast({ title: t("studio.referenceFailed"), description: message, variant: "error" })
+          }
+        />
+      ) : null}
+
+      {caps?.supportsLastFrame ? (
+        <FrameToolbarPicker
+          kind="last"
+          value={draft.lastFrame ?? null}
+          onChange={(value) => setDraft({ lastFrame: value ?? undefined })}
+          recentFrames={items.filter((item) => item.kind === "image").slice(0, 12)}
+          onError={(message) =>
+            pushToast({ title: t("studio.referenceFailed"), description: message, variant: "error" })
+          }
         />
       ) : null}
     </ChatComposerShell>

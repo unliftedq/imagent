@@ -90,8 +90,10 @@ export interface VideoDraft {
   aspectRatio?: string;
   references: string[];
   referenceRoles: StudioReferenceRoles;
-  /** Optional first-frame image path (drag-drop or picked from gallery). */
+  /** Optional first-frame image path (picked from local file or gallery). */
   firstFrame?: string;
+  /** Optional last-frame image path (picked from local file or gallery). */
+  lastFrame?: string;
   parentId?: string;
   assetIds: StudioDraftAssetIds;
 }
@@ -206,6 +208,7 @@ function loadVideoDraftFromStorage(): VideoDraft {
       references: Array.isArray(parsed.references) ? (parsed.references as string[]) : [],
       referenceRoles: normalizeReferenceRoles(parsed.referenceRoles),
       ...(typeof parsed.firstFrame === "string" ? { firstFrame: parsed.firstFrame } : {}),
+      ...(typeof parsed.lastFrame === "string" ? { lastFrame: parsed.lastFrame } : {}),
       ...(typeof parsed.parentId === "string" ? { parentId: parsed.parentId } : {}),
       assetIds: normalizeAssetIds(parsed.assetIds),
     };
@@ -330,6 +333,7 @@ export interface RemixPayloadVideo {
     resolution?: string;
     aspectRatio?: string;
     firstFrame?: string;
+    lastFrame?: string;
     references: { path: string; role?: StudioReferenceRole }[];
   };
   parentId: string;
@@ -456,6 +460,7 @@ export const useUIStore = create<UIState>((set, get) => ({
         ...(typeof r.resolution === "string" ? { resolution: r.resolution } : {}),
         ...(typeof r.aspectRatio === "string" ? { aspectRatio: r.aspectRatio } : {}),
         ...(typeof r.firstFrame === "string" ? { firstFrame: r.firstFrame } : {}),
+        ...(typeof r.lastFrame === "string" ? { lastFrame: r.lastFrame } : {}),
         references: r.references.map((ref) => ref.path),
         referenceRoles: Object.fromEntries(
           r.references.map((ref) => [ref.path, ref.role ?? "freeform"]),

@@ -313,6 +313,7 @@ export const en = {
   "studio.oneReferenceAllowed": "One reference image allowed",
   "studio.onlyFirstAttached": "Only the first selected image was attached.",
   "studio.firstFrame": "First frame",
+  "studio.lastFrame": "Last frame",
   "studio.noReferenceImage": "No reference image attached.",
   "studio.noReferenceImageStyle":
     "No reference image. This style can rely on the prompt snippet below.",
@@ -395,7 +396,6 @@ export const en = {
   "studio.noLocalReferences": "No local references yet.",
   "studio.noKindAssets": "No {kind} assets yet.",
   "studio.removeReference": "Remove {label}",
-  "studio.dropImageHere": "Drop image here",
   "studio.noRecentImages": "No recent images.",
   "studio.remixBadge": "Remix {id}…",
 
