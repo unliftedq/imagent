@@ -9,7 +9,7 @@ import {
   StackPlus,
   Trash,
 } from "@phosphor-icons/react";
-import type { ButtonHTMLAttributes, MouseEvent, ReactNode, Ref } from "react";
+import type { ButtonHTMLAttributes, MouseEvent, ReactNode } from "react";
 
 import { cn } from "../lib/cn.js";
 import type { GalleryItemCardBoardOption } from "./GalleryItemCard.types.js";
@@ -177,19 +177,15 @@ export function CornerButton({
   onClick,
   ariaLabel,
   active,
-  ref,
   ...rest
 }: {
   children: ReactNode;
   onClick?: (e: MouseEvent) => void;
   ariaLabel: string;
   active?: boolean;
-} & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onClick" | "aria-label" | "children" | "ref"> & {
-    ref?: Ref<HTMLButtonElement>;
-  }) {
+} & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onClick" | "aria-label" | "children" | "ref">) {
   return (
     <button
-      ref={ref}
       type="button"
       onClick={onClick}
       aria-label={ariaLabel}

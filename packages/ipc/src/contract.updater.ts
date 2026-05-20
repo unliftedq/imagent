@@ -43,7 +43,7 @@ export const UpdateCheckResultSchema = z.discriminatedUnion("status", [
   z.object({
     status: z.literal("error"),
     currentVersion: z.string(),
-    latestVersion: z.string().nullable(),
+    latestVersion: z.string().nullable().optional(),
     message: z.string(),
   }),
 ]);
