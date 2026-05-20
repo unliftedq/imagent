@@ -47,4 +47,20 @@ describe("reference image helpers", () => {
       await rm(dir, { recursive: true, force: true });
     }
   });
+
+  it("treats Windows drive-letter paths as local files", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "imagent-reference-images-"));
+    const originalCwd = process.cwd();
+    const windowsStylePath = "C:\\tmp\\reference.png";
+    try {
+      process.chdir(dir);
+      await writeFile(windowsStylePath, new Uint8Array([0x89, 0x50, 0x4e, 0x47]));
+      await expect(resolveImageUrlInput(windowsStylePath, "test")).resolves.toBe(
+        "data:image/png;base64,iVBORw==",
+      );
+    } finally {
+      process.chdir(originalCwd);
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
 });
