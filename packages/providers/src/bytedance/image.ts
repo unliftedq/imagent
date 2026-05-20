@@ -1,29 +1,19 @@
 import {
-  applyImageDefaults,
-  type ImageCapabilities,
-  type ImageGenerationResult,
   type ImageModelDef,
-  type ImageOutput,
-  type ImageProvider,
   type ImageRequest,
   type Logger,
-  ProviderError,
-  ProviderRequestError,
-  ProviderResponseError,
   type ProviderTestResult,
-  validateImageRequestAgainstModel,
 } from "@imagent/core";
 import OpenAI from "openai";
 import {
-  aggregateCapabilities,
-  buildOpenAIImageBody,
-  decodeBase64,
-  listModelIds,
+  listOpenAIModelIds,
+  type OpenAICompatibleBody,
+  OpenAICompatibleImageProvider,
   type OpenAIClientLike,
   parseSize,
-  rethrowOpenAIError,
-  testFailureFromError,
-} from "../openai/image.js";
+  runListProbe,
+} from "../common/index.js";
+import { buildOpenAIImageBody, rethrowOpenAIError } from "../openai/image.js";
 
 /**
  * Canonical ByteDance Ark base URL (Seedream image + Seedance video).
@@ -47,95 +37,63 @@ export interface ByteDanceImageProviderOptions {
  * model family is Seedream. Shares an Ark API key with
  * `ByteDanceVideoProvider`; both report `id = "bytedance"`.
  */
-export class ByteDanceImageProvider implements ImageProvider {
-  readonly id = "bytedance";
-  readonly displayName = "ByteDance";
-  readonly models: ReadonlyMap<string, ImageModelDef>;
-  readonly capabilities: ImageCapabilities;
-  private readonly client: OpenAIClientLike;
-  private readonly logger?: Logger;
-
+export class ByteDanceImageProvider extends OpenAICompatibleImageProvider {
   constructor(options: ByteDanceImageProviderOptions) {
-    this.models = options.models;
-    this.capabilities = aggregateCapabilities(options.models);
-    if (options.logger) this.logger = options.logger;
-    this.client =
+    const client =
       options.client ??
       (new OpenAI({
         apiKey: options.apiKey,
         baseURL: options.endpoint.replace(/\/+$/, ""),
       }) as unknown as OpenAIClientLike);
+    super({
+      providerId: "bytedance",
+      displayName: "ByteDance",
+      models: options.models,
+      ...(options.logger !== undefined ? { logger: options.logger } : {}),
+      client,
+      // Ark returns base64 only; no URL fallback.
+      supportsUrlFallback: false,
+      rethrowSdkError: rethrowOpenAIError,
+    });
   }
 
-  async generate(req: ImageRequest, signal?: AbortSignal): Promise<ImageGenerationResult> {
-    const model = this.models.get(req.model);
-    if (!model) {
-      throw new ProviderRequestError(`unknown model '${req.model}' for ${this.id}`, {
-        vendorId: this.id,
-      });
-    }
-    const merged = applyImageDefaults(req, model);
-    validateImageRequestAgainstModel(this.id, merged, model);
+  protected async buildBody(
+    merged: ImageRequest,
+    model: ImageModelDef,
+  ): Promise<OpenAICompatibleBody> {
+    const quality = normalizeSeedreamQuality(merged.quality);
+    const body = await buildOpenAIImageBody({ ...merged, quality: undefined }, model, "bytedance");
+    delete body.quality;
 
-    const { body, outputSize } = await buildByteDanceImageBody(merged, model);
-    const opts: { signal?: AbortSignal } = {};
-    if (signal) opts.signal = signal;
-
-    let response: { data?: Array<{ b64_json?: string; url?: string; revised_prompt?: string }> };
-    try {
-      if (merged.references.length > 0) {
-        if (!this.client.images.edit) {
-          throw new ProviderRequestError(
-            `${this.id} SDK client does not support image references via images.edit API. Ensure you are using an SDK version that includes the edit method.`,
-            { vendorId: this.id },
-          );
-        }
-        response = await this.client.images.edit(body, opts);
-      } else {
-        response = await this.client.images.generate(body, opts);
-      }
-    } catch (err) {
-      throw rethrowOpenAIError(err, this.id);
+    const customSize = parseSize(merged.size).width !== undefined ? merged.size : undefined;
+    if (customSize) {
+      body.size = customSize;
+      return { body, outputSize: customSize, mimeType: "image/png" };
     }
 
-    const data = response?.data ?? [];
-    const outputs: ImageOutput[] = [];
-    for (const entry of data) {
-      if (entry.b64_json) {
-        outputs.push({
-          bytes: decodeBase64(entry.b64_json),
-          mimeType: "image/png",
-          ...parseSize(outputSize),
-          ...(entry.revised_prompt ? { raw: { revised_prompt: entry.revised_prompt } } : {}),
-        });
-      } else {
-        throw new ProviderResponseError("response entry missing b64_json", {
-          vendorId: this.id,
-        });
-      }
+    const aspectRatio = merged.aspectRatio ?? "auto";
+    if (aspectRatio === "auto") {
+      body.size = quality;
+      return { body, outputSize: undefined, mimeType: "image/png" };
     }
-    if (outputs.length === 0) {
-      throw new ProviderError("no image outputs returned", { vendorId: this.id });
+
+    const recommendedSize = SEEDREAM_ASPECT_RATIO_SIZES[quality][aspectRatio];
+    if (recommendedSize) {
+      body.size = recommendedSize;
+      return { body, outputSize: recommendedSize, mimeType: "image/png" };
     }
-    return { outputs };
+
+    body.size = quality;
+    return { body, outputSize: undefined, mimeType: "image/png" };
   }
 
-  async test(signal?: AbortSignal): Promise<ProviderTestResult> {
-    const started = Date.now();
+  protected async doTest(signal?: AbortSignal): Promise<ProviderTestResult> {
     const probeSignal = signal ?? AbortSignal.timeout(8000);
-    try {
-      const ids = await listModelIds(this.client, probeSignal);
-      const latencyMs = Date.now() - started;
-      const configured = [...this.models.keys()];
-      const matched = configured.find((id) => ids.includes(id));
-      const out: ProviderTestResult = matched
-        ? { ok: true, latencyMs, sampleModelId: matched }
-        : { ok: true, latencyMs };
-      return out;
-    } catch (err) {
-      this.logger?.debug?.("bytedance test() failed", { err: String(err) });
-      return testFailureFromError(err);
-    }
+    return runListProbe({
+      listIds: (s) => listOpenAIModelIds(this.client, s),
+      configuredIds: [...this.models.keys()],
+      signal: probeSignal,
+    });
   }
 }
 
@@ -191,36 +149,6 @@ const SEEDREAM_ASPECT_RATIO_SIZES: Record<SeedreamQuality, Record<string, string
     "21:9": "6048x2592",
   },
 };
-
-async function buildByteDanceImageBody(
-  req: ImageRequest,
-  model: ImageModelDef,
-): Promise<{ body: Record<string, unknown>; outputSize: string | undefined }> {
-  const quality = normalizeSeedreamQuality(req.quality);
-  const body = await buildOpenAIImageBody({ ...req, quality: undefined }, model, "bytedance");
-  delete body.quality;
-
-  const customSize = parseSize(req.size) ? req.size : undefined;
-  if (customSize) {
-    body.size = customSize;
-    return { body, outputSize: customSize };
-  }
-
-  const aspectRatio = req.aspectRatio ?? "auto";
-  if (aspectRatio === "auto") {
-    body.size = quality;
-    return { body, outputSize: undefined };
-  }
-
-  const recommendedSize = SEEDREAM_ASPECT_RATIO_SIZES[quality][aspectRatio];
-  if (recommendedSize) {
-    body.size = recommendedSize;
-    return { body, outputSize: recommendedSize };
-  }
-
-  body.size = quality;
-  return { body, outputSize: undefined };
-}
 
 function normalizeSeedreamQuality(value: string | undefined): SeedreamQuality {
   const normalized = value?.toLowerCase();
