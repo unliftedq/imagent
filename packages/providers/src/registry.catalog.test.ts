@@ -54,7 +54,7 @@ describe("createImageRegistry (catalog-driven)", () => {
 
     // ByteDance provider sees Seedream entries (image side only).
     const bd = reg.get("bytedance")!;
-    expect([...bd.models.keys()]).toContain("doubao-seedream-3-0-t2i-250415");
+    expect([...bd.models.keys()]).toContain("seedream-5-0-260128");
   });
 
   it("Azure: deployment names resolve against canonical model capabilities", () => {

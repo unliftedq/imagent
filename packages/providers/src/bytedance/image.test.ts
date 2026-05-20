@@ -32,9 +32,8 @@ function makeProvider(client: FakeClient): ByteDanceImageProvider {
 const baseRequest: ImageRequest = {
   prompt: "neon koi pond",
   providerId: "bytedance",
-  model: "doubao-seedream-3-0-t2i-250415",
+  model: "seedream-5-0-260128",
   count: 1,
-  size: "1024x1024",
   references: [],
   assetIds: [],
 };
@@ -49,8 +48,37 @@ describe("ByteDanceImageProvider", () => {
     expect(client.images.generate).toHaveBeenCalledTimes(1);
     const [body] = client.images.generate.mock.calls[0]!;
     expect(body).toMatchObject({
-      model: "doubao-seedream-3-0-t2i-250415",
+      model: "seedream-5-0-260128",
       prompt: baseRequest.prompt,
+      size: "2k",
+    });
+    expect(body).not.toHaveProperty("quality");
+  });
+
+  it("converts quality + aspect ratio to the recommended Seedream size", async () => {
+    const client = makeFakeClient();
+    client.images.generate.mockResolvedValue({ data: [{ b64_json: PNG_B64 }] });
+    const p = makeProvider(client);
+    await p.generate({ ...baseRequest, quality: "4k", aspectRatio: "16:9" });
+    const [body] = client.images.generate.mock.calls[0]!;
+    expect(body).toMatchObject({
+      size: "5120x2880",
+    });
+  });
+
+  it("passes custom sizes through instead of deriving from aspect ratio", async () => {
+    const client = makeFakeClient();
+    client.images.generate.mockResolvedValue({ data: [{ b64_json: PNG_B64 }] });
+    const p = makeProvider(client);
+    await p.generate({
+      ...baseRequest,
+      quality: "4k",
+      aspectRatio: "16:9",
+      size: "1232x768",
+    });
+    const [body] = client.images.generate.mock.calls[0]!;
+    expect(body).toMatchObject({
+      size: "1232x768",
     });
   });
 

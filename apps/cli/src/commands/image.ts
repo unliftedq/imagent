@@ -16,7 +16,12 @@ import { buildAssetSlots } from "../support/asset-slots.js";
 import { installCancelOnInterrupt } from "../support/job-control.js";
 import { buildRunner, loadCliRuntime } from "../support/runtime.js";
 import { createSpinner } from "../support/spinner.js";
-import { coerceScalar, collect, parseKeyValueOptions, parsePositiveIntegerOption } from "../support/util.js";
+import {
+  coerceScalar,
+  collect,
+  parseKeyValueOptions,
+  parsePositiveIntegerOption,
+} from "../support/util.js";
 
 interface GenerateOptions {
   provider?: string;
@@ -79,11 +84,29 @@ export function registerImageCommand(program: Command): void {
       [],
     )
     .option("--ref <path>", "Freeform reference image path (repeatable)", collect, [])
-    .option("--character <slug>", "Attach a saved character asset by slug (repeatable; see `imagent asset list --kind character`)", collect, [])
+    .option(
+      "--character <slug>",
+      "Attach a saved character asset by slug (repeatable; see `imagent asset list --kind character`)",
+      collect,
+      [],
+    )
     .option("--object <slug>", "Attach a saved object asset by slug (repeatable)", collect, [])
-    .option("--background <slug>", "Attach a saved background asset by slug (repeatable)", collect, [])
-    .option("--style <slug>", "Attach a saved style asset by slug (repeatable; the asset's prompt_snippet is appended to the prompt)", collect, [])
-    .option("--out <dir>", "Copy the completed result to this directory after success (the gallery copy is always retained)")
+    .option(
+      "--background <slug>",
+      "Attach a saved background asset by slug (repeatable)",
+      collect,
+      [],
+    )
+    .option(
+      "--style <slug>",
+      "Attach a saved style asset by slug (repeatable; the asset's prompt_snippet is appended to the prompt)",
+      collect,
+      [],
+    )
+    .option(
+      "--out <dir>",
+      "Copy the completed result to this directory after success (the gallery copy is always retained)",
+    )
     .action(async (prompt: string, options: GenerateOptions) => {
       try {
         await runGenerate(prompt, options);
@@ -290,7 +313,7 @@ function supportedImageOptions(model: ImageModelDef): string[] {
     return ["size", "aspectRatio", "quality", "outputFormat", "count"];
   }
   const keys = ["count"];
-  if (caps.sizes && caps.sizes.length > 0) keys.push("size");
+  if ((caps.sizes && caps.sizes.length > 0) || caps.supportsArbitrarySize) keys.push("size");
   if (caps.aspectRatios && caps.aspectRatios.length > 0) keys.push("aspectRatio");
   if (caps.qualities && caps.qualities.length > 0) keys.push("quality");
   if (caps.outputFormats && caps.outputFormats.length > 0) keys.push("outputFormat");

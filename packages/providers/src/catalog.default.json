@@ -409,52 +409,6 @@
           "count": 1
         }
       },
-      "doubao-seedream-4-0-250828": {
-        "id": "doubao-seedream-4-0-250828",
-        "displayName": "Seedream 4.0",
-        "capabilities": {
-          "sizes": [
-            "1K",
-            "2K",
-            "4K"
-          ],
-          "supportsArbitrarySize": true,
-          "maxPixels": 16777216,
-          "minAspectRatio": 0.0625,
-          "maxAspectRatio": 16,
-          "maxReferences": 14,
-          "maxReferenceSizeMb": 30,
-          "maxOutputs": 15,
-          "supportsStyleRef": true
-        },
-        "defaults": {
-          "size": "2K",
-          "count": 1
-        }
-      },
-      "doubao-seedream-3-0-t2i-250415": {
-        "id": "doubao-seedream-3-0-t2i-250415",
-        "displayName": "Seedream 3.0",
-        "capabilities": {
-          "sizes": [
-            "1024x1024",
-            "864x1152",
-            "1152x864",
-            "1280x720",
-            "720x1280",
-            "832x1248",
-            "1248x832",
-            "1512x648"
-          ],
-          "maxReferences": 0,
-          "maxOutputs": 1,
-          "supportsStyleRef": false
-        },
-        "defaults": {
-          "size": "1024x1024",
-          "count": 1
-        }
-      },
       "grok-imagine-image": {
         "id": "grok-imagine-image",
         "displayName": "Grok Imagine",
@@ -486,6 +440,134 @@
         "defaults": {
           "aspectRatio": "1:1",
           "quality": "1k",
+          "count": 1
+        }
+      },
+      "seedream-5-0-260128": {
+        "id": "seedream-5-0-260128",
+        "displayName": "Seedream 5.0",
+        "capabilities": {
+          "supportsArbitrarySize": true,
+          "minWidth": 256,
+          "maxWidth": 8192,
+          "minHeight": 256,
+          "maxHeight": 8192,
+          "widthMultiple": 1,
+          "heightMultiple": 1,
+          "maxPixels": 16777216,
+          "minAspectRatio": 0.0625,
+          "maxAspectRatio": 16,
+          "aspectRatios": [
+            "auto",
+            "1:1",
+            "2:3",
+            "3:2",
+            "3:4",
+            "4:3",
+            "4:5",
+            "5:4",
+            "16:9",
+            "9:16",
+            "21:9"
+          ],
+          "maxReferences": 10,
+          "maxReferenceSizeMb": 30,
+          "maxOutputs": 15,
+          "supportsStyleRef": true,
+          "qualities": [
+            "2k",
+            "3k",
+            "4k"
+          ]
+        },
+        "defaults": {
+          "quality": "2k",
+          "aspectRatio": "auto",
+          "count": 1
+        }
+      },
+      "seedream-4-5-251128": {
+        "id": "seedream-4-5-251128",
+        "displayName": "Seedream 4.5",
+        "capabilities": {
+          "supportsArbitrarySize": true,
+          "minWidth": 256,
+          "maxWidth": 8192,
+          "minHeight": 256,
+          "maxHeight": 8192,
+          "widthMultiple": 1,
+          "heightMultiple": 1,
+          "maxPixels": 16777216,
+          "minAspectRatio": 0.0625,
+          "maxAspectRatio": 16,
+          "aspectRatios": [
+            "auto",
+            "1:1",
+            "2:3",
+            "3:2",
+            "3:4",
+            "4:3",
+            "4:5",
+            "5:4",
+            "16:9",
+            "9:16",
+            "21:9"
+          ],
+          "maxReferences": 10,
+          "maxReferenceSizeMb": 30,
+          "maxOutputs": 15,
+          "supportsStyleRef": true,
+          "qualities": [
+            "2k",
+            "4k"
+          ]
+        },
+        "defaults": {
+          "quality": "2k",
+          "aspectRatio": "auto",
+          "count": 1
+        }
+      },
+      "seedream-4-0-250828": {
+        "id": "seedream-4-0-250828",
+        "displayName": "Seedream 4.0",
+        "capabilities": {
+          "supportsArbitrarySize": true,
+          "minWidth": 256,
+          "maxWidth": 8192,
+          "minHeight": 256,
+          "maxHeight": 8192,
+          "widthMultiple": 1,
+          "heightMultiple": 1,
+          "maxPixels": 16777216,
+          "minAspectRatio": 0.0625,
+          "maxAspectRatio": 16,
+          "aspectRatios": [
+            "auto",
+            "1:1",
+            "2:3",
+            "3:2",
+            "3:4",
+            "4:3",
+            "4:5",
+            "5:4",
+            "16:9",
+            "9:16",
+            "21:9"
+          ],
+          "maxReferences": 10,
+          "maxReferenceSizeMb": 30,
+          "maxOutputs": 15,
+          "supportsStyleRef": true,
+          "qualities": [
+            "1k",
+            "2k",
+            "4k"
+          ]
+        },
+        "defaults": {
+          "quality": "2k",
+          "aspectRatio": "auto",
           "count": 1
         }
       }
@@ -551,274 +633,6 @@
           "count": 1
         }
       },
-      "doubao-seedance-1-0-pro-250528": {
-        "id": "doubao-seedance-1-0-pro-250528",
-        "displayName": "Seedance 1.0 Pro",
-        "capabilities": {
-          "durationsSec": [
-            2,
-            3,
-            4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            10,
-            11,
-            12
-          ],
-          "maxDurationSec": 12,
-          "fpsOptions": [
-            24
-          ],
-          "resolutions": [
-            "480p",
-            "720p",
-            "1080p"
-          ],
-          "supportsFirstFrame": true,
-          "supportsLastFrame": true,
-          "supportsRefImages": false,
-          "aspectRatios": [
-            "16:9",
-            "9:16",
-            "1:1",
-            "4:3",
-            "3:4",
-            "21:9"
-          ],
-          "maxReferenceSizeMb": 30
-        },
-        "defaults": {
-          "durationSec": 5,
-          "fps": 24,
-          "resolution": "720p"
-        }
-      },
-      "doubao-seedance-1-0-lite-t2v-250428": {
-        "id": "doubao-seedance-1-0-lite-t2v-250428",
-        "displayName": "Seedance 1.0 Lite (T2V)",
-        "capabilities": {
-          "durationsSec": [
-            2,
-            3,
-            4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            10,
-            11,
-            12
-          ],
-          "maxDurationSec": 12,
-          "fpsOptions": [
-            24
-          ],
-          "resolutions": [
-            "480p",
-            "720p",
-            "1080p"
-          ],
-          "supportsFirstFrame": false,
-          "supportsLastFrame": false,
-          "supportsRefImages": false,
-          "aspectRatios": [
-            "16:9",
-            "9:16",
-            "1:1",
-            "4:3",
-            "3:4",
-            "21:9"
-          ]
-        },
-        "defaults": {
-          "durationSec": 5,
-          "fps": 24,
-          "resolution": "720p"
-        }
-      },
-      "doubao-seedance-1-0-lite-i2v-250428": {
-        "id": "doubao-seedance-1-0-lite-i2v-250428",
-        "displayName": "Seedance 1.0 Lite (I2V)",
-        "capabilities": {
-          "durationsSec": [
-            2,
-            3,
-            4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            10,
-            11,
-            12
-          ],
-          "maxDurationSec": 12,
-          "fpsOptions": [
-            24
-          ],
-          "resolutions": [
-            "480p",
-            "720p",
-            "1080p"
-          ],
-          "supportsFirstFrame": true,
-          "supportsLastFrame": true,
-          "supportsRefImages": true,
-          "aspectRatios": [
-            "16:9",
-            "9:16",
-            "1:1",
-            "4:3",
-            "3:4",
-            "21:9"
-          ],
-          "maxReferenceSizeMb": 30,
-          "maxReferences": 4
-        },
-        "defaults": {
-          "durationSec": 5,
-          "fps": 24,
-          "resolution": "720p"
-        }
-      },
-      "doubao-seedance-1-5-pro-251215": {
-        "id": "doubao-seedance-1-5-pro-251215",
-        "displayName": "Seedance 1.5 Pro",
-        "capabilities": {
-          "durationsSec": [
-            4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            10,
-            11,
-            12
-          ],
-          "maxDurationSec": 12,
-          "fpsOptions": [
-            24
-          ],
-          "resolutions": [
-            "480p",
-            "720p",
-            "1080p"
-          ],
-          "supportsFirstFrame": true,
-          "supportsLastFrame": true,
-          "supportsRefImages": false,
-          "aspectRatios": [
-            "16:9",
-            "9:16",
-            "1:1",
-            "4:3",
-            "3:4",
-            "21:9"
-          ],
-          "maxReferenceSizeMb": 30
-        },
-        "defaults": {
-          "durationSec": 5,
-          "fps": 24,
-          "resolution": "720p"
-        }
-      },
-      "doubao-seedance-2-0-260128": {
-        "id": "doubao-seedance-2-0-260128",
-        "displayName": "Seedance 2.0",
-        "capabilities": {
-          "durationsSec": [
-            4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            10,
-            11,
-            12,
-            13,
-            14,
-            15
-          ],
-          "maxDurationSec": 15,
-          "fpsOptions": [
-            24
-          ],
-          "resolutions": [
-            "480p",
-            "720p"
-          ],
-          "supportsFirstFrame": true,
-          "supportsLastFrame": true,
-          "supportsRefImages": true,
-          "aspectRatios": [
-            "16:9",
-            "9:16",
-            "1:1",
-            "4:3",
-            "3:4",
-            "21:9"
-          ],
-          "maxReferenceSizeMb": 30
-        },
-        "defaults": {
-          "durationSec": 5,
-          "fps": 24,
-          "resolution": "720p"
-        }
-      },
-      "doubao-seedance-2-0-fast-260128": {
-        "id": "doubao-seedance-2-0-fast-260128",
-        "displayName": "Seedance 2.0 Fast",
-        "capabilities": {
-          "durationsSec": [
-            4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            10,
-            11,
-            12,
-            13,
-            14,
-            15
-          ],
-          "maxDurationSec": 15,
-          "fpsOptions": [
-            24
-          ],
-          "resolutions": [
-            "480p",
-            "720p"
-          ],
-          "supportsFirstFrame": true,
-          "supportsLastFrame": true,
-          "supportsRefImages": true,
-          "aspectRatios": [
-            "16:9",
-            "9:16",
-            "1:1",
-            "4:3",
-            "3:4",
-            "21:9"
-          ],
-          "maxReferenceSizeMb": 30
-        },
-        "defaults": {
-          "durationSec": 5,
-          "fps": 24,
-          "resolution": "720p"
-        }
-      },
       "grok-imagine-video": {
         "id": "grok-imagine-video",
         "displayName": "Grok Imagine Video",
@@ -864,6 +678,141 @@
           "resolution": "720p",
           "aspectRatio": "16:9"
         }
+      },
+      "dreamina-seedance-2-0-260128": {
+        "id": "dreamina-seedance-2-0-260128",
+        "displayName": "Dreamina Seedance 2.0",
+        "capabilities": {
+          "durationsSec": [
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15
+          ],
+          "maxDurationSec": 15,
+          "fpsOptions": [
+            24
+          ],
+          "resolutions": [
+            "480p",
+            "720p"
+          ],
+          "supportsFirstFrame": true,
+          "supportsLastFrame": true,
+          "supportsRefImages": true,
+          "aspectRatios": [
+            "16:9",
+            "9:16",
+            "1:1",
+            "4:3",
+            "3:4",
+            "21:9"
+          ],
+          "maxReferenceSizeMb": 30,
+          "maxReferences": 9
+        },
+        "defaults": {
+          "durationSec": 5,
+          "fps": 24,
+          "resolution": "720p"
+        }
+      },
+      "dreamina-seedance-2-0-fast-260128": {
+        "id": "dreamina-seedance-2-0-fast-260128",
+        "displayName": "Dreamina Seedance 2.0 Fast",
+        "capabilities": {
+          "durationsSec": [
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15
+          ],
+          "maxDurationSec": 15,
+          "fpsOptions": [
+            24
+          ],
+          "resolutions": [
+            "480p",
+            "720p"
+          ],
+          "supportsFirstFrame": true,
+          "supportsLastFrame": true,
+          "supportsRefImages": true,
+          "aspectRatios": [
+            "16:9",
+            "9:16",
+            "1:1",
+            "4:3",
+            "3:4",
+            "21:9"
+          ],
+          "maxReferenceSizeMb": 30,
+          "maxReferences": 9
+        },
+        "defaults": {
+          "durationSec": 5,
+          "fps": 24,
+          "resolution": "720p"
+        }
+      },
+      "seedance-1-5-pro-251215": {
+        "id": "seedance-1-5-pro-251215",
+        "displayName": "Seedance 1.5 Pro",
+        "capabilities": {
+          "durationsSec": [
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "maxDurationSec": 12,
+          "fpsOptions": [
+            24
+          ],
+          "resolutions": [
+            "480p",
+            "720p",
+            "1080p"
+          ],
+          "supportsFirstFrame": true,
+          "supportsLastFrame": true,
+          "supportsRefImages": false,
+          "aspectRatios": [
+            "16:9",
+            "9:16",
+            "1:1",
+            "4:3",
+            "3:4",
+            "21:9"
+          ],
+          "maxReferenceSizeMb": 30
+        },
+        "defaults": {
+          "durationSec": 5,
+          "fps": 24,
+          "resolution": "720p"
+        }
       }
     }
   },
@@ -889,13 +838,19 @@
       "displayName": "Azure",
       "modelOverrides": {
         "gpt-image-2": {
-          "capabilities": { "maxOutputs": 1 }
+          "capabilities": {
+            "maxOutputs": 1
+          }
         },
         "gpt-image-1.5": {
-          "capabilities": { "maxOutputs": 1 }
+          "capabilities": {
+            "maxOutputs": 1
+          }
         },
         "gpt-image-1-mini": {
-          "capabilities": { "maxOutputs": 1 }
+          "capabilities": {
+            "maxOutputs": 1
+          }
         }
       }
     },
@@ -955,38 +910,30 @@
       "displayName": "ByteDance",
       "image": [
         {
-          "id": "doubao-seedream-4-0-250828",
-          "modelId": "doubao-seedream-4-0-250828"
+          "id": "seedream-5-0-260128",
+          "modelId": "seedream-5-0-260128"
         },
         {
-          "id": "doubao-seedream-3-0-t2i-250415",
-          "modelId": "doubao-seedream-3-0-t2i-250415"
+          "id": "seedream-4-5-251128",
+          "modelId": "seedream-4-5-251128"
+        },
+        {
+          "id": "seedream-4-0-250828",
+          "modelId": "seedream-4-0-250828"
         }
       ],
       "video": [
         {
-          "id": "doubao-seedance-1-0-pro-250528",
-          "modelId": "doubao-seedance-1-0-pro-250528"
+          "id": "dreamina-seedance-2-0-260128",
+          "modelId": "dreamina-seedance-2-0-260128"
         },
         {
-          "id": "doubao-seedance-1-0-lite-t2v-250428",
-          "modelId": "doubao-seedance-1-0-lite-t2v-250428"
+          "id": "dreamina-seedance-2-0-fast-260128",
+          "modelId": "dreamina-seedance-2-0-fast-260128"
         },
         {
-          "id": "doubao-seedance-1-0-lite-i2v-250428",
-          "modelId": "doubao-seedance-1-0-lite-i2v-250428"
-        },
-        {
-          "id": "doubao-seedance-1-5-pro-251215",
-          "modelId": "doubao-seedance-1-5-pro-251215"
-        },
-        {
-          "id": "doubao-seedance-2-0-260128",
-          "modelId": "doubao-seedance-2-0-260128"
-        },
-        {
-          "id": "doubao-seedance-2-0-fast-260128",
-          "modelId": "doubao-seedance-2-0-fast-260128"
+          "id": "seedance-1-5-pro-251215",
+          "modelId": "seedance-1-5-pro-251215"
         }
       ]
     },

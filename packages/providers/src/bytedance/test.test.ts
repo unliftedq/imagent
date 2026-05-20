@@ -32,8 +32,8 @@ describe("ByteDanceImageProvider.test()", () => {
     const client = makeFakeClient();
     client.models.list.mockResolvedValue({
       data: [
-        { id: "doubao-seedream-3-0-t2i-250415" },
-        { id: "doubao-seedance-1-0-pro-250428" },
+        { id: "seedream-5-0-260128" },
+        { id: "dreamina-seedance-2-0-260128" },
       ],
     });
     const p = new ByteDanceImageProvider({
@@ -44,7 +44,7 @@ describe("ByteDanceImageProvider.test()", () => {
     });
     const res = await p.test!();
     expect(res.ok).toBe(true);
-    if (res.ok) expect(res.sampleModelId).toBe("doubao-seedream-3-0-t2i-250415");
+    if (res.ok) expect(res.sampleModelId).toBe("seedream-5-0-260128");
   });
 
   it("bad auth: 401", async () => {
@@ -67,7 +67,7 @@ describe("ByteDanceImageProvider.test()", () => {
 describe("ByteDanceVideoProvider.test()", () => {
   it("happy auth: 200 + sample model id", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      jsonResponse(200, { data: [{ id: "doubao-seedance-1-0-pro-250428" }] }),
+      jsonResponse(200, { data: [{ id: "dreamina-seedance-2-0-260128" }] }),
     );
     const p = new ByteDanceVideoProvider({
       apiKey: "ark-key",
@@ -77,7 +77,7 @@ describe("ByteDanceVideoProvider.test()", () => {
     });
     const res = await p.test!();
     expect(res.ok).toBe(true);
-    if (res.ok) expect(res.sampleModelId).toBe("doubao-seedance-1-0-pro-250428");
+    if (res.ok) expect(res.sampleModelId).toBe("dreamina-seedance-2-0-260128");
   });
 
   it("bad auth: 401", async () => {
