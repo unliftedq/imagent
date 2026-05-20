@@ -21,6 +21,14 @@ function currentRoute(): Route {
     return { name: "changelogs", path: "/changelogs" };
   }
 
+  if (path === "/terms") {
+    return { name: "terms", path: "/terms" };
+  }
+
+  if (path === "/privacy") {
+    return { name: "privacy", path: "/privacy" };
+  }
+
   return { name: "not-found", path };
 }
 

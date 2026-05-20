@@ -8,6 +8,8 @@ import { DocPageView } from "./pages/doc-detail";
 import { DocsIndexPage } from "./pages/docs-index";
 import { HomePage } from "./pages/home";
 import { NotFoundPage } from "./pages/not-found";
+import { PrivacyPage } from "./pages/privacy";
+import { TermsPage } from "./pages/terms";
 
 export function App() {
   const { route } = useRouter();
@@ -38,6 +40,8 @@ export function App() {
       {route.name === "doc" && selectedDoc ? <DocPageView doc={selectedDoc} docs={docs} /> : null}
       {route.name === "doc" && !selectedDoc ? <NotFoundPage /> : null}
       {route.name === "changelogs" ? <ChangelogsPage markdown={changelogMarkdown} /> : null}
+      {route.name === "terms" ? <TermsPage /> : null}
+      {route.name === "privacy" ? <PrivacyPage /> : null}
       {route.name === "not-found" ? <NotFoundPage /> : null}
     </Shell>
   );
