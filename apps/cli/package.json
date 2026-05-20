@@ -48,7 +48,6 @@
     "build:binary": "tsc -b && node scripts/build-binary.mjs"
   },
   "dependencies": {
-    "@ai-sdk/bytedance": "catalog:",
     "@ai-sdk/xai": "catalog:",
     "@google/genai": "catalog:",
     "@node-rs/jieba": "catalog:",
