@@ -27,7 +27,7 @@ describe("reference image helpers", () => {
     expect(guessImageMimeType("unknown", new Uint8Array([0]))).toBe("image/png");
   });
 
-  it("resolves image-url inputs while preserving URLs and asset ids", async () => {
+  it("resolves image-url inputs while preserving common passthrough URLs and asset ids", async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "imagent-reference-images-"));
     try {
       const png = path.join(dir, "reference.png");
@@ -35,6 +35,9 @@ describe("reference image helpers", () => {
 
       await expect(resolveImageUrlInput("https://example.com/ref.png", "test")).resolves.toBe(
         "https://example.com/ref.png",
+      );
+      await expect(resolveImageUrlInput("http://example.com/ref.png", "test")).resolves.toBe(
+        "http://example.com/ref.png",
       );
       await expect(resolveImageUrlInput("data:image/png;base64,iVBORw==", "test")).resolves.toBe(
         "data:image/png;base64,iVBORw==",
@@ -56,6 +59,22 @@ describe("reference image helpers", () => {
       process.chdir(dir);
       await writeFile(windowsStylePath, new Uint8Array([0x89, 0x50, 0x4e, 0x47]));
       await expect(resolveImageUrlInput(windowsStylePath, "test")).resolves.toBe(
+        "data:image/png;base64,iVBORw==",
+      );
+    } finally {
+      process.chdir(originalCwd);
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("does not passthrough non-http(s)/data schemes", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "imagent-reference-images-"));
+    const originalCwd = process.cwd();
+    const pseudoSchemePath = "ftp:reference.png";
+    try {
+      process.chdir(dir);
+      await writeFile(pseudoSchemePath, new Uint8Array([0x89, 0x50, 0x4e, 0x47]));
+      await expect(resolveImageUrlInput(pseudoSchemePath, "test")).resolves.toBe(
         "data:image/png;base64,iVBORw==",
       );
     } finally {

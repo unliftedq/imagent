@@ -134,7 +134,7 @@ function fallbackFilenameForMime(mimeType: string): string {
 
 function isImageUrlPassthrough(value: string): boolean {
   if (/^[a-zA-Z]:[\\/]/.test(value)) return false;
-  return /^[a-z][a-z0-9+.-]*:/i.test(value);
+  return /^https?:\/\//i.test(value) || /^data:/i.test(value);
 }
 
 function isMissingPathError(err: unknown): boolean {
