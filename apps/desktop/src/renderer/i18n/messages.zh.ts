@@ -311,6 +311,7 @@ export const zh: Dict = {
   "studio.oneReferenceAllowed": "仅支持一张参考图",
   "studio.onlyFirstAttached": "只有第一张选中的图片被附加了。",
   "studio.firstFrame": "首帧",
+  "studio.lastFrame": "尾帧",
   "studio.noReferenceImage": "未附加参考图。",
   "studio.noReferenceImageStyle": "未附加参考图，此风格可依靠下方的提示词片段。",
   "studio.outputCount": "输出数量",
@@ -391,7 +392,6 @@ export const zh: Dict = {
   "studio.noLocalReferences": "暂无本地参考图。",
   "studio.noKindAssets": "暂无{kind}素材。",
   "studio.removeReference": "移除 {label}",
-  "studio.dropImageHere": "拖放图片至此",
   "studio.noRecentImages": "暂无最近图片。",
   "studio.remixBadge": "Remix {id}…",
 

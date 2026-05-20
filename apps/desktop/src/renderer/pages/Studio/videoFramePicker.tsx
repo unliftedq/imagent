@@ -1,29 +1,51 @@
 import type { GalleryItem } from "@imagent/core";
 import { Button, Icons, Popover } from "@imagent/ui";
-import type { DragEvent } from "react";
 import { useT } from "../../i18n/index.js";
-import { resolveGalleryUrl } from "./utils.js";
+import { api } from "../../lib/api.js";
+import { resolveGalleryAbsolutePath, resolveGalleryUrl } from "./utils.js";
+import { IMAGE_FILE_FILTERS } from "./types.js";
 
-export function FirstFrameToolbarPicker({
+export type FrameKind = "first" | "last";
+
+export function FrameToolbarPicker({
+  kind,
   value,
   onChange,
   recentFrames,
+  onError,
 }: {
+  kind: FrameKind;
   value: string | null;
   onChange: (value: string | null) => void;
   recentFrames: GalleryItem[];
+  onError: (message: string) => void;
 }) {
   const t = useT();
 
-  const onDrop = (event: DragEvent<HTMLElement>): void => {
-    event.preventDefault();
-    const file = event.dataTransfer.files[0];
-    if (!file) return;
-    const path = (file as File & { path?: string }).path;
-    if (typeof path === "string" && path.length > 0) onChange(path);
+  const titleLabel = kind === "first" ? t("studio.firstFrame") : t("studio.lastFrame");
+  const buttonLabel = value ? (value.split(/[\\/]/).pop() ?? value) : titleLabel;
+
+  const chooseLocalImage = async (): Promise<void> => {
+    try {
+      const result = await api["system.chooseFiles"]({
+        multiple: false,
+        filters: IMAGE_FILE_FILTERS,
+      });
+      const picked = result.paths[0];
+      if (picked) onChange(picked);
+    } catch (err) {
+      onError((err as Error)?.message ?? String(err));
+    }
   };
 
-  const label = value ? (value.split(/[\\/]/).pop() ?? value) : t("studio.firstFrame");
+  const pickFromGallery = async (item: GalleryItem): Promise<void> => {
+    try {
+      const absPath = await resolveGalleryAbsolutePath(item.relPath);
+      onChange(absPath);
+    } catch (err) {
+      onError((err as Error)?.message ?? String(err));
+    }
+  };
 
   return (
     <Popover.Root>
@@ -38,15 +60,13 @@ export function FirstFrameToolbarPicker({
           }
         >
           <Icons.ImageSquare weight="duotone" className="size-3.5 shrink-0" />
-          <span className="truncate">{label}</span>
+          <span className="truncate">{buttonLabel}</span>
         </button>
       </Popover.Trigger>
       <Popover.Content className="w-[340px]">
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-[12px] font-semibold text-(--text)">
-              {t("studio.firstFrame")}
-            </span>
+            <span className="text-[12px] font-semibold text-(--text)">{titleLabel}</span>
             {value ? (
               <Button size="sm" variant="ghost" onClick={() => onChange(null)}>
                 {t("common.clear")}
@@ -55,19 +75,15 @@ export function FirstFrameToolbarPicker({
           </div>
           <button
             type="button"
-            onDragOver={(event) => event.preventDefault()}
-            onDrop={onDrop}
+            onClick={() => void chooseLocalImage()}
             className={
-              "flex min-h-16 w-full items-center justify-center rounded-(--radius-md) " +
-              "border border-dashed border-(--border) bg-(--surface-sunken) " +
-              "px-3 py-3 text-center text-[12px] text-(--text-muted)"
+              "flex h-10 items-center justify-center gap-2 rounded-(--radius-md) border border-dashed " +
+              "border-(--border) bg-(--surface) text-[12px] text-(--text) transition-colors " +
+              "duration-(--motion-fast) hover:border-(--text)"
             }
           >
-            {value ? (
-              <span className="truncate">{label}</span>
-            ) : (
-              <span>{t("studio.dropImageHere")}</span>
-            )}
+            <Icons.FolderOpen weight="duotone" className="size-4 text-(--text-muted)" />
+            {t("studio.uploadLocalImage")}
           </button>
           {recentFrames.length === 0 ? (
             <div className="rounded-(--radius-md) border border-(--border-faint) px-3 py-4 text-center text-[12px] text-(--text-muted)">
@@ -79,7 +95,7 @@ export function FirstFrameToolbarPicker({
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => onChange(item.relPath)}
+                  onClick={() => void pickFromGallery(item)}
                   title={item.prompt}
                   className={
                     "block aspect-square overflow-hidden rounded-(--radius-xs) " +

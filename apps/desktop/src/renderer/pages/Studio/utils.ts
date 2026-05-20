@@ -1,4 +1,5 @@
 import type { StudioReferenceRoles } from "../../state/useUIStore.js";
+import { api } from "../../lib/api.js";
 
 export function autosizeComposer(el: HTMLTextAreaElement | null): void {
   if (!el) return;
@@ -34,6 +35,32 @@ export function resolveGalleryUrl(relPath: string): string {
   const norm = relPath.replace(/\\/g, "/").replace(/^\/+/, "");
   const segments = norm.split("/").map(encodeURIComponent).join("/");
   return `imagent://local/${segments}`;
+}
+
+let dataDirPromise: Promise<string> | null = null;
+function getDataDir(): Promise<string> {
+  if (!dataDirPromise) {
+    dataDirPromise = api["app.storagePaths"]().then((p) => p.dataDir);
+  }
+  return dataDirPromise;
+}
+
+/**
+ * Resolve a gallery item's `relPath` (e.g. `gallery/2026/04/foo.png`) to an
+ * absolute filesystem path under the user's data dir. Used when feeding a
+ * gallery image into provider request fields (firstFrame/lastFrame) so the
+ * main process can `fs.stat` it.
+ */
+export async function resolveGalleryAbsolutePath(relPath: string): Promise<string> {
+  const dataDir = await getDataDir();
+  const usesBackslash = dataDir.includes("\\") && !/^[a-zA-Z]+:\//.test(dataDir);
+  const sep = usesBackslash ? "\\" : "/";
+  const trimmed = dataDir.endsWith("/") || dataDir.endsWith("\\") ? dataDir.slice(0, -1) : dataDir;
+  const normalizedRel = usesBackslash
+    ? relPath.replace(/\//g, "\\")
+    : relPath.replace(/\\/g, "/");
+  const cleanedRel = normalizedRel.replace(/^[/\\]+/, "");
+  return `${trimmed}${sep}${cleanedRel}`;
 }
 
 export function pruneReferenceRoles(
