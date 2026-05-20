@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { ProviderError, type VideoRequest } from "@imagent/core";
-import { ByteDanceVideoProvider, type ByteDanceVideoModelFactory } from "./video.js";
+import { ByteDanceVideoProvider } from "./video.js";
 import { BYTEDANCE_VIDEO_MODELS } from "../catalog/test-fixtures.js";
 
 const MP4_BYTES = new Uint8Array([
@@ -14,62 +14,19 @@ function jsonResponse(status: number, body: unknown): Response {
   });
 }
 
-/** `VideoModelV4Result` shape returned by `doGenerate` — discriminated union per data type. */
-type FakeDoGenerateResult = {
-  videos: Array<{ type: "binary"; data: Uint8Array; mediaType: string }>;
-  warnings: never[];
-  response: { timestamp: Date; modelId: string; headers: undefined };
-};
-
-interface FakeModelOptions {
-  /** Override the doGenerate bytes. */
-  bytes?: Uint8Array;
-  /** Override the doGenerate behaviour completely. */
-  doGenerate?: (opts: { abortSignal?: AbortSignal }) => Promise<FakeDoGenerateResult>;
-}
-
-function makeDefaultResult(modelId: string, bytes: Uint8Array): FakeDoGenerateResult {
-  return {
-    videos: [{ type: "binary", data: bytes, mediaType: "video/mp4" }],
-    warnings: [] as never[],
-    response: { timestamp: new Date(), modelId, headers: undefined },
-  };
-}
-
-/**
- * Fake `Experimental_VideoModelV4` — only the fields that
- * `experimental_generateVideo` actually reads. The result shape is the V4
- * discriminated `VideoModelV4VideoData` union (`type: 'binary'` here).
- */
-function makeFakeModel(modelId: string, opts: FakeModelOptions = {}) {
-  const stub = vi.fn(async ({ abortSignal }: { abortSignal?: AbortSignal }) => {
-    if (abortSignal?.aborted) {
-      const err = new Error("operation was aborted");
-      (err as { name?: string }).name = "AbortError";
-      throw err;
-    }
-    if (opts.doGenerate) return opts.doGenerate({ abortSignal });
-    return makeDefaultResult(modelId, opts.bytes ?? MP4_BYTES);
+function videoResponse(bytes = MP4_BYTES, mimeType = "video/mp4"): Response {
+  return new Response(bytes, {
+    status: 200,
+    headers: { "content-type": mimeType },
   });
-  return {
-    specificationVersion: "v4",
-    provider: "bytedance-test",
-    modelId,
-    maxVideosPerCall: 1,
-    doGenerate: stub,
-  } as unknown as ReturnType<ByteDanceVideoModelFactory>;
 }
 
-function makeProvider(
-  factory: ByteDanceVideoModelFactory,
-  opts: { fetch?: typeof fetch } = {},
-): ByteDanceVideoProvider {
+function makeProvider(fetch: typeof fetch): ByteDanceVideoProvider {
   return new ByteDanceVideoProvider({
     apiKey: "volc-key",
     endpoint: "https://ark.cn-beijing.volces.com/api/v3",
     models: new Map(Object.entries(BYTEDANCE_VIDEO_MODELS)),
-    modelFactory: factory,
-    ...(opts.fetch ? { fetch: opts.fetch } : {}),
+    fetch,
   });
 }
 
@@ -80,116 +37,129 @@ const baseRequest: VideoRequest = {
   durationSec: 5,
   fps: 24,
   resolution: "720p",
-  references: [],
+  aspectRatio: "16:9",
+  firstFrame: "https://example.com/first.png",
+  lastFrame: "https://example.com/last.png",
+  references: [{ path: "https://example.com/ref.png", role: "freeform" }],
   assetIds: [],
 };
 
-/**
- * Wait for queued microtasks + I/O ticks to flush. The Vercel SDK's
- * `experimental_generateVideo` chains several awaits (model resolution,
- * `invokeModelMaxVideosPerCall`, the retry wrapper, then the doGenerate
- * promise itself) so we need multiple tick boundaries before our submit-side
- * `.then(...)` can run.
- */
-async function flushMicrotasks(): Promise<void> {
-  for (let i = 0; i < 8; i++) {
-    await new Promise<void>((resolve) => setImmediate(resolve));
-  }
-}
-
 describe("ByteDanceVideoProvider", () => {
-  it("submit returns a synthetic providerJobId and invokes the SDK model", async () => {
-    const factory = vi.fn((id: string) => makeFakeModel(id));
-    const p = makeProvider(factory);
-    const handle = await p.submit(baseRequest);
-    expect(handle.providerId).toBe("bytedance");
-    expect(typeof handle.providerJobId).toBe("string");
-    expect(handle.providerJobId.length).toBeGreaterThan(0);
-    expect(factory).toHaveBeenCalledWith("dreamina-seedance-2-0-260128");
-  });
+  it("submit posts a ModelArk task and returns the remote task id", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { id: "task-123" }));
+    const p = makeProvider(fetchMock as unknown as typeof fetch);
 
-  it("poll returns 'running' immediately, 'succeeded' after the SDK promise resolves", async () => {
-    let resolveGen!: (v: FakeDoGenerateResult) => void;
-    const pending = new Promise<FakeDoGenerateResult>((res) => {
-      resolveGen = res;
+    const handle = await p.submit(baseRequest);
+
+    expect(handle).toMatchObject({
+      providerId: "bytedance",
+      providerJobId: "task-123",
+      pollingUrl: "/contents/generations/tasks/task-123",
+      meta: { durationSec: 5 },
     });
-    const factory = vi.fn((id: string) =>
-      makeFakeModel(id, { doGenerate: () => pending }),
-    );
-    const p = makeProvider(factory);
-    const handle = await p.submit(baseRequest);
-
-    // Before settlement: running.
-    expect((await p.poll(handle)).state).toBe("running");
-
-    // Settle and flush.
-    resolveGen(makeDefaultResult("dreamina-seedance-2-0-260128", MP4_BYTES));
-    await flushMicrotasks();
-
-    expect((await p.poll(handle)).state).toBe("succeeded");
-  });
-
-  it("poll returns 'failed' with errorMessage after the SDK promise rejects", async () => {
-    const factory = vi.fn((id: string) =>
-      makeFakeModel(id, {
-        doGenerate: async () => {
-          throw new Error("upstream model error");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks");
+    expect(init.method).toBe("POST");
+    expect(init.headers).toMatchObject({ Authorization: "Bearer volc-key" });
+    expect(JSON.parse(String(init.body))).toEqual({
+      model: "dreamina-seedance-2-0-260128",
+      content: [
+        { type: "text", text: "rotating crystal in a misty forest" },
+        {
+          type: "image_url",
+          image_url: { url: "https://example.com/first.png" },
+          role: "first_frame",
         },
-      }),
-    );
-    const p = makeProvider(factory);
-    const handle = await p.submit(baseRequest);
-    await flushMicrotasks();
-    const status = await p.poll(handle);
-    expect(status.state).toBe("failed");
-    expect(status.errorMessage).toMatch(/upstream model error/);
+        {
+          type: "image_url",
+          image_url: { url: "https://example.com/last.png" },
+          role: "last_frame",
+        },
+        {
+          type: "image_url",
+          image_url: { url: "https://example.com/ref.png" },
+          role: "reference_image",
+        },
+      ],
+      ratio: "16:9",
+      duration: 5,
+      fps: 24,
+      resolution: "720p",
+    });
   });
 
-  it("cancel aborts the underlying signal and removes the entry; subsequent fetch throws", async () => {
-    const factory = vi.fn((id: string) =>
-      makeFakeModel(id, {
-        doGenerate: ({ abortSignal }) =>
-          new Promise<never>((_resolve, reject) => {
-            abortSignal?.addEventListener("abort", () => {
-              const err = new Error("operation was aborted");
-              (err as { name?: string }).name = "AbortError";
-              reject(err);
-            });
-          }),
-      }),
-    );
-    const p = makeProvider(factory);
-    const handle = await p.submit(baseRequest);
-    await p.cancel(handle);
-    await flushMicrotasks();
-    // After cancel the entry is removed — `fetch` reports unknown id.
-    await expect(p.fetch(handle)).rejects.toBeInstanceOf(ProviderError);
-    // poll on a removed handle reports failed/unknown.
-    const status = await p.poll(handle);
-    expect(status.state).toBe("failed");
-    expect(status.errorMessage).toMatch(/unknown providerJobId/);
+  it("poll maps ModelArk task statuses", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(200, { id: "task-123", status: "running" }))
+      .mockResolvedValueOnce(jsonResponse(200, { id: "task-123", status: "succeeded" }))
+      .mockResolvedValueOnce(
+        jsonResponse(200, {
+          id: "task-123",
+          status: "failed",
+          error: { message: "upstream model error" },
+        }),
+      );
+    const p = makeProvider(fetchMock as unknown as typeof fetch);
+    const handle = { providerId: "bytedance", providerJobId: "task-123" };
+
+    expect(await p.poll(handle)).toEqual({ state: "running" });
+    expect(await p.poll(handle)).toEqual({ state: "succeeded" });
+    expect(await p.poll(handle)).toEqual({ state: "failed", errorMessage: "upstream model error" });
   });
 
-  it("fetch returns the bytes once the job has succeeded", async () => {
-    const factory = vi.fn((id: string) => makeFakeModel(id));
-    const p = makeProvider(factory);
-    const handle = await p.submit(baseRequest);
-    await flushMicrotasks();
-    const r = await p.fetch(handle);
-    expect(r.output.mimeType).toMatch(/^video\//);
+  it("fetch downloads the video bytes once the task has succeeded", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse(200, {
+          id: "task-123",
+          model: "dreamina-seedance-2-0-260128",
+          status: "succeeded",
+          content: { video_url: "https://cdn.example.com/out.mp4" },
+          usage: { completion_tokens: 42 },
+        }),
+      )
+      .mockResolvedValueOnce(videoResponse());
+    const p = makeProvider(fetchMock as unknown as typeof fetch);
+
+    const r = await p.fetch({
+      providerId: "bytedance",
+      providerJobId: "task-123",
+      meta: { durationSec: 5 },
+    });
+
     expect(Array.from(r.output.bytes)).toEqual(Array.from(MP4_BYTES));
+    expect(r.output.mimeType).toBe("video/mp4");
     expect(r.output.durationMs).toBe(5000);
+    expect(r.output.raw).toEqual({
+      taskId: "task-123",
+      model: "dreamina-seedance-2-0-260128",
+      usage: { completion_tokens: 42 },
+    });
+    expect(fetchMock.mock.calls[1]?.[0]).toBe("https://cdn.example.com/out.mp4");
   });
 
-  it("fetch before the job succeeds throws ProviderError", async () => {
-    const factory = vi.fn((id: string) =>
-      makeFakeModel(id, {
-        doGenerate: () => new Promise(() => {}), // never resolves
-      }),
+  it("fetch before the task succeeds throws ProviderError", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { id: "task-123", status: "running" }));
+    const p = makeProvider(fetchMock as unknown as typeof fetch);
+
+    await expect(p.fetch({ providerId: "bytedance", providerJobId: "task-123" })).rejects.toBeInstanceOf(
+      ProviderError,
     );
-    const p = makeProvider(factory);
-    const handle = await p.submit(baseRequest);
-    await expect(p.fetch(handle)).rejects.toBeInstanceOf(ProviderError);
+  });
+
+  it("cancel deletes the remote ModelArk task", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    const p = makeProvider(fetchMock as unknown as typeof fetch);
+
+    await p.cancel({ providerId: "bytedance", providerJobId: "task-123" });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks/task-123");
+    expect(init.method).toBe("DELETE");
   });
 
   it("test() returns ok against /models listing via probe http", async () => {
@@ -201,8 +171,7 @@ describe("ByteDanceVideoProvider", () => {
         ],
       }),
     );
-    const factory = vi.fn((id: string) => makeFakeModel(id));
-    const p = makeProvider(factory, { fetch: fetchMock as unknown as typeof fetch });
+    const p = makeProvider(fetchMock as unknown as typeof fetch);
     const r = await p.test();
     expect(r.ok).toBe(true);
     if (r.ok) {
@@ -212,8 +181,7 @@ describe("ByteDanceVideoProvider", () => {
 
   it("test() returns failure on 401", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(401, { error: "bad key" }));
-    const factory = vi.fn((id: string) => makeFakeModel(id));
-    const p = makeProvider(factory, { fetch: fetchMock as unknown as typeof fetch });
+    const p = makeProvider(fetchMock as unknown as typeof fetch);
     const r = await p.test();
     expect(r.ok).toBe(false);
     if (!r.ok) {
