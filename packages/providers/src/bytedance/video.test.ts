@@ -1,10 +1,17 @@
-import { describe, expect, it, vi } from "vitest";
 import { ProviderError, type VideoRequest } from "@imagent/core";
-import { ByteDanceVideoProvider } from "./video.js";
+import { describe, expect, it, vi } from "vitest";
 import { BYTEDANCE_VIDEO_MODELS } from "../catalog/test-fixtures.js";
+import { ByteDanceVideoProvider } from "./video.js";
 
 const MP4_BYTES = new Uint8Array([
-  0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, // ftyp box header
+  0x00,
+  0x00,
+  0x00,
+  0x18,
+  0x66,
+  0x74,
+  0x79,
+  0x70, // ftyp box header
 ]);
 
 function jsonResponse(status: number, body: unknown): Response {
@@ -142,12 +149,14 @@ describe("ByteDanceVideoProvider", () => {
   });
 
   it("fetch before the task succeeds throws ProviderError", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { id: "task-123", status: "running" }));
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse(200, { id: "task-123", status: "running" }));
     const p = makeProvider(fetchMock as unknown as typeof fetch);
 
-    await expect(p.fetch({ providerId: "bytedance", providerJobId: "task-123" })).rejects.toBeInstanceOf(
-      ProviderError,
-    );
+    await expect(
+      p.fetch({ providerId: "bytedance", providerJobId: "task-123" }),
+    ).rejects.toBeInstanceOf(ProviderError);
   });
 
   it("cancel deletes the remote ModelArk task", async () => {
@@ -158,17 +167,16 @@ describe("ByteDanceVideoProvider", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks/task-123");
+    expect(url).toBe(
+      "https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks/task-123",
+    );
     expect(init.method).toBe("DELETE");
   });
 
   it("test() returns ok against /models listing via probe http", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse(200, {
-        data: [
-          { id: "dreamina-seedance-2-0-260128" },
-          { id: "seedream-5-0-260128" },
-        ],
+        data: [{ id: "dreamina-seedance-2-0-260128" }, { id: "seedream-5-0-260128" }],
       }),
     );
     const p = makeProvider(fetchMock as unknown as typeof fetch);

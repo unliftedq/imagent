@@ -1,9 +1,9 @@
 import {
+  applyVideoDefaults,
+  type Logger,
   ProviderError,
   ProviderRequestError,
   ProviderResponseError,
-  applyVideoDefaults,
-  type Logger,
   type ProviderTestResult,
   type VideoCapabilities,
   type VideoGenerationResult,
@@ -167,9 +167,12 @@ export class ByteDanceVideoProvider implements VideoProvider {
     const jobStatus = statusToJobStatus(status);
     if (jobStatus.state !== "succeeded") {
       const suffix = jobStatus.errorMessage ? `: ${jobStatus.errorMessage}` : "";
-      throw new ProviderError(`fetch() called on non-succeeded job (state=${jobStatus.state})${suffix}`, {
-        vendorId: this.id,
-      });
+      throw new ProviderError(
+        `fetch() called on non-succeeded job (state=${jobStatus.state})${suffix}`,
+        {
+          vendorId: this.id,
+        },
+      );
     }
 
     const videoUrl = pickVideoUrl(status);
@@ -226,7 +229,8 @@ export class ByteDanceVideoProvider implements VideoProvider {
   }
 
   private async fetchTask(handle: VideoJobHandle): Promise<ArkTaskStatusResponse> {
-    const path = typeof handle.pollingUrl === "string" ? handle.pollingUrl : taskPath(handle.providerJobId);
+    const path =
+      typeof handle.pollingUrl === "string" ? handle.pollingUrl : taskPath(handle.providerJobId);
     return this.http.get<ArkTaskStatusResponse>(path);
   }
 }
@@ -306,7 +310,13 @@ function statusToJobStatus(res: ArkTaskStatusResponse): VideoJobStatus {
 }
 
 function isKnownState(value: string): value is VideoJobState {
-  return value === "queued" || value === "running" || value === "succeeded" || value === "failed" || value === "cancelled";
+  return (
+    value === "queued" ||
+    value === "running" ||
+    value === "succeeded" ||
+    value === "failed" ||
+    value === "cancelled"
+  );
 }
 
 function pickErrorMessage(res: ArkTaskStatusResponse): string | undefined {
