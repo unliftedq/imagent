@@ -121,42 +121,57 @@ export const FLUX_IMAGE_MODELS: Record<string, ImageModelDef> = {
 };
 
 export const BYTEDANCE_IMAGE_MODELS: Record<string, ImageModelDef> = {
-  "doubao-seedream-4-0-250828": {
-    id: "doubao-seedream-4-0-250828",
-    displayName: "Seedream 4.0",
+  "seedream-5-0-260128": {
+    id: "seedream-5-0-260128",
+    displayName: "Seedream 5.0",
     capabilities: {
-      sizes: ["1024x1024", "1K", "2K", "4K"],
-      maxReferences: 3,
+      sizes: ["2K", "3K", "4K"],
+      supportsArbitrarySize: true,
+      maxReferences: 10,
       maxOutputs: 15,
       supportsStyleRef: true,
     },
     defaults: { size: "2K", count: 1 },
   },
-  "doubao-seedream-3-0-t2i-250415": {
-    id: "doubao-seedream-3-0-t2i-250415",
-    displayName: "Seedream 3.0",
+  "seedream-4-5-251128": {
+    id: "seedream-4-5-251128",
+    displayName: "Seedream 4.5",
     capabilities: {
-      sizes: ["1024x1024", "864x1152", "1152x864", "768x1344", "1344x768"],
-      maxReferences: 4,
-      maxOutputs: 4,
+      sizes: ["2K", "4K"],
+      supportsArbitrarySize: true,
+      maxReferences: 10,
+      maxOutputs: 15,
       supportsStyleRef: true,
     },
-    defaults: { size: "1024x1024", count: 1 },
+    defaults: { size: "2K", count: 1 },
+  },
+  "seedream-4-0-250828": {
+    id: "seedream-4-0-250828",
+    displayName: "Seedream 4.0",
+    capabilities: {
+      sizes: ["1K", "2K", "4K"],
+      supportsArbitrarySize: true,
+      maxReferences: 10,
+      maxOutputs: 15,
+      supportsStyleRef: true,
+    },
+    defaults: { size: "2K", count: 1 },
   },
 };
 
 export const BYTEDANCE_VIDEO_MODELS: Record<string, VideoModelDef> = {
-  "doubao-seedance-1-0-pro-250428": {
-    id: "doubao-seedance-1-0-pro-250428",
-    displayName: "Seedance 1.0 Pro",
+  "dreamina-seedance-2-0-260128": {
+    id: "dreamina-seedance-2-0-260128",
+    displayName: "Dreamina Seedance 2.0",
     capabilities: {
-      durationsSec: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      maxDurationSec: 12,
+      durationsSec: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+      maxDurationSec: 15,
       fpsOptions: [24],
-      resolutions: ["480p", "720p", "1080p"],
+      resolutions: ["480p", "720p"],
       supportsFirstFrame: true,
       supportsLastFrame: true,
       supportsRefImages: true,
+      maxReferences: 9,
     },
     defaults: { durationSec: 5, fps: 24, resolution: "720p" },
   },

@@ -76,7 +76,7 @@ function makeProvider(
 const baseRequest: VideoRequest = {
   prompt: "rotating crystal in a misty forest",
   providerId: "bytedance",
-  model: "doubao-seedance-1-0-pro-250428",
+  model: "dreamina-seedance-2-0-260128",
   durationSec: 5,
   fps: 24,
   resolution: "720p",
@@ -105,7 +105,7 @@ describe("ByteDanceVideoProvider", () => {
     expect(handle.providerId).toBe("bytedance");
     expect(typeof handle.providerJobId).toBe("string");
     expect(handle.providerJobId.length).toBeGreaterThan(0);
-    expect(factory).toHaveBeenCalledWith("doubao-seedance-1-0-pro-250428");
+    expect(factory).toHaveBeenCalledWith("dreamina-seedance-2-0-260128");
   });
 
   it("poll returns 'running' immediately, 'succeeded' after the SDK promise resolves", async () => {
@@ -123,7 +123,7 @@ describe("ByteDanceVideoProvider", () => {
     expect((await p.poll(handle)).state).toBe("running");
 
     // Settle and flush.
-    resolveGen(makeDefaultResult("doubao-seedance-1-0-pro-250428", MP4_BYTES));
+    resolveGen(makeDefaultResult("dreamina-seedance-2-0-260128", MP4_BYTES));
     await flushMicrotasks();
 
     expect((await p.poll(handle)).state).toBe("succeeded");
@@ -196,8 +196,8 @@ describe("ByteDanceVideoProvider", () => {
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse(200, {
         data: [
-          { id: "doubao-seedance-1-0-pro-250428" },
-          { id: "doubao-seedream-3-0-t2i-250415" },
+          { id: "dreamina-seedance-2-0-260128" },
+          { id: "seedream-5-0-260128" },
         ],
       }),
     );
@@ -206,7 +206,7 @@ describe("ByteDanceVideoProvider", () => {
     const r = await p.test();
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.sampleModelId).toBe("doubao-seedance-1-0-pro-250428");
+      expect(r.sampleModelId).toBe("dreamina-seedance-2-0-260128");
     }
   });
 

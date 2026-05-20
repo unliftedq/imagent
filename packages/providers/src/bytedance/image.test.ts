@@ -32,7 +32,7 @@ function makeProvider(client: FakeClient): ByteDanceImageProvider {
 const baseRequest: ImageRequest = {
   prompt: "neon koi pond",
   providerId: "bytedance",
-  model: "doubao-seedream-3-0-t2i-250415",
+  model: "seedream-5-0-260128",
   count: 1,
   size: "1024x1024",
   references: [],
@@ -49,7 +49,7 @@ describe("ByteDanceImageProvider", () => {
     expect(client.images.generate).toHaveBeenCalledTimes(1);
     const [body] = client.images.generate.mock.calls[0]!;
     expect(body).toMatchObject({
-      model: "doubao-seedream-3-0-t2i-250415",
+      model: "seedream-5-0-260128",
       prompt: baseRequest.prompt,
     });
   });
