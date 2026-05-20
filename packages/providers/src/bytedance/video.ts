@@ -57,49 +57,6 @@ interface ByteDanceContentPart {
 
 const TASKS_PATH = "/contents/generations/tasks";
 
-const RESOLUTION_MAP: Record<string, string> = {
-  "864x496": "480p",
-  "496x864": "480p",
-  "752x560": "480p",
-  "560x752": "480p",
-  "640x640": "480p",
-  "992x432": "480p",
-  "432x992": "480p",
-  "864x480": "480p",
-  "480x864": "480p",
-  "736x544": "480p",
-  "544x736": "480p",
-  "960x416": "480p",
-  "416x960": "480p",
-  "832x480": "480p",
-  "480x832": "480p",
-  "624x624": "480p",
-  "1280x720": "720p",
-  "720x1280": "720p",
-  "1112x834": "720p",
-  "834x1112": "720p",
-  "960x960": "720p",
-  "1470x630": "720p",
-  "630x1470": "720p",
-  "1248x704": "720p",
-  "704x1248": "720p",
-  "1120x832": "720p",
-  "832x1120": "720p",
-  "1504x640": "720p",
-  "640x1504": "720p",
-  "1920x1080": "1080p",
-  "1080x1920": "1080p",
-  "1664x1248": "1080p",
-  "1248x1664": "1080p",
-  "1440x1440": "1080p",
-  "2206x946": "1080p",
-  "946x2206": "1080p",
-  "1920x1088": "1080p",
-  "1088x1920": "1080p",
-  "2176x928": "1080p",
-  "928x2176": "1080p",
-};
-
 /**
  * ByteDance video provider — backed directly by ModelArk's Seedance HTTP task
  * API. Submit creates a `/contents/generations/tasks` job, poll reads that
@@ -243,7 +200,7 @@ function buildCreateTaskBody(req: VideoRequest, model: VideoModelDef): Record<st
   if (req.aspectRatio) body.ratio = req.aspectRatio;
   if (req.durationSec !== undefined) body.duration = req.durationSec;
   if (req.fps !== undefined) body.fps = req.fps;
-  if (req.resolution) body.resolution = normalizeResolution(req.resolution);
+  if (req.resolution) body.resolution = req.resolution;
   mergeRawOptions(body, req.raw);
   return body;
 }
@@ -271,10 +228,6 @@ function mergeRawOptions(body: Record<string, unknown>, raw: VideoRequest["raw"]
   for (const [key, value] of Object.entries(rawObj)) {
     if (key !== "parameters") body[key] = value;
   }
-}
-
-function normalizeResolution(value: string): string {
-  return RESOLUTION_MAP[value] ?? value;
 }
 
 function taskPath(taskId: string): string {
