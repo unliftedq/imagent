@@ -91,7 +91,7 @@ const SECTION_META: Record<
     labelKey: "settings.section.providers",
   },
   models: {
-    icon: <Icons.Brain weight="duotone" className="size-4" />,
+    icon: <Icons.Sparkle weight="duotone" className="size-4" />,
     labelKey: "settings.section.models",
   },
   about: {

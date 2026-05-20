@@ -43,7 +43,7 @@ export function pickModelLogo(modelId: string): ModelLogo | undefined {
   if (modelId.startsWith("flux-")) {
     return { src: bflUrl, alt: "Black Forest Labs" };
   }
-  if (modelId.startsWith("doubao-")) {
+  if (modelId.startsWith("doubao-") || modelId.startsWith("seedream-") || modelId.startsWith("seedance-") || modelId.startsWith("dreamina-")) {
     return { src: bytedanceUrl, alt: "ByteDance" };
   }
   if (modelId.startsWith("grok-")) {

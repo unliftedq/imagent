@@ -31,7 +31,7 @@ export function ProviderModelPicker({
   );
   const favorites = options.filter((option) => favoriteKeys.has(modelFavoriteKey(mode, option)));
   const providers = uniqueProviders(options);
-  const triggerLabel = current?.modelId ?? t("studio.chooseModel");
+  const triggerLabel = current?.displayName ?? t("studio.chooseModel");
 
   const choose = (option: UnifiedModelOption): void => {
     onChange({ providerId: option.providerId, modelId: option.modelId });

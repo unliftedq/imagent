@@ -171,8 +171,8 @@ function providerDisplayName(
   base: { displayName?: string },
 ): string | undefined {
   if (offering.displayName) return offering.displayName;
-  if (offering.id !== offering.modelId) {
-    return base.displayName ? `${offering.id} (${base.displayName})` : offering.id;
-  }
-  return base.displayName;
+  // When the offering id differs from the canonical model id (e.g. an Azure
+  // deployment name), prefer the canonical model's display name so the UI
+  // shows "GPT Image 2" rather than "my-deployment (GPT Image 2)".
+  return base.displayName ?? (offering.id !== offering.modelId ? undefined : offering.id);
 }
