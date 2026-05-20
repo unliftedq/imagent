@@ -62,6 +62,28 @@ export function imageDataUrl(reference: LoadedImageReference): string {
 }
 
 /**
+ * Resolve an image-url style input for providers that accept public URLs,
+ * already-encoded data URLs, local files as data URLs, and opaque asset ids.
+ */
+export async function resolveImageUrlInput(value: string, vendorId: string): Promise<string> {
+  if (isImageUrlPassthrough(value)) return value;
+
+  try {
+    const fileStat = await fs.stat(value);
+    if (!fileStat.isFile()) return value;
+  } catch (err) {
+    if (isMissingPathError(err)) return value;
+    throw new ProviderRequestError(
+      `could not read reference image '${value}': ${(err as Error)?.message ?? String(err)}`,
+      { vendorId, cause: err },
+    );
+  }
+
+  const [reference] = await loadImageReferences([{ path: value, role: "freeform" }], vendorId);
+  return reference ? imageDataUrl(reference) : value;
+}
+
+/**
  * Detect an image MIME type from the file extension first, then from known
  * byte signatures for extensionless files. Falls back to image/png because
  * that is the default output/input format used elsewhere in the providers.
@@ -108,4 +130,13 @@ function fallbackFilenameForMime(mimeType: string): string {
     default:
       return "reference.png";
   }
+}
+
+function isImageUrlPassthrough(value: string): boolean {
+  return /^[a-z][a-z0-9+.-]*:/i.test(value);
+}
+
+function isMissingPathError(err: unknown): boolean {
+  const code = (err as NodeJS.ErrnoException | undefined)?.code;
+  return code === "ENOENT" || code === "ENOTDIR";
 }

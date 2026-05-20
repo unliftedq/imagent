@@ -1,5 +1,3 @@
-import { readFile, stat } from "node:fs/promises";
-import path from "node:path";
 import {
   applyVideoDefaults,
   type Logger,
@@ -20,6 +18,7 @@ import {
 } from "@imagent/core";
 import { createHttpClient, type HttpClient } from "../http/index.js";
 import { testFailureFromError } from "../openai/image.js";
+import { resolveImageUrlInput } from "../reference-images.js";
 
 export interface ByteDanceVideoProviderOptions {
   apiKey: string;
@@ -215,68 +214,25 @@ async function buildContent(req: VideoRequest): Promise<ByteDanceContentPart[]> 
   if (req.firstFrame) {
     content.push({
       type: "image_url",
-      image_url: { url: await normalizeImageInput(req.firstFrame) },
+      image_url: { url: await resolveImageUrlInput(req.firstFrame, "bytedance") },
       role: "first_frame",
     });
   }
   if (req.lastFrame) {
     content.push({
       type: "image_url",
-      image_url: { url: await normalizeImageInput(req.lastFrame) },
+      image_url: { url: await resolveImageUrlInput(req.lastFrame, "bytedance") },
       role: "last_frame",
     });
   }
   for (const ref of req.references) {
     content.push({
       type: "image_url",
-      image_url: { url: await normalizeImageInput(ref.path) },
+      image_url: { url: await resolveImageUrlInput(ref.path, "bytedance") },
       role: "reference_image",
     });
   }
   return content;
-}
-
-async function normalizeImageInput(value: string): Promise<string> {
-  if (isPassthroughImageInput(value)) return value;
-
-  try {
-    const fileStat = await stat(value);
-    if (!fileStat.isFile()) return value;
-  } catch (err) {
-    if (isMissingPathError(err)) return value;
-    throw err;
-  }
-
-  const bytes = await readFile(value);
-  const mimeType = imageMimeType(value);
-  return `data:${mimeType};base64,${bytes.toString("base64")}`;
-}
-
-function isPassthroughImageInput(value: string): boolean {
-  return /^[a-z][a-z0-9+.-]*:/i.test(value) || value.startsWith("data:image/");
-}
-
-function isMissingPathError(err: unknown): boolean {
-  const code = (err as NodeJS.ErrnoException | undefined)?.code;
-  return code === "ENOENT" || code === "ENOTDIR";
-}
-
-function imageMimeType(filePath: string): string {
-  switch (path.extname(filePath).toLowerCase()) {
-    case ".jpg":
-    case ".jpeg":
-      return "image/jpeg";
-    case ".webp":
-      return "image/webp";
-    case ".gif":
-      return "image/gif";
-    case ".bmp":
-      return "image/bmp";
-    case ".svg":
-      return "image/svg+xml";
-    default:
-      return "image/png";
-  }
 }
 
 function mergeRawOptions(body: Record<string, unknown>, raw: VideoRequest["raw"]): void {
