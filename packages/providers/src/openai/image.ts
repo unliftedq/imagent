@@ -1,21 +1,26 @@
 import {
   appendImageReferenceInstructions,
-  applyImageDefaults,
-  type ImageCapabilities,
-  type ImageGenerationResult,
   type ImageModelDef,
-  type ImageOutput,
-  type ImageProvider,
   type ImageRequest,
-  type Logger,
   ProviderError,
   ProviderHttpError,
-  ProviderRequestError,
-  ProviderResponseError,
   type ProviderTestResult,
-  validateImageRequestAgainstModel,
 } from "@imagent/core";
 import OpenAI, { APIError } from "openai";
+import {
+  aggregateImageCapabilities,
+  decodeBase64,
+  fetchBytesViaFetch,
+  listOpenAIModelIds,
+  mimeTypeForOutputFormat,
+  type OpenAICompatibleBody,
+  OpenAICompatibleImageProvider,
+  type OpenAICompatibleImageProviderOptions,
+  type OpenAIClientLike,
+  parseSize,
+  runListProbe,
+  testFailureFromError,
+} from "../common/index.js";
 import { loadImageReferences, openAIReferenceFiles } from "../reference-images.js";
 
 /**
@@ -25,30 +30,7 @@ import { loadImageReferences, openAIReferenceFiles } from "../reference-images.j
  */
 export const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
 
-/**
- * Minimal SDK client surface used by `OpenAIImageProvider`. Tests inject a
- * fake; production constructs a real `OpenAI` instance. Defined structurally
- * so test fakes don't need to satisfy the full `OpenAI` shape.
- */
-export interface OpenAIClientLike {
-  images: {
-    generate: OpenAIImageMethod;
-    edit?: OpenAIImageMethod;
-  };
-  models: {
-    list: (options?: {
-      signal?: AbortSignal;
-    }) => Promise<{ data?: Array<{ id?: string }> }> | AsyncIterable<{ id?: string }>;
-  };
-}
-
-type OpenAIImageResponse = {
-  data?: Array<{ b64_json?: string; url?: string; revised_prompt?: string }>;
-};
-type OpenAIImageMethod = (
-  body: Record<string, unknown>,
-  options?: { signal?: AbortSignal },
-) => Promise<OpenAIImageResponse>;
+export type { OpenAIClientLike };
 
 export interface OpenAIImageProviderOptions {
   apiKey: string;
@@ -58,92 +40,35 @@ export interface OpenAIImageProviderOptions {
   displayName?: string;
   /** Inject a SDK client (tests). In production we construct one. */
   client?: OpenAIClientLike;
-  logger?: Logger;
+  logger?: OpenAICompatibleImageProviderOptions["logger"];
 }
 
-export class OpenAIImageProvider implements ImageProvider {
-  readonly id: string;
-  readonly displayName: string;
-  readonly capabilities: ImageCapabilities;
-  readonly models: ReadonlyMap<string, ImageModelDef>;
-  protected readonly client: OpenAIClientLike;
-  protected readonly logger?: Logger;
-
+export class OpenAIImageProvider extends OpenAICompatibleImageProvider {
   constructor(options: OpenAIImageProviderOptions) {
-    this.id = options.providerId ?? "openai";
-    this.displayName = options.displayName ?? "OpenAI";
-    this.models = options.models;
-    this.capabilities = aggregateCapabilities(options.models);
-    if (options.logger) this.logger = options.logger;
-    this.client =
+    const client =
       options.client ??
       (new OpenAI({
         apiKey: options.apiKey,
         baseURL: options.baseUrl ?? DEFAULT_OPENAI_BASE_URL,
       }) as unknown as OpenAIClientLike);
+    super({
+      providerId: options.providerId ?? "openai",
+      displayName: options.displayName ?? "OpenAI",
+      models: options.models,
+      ...(options.logger !== undefined ? { logger: options.logger } : {}),
+      client,
+      supportsUrlFallback: true,
+      fetchBytesFromUrl: (url, signal) => fetchBytesViaFetch(url, "openai", signal),
+      rethrowSdkError: rethrowOpenAIError,
+    });
   }
 
-  async generate(req: ImageRequest, signal?: AbortSignal): Promise<ImageGenerationResult> {
-    const model = this.models.get(req.model);
-    if (!model) {
-      throw new ProviderRequestError(`unknown model '${req.model}' for ${this.id}`, {
-        vendorId: this.id,
-      });
-    }
-
-    const merged = applyImageDefaults(req, model);
-    validateImageRequestAgainstModel(this.id, merged, model);
-
+  protected async buildBody(
+    merged: ImageRequest,
+    model: ImageModelDef,
+  ): Promise<OpenAICompatibleBody> {
     const body = await buildOpenAIImageBody(merged, model, this.id);
-    const opts: { signal?: AbortSignal } = {};
-    if (signal) opts.signal = signal;
-
-    let response: { data?: Array<{ b64_json?: string; url?: string; revised_prompt?: string }> };
-    try {
-      if (merged.references.length > 0) {
-        if (!this.client.images.edit) {
-          throw new ProviderRequestError(
-            `${this.id} SDK client does not support image references via images.edit API. Ensure you are using an SDK version that includes the edit method.`,
-            { vendorId: this.id },
-          );
-        }
-        response = await this.client.images.edit(body, opts);
-      } else {
-        response = await this.client.images.generate(body, opts);
-      }
-    } catch (err) {
-      throw rethrowOpenAIError(err, this.id);
-    }
-
-    const data = response?.data ?? [];
-    const outputs: ImageOutput[] = [];
-    for (const entry of data) {
-      if (entry.b64_json) {
-        const bytes = decodeBase64(entry.b64_json);
-        outputs.push({
-          bytes,
-          mimeType: mimeTypeForOutputFormat(merged.outputFormat),
-          ...parseSize(merged.size),
-          ...(entry.revised_prompt ? { raw: { revised_prompt: entry.revised_prompt } } : {}),
-        });
-      } else if (entry.url) {
-        // Fallback for deployments that ignore response_format and return URLs.
-        const dl = await fetchBytesFromUrl(entry.url, signal);
-        outputs.push({
-          bytes: dl.bytes,
-          mimeType: dl.mimeType,
-          ...parseSize(merged.size),
-        });
-      } else {
-        throw new ProviderResponseError("response entry missing both b64_json and url", {
-          vendorId: this.id,
-        });
-      }
-    }
-    if (outputs.length === 0) {
-      throw new ProviderError("no image outputs returned", { vendorId: this.id });
-    }
-    return { outputs };
+    return { body };
   }
 
   /**
@@ -151,21 +76,13 @@ export class OpenAIImageProvider implements ImageProvider {
    * means the key is valid. We additionally annotate the response when one of
    * our configured model ids is present in the listing.
    */
-  async test(signal?: AbortSignal): Promise<ProviderTestResult> {
-    const started = Date.now();
+  protected async doTest(signal?: AbortSignal): Promise<ProviderTestResult> {
     const probeSignal = signal ?? AbortSignal.timeout(8000);
-    try {
-      const ids = await listModelIds(this.client, probeSignal);
-      const latencyMs = Date.now() - started;
-      const configured = [...this.models.keys()];
-      const matched = configured.find((id) => ids.includes(id));
-      const out: ProviderTestResult = matched
-        ? { ok: true, latencyMs, sampleModelId: matched }
-        : { ok: true, latencyMs };
-      return out;
-    } catch (err) {
-      return testFailureFromError(err);
-    }
+    return runListProbe({
+      listIds: (s) => listOpenAIModelIds(this.client, s),
+      configuredIds: [...this.models.keys()],
+      signal: probeSignal,
+    });
   }
 }
 
@@ -253,139 +170,15 @@ export function rethrowOpenAIError(err: unknown, vendorId: string): never {
   throw new ProviderError(String(err), { vendorId });
 }
 
-/**
- * `models.list()` returns a `PagePromise` (async iterable) in the real SDK.
- * For tests we accept either an array-shaped `{ data }` value or an async
- * iterable. Either path returns the model id list.
- */
-export async function listModelIds(
-  client: OpenAIClientLike,
-  signal?: AbortSignal,
-): Promise<string[]> {
-  const opts: { signal?: AbortSignal } = {};
-  if (signal) opts.signal = signal;
-  const result = await client.models.list(opts);
-  // Real SDK PagePromise: has both AsyncIterable<Item> AND a resolved Page that
-  // exposes `data`. The resolved value (after await) IS the page; PagePromise's
-  // resolution exposes `data`. Tests typically return `{ data: [...] }`.
-  if (result && typeof (result as { data?: unknown }).data !== "undefined") {
-    const data = (result as { data?: Array<{ id?: string }> }).data ?? [];
-    return data.map((m) => m?.id).filter((s): s is string => typeof s === "string");
-  }
-  // Fall back: drain the async iterable.
-  const ids: string[] = [];
-  if (typeof (result as AsyncIterable<{ id?: string }>)[Symbol.asyncIterator] === "function") {
-    for await (const m of result as AsyncIterable<{ id?: string }>) {
-      if (typeof m?.id === "string") ids.push(m.id);
-    }
-  }
-  return ids;
-}
-
-async function fetchBytesFromUrl(
-  url: string,
-  signal?: AbortSignal,
-): Promise<{ bytes: Uint8Array<ArrayBuffer>; mimeType: string }> {
-  const init: RequestInit = signal ? { signal } : {};
-  const res = await fetch(url, init);
-  if (!res.ok) {
-    throw new ProviderHttpError(`HTTP ${res.status} downloading ${url}`, {
-      vendorId: "openai",
-      status: res.status,
-    });
-  }
-  const buf = await res.arrayBuffer();
-  const bytes = new Uint8Array(buf as ArrayBuffer);
-  const mimeType = res.headers.get("content-type") ?? "image/png";
-  return { bytes, mimeType: mimeType.startsWith("image/") ? mimeType : "image/png" };
-}
-
-export function aggregateCapabilities(
-  models: ReadonlyMap<string, ImageModelDef>,
-): ImageCapabilities {
-  const sizes = new Set<string>();
-  let supportsArbitrarySize = false;
-  const aspectRatios = new Set<string>();
-  let maxReferences = 0;
-  let maxReferenceSizeMb: number | undefined;
-  let maxOutputs = 1;
-  let supportsStyleRef = false;
-  for (const m of models.values()) {
-    const c = m.capabilities;
-    if (!c) continue;
-    for (const s of c.sizes ?? []) sizes.add(s);
-    supportsArbitrarySize ||= c.supportsArbitrarySize === true;
-    for (const a of c.aspectRatios ?? []) aspectRatios.add(a);
-    maxReferences = Math.max(maxReferences, c.maxReferences ?? 0);
-    if (c.maxReferenceSizeMb !== undefined) {
-      maxReferenceSizeMb = Math.max(maxReferenceSizeMb ?? 0, c.maxReferenceSizeMb);
-    }
-    maxOutputs = Math.max(maxOutputs, c.maxOutputs);
-    supportsStyleRef ||= c.supportsStyleRef;
-  }
-  return {
-    sizes: [...sizes],
-    ...(supportsArbitrarySize ? { supportsArbitrarySize } : {}),
-    aspectRatios: [...aspectRatios],
-    maxReferences,
-    ...(maxReferenceSizeMb !== undefined ? { maxReferenceSizeMb } : {}),
-    maxOutputs,
-    supportsStyleRef,
-  };
-}
-
-export function decodeBase64(s: string): Uint8Array<ArrayBuffer> {
-  const b = Buffer.from(s, "base64");
-  const ab = new ArrayBuffer(b.byteLength);
-  const out = new Uint8Array(ab);
-  out.set(b);
-  return out;
-}
-
-/**
- * Map a requested `output_format` (or absence thereof) to the MIME type the
- * decoded base64 bytes will carry. gpt-image-* defaults to PNG when the
- * request omits the parameter; legacy DALL-E always returns PNG.
- */
-export function mimeTypeForOutputFormat(outputFormat: string | undefined): string {
-  switch (outputFormat) {
-    case "jpeg":
-    case "jpg":
-      return "image/jpeg";
-    case "webp":
-      return "image/webp";
-    default:
-      return "image/png";
-  }
-}
-
-export function parseSize(size: string | undefined): { width?: number; height?: number } {
-  if (!size) return {};
-  const m = /^(\d+)x(\d+)$/.exec(size);
-  if (!m) return {};
-  return { width: Number(m[1]), height: Number(m[2]) };
-}
-
-/**
- * Convert any thrown error into a `ProviderTestResult` failure shape. Shared
- * by every vendor's `test()` so they have identical never-throws semantics.
- */
-export function testFailureFromError(err: unknown): ProviderTestResult {
-  if (err instanceof APIError && typeof err.status === "number") {
-    return { ok: false, reason: `HTTP ${err.status}: ${err.message}`, status: err.status };
-  }
-  if (err instanceof ProviderHttpError) {
-    return { ok: false, reason: err.message, status: err.status ?? 0 };
-  }
-  if (err instanceof ProviderError) {
-    const out: ProviderTestResult =
-      err.status !== undefined
-        ? { ok: false, reason: err.message, status: err.status }
-        : { ok: false, reason: err.message };
-    return out;
-  }
-  if (err instanceof Error) {
-    return { ok: false, reason: err.message };
-  }
-  return { ok: false, reason: String(err) };
-}
+// Back-compat re-exports — these previously lived here and are imported
+// directly from `../openai/image.js` by tests and other vendor files. They
+// now have their canonical home under `../common/`, but the re-export
+// preserves all existing import paths with zero churn.
+export {
+  aggregateImageCapabilities as aggregateCapabilities,
+  decodeBase64,
+  listOpenAIModelIds as listModelIds,
+  mimeTypeForOutputFormat,
+  parseSize,
+  testFailureFromError,
+};

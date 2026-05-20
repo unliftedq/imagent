@@ -1,21 +1,21 @@
 import { GoogleGenAI } from "@google/genai";
 import {
   appendImageReferenceInstructions,
-  applyImageDefaults,
-  type ImageCapabilities,
   type ImageGenerationResult,
   type ImageModelDef,
   type ImageOutput,
-  type ImageProvider,
   type ImageRequest,
   type Logger,
   ProviderError,
-  ProviderRequestError,
   ProviderResponseError,
   type ProviderTestResult,
-  validateImageRequestAgainstModel,
 } from "@imagent/core";
-import { aggregateCapabilities, decodeBase64, testFailureFromError } from "../openai/image.js";
+import {
+  BaseImageProvider,
+  decodeBase64,
+  rethrowGenericSdkError,
+  runListProbe,
+} from "../common/index.js";
 import { loadImageReferences } from "../reference-images.js";
 
 /** Canonical Google generative-language base URL (used as fallback HttpOptions). */
@@ -70,18 +70,16 @@ export interface GoogleImageProviderOptions {
  * `/^gemini-.*-(flash-)?image/` goes through `generateContent`; everything
  * else uses `generateImages`.
  */
-export class GoogleImageProvider implements ImageProvider {
-  readonly id = "google";
-  readonly displayName = "Google AI Studio";
-  readonly models: ReadonlyMap<string, ImageModelDef>;
-  readonly capabilities: ImageCapabilities;
-  private readonly client: GoogleGenAIClientLike;
-  private readonly logger?: Logger;
+export class GoogleImageProvider extends BaseImageProvider {
+  protected readonly client: GoogleGenAIClientLike;
 
   constructor(options: GoogleImageProviderOptions) {
-    this.models = options.models;
-    this.capabilities = aggregateCapabilities(options.models);
-    if (options.logger) this.logger = options.logger;
+    super({
+      providerId: "google",
+      displayName: "Google AI Studio",
+      models: options.models,
+      ...(options.logger !== undefined ? { logger: options.logger } : {}),
+    });
     if (options.client) {
       this.client = options.client;
     } else {
@@ -93,20 +91,14 @@ export class GoogleImageProvider implements ImageProvider {
     }
   }
 
-  async generate(req: ImageRequest, signal?: AbortSignal): Promise<ImageGenerationResult> {
-    const model = this.models.get(req.model);
-    if (!model) {
-      throw new ProviderRequestError(`unknown model '${req.model}' for google`, {
-        vendorId: this.id,
-      });
-    }
-    const merged = applyImageDefaults(req, model);
-    validateImageRequestAgainstModel(this.id, merged, model);
-
+  protected async doGenerate(
+    merged: ImageRequest,
+    model: ImageModelDef,
+    signal?: AbortSignal,
+  ): Promise<ImageGenerationResult> {
     if (signal?.aborted) {
       throw new ProviderError("request aborted", { vendorId: this.id });
     }
-
     if (isNanoBananaModel(model.id)) {
       return this.generateViaContent(merged, model.id, signal);
     }
@@ -138,7 +130,7 @@ export class GoogleImageProvider implements ImageProvider {
         config,
       });
     } catch (err) {
-      throw rethrowGoogleError(err, this.id);
+      rethrowGenericSdkError(err, this.id);
     }
 
     const outputs: ImageOutput[] = [];
@@ -194,7 +186,7 @@ export class GoogleImageProvider implements ImageProvider {
         config,
       });
     } catch (err) {
-      throw rethrowGoogleError(err, this.id);
+      rethrowGenericSdkError(err, this.id);
     }
 
     const outputs: ImageOutput[] = [];
@@ -242,26 +234,13 @@ export class GoogleImageProvider implements ImageProvider {
    * async-iterable Pager; we drain a single page and look for one of our
    * configured ids.
    */
-  async test(_signal?: AbortSignal): Promise<ProviderTestResult> {
-    const started = Date.now();
-    try {
-      const names = await listGoogleModelIds(this.client);
-      const latencyMs = Date.now() - started;
-      if (names.length === 0) {
-        return { ok: false, reason: "model list returned no entries" };
-      }
-      const configured = [...this.models.keys()];
-      const matched = configured.find((id) =>
-        names.some((n) => n === id || n.endsWith(`/${id}`) || n.endsWith(id)),
-      );
-      const out: ProviderTestResult = matched
-        ? { ok: true, latencyMs, sampleModelId: matched }
-        : { ok: true, latencyMs };
-      return out;
-    } catch (err) {
-      this.logger?.debug?.("google test() failed", { err: String(err) });
-      return testFailureFromError(err);
-    }
+  protected async doTest(_signal?: AbortSignal): Promise<ProviderTestResult> {
+    return runListProbe({
+      listIds: () => listGoogleModelIds(this.client),
+      configuredIds: [...this.models.keys()],
+      matcher: (id, listed) => listed === id || listed.endsWith(`/${id}`) || listed.endsWith(id),
+      failOnEmptyList: true,
+    });
   }
 }
 
@@ -303,11 +282,4 @@ export async function listGoogleModelIds(client: GoogleGenAIClientLike): Promise
     return out;
   }
   return [];
-}
-
-function rethrowGoogleError(err: unknown, vendorId: string): Error {
-  if (err instanceof Error) {
-    return new ProviderError(err.message, { vendorId, cause: err });
-  }
-  return new ProviderError(String(err), { vendorId });
 }

@@ -1,34 +1,35 @@
 import {
   appendImageReferenceInstructions,
-  applyImageDefaults,
-  type ImageCapabilities,
   type ImageGenerationResult,
   type ImageModelDef,
-  type ImageOutput,
-  type ImageProvider,
   type ImageRequest,
+  type ImageOutput,
   type Logger,
-  ProviderAbortError,
   ProviderError,
   ProviderRequestError,
   ProviderResponseError,
   type ProviderTestResult,
-  ProviderTimeoutError,
-  validateImageRequestAgainstModel,
 } from "@imagent/core";
 import OpenAI from "openai";
 import { z } from "zod";
-import { createHttpClient, type HttpClient } from "../http/index.js";
 import {
-  aggregateCapabilities,
-  buildOpenAIImageBody,
+  BaseImageProvider,
+  callOpenAIImageEndpoint,
+  createAbortableSleep,
   decodeBase64,
+  decodeOpenAIImageResponse,
+  DEFAULT_FLUX_POLL_ENVELOPE,
+  type FluxPollEnvelope,
+  FluxSubmitResponseSchema,
   mimeTypeForOutputFormat,
   type OpenAIClientLike,
   parseSize,
-  rethrowOpenAIError,
+  pollFluxJob,
+  readFluxSyncResponse,
   testFailureFromError,
-} from "../openai/image.js";
+} from "../common/index.js";
+import { createHttpClient, type HttpClient } from "../http/index.js";
+import { buildOpenAIImageBody, rethrowOpenAIError } from "../openai/image.js";
 import { loadImageReferences } from "../reference-images.js";
 import { azureModelFamily, type AzureModelFamily, FOUNDRY_FLUX_MODELS } from "./families.js";
 
@@ -61,47 +62,6 @@ const MaiResponseSchema = z.object({
     .nonempty(),
 });
 
-const FluxSubmitResponseSchema = z.object({
-  id: z.string().optional(),
-  polling_url: z.string().optional(),
-  status: z.string().optional(),
-  result: z
-    .object({
-      sample: z.string().optional(),
-    })
-    .nullable()
-    .optional(),
-  data: z
-    .array(
-      z.object({
-        b64_json: z.string().optional(),
-        url: z.string().optional(),
-      }),
-    )
-    .optional(),
-  error: z.string().nullable().optional(),
-});
-
-const FluxPollResponseSchema = z.object({
-  id: z.string().optional(),
-  status: z.string(),
-  result: z
-    .object({
-      sample: z.string().optional(),
-    })
-    .nullable()
-    .optional(),
-  progress: z.number().optional(),
-  error: z.string().nullable().optional(),
-});
-
-// FLUX BFL polling envelope — mirrors the BFL direct provider so behaviour
-// is consistent across both routes.
-const FLUX_POLL_INITIAL_MS = 1_000;
-const FLUX_POLL_MAX_MS = 5_000;
-const FLUX_POLL_TIMEOUT_MS = 60_000;
-const FLUX_POLL_BACKOFF = 1.6;
-
 /**
  * Azure Foundry image provider. One Azure resource hosts deployments from
  * multiple model families — GPT-Image (OpenAI-compatible), Microsoft
@@ -129,32 +89,26 @@ const FLUX_POLL_BACKOFF = 1.6;
  * Foundry resources (`*.services.ai.azure.com`) and recent Azure OpenAI
  * resources (`*.openai.azure.com`) both expose `/openai/v1/...`. The
  * deployment name rides in the request body's `model` field.
- *
- * The class is exported as both `AzureImageProvider` (preferred) and
- * `AzureOpenAIImageProvider` (back-compat alias) — see the bottom of the file.
  */
-export class AzureImageProvider implements ImageProvider {
-  readonly id = "azure";
-  readonly displayName = "Azure";
-  readonly capabilities: ImageCapabilities;
-  readonly models: ReadonlyMap<string, ImageModelDef>;
+export class AzureImageProvider extends BaseImageProvider {
   private readonly client: OpenAIClientLike;
   /** HTTP client for non-SDK paths using `api-key` auth (MAI + listing). */
   private readonly http: HttpClient;
   /** HTTP client for FLUX BFL paths using `Authorization: Bearer` auth. */
   private readonly fluxHttp: HttpClient;
   private readonly endpoint: string;
-  private readonly logger?: Logger;
-  private readonly pollIntervalMs: number;
-  private readonly pollTimeoutMs: number;
+  private readonly envelope: FluxPollEnvelope;
   private readonly sleep: (ms: number, signal?: AbortSignal) => Promise<void>;
 
   constructor(options: AzureImageProviderOptions) {
+    super({
+      providerId: "azure",
+      displayName: "Azure",
+      models: options.models,
+      ...(options.logger !== undefined ? { logger: options.logger } : {}),
+    });
     const endpoint = options.endpoint.replace(/\/+$/, "");
     this.endpoint = endpoint;
-    this.models = options.models;
-    this.capabilities = aggregateCapabilities(options.models);
-    if (options.logger) this.logger = options.logger;
 
     if (options.client) {
       this.client = options.client;
@@ -168,7 +122,7 @@ export class AzureImageProvider implements ImageProvider {
 
     // Azure cognitive services accept the API key as `api-key` header (the
     // canonical Azure form). Used for MAI generate calls and the deployment
-    // listing probe — the OpenAI SDK manages its own Bearer auth.
+    // listing probe — the OpenAI SDK manages its own Bearer-token auth.
     const httpOpts: Parameters<typeof createHttpClient>[0] = {
       vendorId: this.id,
       headers: { "api-key": options.apiKey },
@@ -187,21 +141,19 @@ export class AzureImageProvider implements ImageProvider {
     };
     this.fluxHttp = createHttpClient(fluxOpts);
 
-    this.pollIntervalMs = options.pollIntervalMs ?? FLUX_POLL_INITIAL_MS;
-    this.pollTimeoutMs = options.pollTimeoutMs ?? FLUX_POLL_TIMEOUT_MS;
-    this.sleep = options.sleep ?? defaultSleep;
+    this.envelope = {
+      ...DEFAULT_FLUX_POLL_ENVELOPE,
+      ...(options.pollIntervalMs !== undefined ? { intervalMs: options.pollIntervalMs } : {}),
+      ...(options.pollTimeoutMs !== undefined ? { timeoutMs: options.pollTimeoutMs } : {}),
+    };
+    this.sleep = options.sleep ?? createAbortableSleep(this.id);
   }
 
-  async generate(req: ImageRequest, signal?: AbortSignal): Promise<ImageGenerationResult> {
-    const model = this.models.get(req.model);
-    if (!model) {
-      throw new ProviderRequestError(`unknown model '${req.model}' for ${this.id}`, {
-        vendorId: this.id,
-      });
-    }
-    const merged = applyImageDefaults(req, model);
-    validateImageRequestAgainstModel(this.id, merged, model);
-
+  protected async doGenerate(
+    merged: ImageRequest,
+    model: ImageModelDef,
+    signal?: AbortSignal,
+  ): Promise<ImageGenerationResult> {
     const family: AzureModelFamily = azureModelFamily(model);
     switch (family) {
       case "mai-images":
@@ -221,7 +173,7 @@ export class AzureImageProvider implements ImageProvider {
    * we keep them aligned.) The listing covers all families on the resource —
    * MAI and FLUX deployments show up here too.
    */
-  async test(signal?: AbortSignal): Promise<ProviderTestResult> {
+  protected async doTest(signal?: AbortSignal): Promise<ProviderTestResult> {
     const started = Date.now();
     const url = `${this.endpoint}/openai/v1/models`;
     try {
@@ -270,42 +222,21 @@ export class AzureImageProvider implements ImageProvider {
     signal?: AbortSignal,
   ): Promise<ImageGenerationResult> {
     const body = await buildOpenAIImageBody(req, model, this.id);
-    const opts: { signal?: AbortSignal } = {};
-    if (signal) opts.signal = signal;
-
-    let response: { data?: Array<{ b64_json?: string; url?: string; revised_prompt?: string }> };
-    try {
-      if (req.references.length > 0) {
-        if (!this.client.images.edit) {
-          throw new ProviderRequestError(
-            `${this.id} SDK client does not support image references via images.edit API. Ensure you are using an SDK version that includes the edit method.`,
-            { vendorId: this.id },
-          );
-        }
-        response = await this.client.images.edit(body, opts);
-      } else {
-        response = await this.client.images.generate(body, opts);
-      }
-    } catch (err) {
-      throw rethrowOpenAIError(err, this.id);
-    }
-
-    const data = response?.data ?? [];
-    const outputs: ImageOutput[] = [];
-    for (const entry of data) {
-      if (entry.b64_json) {
-        outputs.push({
-          bytes: decodeBase64(entry.b64_json),
-          mimeType: mimeTypeForOutputFormat(req.outputFormat),
-          ...parseSize(req.size),
-          ...(entry.revised_prompt ? { raw: { revised_prompt: entry.revised_prompt } } : {}),
-        });
-      } else {
-        throw new ProviderResponseError("response entry missing b64_json", {
-          vendorId: this.id,
-        });
-      }
-    }
+    const response = await callOpenAIImageEndpoint({
+      client: this.client,
+      body,
+      hasReferences: req.references.length > 0,
+      vendorId: this.id,
+      rethrowSdkError: rethrowOpenAIError,
+      ...(signal !== undefined ? { signal } : {}),
+    });
+    const outputs = await decodeOpenAIImageResponse(response, {
+      vendorId: this.id,
+      ...(req.size ? { sizeForOutput: req.size } : {}),
+      defaultMimeType: mimeTypeForOutputFormat(req.outputFormat),
+      // Azure's openai-family deployments always return base64 — no URL fallback.
+      ...(signal !== undefined ? { signal } : {}),
+    });
     if (outputs.length === 0) {
       throw new ProviderError("no image outputs returned", { vendorId: this.id });
     }
@@ -411,126 +342,26 @@ export class AzureImageProvider implements ImageProvider {
     );
 
     // Sync response — terminal in one shot.
-    const syncOutputs = await this.maybeReadFluxSyncResponse(submit, signal);
+    const syncOutputs = await readFluxSyncResponse(submit, this.fluxHttp, this.id, signal);
     if (syncOutputs) return { outputs: syncOutputs };
 
     // Async response — poll the polling_url until terminal.
     if (!submit.polling_url) {
-      throw new ProviderResponseError(
+      throw new ProviderError(
         `FLUX submit response had neither image data nor polling_url: ${JSON.stringify(submit).slice(0, 256)}`,
         { vendorId: this.id },
       );
     }
-    return this.pollFluxJob(submit.polling_url, submit.id ?? "(unknown)", signal);
-  }
-
-  /**
-   * Recognise the synchronous response shapes (data array or terminal status
-   * with `result.sample`). Returns `null` when the response is async-style
-   * (caller should poll). Throws on terminal-but-failed states.
-   */
-  private async maybeReadFluxSyncResponse(
-    submit: z.infer<typeof FluxSubmitResponseSchema>,
-    signal?: AbortSignal,
-  ): Promise<ImageOutput[] | null> {
-    if (submit.data && submit.data.length > 0) {
-      const outputs: ImageOutput[] = [];
-      for (const entry of submit.data) {
-        if (entry.b64_json) {
-          outputs.push({
-            bytes: decodeBase64(entry.b64_json),
-            mimeType: "image/png",
-          });
-        } else if (entry.url) {
-          const dl = await this.fluxHttp.getBytes(entry.url, signal ? { signal } : {});
-          outputs.push({
-            bytes: dl.bytes,
-            mimeType: dl.mimeType.startsWith("image/") ? dl.mimeType : "image/png",
-          });
-        } else {
-          throw new ProviderResponseError("FLUX response entry missing b64_json and url", {
-            vendorId: this.id,
-          });
-        }
-      }
-      return outputs;
-    }
-
-    const status = submit.status;
-    if (status === "Ready" && submit.result?.sample) {
-      const dl = await this.fluxHttp.getBytes(submit.result.sample, signal ? { signal } : {});
-      return [
-        {
-          bytes: dl.bytes,
-          mimeType: dl.mimeType.startsWith("image/") ? dl.mimeType : "image/png",
-        },
-      ];
-    }
-    if (
-      status === "Error" ||
-      status === "Failed" ||
-      status === "Content Moderated" ||
-      status === "Request Moderated"
-    ) {
-      throw new ProviderError(`FLUX job ended in state '${status}': ${submit.error ?? ""}`, {
-        vendorId: this.id,
-      });
-    }
-    return null;
-  }
-
-  private async pollFluxJob(
-    pollUrl: string,
-    jobId: string,
-    signal?: AbortSignal,
-  ): Promise<ImageGenerationResult> {
-    const start = Date.now();
-    let interval = this.pollIntervalMs;
-    while (true) {
-      if (signal?.aborted) {
-        throw new ProviderAbortError(this.id, signal.reason);
-      }
-      if (Date.now() - start > this.pollTimeoutMs) {
-        throw new ProviderTimeoutError(
-          `Azure FLUX job ${jobId} did not complete within ${this.pollTimeoutMs}ms`,
-          { vendorId: this.id },
-        );
-      }
-      await this.sleep(interval, signal);
-      const pollOpts: { signal?: AbortSignal; schema: typeof FluxPollResponseSchema } = {
-        schema: FluxPollResponseSchema,
-      };
-      if (signal) pollOpts.signal = signal;
-      const status = await this.fluxHttp.get<z.infer<typeof FluxPollResponseSchema>>(
-        pollUrl,
-        pollOpts,
-      );
-
-      const s = status.status;
-      if (s === "Ready") {
-        const sample = status.result?.sample;
-        if (!sample) {
-          throw new ProviderError("Azure FLUX Ready response missing result.sample url", {
-            vendorId: this.id,
-          });
-        }
-        const dl = await this.fluxHttp.getBytes(sample, signal ? { signal } : {});
-        return {
-          outputs: [
-            {
-              bytes: dl.bytes,
-              mimeType: dl.mimeType.startsWith("image/") ? dl.mimeType : "image/png",
-            },
-          ],
-        };
-      }
-      if (s === "Error" || s === "Failed" || s === "Content Moderated" || s === "Request Moderated") {
-        throw new ProviderError(`Azure FLUX job ended in state '${s}': ${status.error ?? ""}`, {
-          vendorId: this.id,
-        });
-      }
-      interval = Math.min(Math.round(interval * FLUX_POLL_BACKOFF), FLUX_POLL_MAX_MS);
-    }
+    const outputs = await pollFluxJob({
+      pollUrl: submit.polling_url,
+      jobId: submit.id ?? "(unknown)",
+      vendorId: this.id,
+      http: this.fluxHttp,
+      sleep: this.sleep,
+      envelope: this.envelope,
+      ...(signal !== undefined ? { signal } : {}),
+    });
+    return { outputs };
   }
 
   private async buildFluxBody(
@@ -564,24 +395,3 @@ export class AzureImageProvider implements ImageProvider {
 }
 
 export { azureModelFamily, type AzureModelFamily, FOUNDRY_FLUX_MODELS } from "./families.js";
-
-async function defaultSleep(ms: number, signal?: AbortSignal): Promise<void> {
-  await new Promise<void>((resolve, reject) => {
-    const handle = setTimeout(() => {
-      if (signal) signal.removeEventListener("abort", onAbort);
-      resolve();
-    }, ms);
-    const onAbort = () => {
-      clearTimeout(handle);
-      reject(new ProviderAbortError("azure", signal?.reason));
-    };
-    if (signal) {
-      if (signal.aborted) {
-        clearTimeout(handle);
-        reject(new ProviderAbortError("azure", signal.reason));
-        return;
-      }
-      signal.addEventListener("abort", onAbort, { once: true });
-    }
-  });
-}
