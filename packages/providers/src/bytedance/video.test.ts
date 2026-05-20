@@ -21,12 +21,12 @@ function videoResponse(bytes = MP4_BYTES, mimeType = "video/mp4"): Response {
   });
 }
 
-function makeProvider(fetch: typeof fetch): ByteDanceVideoProvider {
+function makeProvider(fetcher: typeof fetch): ByteDanceVideoProvider {
   return new ByteDanceVideoProvider({
     apiKey: "volc-key",
     endpoint: "https://ark.cn-beijing.volces.com/api/v3",
     models: new Map(Object.entries(BYTEDANCE_VIDEO_MODELS)),
-    fetch,
+    fetch: fetcher,
   });
 }
 
