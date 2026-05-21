@@ -1,11 +1,13 @@
-import type { Asset, AssetKind } from "@imagent/core";
-import { Icons, Popover } from "@imagent/ui";
+import type { Asset, AssetKind, GalleryItem } from "@imagent/core";
+import { Button, Icons, Popover } from "@imagent/ui";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useT } from "../../i18n/index.js";
 import { api } from "../../lib/api.js";
-import { ASSET_REFERENCE_KINDS, IMAGE_FILE_FILTERS, type ReferenceKind } from "./types.js";
-import { fileName, uniqueStrings } from "./utils.js";
+import { ASSET_REFERENCE_KINDS, IMAGE_FILE_FILTERS } from "./types.js";
+import { fileName, resolveGalleryAbsolutePath, resolveGalleryUrl, uniqueStrings } from "./utils.js";
+
+type ActiveView = { type: "kind"; kind: AssetKind } | { type: "gallery" };
 
 export function ReferencePicker({
   assetIds,
@@ -29,7 +31,7 @@ export function ReferencePicker({
   onError: (message: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [activeKind, setActiveKind] = useState<ReferenceKind | null>(null);
+  const [activeView, setActiveView] = useState<ActiveView | null>(null);
   const t = useT();
   const totalAssets = ASSET_REFERENCE_KINDS.reduce((sum, kind) => sum + assetIds[kind].length, 0);
   const totalReferences = totalAssets + references.length;
@@ -64,12 +66,24 @@ export function ReferencePicker({
     onAssetIdsChange({ ...assetIds, [kind]: next });
   };
 
+  const addGallerySelection = async (items: GalleryItem[]): Promise<void> => {
+    if (items.length === 0) return;
+    try {
+      const paths = await Promise.all(
+        items.map((item) => resolveGalleryAbsolutePath(item.relPath)),
+      );
+      onReferencesChange(uniqueStrings([...references, ...paths]));
+    } catch (err) {
+      onError((err as Error)?.message ?? String(err));
+    }
+  };
+
   return (
     <Popover.Root
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (!next) setActiveKind(null);
+        if (!next) setActiveView(null);
       }}
     >
       <Popover.Trigger asChild>
@@ -90,19 +104,24 @@ export function ReferencePicker({
         </button>
       </Popover.Trigger>
       <Popover.Content className="w-[420px] p-3">
-        {activeKind ? (
+        {activeView?.type === "kind" ? (
           <ReferenceKindPanel
-            kind={activeKind}
-            assets={activeKind === "other" ? [] : (assetsByKind[activeKind] ?? [])}
-            selected={activeKind === "other" ? [] : (assetIds[activeKind] ?? [])}
-            references={references}
+            kind={activeView.kind}
+            assets={assetsByKind[activeView.kind] ?? []}
+            selected={assetIds[activeView.kind] ?? []}
             thumbnailUrl={thumbnailUrl}
-            onBack={() => setActiveKind(null)}
-            onToggleAsset={(assetId) => {
-              if (activeKind !== "other") toggleAsset(activeKind, assetId);
-            }}
-            onChooseLocal={() => void chooseLocalImages()}
+            onBack={() => setActiveView(null)}
+            onToggleAsset={(assetId) => toggleAsset(activeView.kind, assetId)}
             onCreateAsset={onRequestCreateAsset}
+          />
+        ) : activeView?.type === "gallery" ? (
+          <GalleryPickerPanel
+            onBack={() => setActiveView(null)}
+            onConfirm={async (items) => {
+              await addGallerySelection(items);
+              setActiveView(null);
+            }}
+            onError={onError}
           />
         ) : (
           <div className="flex flex-col gap-3">
@@ -120,16 +139,26 @@ export function ReferencePicker({
               {ASSET_REFERENCE_KINDS.map((kind) => (
                 <ReferenceMenuButton
                   key={kind}
-                  kind={kind}
+                  icon={assetKindIcon(kind)}
+                  label={assetKindLabel(kind, t)}
                   count={assetIds[kind]?.length ?? 0}
-                  onClick={() => setActiveKind(kind)}
+                  onClick={() => setActiveView({ type: "kind", kind })}
                 />
               ))}
               <ReferenceMenuButton
-                kind="other"
+                icon={
+                  <Icons.ImageSquare weight="duotone" className="size-4 shrink-0 text-(--text-muted)" />
+                }
+                label={t("studio.pickFromGallery")}
+                count={0}
+                onClick={() => setActiveView({ type: "gallery" })}
+              />
+              <ReferenceMenuButton
+                icon={<Icons.UploadSimple weight="duotone" className="size-4 shrink-0 text-(--text-muted)" />}
+                label={t("studio.uploadLocalImage")}
                 count={references.length}
-                onClick={() => setActiveKind("other")}
-              />{" "}
+                onClick={() => void chooseLocalImages()}
+              />
             </div>
             {totalReferences > 0 ? (
               <SelectedReferences
@@ -151,25 +180,20 @@ function ReferenceKindPanel({
   kind,
   assets,
   selected,
-  references,
   thumbnailUrl,
   onBack,
   onToggleAsset,
-  onChooseLocal,
   onCreateAsset,
 }: {
-  kind: ReferenceKind;
+  kind: AssetKind;
   assets: Asset[];
   selected: string[];
-  references: string[];
   thumbnailUrl: (asset: Asset) => string | null | undefined;
   onBack: () => void;
   onToggleAsset: (assetId: string) => void;
-  onChooseLocal: () => void;
   onCreateAsset: () => void;
 }) {
   const t = useT();
-  const isOther = kind === "other";
 
   return (
     <div className="flex flex-col gap-3">
@@ -182,45 +206,12 @@ function ReferenceKindPanel({
           <Icons.CaretRight weight="bold" className="size-3 rotate-180" />
           {t("studio.references")}
         </button>
-        <span className="text-[12px] font-semibold text-(--text)">
-          {referenceKindLabel(kind, t)}
-        </span>
+        <span className="text-[12px] font-semibold text-(--text)">{assetKindLabel(kind, t)}</span>
       </div>
 
-      <button
-        type="button"
-        onClick={onChooseLocal}
-        className={
-          "flex h-10 items-center justify-center gap-2 rounded-(--radius-md) border border-dashed " +
-          "border-(--border) bg-(--surface) text-[12px] text-(--text) transition-colors " +
-          "duration-(--motion-fast) hover:border-(--text)"
-        }
-      >
-        <Icons.FolderOpen weight="duotone" className="size-4 text-(--text-muted)" />
-        {t("studio.uploadLocalImage")}
-      </button>
-
-      {isOther ? (
-        references.length === 0 ? (
-          <div className="rounded-(--radius-md) border border-(--border-faint) px-3 py-5 text-center text-[12px] text-(--text-muted)">
-            {t("studio.noLocalReferences")}
-          </div>
-        ) : (
-          <div className="flex flex-col gap-1.5">
-            {references.map((path) => (
-              <div
-                key={path}
-                className="flex min-w-0 items-center gap-2 rounded-(--radius-sm) bg-(--surface) px-2 py-1.5 text-[12px] text-(--text)"
-              >
-                <Icons.Image weight="duotone" className="size-4 shrink-0 text-(--text-muted)" />
-                <span className="truncate">{fileName(path)}</span>
-              </div>
-            ))}
-          </div>
-        )
-      ) : assets.length === 0 ? (
+      {assets.length === 0 ? (
         <div className="rounded-(--radius-md) border border-(--border-faint) px-3 py-5 text-center text-[12px] text-(--text-muted)">
-          <p>{t("studio.noKindAssets", { kind: referenceKindLabel(kind, t).toLowerCase() })}</p>
+          <p>{t("studio.noKindAssets", { kind: assetKindLabel(kind, t).toLowerCase() })}</p>
           <button
             type="button"
             onClick={onCreateAsset}
@@ -266,16 +257,202 @@ function ReferenceKindPanel({
   );
 }
 
+function GalleryPickerPanel({
+  onBack,
+  onConfirm,
+  onError,
+}: {
+  onBack: () => void;
+  onConfirm: (items: GalleryItem[]) => void | Promise<void>;
+  onError: (message: string) => void;
+}) {
+  const t = useT();
+  const PAGE_SIZE = 120;
+  const [items, setItems] = useState<GalleryItem[]>([]);
+  const [total, setTotal] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [adding, setAdding] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    void (async () => {
+      try {
+        const result = await api["gallery.query"]({
+          kind: "image",
+          limit: PAGE_SIZE,
+          offset: 0,
+        });
+        if (cancelled) return;
+        setItems(result.items);
+        setTotal(result.total);
+      } catch (err) {
+        if (cancelled) return;
+        onError((err as Error)?.message ?? String(err));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [onError]);
+
+  const loadMore = async (): Promise<void> => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const result = await api["gallery.query"]({
+        kind: "image",
+        limit: PAGE_SIZE,
+        offset: items.length,
+      });
+      setItems((prev) => {
+        const seen = new Set(prev.map((it) => it.id));
+        const merged = [...prev];
+        for (const item of result.items) {
+          if (!seen.has(item.id)) merged.push(item);
+        }
+        return merged;
+      });
+      setTotal(result.total);
+    } catch (err) {
+      onError((err as Error)?.message ?? String(err));
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const toggle = (id: string): void => {
+    setSelected((prev) => (prev.includes(id) ? prev.filter((it) => it !== id) : [...prev, id]));
+  };
+
+  const confirm = async (): Promise<void> => {
+    if (selected.length === 0 || adding) return;
+    setAdding(true);
+    try {
+      const picked = items.filter((item) => selected.includes(item.id));
+      await onConfirm(picked);
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const hasMore = total !== null && items.length < total;
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex h-7 items-center gap-1 rounded-(--radius-sm) px-2 text-[12px] text-(--text-muted) hover:bg-(--surface) hover:text-(--text)"
+        >
+          <Icons.CaretRight weight="bold" className="size-3 rotate-180" />
+          {t("studio.references")}
+        </button>
+        <span className="text-[12px] font-semibold text-(--text)">
+          {t("studio.pickFromGallery")}
+        </span>
+      </div>
+
+      {loading && items.length === 0 ? (
+        <div className="rounded-(--radius-md) border border-(--border-faint) px-3 py-5 text-center text-[12px] text-(--text-muted)">
+          {t("common.loading")}
+        </div>
+      ) : items.length === 0 ? (
+        <div className="rounded-(--radius-md) border border-(--border-faint) px-3 py-5 text-center text-[12px] text-(--text-muted)">
+          {t("studio.noRecentImages")}
+        </div>
+      ) : (
+        <div className="flex max-h-[280px] flex-col gap-2 overflow-y-auto pr-1">
+          <div className="grid grid-cols-4 gap-1.5">
+            {items.map((item) => {
+              const active = selected.includes(item.id);
+              const order = active ? selected.indexOf(item.id) + 1 : 0;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => toggle(item.id)}
+                  title={item.prompt}
+                  className={
+                    "relative block aspect-square overflow-hidden rounded-(--radius-xs) border " +
+                    "bg-(--surface-sunken) transition-colors duration-(--motion-fast) " +
+                    "hover:border-(--border-strong) focus-visible:outline-none focus-visible:ring-2 " +
+                    "focus-visible:ring-(--focus-ring) " +
+                    (active ? "border-(--accent)" : "border-(--border)")
+                  }
+                >
+                  <img
+                    src={resolveGalleryUrl(item.relPath)}
+                    alt={item.prompt}
+                    className="block h-full w-full object-cover"
+                  />
+                  {active ? (
+                    <span
+                      className={
+                        "absolute right-1 top-1 inline-flex size-4 items-center justify-center " +
+                        "rounded-full bg-(--accent) text-[10px] font-semibold text-(--accent-fg)"
+                      }
+                    >
+                      {order}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+          {hasMore ? (
+            <button
+              type="button"
+              onClick={() => void loadMore()}
+              disabled={loadingMore}
+              className={
+                "mt-1 inline-flex h-8 items-center justify-center rounded-(--radius-sm) border " +
+                "border-(--border) bg-(--surface) text-[11px] text-(--text-muted) " +
+                "hover:border-(--border-strong) hover:text-(--text) disabled:opacity-60"
+              }
+            >
+              {loadingMore
+                ? t("common.loading")
+                : t("gallery.loadMore", { remaining: String((total ?? items.length) - items.length) })}
+            </button>
+          ) : null}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between gap-2 border-t border-(--border-faint) pt-3">
+        <span className="text-[11px] text-(--text-muted)">
+          {selected.length > 0
+            ? t("studio.gallerySelectedCount", { count: String(selected.length) })
+            : t("studio.gallerySelectHint")}
+        </span>
+        <Button
+          size="sm"
+          onClick={() => void confirm()}
+          disabled={selected.length === 0 || adding}
+        >
+          {t("studio.addToReferences")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function ReferenceMenuButton({
-  kind,
+  icon,
+  label,
   count,
   onClick,
 }: {
-  kind: ReferenceKind;
+  icon: ReactNode;
+  label: string;
   count: number;
   onClick: () => void;
 }) {
-  const t = useT();
   return (
     <button
       type="button"
@@ -288,10 +465,8 @@ function ReferenceMenuButton({
       }
     >
       <span className="flex min-w-0 items-center gap-2">
-        {referenceKindIcon(kind)}
-        <span className="truncate text-[12px] font-semibold text-(--text)">
-          {referenceKindLabel(kind, t)}
-        </span>
+        {icon}
+        <span className="truncate text-[12px] font-semibold text-(--text)">{label}</span>
       </span>
       {count > 0 ? (
         <span className="rounded-(--radius-pill) bg-(--accent-soft) px-1.5 text-[10px] font-semibold text-(--accent)">
@@ -358,7 +533,7 @@ function ReferenceChip({ label, onRemove }: { label: string; onRemove: () => voi
 
 type TFn = ReturnType<typeof useT>;
 
-function referenceKindLabel(kind: ReferenceKind, t: TFn): string {
+function assetKindLabel(kind: AssetKind, t: TFn): string {
   switch (kind) {
     case "character":
       return t("assets.kind.character");
@@ -368,12 +543,10 @@ function referenceKindLabel(kind: ReferenceKind, t: TFn): string {
       return t("assets.kind.background");
     case "style":
       return t("assets.kind.style");
-    case "other":
-      return t("studio.role.other");
   }
 }
 
-function referenceKindIcon(kind: ReferenceKind): ReactNode {
+function assetKindIcon(kind: AssetKind): ReactNode {
   const className = "size-4 shrink-0 text-(--text-muted)";
   switch (kind) {
     case "character":
@@ -384,7 +557,5 @@ function referenceKindIcon(kind: ReferenceKind): ReactNode {
       return <Icons.Mountains weight="duotone" className={className} />;
     case "style":
       return <Icons.Palette weight="duotone" className={className} />;
-    case "other":
-      return <Icons.UploadSimple weight="duotone" className={className} />;
   }
 }

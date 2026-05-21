@@ -41,7 +41,6 @@ export function VideoRail() {
   const refreshConfig = useConfigStore((state) => state.refresh);
 
   const refreshGallery = useGalleryStore((state) => state.refresh);
-  const items = useGalleryStore((state) => state.items);
 
   const assetsByKind = useAssetsStore((state) => state.byKind);
   const refreshAssets = useAssetsStore((state) => state.refresh);
@@ -298,7 +297,6 @@ export function VideoRail() {
           kind="first"
           value={draft.firstFrame ?? null}
           onChange={(value) => setDraft({ firstFrame: value ?? undefined })}
-          recentFrames={items.filter((item) => item.kind === "image").slice(0, 12)}
           onError={(message) =>
             pushToast({ title: t("studio.referenceFailed"), description: message, variant: "error" })
           }
@@ -310,7 +308,6 @@ export function VideoRail() {
           kind="last"
           value={draft.lastFrame ?? null}
           onChange={(value) => setDraft({ lastFrame: value ?? undefined })}
-          recentFrames={items.filter((item) => item.kind === "image").slice(0, 12)}
           onError={(message) =>
             pushToast({ title: t("studio.referenceFailed"), description: message, variant: "error" })
           }

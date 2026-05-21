@@ -453,6 +453,12 @@ export class JobRunner extends EventEmitter {
       this.intentOverrides.set(id, overrides);
     }
 
+    // Surface the queued state immediately so Studio's job rail can render
+    // the running-progress affordance (and cancel button) without waiting
+    // for the provider's submit round-trip — which for video providers
+    // (Veo, Seedance, Grok) can take several seconds.
+    this.emit("job.progress", { id, progress: 0, state: "queued" });
+
     // Submit asynchronously; record providerJobId as soon as we have it.
     void (async () => {
       try {
