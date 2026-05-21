@@ -177,8 +177,18 @@ async function bootstrap(): Promise<RuntimeServices> {
   const forward =
     (channel: "job.progress" | "job.completed" | "job.failed" | "updater.progress") =>
     (payload: unknown) => {
+      // Per-window try/catch so a destroyed `webContents` doesn't take down
+      // the whole emit() call back to the JobRunner — node EventEmitter
+      // propagates listener throws back to the caller, which would skip
+      // subsequent listeners (e.g. attach/onCompleted in ipc-handlers).
       for (const win of BrowserWindow.getAllWindows()) {
-        win.webContents.send(channel, payload);
+        try {
+          if (!win.isDestroyed() && !win.webContents.isDestroyed()) {
+            win.webContents.send(channel, payload);
+          }
+        } catch (err) {
+          logger.warn(`[main] forward ${channel} failed`, { err: String(err) });
+        }
       }
     };
   runtime.jobRunner.on("job.progress", forward("job.progress"));
@@ -186,9 +196,14 @@ async function bootstrap(): Promise<RuntimeServices> {
   runtime.jobRunner.on("job.failed", forward("job.failed"));
   updater.on("progress", forward("updater.progress"));
 
-  // Make sure newly-created windows can also receive emit() events.
+  // Make sure newly-created windows can also receive emit() events. We also
+  // proactively remove the target when the webContents is destroyed so the
+  // emit() loop doesn't trip on "Object has been destroyed" mid-broadcast
+  // (which previously dropped events for any live windows downstream of the
+  // dead target — see gallery.changed losses after a window reload).
   app.on("browser-window-created", (_e, win) => {
-    ipcServer.addEventTarget(win.webContents);
+    const remove = ipcServer.addEventTarget(win.webContents);
+    win.webContents.once("destroyed", remove);
   });
 
   // Best-effort startup update check, deferred so it doesn't slow first paint.

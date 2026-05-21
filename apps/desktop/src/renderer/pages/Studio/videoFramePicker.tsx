@@ -1,5 +1,6 @@
 import type { GalleryItem } from "@imagent/core";
 import { Button, Icons, Popover } from "@imagent/ui";
+import { useEffect, useState } from "react";
 import { useT } from "../../i18n/index.js";
 import { api } from "../../lib/api.js";
 import { resolveGalleryAbsolutePath, resolveGalleryUrl } from "./utils.js";
@@ -11,19 +12,74 @@ export function FrameToolbarPicker({
   kind,
   value,
   onChange,
-  recentFrames,
   onError,
 }: {
   kind: FrameKind;
   value: string | null;
   onChange: (value: string | null) => void;
-  recentFrames: GalleryItem[];
   onError: (message: string) => void;
 }) {
   const t = useT();
+  const PAGE_SIZE = 120;
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState<GalleryItem[]>([]);
+  const [total, setTotal] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const titleLabel = kind === "first" ? t("studio.firstFrame") : t("studio.lastFrame");
   const buttonLabel = value ? (value.split(/[\\/]/).pop() ?? value) : titleLabel;
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setLoading(true);
+    void (async () => {
+      try {
+        const result = await api["gallery.query"]({
+          kind: "image",
+          limit: PAGE_SIZE,
+          offset: 0,
+        });
+        if (cancelled) return;
+        setItems(result.items);
+        setTotal(result.total);
+      } catch (err) {
+        if (cancelled) return;
+        onError((err as Error)?.message ?? String(err));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, onError]);
+
+  const loadMore = async (): Promise<void> => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const result = await api["gallery.query"]({
+        kind: "image",
+        limit: PAGE_SIZE,
+        offset: items.length,
+      });
+      setItems((prev) => {
+        const seen = new Set(prev.map((it) => it.id));
+        const merged = [...prev];
+        for (const item of result.items) {
+          if (!seen.has(item.id)) merged.push(item);
+        }
+        return merged;
+      });
+      setTotal(result.total);
+    } catch (err) {
+      onError((err as Error)?.message ?? String(err));
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const chooseLocalImage = async (): Promise<void> => {
     try {
@@ -32,7 +88,10 @@ export function FrameToolbarPicker({
         filters: IMAGE_FILE_FILTERS,
       });
       const picked = result.paths[0];
-      if (picked) onChange(picked);
+      if (picked) {
+        onChange(picked);
+        setOpen(false);
+      }
     } catch (err) {
       onError((err as Error)?.message ?? String(err));
     }
@@ -42,13 +101,16 @@ export function FrameToolbarPicker({
     try {
       const absPath = await resolveGalleryAbsolutePath(item.relPath);
       onChange(absPath);
+      setOpen(false);
     } catch (err) {
       onError((err as Error)?.message ?? String(err));
     }
   };
 
+  const hasMore = total !== null && items.length < total;
+
   return (
-    <Popover.Root>
+    <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
         <button
           type="button"
@@ -85,31 +147,55 @@ export function FrameToolbarPicker({
             <Icons.FolderOpen weight="duotone" className="size-4 text-(--text-muted)" />
             {t("studio.uploadLocalImage")}
           </button>
-          {recentFrames.length === 0 ? (
+          {loading && items.length === 0 ? (
+            <div className="rounded-(--radius-md) border border-(--border-faint) px-3 py-4 text-center text-[12px] text-(--text-muted)">
+              {t("common.loading")}
+            </div>
+          ) : items.length === 0 ? (
             <div className="rounded-(--radius-md) border border-(--border-faint) px-3 py-4 text-center text-[12px] text-(--text-muted)">
               {t("studio.noRecentImages")}
             </div>
           ) : (
-            <div className="grid max-h-[220px] grid-cols-4 gap-1.5 overflow-y-auto">
-              {recentFrames.map((item) => (
+            <div className="flex max-h-[280px] flex-col gap-2 overflow-y-auto pr-1">
+              <div className="grid grid-cols-4 gap-1.5">
+                {items.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => void pickFromGallery(item)}
+                    title={item.prompt}
+                    className={
+                      "block aspect-square overflow-hidden rounded-(--radius-xs) " +
+                      "border border-(--border) bg-(--surface-sunken) hover:border-(--border-strong) " +
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring)"
+                    }
+                  >
+                    <img
+                      src={resolveGalleryUrl(item.relPath)}
+                      alt={item.prompt}
+                      className="block h-full w-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+              {hasMore ? (
                 <button
-                  key={item.id}
                   type="button"
-                  onClick={() => void pickFromGallery(item)}
-                  title={item.prompt}
+                  onClick={() => void loadMore()}
+                  disabled={loadingMore}
                   className={
-                    "block aspect-square overflow-hidden rounded-(--radius-xs) " +
-                    "border border-(--border) bg-(--surface-sunken) hover:border-(--border-strong) " +
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring)"
+                    "mt-1 inline-flex h-8 items-center justify-center rounded-(--radius-sm) border " +
+                    "border-(--border) bg-(--surface) text-[11px] text-(--text-muted) " +
+                    "hover:border-(--border-strong) hover:text-(--text) disabled:opacity-60"
                   }
                 >
-                  <img
-                    src={resolveGalleryUrl(item.relPath)}
-                    alt={item.prompt}
-                    className="block h-full w-full object-cover"
-                  />
+                  {loadingMore
+                    ? t("common.loading")
+                    : t("gallery.loadMore", {
+                        remaining: String((total ?? items.length) - items.length),
+                      })}
                 </button>
-              ))}
+              ) : null}
             </div>
           )}
         </div>

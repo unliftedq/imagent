@@ -112,11 +112,32 @@ export function registerIpcHandlers(
       handlers[method] = handler as ContractHandlers[typeof method];
     },
     emit(event, payload) {
-      // Validate against the event schema so a buggy emitter is caught early.
-      const schema = events[event];
-      const parsed = schema.parse(payload);
-      for (const t of targets) {
-        t.send(event, parsed);
+      // emit() is fire-and-forget — it must never throw back into the
+      // caller. Listener throws on a Node EventEmitter (e.g. our JobRunner
+      // forwarding to renderers) would otherwise skip downstream listeners
+      // and silently lose job-completion side-effects.
+      let parsed: unknown;
+      try {
+        const schema = events[event];
+        parsed = schema.parse(payload);
+      } catch (err) {
+        // Programmer error: log to console (no logger injected here) but
+        // don't crash the emitter. The renderer would never know either way.
+        // eslint-disable-next-line no-console
+        console.warn(`[ipc] emit(${event}): payload validation failed`, err);
+        return;
+      }
+      // Per-target try/catch so a destroyed `webContents` (window closed or
+      // reloaded mid-session) doesn't short-circuit broadcasts to the
+      // remaining live renderers. Without this, a single "Object has been
+      // destroyed" throw would mean live windows never see the event.
+      // Snapshot first so deletions mid-iteration can't trip the Set iterator.
+      for (const t of Array.from(targets)) {
+        try {
+          t.send(event, parsed);
+        } catch {
+          targets.delete(t);
+        }
       }
     },
     addEventTarget(target) {

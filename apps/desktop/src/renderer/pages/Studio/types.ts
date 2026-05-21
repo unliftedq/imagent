@@ -1,4 +1,4 @@
-import type { AssetKind, ImageModelDef, VideoModelDef } from "@imagent/core";
+import type { ImageModelDef, VideoModelDef } from "@imagent/core";
 import type { ProviderId } from "@imagent/ipc";
 import type { StudioMode } from "../../state/useUIStore.js";
 
@@ -9,7 +9,6 @@ export const IMAGE_FILE_FILTERS = [
 ];
 
 export type ModelFavoriteKey = `${StudioMode}:${string}:${string}`;
-export type ReferenceKind = AssetKind | "other";
 
 export interface UnifiedModelOption {
   providerId: ProviderId;

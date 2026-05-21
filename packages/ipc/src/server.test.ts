@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createIpcClient, type IpcTransport } from "./client.js";
 import { contract } from "./contract.js";
 import { events } from "./events.js";
@@ -130,15 +130,52 @@ describe("registerIpcHandlers", () => {
     server.addEventTarget(target);
     server.emit("config.changed", { configJson: "{}" });
     expect(sent).toEqual([["config.changed", { configJson: "{}" }]]);
-    // Schema rejection should throw at the emitter (caller's bug, not a
-    // wire-format issue).
-    expect(() =>
-      server.emit("job.progress", {
-        id: "x",
-        progress: 2, // out of range
-        state: "running",
-      }),
-    ).toThrow();
+    // Schema rejection is fire-and-forget — emit() must not throw back into
+    // the caller (otherwise a buggy payload would tear down job-runner
+    // listeners on the same EventEmitter). The bad payload is dropped and
+    // logged via console.warn; downstream targets are not touched.
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      expect(() =>
+        server.emit("job.progress", {
+          id: "x",
+          progress: 2, // out of range
+          state: "running",
+        }),
+      ).not.toThrow();
+      expect(sent).toHaveLength(1); // no extra send for the rejected payload
+      expect(warnSpy).toHaveBeenCalled();
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("drops destroyed targets without aborting the broadcast", () => {
+    const { ipcMain } = makeFakeIpc();
+    const server = registerIpcHandlers(ipcMain, {});
+    const live: Array<[string, unknown]> = [];
+    const dead: WebContentsLike = {
+      send: () => {
+        throw new Error("Object has been destroyed");
+      },
+    };
+    const liveTarget: WebContentsLike = {
+      send: (channel, payload) => {
+        live.push([channel, payload]);
+      },
+    };
+    // Order matters — the dead target is registered first so the live one
+    // sits *after* it in the iteration. Without the per-target try/catch
+    // the throw would abort the loop and `liveTarget` would never see the
+    // event (this is the bug behind the "gallery.changed (video) emit
+    // failed" reports — destroyed renderers were swallowing the broadcast).
+    server.addEventTarget(dead);
+    server.addEventTarget(liveTarget);
+    server.emit("config.changed", { configJson: "{}" });
+    expect(live).toEqual([["config.changed", { configJson: "{}" }]]);
+    // A second emit should not re-attempt the destroyed target.
+    server.emit("config.changed", { configJson: "{\"x\":1}" });
+    expect(live).toHaveLength(2);
   });
 
   it("client → server happy path: providers.test ok=true round-trip", async () => {
