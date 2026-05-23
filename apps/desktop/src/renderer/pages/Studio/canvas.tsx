@@ -2,6 +2,7 @@ import type { GalleryItem, Job } from "@imagent/core";
 import { Button, Dialog, Icons } from "@imagent/ui";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useT } from "../../i18n/index.js";
+import { ZoomableImage } from "../../components/ZoomableImage.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
 import { useJobsStore } from "../../state/useJobsStore.js";
 import type { StudioMode } from "../../state/useUIStore.js";
@@ -90,23 +91,31 @@ export function CanvasArea({ mode }: { mode: StudioMode }) {
 
   return (
     <section className="flex h-full min-h-0 flex-col overflow-hidden bg-(--bg)">
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 overflow-auto p-6">
+      <div className="flex min-h-0 flex-1 flex-col items-stretch gap-3 overflow-hidden p-6">
         {generating ? (
-          <GeneratingCanvas
-            mode={mode}
-            jobId={selectedStudioJob?.id ?? null}
-            prompt={selectedStudioJob?.prompt ?? ""}
-            submittedAt={selectedStudioJob?.submittedAt ?? null}
-          />
+          <div className="flex min-h-0 flex-1 items-center justify-center">
+            <GeneratingCanvas
+              mode={mode}
+              jobId={selectedStudioJob?.id ?? null}
+              prompt={selectedStudioJob?.prompt ?? ""}
+              submittedAt={selectedStudioJob?.submittedAt ?? null}
+            />
+          </div>
         ) : display ? (
           <>
-            <CanvasMedia item={display} />
+            <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden">
+              <CanvasMedia item={display} />
+            </div>
             {siblings.length > 1 ? (
-              <CanvasFilmstrip siblings={siblings} focusedId={display.id} onSelect={pinItem} />
+              <div className="flex shrink-0 items-center justify-center">
+                <CanvasFilmstrip siblings={siblings} focusedId={display.id} onSelect={pinItem} />
+              </div>
             ) : null}
           </>
         ) : (
-          <EmptyCanvas mode={mode} />
+          <div className="flex min-h-0 flex-1 items-center justify-center">
+            <EmptyCanvas mode={mode} />
+          </div>
         )}
       </div>
       <StudioJobsRail mode={mode} pinnedItemId={display?.id ?? null} onPinItem={pinItem} />
@@ -273,7 +282,11 @@ function StudioJobsRail({
             ) : null}
           </div>
         </div>
-        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+        {/* Single-row, horizontally scrollable job list. Cards keep a fixed
+            width so they don't shrink as more jobs queue up, and the
+            `-mx-1 px-1` pair lets the focus ring breathe past the edge
+            without clipping. */}
+        <div className="-mx-1 flex gap-2 overflow-x-auto overflow-y-hidden px-1 pb-1">
           {modeJobs.map((trackedJob) => {
             const job = jobs[trackedJob.id];
             const state = job?.state;
@@ -299,7 +312,7 @@ function StudioJobsRail({
                 key={trackedJob.id}
                 data-state={state ?? "submitted"}
                 className={
-                  "group/job-card flex min-w-0 flex-col gap-2 rounded-(--radius-md) border bg-(--surface-raised) p-3 " +
+                  "group/job-card flex w-[260px] shrink-0 flex-col gap-2 rounded-(--radius-md) border bg-(--surface-raised) p-3 " +
                   "shadow-[0_1px_0_color-mix(in_oklch,var(--border-faint)_70%,transparent)] " +
                   "transition-colors duration-(--motion-fast) " +
                   (active
@@ -822,13 +835,18 @@ function CanvasMedia({ item, className = "" }: { item: GalleryItem; className?: 
     );
   }
 
+  // Image preview: support wheel-zoom and drag-to-pan to match the Gallery
+  // lightbox. The container is full-size so pan is clamped to the visible
+  // canvas region rather than overflowing into the filmstrip / job rail.
   return (
-    <img
-      key={item.id}
+    <ZoomableImage
+      resetKey={item.id}
       src={url}
       alt={item.prompt}
+      width={item.width}
+      height={item.height}
       className={
-        "max-h-full max-w-full rounded-(--radius-lg) border border-(--border) object-contain " +
+        "block h-auto max-h-full w-auto max-w-full rounded-(--radius-lg) border border-(--border) object-contain select-none " +
         className
       }
     />

@@ -240,6 +240,8 @@ export const en = {
   "gallery.toast.trashEmptied": "Trash emptied",
   "gallery.toast.cancelFailed": "Cancel failed",
   "gallery.preview.close": "Close preview",
+  "gallery.preview.previous": "Previous",
+  "gallery.preview.next": "Next",
   "gallery.preview.cancelGeneration": "Cancel generation",
   "gallery.preview.boardActions": "Board actions",
   "gallery.preview.showDetails": "Show details",

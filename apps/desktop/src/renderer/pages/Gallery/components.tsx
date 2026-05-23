@@ -2,11 +2,12 @@ import type { Board, GalleryItem } from "@imagent/core";
 import { BoardSidebarItem, Icons } from "@imagent/ui";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 import { useT } from "../../i18n/index.js";
 import { api } from "../../lib/api.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
 import { resolveGalleryUrl } from "../Studio";
+import { ZoomableImage } from "../../components/ZoomableImage.js";
 
 export function BoardRow({
   board,
@@ -141,11 +142,18 @@ export function LightboxPreview({
   onClose,
   onRemix,
   onSaveAsAsset,
+  onNavigate,
 }: {
   itemId: string;
   onClose: () => void;
   onRemix: (id: string) => void;
   onSaveAsAsset: (item: GalleryItem) => void;
+  /**
+   * Called when the user moves to a sibling item via the prev/next
+   * buttons or the arrow keys. Optional — when omitted, navigation
+   * affordances are hidden.
+   */
+  onNavigate?: (id: string) => void;
 }) {
   const [data, setData] = useState<{
     item: GalleryItem;
@@ -163,9 +171,41 @@ export function LightboxPreview({
   const [copied, setCopied] = useState(false);
   const removeItem = useGalleryStore((s) => s.remove);
   const toggleFav = useGalleryStore((s) => s.toggleFavorite);
+  const items = useGalleryStore((s) => s.items);
   const cachedItem = useGalleryStore((s) => s.items.find((it) => it.id === itemId) ?? null);
   const mediaPreviewStyle = data ? getMediaPreviewStyle(data.item) : undefined;
   const t = useT();
+
+  // Adjacent items in the currently-filtered gallery list. `items` already
+  // reflects the active board / search / favorites filter, so navigation
+  // walks the same set the user is browsing — no surprise jumps to hidden
+  // items.
+  const currentIndex = items.findIndex((it) => it.id === itemId);
+  const prevItem = currentIndex > 0 ? (items[currentIndex - 1] ?? null) : null;
+  const nextItem =
+    currentIndex >= 0 && currentIndex < items.length - 1
+      ? (items[currentIndex + 1] ?? null)
+      : null;
+
+  // Arrow-key navigation. Bound at the window because Radix Dialog already
+  // owns Escape, and the lightbox has no form controls that would swallow
+  // arrow key presses for editing.
+  useEffect(() => {
+    if (!onNavigate) return;
+    const handler = (e: KeyboardEvent): void => {
+      if (e.defaultPrevented) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === "ArrowLeft" && prevItem) {
+        e.preventDefault();
+        onNavigate(prevItem.id);
+      } else if (e.key === "ArrowRight" && nextItem) {
+        e.preventDefault();
+        onNavigate(nextItem.id);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onNavigate, prevItem, nextItem]);
 
   // Show the cached row from the store immediately so the lightbox never
   // flashes "Loading…" — gallery.show() then enriches with lineage + assets.
@@ -253,6 +293,46 @@ export function LightboxPreview({
             <Icons.X weight="bold" className="size-4" />
           </button>
 
+          {/* Prev / next navigation — vertically centered on each side.
+              Hidden when there's no neighbour in that direction so the
+              chrome doesn't promise navigation that won't work. */}
+          {onNavigate && prevItem ? (
+            <button
+              type="button"
+              aria-label={t("gallery.preview.previous")}
+              title={t("gallery.preview.previous")}
+              onClick={(e) => {
+                e.stopPropagation();
+                onNavigate(prevItem.id);
+              }}
+              className={
+                "absolute left-4 top-1/2 z-10 inline-flex size-10 -translate-y-1/2 items-center justify-center " +
+                "rounded-(--radius-pill) bg-white/8 text-white backdrop-blur-md " +
+                "transition-colors duration-(--duration-fast) hover:bg-white/16"
+              }
+            >
+              <Icons.CaretLeft weight="bold" className="size-5" />
+            </button>
+          ) : null}
+          {onNavigate && nextItem ? (
+            <button
+              type="button"
+              aria-label={t("gallery.preview.next")}
+              title={t("gallery.preview.next")}
+              onClick={(e) => {
+                e.stopPropagation();
+                onNavigate(nextItem.id);
+              }}
+              className={
+                "absolute right-4 top-1/2 z-10 inline-flex size-10 -translate-y-1/2 items-center justify-center " +
+                "rounded-(--radius-pill) bg-white/8 text-white backdrop-blur-md " +
+                "transition-colors duration-(--duration-fast) hover:bg-white/16"
+              }
+            >
+              <Icons.CaretRight weight="bold" className="size-5" />
+            </button>
+          ) : null}
+
           {data ? (
             <>
               {/*
@@ -288,13 +368,14 @@ export function LightboxPreview({
                       className="block h-auto max-h-full w-auto max-w-full rounded-(--radius-md) bg-black object-contain shadow-[0_24px_64px_-16px_rgba(0,0,0,0.65)]"
                     />
                   ) : (
-                    <ZoomablePreviewImage
-                      itemId={data.item.id}
+                    <ZoomableImage
+                      resetKey={data.item.id}
                       src={resolveGalleryUrl(data.item.relPath)}
                       alt={data.item.prompt}
                       width={data.item.width}
                       height={data.item.height}
                       baseStyle={mediaPreviewStyle}
+                      className="block h-auto max-h-full w-auto max-w-full rounded-(--radius-md) object-contain shadow-[0_24px_64px_-16px_rgba(0,0,0,0.65)] select-none"
                     />
                   )}
                 </div>
@@ -493,177 +574,6 @@ function getMediaPreviewStyle(item: GalleryItem): CSSProperties {
 
 function getMediaPreviewMaxSize(size: number | null | undefined): string {
   return typeof size === "number" && size > 0 ? `min(100%, ${size}px)` : "100%";
-}
-
-/**
- * Image preview with wheel-zoom (toward cursor), drag-to-pan when zoomed,
- * and double-click to toggle fit ↔ 2×. Pan is clamped so the image edges
- * cannot fly past the visible content area. Reset whenever `itemId` changes.
- *
- * The wheel listener is attached imperatively because React's synthetic
- * `onWheel` is registered as passive at the root and cannot
- * `preventDefault()` the page-scroll.
- */
-function ZoomablePreviewImage({
-  itemId,
-  src,
-  alt,
-  width,
-  height,
-  baseStyle,
-}: {
-  itemId: string;
-  src: string;
-  alt: string;
-  width: number | null | undefined;
-  height: number | null | undefined;
-  baseStyle: CSSProperties | undefined;
-}) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const imgRef = useRef<HTMLImageElement | null>(null);
-  const panRef = useRef<{
-    pointerId: number;
-    startX: number;
-    startY: number;
-    baseTx: number;
-    baseTy: number;
-  } | null>(null);
-  const [view, setView] = useState({ scale: 1, tx: 0, ty: 0 });
-  const [panning, setPanning] = useState(false);
-
-  // Reset zoom whenever the displayed item changes.
-  useEffect(() => {
-    setView({ scale: 1, tx: 0, ty: 0 });
-  }, [itemId]);
-
-  const clampPan = (s: number, x: number, y: number): { x: number; y: number } => {
-    const c = containerRef.current;
-    const img = imgRef.current;
-    if (!c || !img) return { x, y };
-    const cw = c.clientWidth;
-    const ch = c.clientHeight;
-    // offsetWidth/Height are pre-transform layout dimensions, so they reflect
-    // the "fit" size set by max-w-full / max-h-full / object-contain.
-    const mw = img.offsetWidth * s;
-    const mh = img.offsetHeight * s;
-    const maxX = Math.max(0, (mw - cw) / 2);
-    const maxY = Math.max(0, (mh - ch) / 2);
-    return {
-      x: Math.max(-maxX, Math.min(maxX, x)),
-      y: Math.max(-maxY, Math.min(maxY, y)),
-    };
-  };
-
-  // Wheel-to-zoom centered at the cursor. Attach a non-passive native listener
-  // so `preventDefault()` actually suppresses page scroll inside the lightbox.
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const handler = (e: WheelEvent): void => {
-      e.preventDefault();
-      const rect = el.getBoundingClientRect();
-      // Cursor relative to the container's center, which is also where the
-      // image's transform-origin sits at scale = 1.
-      const cx = e.clientX - rect.left - rect.width / 2;
-      const cy = e.clientY - rect.top - rect.height / 2;
-      // Smooth exponential zoom; trackpads send small deltaY, mice send larger.
-      const factor = Math.exp(-e.deltaY * 0.0015);
-      setView((prev) => {
-        const next = Math.min(8, Math.max(1, prev.scale * factor));
-        if (next === prev.scale) return prev;
-        if (next <= 1.001) return { scale: 1, tx: 0, ty: 0 };
-        // Keep the image-space point under the cursor stationary across
-        // the zoom: solve (cx - tx) / s == (cx - tx') / s' for tx'.
-        const nextTx = cx - ((cx - prev.tx) * next) / prev.scale;
-        const nextTy = cy - ((cy - prev.ty) * next) / prev.scale;
-        const clamped = clampPan(next, nextTx, nextTy);
-        return { scale: next, tx: clamped.x, ty: clamped.y };
-      });
-    };
-    el.addEventListener("wheel", handler, { passive: false });
-    return () => el.removeEventListener("wheel", handler);
-  }, []);
-
-  const onPointerDown = (e: React.PointerEvent<HTMLImageElement>): void => {
-    if (view.scale <= 1) return;
-    if (e.button !== 0) return;
-    e.preventDefault();
-    e.stopPropagation();
-    e.currentTarget.setPointerCapture(e.pointerId);
-    panRef.current = {
-      pointerId: e.pointerId,
-      startX: e.clientX,
-      startY: e.clientY,
-      baseTx: view.tx,
-      baseTy: view.ty,
-    };
-    setPanning(true);
-  };
-  const onPointerMove = (e: React.PointerEvent<HTMLImageElement>): void => {
-    const ps = panRef.current;
-    if (!ps) return;
-    const dx = e.clientX - ps.startX;
-    const dy = e.clientY - ps.startY;
-    setView((prev) => {
-      const clamped = clampPan(prev.scale, ps.baseTx + dx, ps.baseTy + dy);
-      return { ...prev, tx: clamped.x, ty: clamped.y };
-    });
-  };
-  const endPan = (e: React.PointerEvent<HTMLImageElement>): void => {
-    if (!panRef.current) return;
-    panRef.current = null;
-    setPanning(false);
-    try {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch {
-      /* pointer may already be released */
-    }
-  };
-
-  const onDoubleClick = (e: React.MouseEvent<HTMLImageElement>): void => {
-    e.stopPropagation();
-    const el = containerRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const cx = e.clientX - rect.left - rect.width / 2;
-    const cy = e.clientY - rect.top - rect.height / 2;
-    setView((prev) => {
-      if (prev.scale > 1) return { scale: 1, tx: 0, ty: 0 };
-      const next = 2;
-      const nextTx = cx - cx * next; // prev.tx === 0, prev.scale === 1
-      const nextTy = cy - cy * next;
-      const clamped = clampPan(next, nextTx, nextTy);
-      return { scale: next, tx: clamped.x, ty: clamped.y };
-    });
-  };
-
-  return (
-    <div ref={containerRef} className="relative flex h-full w-full items-center justify-center">
-      <img
-        ref={imgRef}
-        src={src}
-        alt={alt}
-        width={width || undefined}
-        height={height || undefined}
-        draggable={false}
-        style={{
-          ...baseStyle,
-          transform: `translate3d(${view.tx}px, ${view.ty}px, 0) scale(${view.scale})`,
-          transformOrigin: "center center",
-          transition: panning ? "none" : "transform 120ms ease-out",
-          cursor: view.scale > 1 ? (panning ? "grabbing" : "grab") : "default",
-          touchAction: "none",
-          willChange: "transform",
-        }}
-        className="block h-auto max-h-full w-auto max-w-full rounded-(--radius-md) object-contain shadow-[0_24px_64px_-16px_rgba(0,0,0,0.65)] select-none"
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={endPan}
-        onPointerCancel={endPan}
-        onDoubleClick={onDoubleClick}
-      />
-    </div>
-  );
 }
 
 function LightboxAction({

@@ -239,6 +239,8 @@ export const zh: Dict = {
   "gallery.toast.trashEmptied": "回收站已清空",
   "gallery.toast.cancelFailed": "取消失败",
   "gallery.preview.close": "关闭预览",
+  "gallery.preview.previous": "上一张",
+  "gallery.preview.next": "下一张",
   "gallery.preview.cancelGeneration": "取消生成",
   "gallery.preview.boardActions": "看板操作",
   "gallery.preview.showDetails": "显示详情",
