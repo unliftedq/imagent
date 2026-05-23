@@ -85,7 +85,7 @@ imagent/
 
 ## Current status
 
-imagent remains in an early stage. Data structures, packaging, and parts of the feature set may continue to evolve. The current version does not include telemetry, automatic updates, cloud sync, or account systems. The Windows installer is unsigned and may trigger a SmartScreen warning on first launch.
+imagent remains in an early stage. Data structures, packaging, and parts of the feature set may continue to evolve. The current version does not include telemetry, automatic updates, cloud sync, or account systems. Desktop packages are unsigned, so macOS may require removing quarantine and Windows may show a SmartScreen warning on first launch.
 
 ## License
 
