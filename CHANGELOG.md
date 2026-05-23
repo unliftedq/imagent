@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.7 - 2026-05-23
+
+### UI & desktop
+
+- Improved dialog and popover portal handling in `@imagent/ui` so layered surfaces behave more reliably during interaction.
+- Updated the Studio model picker to use the new portal-aware primitives for more consistent overlay behavior in the desktop app.
+
 ## 0.2.6 - 2026-05-23
 
 ### Branding & packaging
