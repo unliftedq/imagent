@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.6 - 2026-05-23
+
+### Branding & packaging
+
+- Replaced the remaining ByteDance-facing product copy with BytePlus / Volcengine naming across the CLI, desktop app, docs, issue templates, workflows, and release-facing assets so provider branding stays consistent throughout the project.
+- Refreshed related provider logos and desktop branding assets to match the current naming.
+
+### Desktop app
+
+- Added a dedicated macOS icon generation script and regenerated the packaged macOS icon assets, making future desktop branding updates easier to reproduce.
+
 ## 0.2.5 - 2026-05-23
 
 ### Desktop app
