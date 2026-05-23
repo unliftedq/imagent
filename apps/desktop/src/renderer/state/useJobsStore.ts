@@ -164,7 +164,7 @@ export const useJobsStore = create<JobsState>((set, get) => ({
     // mask the freshly-generated output. Harmless when no canvas is mounted.
     if (wasActive && j.resultItemId && typeof window !== "undefined") {
       window.dispatchEvent(
-        new CustomEvent<{ id: string }>("imagent:canvas-pin", {
+        new CustomEvent<{ id: string; item?: undefined }>("imagent:canvas-pin", {
           detail: { id: j.resultItemId },
         }),
       );

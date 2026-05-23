@@ -3,8 +3,8 @@ import { Icons } from "@imagent/ui";
 import type { DragEvent, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useT } from "../../i18n/index.js";
+import { api } from "../../lib/api.js";
 import { useAssetsStore } from "../../state/useAssetsStore.js";
-import { useGalleryStore } from "../../state/useGalleryStore.js";
 import { type StudioMode, useUIStore } from "../../state/useUIStore.js";
 import { resolveAssetThumbnailUrl } from "../Assets";
 import { CreateAssetDialog } from "../Assets/CreateAssetDialog.js";
@@ -22,6 +22,10 @@ type GalleryFilter = "all" | "newest";
 type AssetFilter = "all" | AssetKind;
 
 const ASSET_FILTERS: AssetFilter[] = ["all", ...ASSET_REFERENCE_KINDS];
+const STUDIO_GALLERY_QUERY = {
+  limit: 60,
+  offset: 0,
+} as const;
 
 export function readStudioReferenceDragData(
   dataTransfer: DataTransfer,
@@ -66,11 +70,10 @@ export function StudioGalleryRail({
   onViewAll: () => void;
   onViewAssets: () => void;
 }) {
-  const galleryItems = useGalleryStore((state) => state.items);
-  const refreshGallery = useGalleryStore((state) => state.refresh);
   const assetsByKind = useAssetsStore((state) => state.byKind);
   const refreshAssets = useAssetsStore((state) => state.refresh);
   const pushToast = useUIStore((state) => state.pushToast);
+  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
   const [tab, setTab] = useState<RailTab>("gallery");
   const [galleryFilter, setGalleryFilter] = useState<GalleryFilter>("all");
   const [assetFilter, setAssetFilter] = useState<AssetFilter>("all");
@@ -79,9 +82,27 @@ export function StudioGalleryRail({
   const t = useT();
 
   useEffect(() => {
-    void refreshGallery();
+    let cancelled = false;
+
+    const refreshGalleryItems = async (): Promise<void> => {
+      const result = await api["gallery.query"](STUDIO_GALLERY_QUERY);
+      if (!cancelled) {
+        setGalleryItems(result.items);
+      }
+    };
+
+    void refreshGalleryItems();
     void refreshAssets();
-  }, [refreshGallery, refreshAssets]);
+
+    const offGalleryChanged = api.on("gallery.changed", () => {
+      void refreshGalleryItems();
+    });
+
+    return () => {
+      cancelled = true;
+      offGalleryChanged();
+    };
+  }, [refreshAssets]);
 
   const filteredGallery = useMemo(() => {
     const ofMode = galleryItems.filter((item) => item.kind === mode);
@@ -282,8 +303,8 @@ function GalleryThumb({
         type="button"
         onClick={() => {
           window.dispatchEvent(
-            new CustomEvent<{ id: string }>("imagent:canvas-pin", {
-              detail: { id: item.id },
+            new CustomEvent<{ id: string; item?: GalleryItem }>("imagent:canvas-pin", {
+              detail: { id: item.id, item },
             }),
           );
         }}

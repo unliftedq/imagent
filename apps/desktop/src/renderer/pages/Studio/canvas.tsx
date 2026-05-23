@@ -15,6 +15,11 @@ const submittedAtFormatter = new Intl.DateTimeFormat(undefined, {
   minute: "2-digit",
 });
 
+interface CanvasPinDetail {
+  id: string;
+  item?: GalleryItem;
+}
+
 /**
  * Returns the number of whole seconds elapsed since `startTime`. The clock
  * ticks every second while `active` is true and freezes otherwise — used by
@@ -46,14 +51,18 @@ export function CanvasArea({ mode }: { mode: StudioMode }) {
   const studioJobs = useJobsStore((state) => state.studioJobs);
 
   const [pinnedId, setPinnedId] = useState<string | null>(null);
+  const [pinnedFallback, setPinnedFallback] = useState<GalleryItem | null>(null);
   const pinItem = useCallback((id: string): void => {
     setPinnedId(id);
+    setPinnedFallback(null);
   }, []);
 
   useEffect(() => {
     const onPin = (event: Event): void => {
-      const customEvent = event as CustomEvent<{ id: string }>;
-      if (customEvent.detail?.id) setPinnedId(customEvent.detail.id);
+      const customEvent = event as CustomEvent<CanvasPinDetail>;
+      if (!customEvent.detail?.id) return;
+      setPinnedId(customEvent.detail.id);
+      setPinnedFallback(customEvent.detail.item ?? null);
     };
     window.addEventListener("imagent:canvas-pin", onPin as EventListener);
     return () => {
@@ -62,9 +71,12 @@ export function CanvasArea({ mode }: { mode: StudioMode }) {
   }, []);
 
   const pinned = useMemo(() => {
-    const item = pinnedId ? (items.find((candidate) => candidate.id === pinnedId) ?? null) : null;
+    const item = pinnedId
+      ? (items.find((candidate) => candidate.id === pinnedId) ??
+        (pinnedFallback?.id === pinnedId ? pinnedFallback : null))
+      : null;
     return item?.kind === mode ? item : null;
-  }, [items, pinnedId, mode]);
+  }, [items, mode, pinnedFallback, pinnedId]);
 
   const modeJobs = useMemo(() => studioJobs.filter((job) => job.kind === mode), [mode, studioJobs]);
   const activeModeJob = modeJobs.find((job) => job.id === activeJobId) ?? null;
@@ -337,7 +349,7 @@ function StudioJobsRail({
                     const focusItem = resultItemId ?? jobResults[0]?.id ?? null;
                     if (focusItem) {
                       window.dispatchEvent(
-                        new CustomEvent<{ id: string }>("imagent:canvas-pin", {
+                        new CustomEvent<{ id: string; item?: undefined }>("imagent:canvas-pin", {
                           detail: { id: focusItem },
                         }),
                       );
@@ -365,7 +377,7 @@ function StudioJobsRail({
                       setActiveJobId(trackedJob.id);
                       onPinItem(itemId);
                       window.dispatchEvent(
-                        new CustomEvent<{ id: string }>("imagent:canvas-pin", {
+                        new CustomEvent<{ id: string; item?: undefined }>("imagent:canvas-pin", {
                           detail: { id: itemId },
                         }),
                       );
