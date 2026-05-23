@@ -428,6 +428,10 @@ export function GalleryPage() {
               setPreviewId(null);
               openSaveAsAssetDialog(item);
             }}
+            onNavigate={(id) => {
+              setPreviewId(id);
+              setSelectedId(id);
+            }}
           />
         ) : null}
 

@@ -9,6 +9,7 @@ export {
   ArrowSquareOut,
   Brain,
   CaretDown,
+  CaretLeft,
   CaretRight,
   CaretUp,
   Check,
