@@ -1,6 +1,7 @@
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { forwardRef, type ComponentPropsWithoutRef, type ElementRef } from "react";
 import { cn } from "../lib/cn.js";
+import { useDialogPortalContainer } from "./Dialog.js";
 
 /**
  * Radix Popover primitive — wrapped to inherit the Clay surface tokens and
@@ -18,23 +19,29 @@ export const PopoverContent = forwardRef<
   { className, align = "start", sideOffset = 8, collisionPadding = 8, ...rest },
   ref,
 ) {
+  // When opened inside a Dialog, portal into the dialog content so wheel
+  // events aren't blocked by Radix Dialog's `react-remove-scroll` (which
+  // only allows scrolling on DOM descendants of the dialog).
+  const dialogContainer = useDialogPortalContainer();
   return (
-    <PopoverPrimitive.Portal>
+    <PopoverPrimitive.Portal container={dialogContainer ?? undefined}>
       <PopoverPrimitive.Content
         ref={ref}
         align={align}
         sideOffset={sideOffset}
         collisionPadding={collisionPadding}
         className={cn(
-          "z-50 rounded-(--radius-md) border border-(--border) " +
+          "pointer-events-auto z-50 rounded-(--radius-md) border border-(--border) " +
             "bg-(--bg) text-(--text) " +
             // Clay system: no shadow on content surfaces beyond the documented
             // hairline border.
             "p-3 outline-none " +
-            // Never exceed the space Radix measured between the trigger and
-            // the viewport edge — otherwise long popovers overflow off-screen
-            // and the bottom rows become unreachable.
-            "max-h-[var(--radix-popover-content-available-height)] overflow-hidden " +
+            // Cap height to the space Radix measured between the trigger and
+            // the viewport edge, and own the scroll directly. Consumers that
+            // need fixed regions (sticky headers/footers) can override
+            // `overflow-y-auto` to `overflow-hidden` and provide their own
+            // scroll container.
+            "max-h-[var(--radix-popover-content-available-height)] overflow-y-auto " +
             "data-[state=open]:animate-in data-[state=closed]:animate-out " +
             "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
           className,
