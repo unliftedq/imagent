@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.2.5 - 2026-05-23
+
+### Desktop app
+
+- Gallery and Studio now use a shared zoomable image preview, making it easier to inspect generated images and references without leaving the current workflow.
+- Studio image and video flows were tightened up: queued jobs emit progress immediately, reference upload UX was cleaned up, and first/last frame picking now follows the same interaction pattern as other asset pickers.
+- Model logos, several UI icons, and desktop branding assets were refreshed for clearer provider recognition and a more polished app presentation.
+
+### Providers
+
+- ByteDance image and video support was refreshed around the current catalog ids and capabilities, and the video provider now uses direct ModelArk HTTP handling for more reliable task execution and polling.
+
+### Docs & legal
+
+- The desktop About settings now link to the project's legal documents, and the website now includes dedicated Privacy Policy and Terms of Service pages.
+- README branding assets and copy were refreshed to match the current product identity.
+
 ## 0.2.4 - 2026-05-19
 
 ### CLI
