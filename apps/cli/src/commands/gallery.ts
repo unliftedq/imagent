@@ -22,6 +22,7 @@ import { buildAssetSlots, capReferences } from "../support/asset-slots.js";
 import { installCancelOnInterrupt } from "../support/job-control.js";
 import { buildRunner, loadCliRuntime } from "../support/runtime.js";
 import { createSpinner } from "../support/spinner.js";
+import { videoProviderConfigHint } from "../support/video/shared.js";
 import {
   excerpt,
   formatRelativeTime,
@@ -317,7 +318,7 @@ async function runRemix(itemId: string, options: GalleryRemixOptions): Promise<v
     const provider = runtime.videoRegistry.get(providerId);
     if (!provider) {
       throw new Error(
-        `video provider '${providerId}' is not configured. Run \`imagent config set bytedance.apiKey ...\` first.`,
+        `video provider '${providerId}' is not configured. Run \`${videoProviderConfigHint(providerId)}\` first.`,
       );
     }
     const req: VideoRequest = {

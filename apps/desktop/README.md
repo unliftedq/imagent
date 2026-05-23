@@ -24,7 +24,7 @@ If you later switch back to the CLI or persistence tests, rebuild `better-sqlite
 - **Gallery**: review generated results with search, favorites, Boards organization, lineage inspection, and remix workflows.
 - **Assets**: manage Characters, Objects, Backgrounds, and Styles, including archive and restore flows.
 - **Models**: inspect and manage the model catalog.
-- **Providers**: configure keys and endpoints for OpenAI, Azure OpenAI, Google, Flux/BFL, ByteDance, xAI, and other supported providers.
+- **Providers**: configure keys and endpoints for OpenAI, Azure OpenAI, Google, Flux/BFL, BytePlus, 火山引擎, xAI, and other supported providers.
 - **Settings**: control theme, default provider, output directory, concurrency, prompt history, and related preferences.
 
 ## Typical workflow

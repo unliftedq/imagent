@@ -28,7 +28,7 @@ export function registerOptionsCommand(program: Command): void {
     .description(
       "Show the request options/capabilities for a specific provider+model (use before `imagent image` / `imagent video`)",
     )
-    .requiredOption("--provider <id>", "Provider id (e.g. openai, azure, google, flux-bfl, bytedance, xai)")
+    .requiredOption("--provider <id>", "Provider id (e.g. openai, azure, google, flux-bfl, byteplus, volcengine, xai)")
     .requiredOption("--model <id>", "Model/offering id as it appears under that provider")
     .option("--kind <kind>", "Disambiguate when the same id exists for both kinds: 'image' or 'video'")
     .option("--json", "Emit machine-readable JSON instead of the human-friendly view", false)

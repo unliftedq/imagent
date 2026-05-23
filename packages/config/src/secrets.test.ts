@@ -68,7 +68,8 @@ describe("createEnvSecretsStore", () => {
       AZURE_API_KEY: "azure-key",
       GOOGLE_API_KEY: "g",
       FLUX_BFL_API_KEY: "f",
-      BYTEDANCE_API_KEY: "b",
+      BYTEPLUS_API_KEY: "bp",
+      VOLCENGINE_API_KEY: "v",
       XAI_API_KEY: "x",
     });
 
@@ -77,15 +78,27 @@ describe("createEnvSecretsStore", () => {
       azure: { apiKey: "azure-key" },
       google: { apiKey: "g" },
       "flux-bfl": { apiKey: "f" },
-      bytedance: { apiKey: "b" },
+      byteplus: { apiKey: "bp" },
+      volcengine: { apiKey: "v" },
       xai: { apiKey: "x" },
+    });
+  });
+
+  it("accepts legacy ByteDance env var aliases for BytePlus", async () => {
+    const store = createEnvSecretsStore({
+      BYTEDANCE_API_KEY: "legacy-bp",
+    });
+
+    await expect(store.loadSecrets()).resolves.toEqual({
+      byteplus: { apiKey: "legacy-bp" },
     });
   });
 
   it("does not surface endpoint env vars in the secrets shape (those are routing)", async () => {
     const store = createEnvSecretsStore({
       AZURE_ENDPOINT: "https://example.openai.azure.com",
-      BYTEDANCE_ENDPOINT: "https://ark.cn-beijing.volces.com",
+      BYTEPLUS_ENDPOINT: "https://ark.ap-southeast.bytepluses.com/api/v3",
+      VOLCENGINE_ENDPOINT: "https://ark.cn-beijing.volces.com/api/v3",
     });
 
     await expect(store.loadSecrets()).resolves.toEqual({});
@@ -93,18 +106,32 @@ describe("createEnvSecretsStore", () => {
 });
 
 describe("envProviderRoutingOverlay", () => {
-  it("overlays Azure + ByteDance endpoints on top of an empty prefs block", () => {
+  it("overlays Azure + BytePlus + Volcengine endpoints on top of an empty prefs block", () => {
     const empty = ProviderPreferencesSchema.parse({});
     const overlaid = envProviderRoutingOverlay(
       {
         AZURE_ENDPOINT: "https://example.openai.azure.com",
-        BYTEDANCE_ENDPOINT: "https://ark.cn-beijing.volces.com",
+        BYTEPLUS_ENDPOINT: "https://ark.ap-southeast.bytepluses.com/api/v3",
+        VOLCENGINE_ENDPOINT: "https://ark.cn-beijing.volces.com/api/v3",
       },
       empty,
     );
 
     expect(overlaid.azure?.endpoint).toBe("https://example.openai.azure.com");
-    expect(overlaid.bytedance?.endpoint).toBe("https://ark.cn-beijing.volces.com");
+    expect(overlaid.byteplus?.endpoint).toBe("https://ark.ap-southeast.bytepluses.com/api/v3");
+    expect(overlaid.volcengine?.endpoint).toBe("https://ark.cn-beijing.volces.com/api/v3");
+  });
+
+  it("accepts the legacy ByteDance endpoint env var alias for BytePlus", () => {
+    const empty = ProviderPreferencesSchema.parse({});
+    const overlaid = envProviderRoutingOverlay(
+      {
+        BYTEDANCE_ENDPOINT: "https://legacy.byteplus.example/api/v3",
+      },
+      empty,
+    );
+
+    expect(overlaid.byteplus?.endpoint).toBe("https://legacy.byteplus.example/api/v3");
   });
 
   it("returns the same prefs object when no relevant env vars are set", () => {
@@ -141,5 +168,45 @@ describe("mergeSecrets", () => {
       openai: { apiKey: "env-key" },
       google: { apiKey: "google-key" },
     });
+  });
+});
+
+describe("legacy bytedance compatibility", () => {
+  it("loads a secrets.json that stores its key under the legacy `bytedance` field", async () => {
+    const filePath = path.join(tmpDir, "secrets.json");
+    await fs.writeFile(
+      filePath,
+      JSON.stringify({ bytedance: { apiKey: "legacy-key-12345" } }),
+      "utf8",
+    );
+    const store = createFileSecretsStore(filePath);
+    const loaded = await store.loadSecrets();
+    expect(loaded).toEqual({ byteplus: { apiKey: "legacy-key-12345" } });
+    expect(loaded).not.toHaveProperty("bytedance");
+  });
+
+  it("re-saving after a legacy load drops the `bytedance` field on disk", async () => {
+    const filePath = path.join(tmpDir, "secrets.json");
+    await fs.writeFile(
+      filePath,
+      JSON.stringify({ bytedance: { apiKey: "legacy-key-12345" } }),
+      "utf8",
+    );
+    const store = createFileSecretsStore(filePath);
+    // Trigger a save (no-op patch is enough — current state is normalized
+    // through the schema preprocess on the way in).
+    await store.saveSecrets({});
+    const raw = JSON.parse(await fs.readFile(filePath, "utf8"));
+    expect(raw).toEqual({ byteplus: { apiKey: "legacy-key-12345" } });
+    expect(raw).not.toHaveProperty("bytedance");
+  });
+
+  it("new `byteplus` wins when both fields are present", () => {
+    const parsed = ProviderPreferencesSchema.parse({
+      bytedance: { endpoint: "https://legacy.example/api" },
+      byteplus: { endpoint: "https://new.example/api" },
+    });
+    expect(parsed.byteplus?.endpoint).toBe("https://new.example/api");
+    expect(parsed).not.toHaveProperty("bytedance");
   });
 });

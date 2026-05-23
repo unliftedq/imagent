@@ -135,8 +135,8 @@ export function ProvidersSection() {
 
       // Routing now lives entirely in providers.config — endpoint, baseUrl,
       // and (for Azure / custom) deployment mappings. Always save prefs so a
-      // ByteDance endpoint edit or a custom-provider baseUrl change isn't
-      // dropped.
+      // BytePlus / 火山引擎 endpoint edit or a custom-provider baseUrl change
+      // isn't dropped.
       const nextPrefs = prefsWithMappings(providerPrefs, activeModal, form);
       await saveProviderPrefs(nextPrefs);
 

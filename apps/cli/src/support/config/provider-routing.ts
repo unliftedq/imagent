@@ -17,7 +17,8 @@ const BUILT_IN_ROUTING_IDS = new Set<string>([
   "azure",
   "google",
   "flux-bfl",
-  "bytedance",
+  "byteplus",
+  "volcengine",
   "xai",
 ]);
 

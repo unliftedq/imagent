@@ -3,7 +3,15 @@ import type {
   ProviderSecrets,
 } from "@imagent/config";
 
-export const VENDOR_KEYS = ["openai", "azure", "google", "flux-bfl", "bytedance", "xai"] as const;
+export const VENDOR_KEYS = [
+  "openai",
+  "azure",
+  "google",
+  "flux-bfl",
+  "byteplus",
+  "volcengine",
+  "xai",
+] as const;
 export type VendorId = (typeof VENDOR_KEYS)[number];
 
 export const RESET_TARGETS = ["catalog", "secrets", "config"] as const;
@@ -18,7 +26,8 @@ export const ALLOWED_FIELDS: Record<VendorId, Record<string, FieldDef>> = {
   azure: { apiKey: { store: "secrets" }, endpoint: { store: "config" } },
   google: { apiKey: { store: "secrets" }, baseUrl: { store: "config" } },
   "flux-bfl": { apiKey: { store: "secrets" }, baseUrl: { store: "config" } },
-  bytedance: { apiKey: { store: "secrets" }, endpoint: { store: "config" } },
+  byteplus: { apiKey: { store: "secrets" }, endpoint: { store: "config" } },
+  volcengine: { apiKey: { store: "secrets" }, endpoint: { store: "config" } },
   xai: { apiKey: { store: "secrets" }, baseUrl: { store: "config" } },
 };
 

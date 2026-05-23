@@ -169,7 +169,8 @@ export const modelsContract = {
     }),
   },
 
-  // Same shape, but for video providers (currently ByteDance / Seedance). M7.
+  // Same shape, but for video providers (BytePlus / 火山引擎 Seedance,
+  // Google Veo, xAI Grok Imagine Video). M7.
   "video.models": {
     input: z.object({ providerId: ProviderIdSchema }),
     output: z.object({

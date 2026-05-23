@@ -44,7 +44,8 @@ Providers without credentials are silently skipped at runtime. Pick the provider
 | `azure`     | `endpoint`, `apiKey`    | Yes    | No     |
 | `google`    | `apiKey`                | Yes    | Yes    |
 | `flux-bfl`  | `apiKey`                | Yes    | No     |
-| `bytedance` | `endpoint`, `apiKey`    | Yes    | Yes    |
+| `byteplus`  | `endpoint`, `apiKey`    | Yes    | Yes    |
+| `volcengine`| `endpoint`, `apiKey`    | Yes    | Yes    |
 | `xai`       | `apiKey`                | Yes    | Yes    |
 
 ```bash
@@ -52,8 +53,8 @@ imagent config set openai.apiKey sk-...
 imagent config set google.apiKey <google-api-key>
 imagent config set azure.endpoint https://my-resource.services.ai.azure.com
 imagent config set azure.apiKey <azure-key>
-imagent config set bytedance.endpoint https://ark.cn-beijing.volces.com/api/v3
-imagent config set bytedance.apiKey <bytedance-key>
+imagent config set volcengine.endpoint https://ark.cn-beijing.volces.com/api/v3
+imagent config set volcengine.apiKey <volcengine-key>
 imagent config set flux-bfl.apiKey <bfl-key>
 imagent config set xai.apiKey <xai-key>
 ```
@@ -81,8 +82,8 @@ OPENAI_API_KEY=sk-...                 imagent image generate "<prompt>" --provid
 GOOGLE_API_KEY=<key>                  imagent image generate "<prompt>" --provider google
 AZURE_ENDPOINT=https://... AZURE_API_KEY=<key> \
                                       imagent image generate "<prompt>" --provider azure
-BYTEDANCE_ENDPOINT=https://... BYTEDANCE_API_KEY=<key> \
-                                      imagent video generate "<prompt>" --provider bytedance
+VOLCENGINE_ENDPOINT=https://... VOLCENGINE_API_KEY=<key> \
+                                      imagent video generate "<prompt>" --provider volcengine
 FLUX_BFL_API_KEY=<key>                imagent image generate "<prompt>" --provider flux-bfl
 XAI_API_KEY=<key>                     imagent image generate "<prompt>" --provider xai
 ```

@@ -468,7 +468,8 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       }
       if (input.google?.apiKey) patch.google = { apiKey: input.google.apiKey };
       if (input["flux-bfl"]?.apiKey) patch["flux-bfl"] = { apiKey: input["flux-bfl"].apiKey };
-      if (input.bytedance?.apiKey) patch.bytedance = { apiKey: input.bytedance.apiKey };
+      if (input.byteplus?.apiKey) patch.byteplus = { apiKey: input.byteplus.apiKey };
+      if (input.volcengine?.apiKey) patch.volcengine = { apiKey: input.volcengine.apiKey };
       if (input.xai?.apiKey) patch.xai = { apiKey: input.xai.apiKey };
       if (input.customOpenAI) {
         const currentSecrets = await secretsStore.loadSecrets();
@@ -1339,7 +1340,8 @@ const WELL_KNOWN_PROVIDER_IDS = [
   "azure",
   "google",
   "flux-bfl",
-  "bytedance",
+  "byteplus",
+  "volcengine",
   "xai",
 ] as const;
 
@@ -1348,7 +1350,8 @@ const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   azure: "Azure",
   google: "Google AI Studio",
   "flux-bfl": "Black Forest Labs",
-  bytedance: "ByteDance",
+  byteplus: "BytePlus",
+  volcengine: "Volcengine",
   xai: "xAI",
 };
 
@@ -1423,13 +1426,22 @@ function providerSummaryList(
       modelIds: imageIds("flux-bfl"),
     },
     {
-      id: "bytedance",
-      displayName: "ByteDance",
-      configured: !!(secrets.bytedance?.apiKey && prefs.bytedance?.endpoint),
-      // ByteDance spans both kinds: Seedream image + Seedance video.
+      id: "byteplus",
+      displayName: "BytePlus",
+      configured: !!(secrets.byteplus?.apiKey && prefs.byteplus?.endpoint),
+      // BytePlus spans both kinds: Seedream image + Seedance video.
       kinds: ["image", "video"],
-      defaultModel: firstImage("bytedance"),
-      modelIds: [...imageIds("bytedance"), ...videoIds("bytedance")],
+      defaultModel: firstImage("byteplus"),
+      modelIds: [...imageIds("byteplus"), ...videoIds("byteplus")],
+    },
+    {
+      id: "volcengine",
+      displayName: "Volcengine",
+      configured: !!(secrets.volcengine?.apiKey && prefs.volcengine?.endpoint),
+      // Volcengine (火山引擎) spans both kinds: Seedream image + Seedance video.
+      kinds: ["image", "video"],
+      defaultModel: firstImage("volcengine"),
+      modelIds: [...imageIds("volcengine"), ...videoIds("volcengine")],
     },
     {
       id: "xai",
@@ -1498,8 +1510,11 @@ function buildUnifiedModelList(
     if (id === "azure") {
       return !!(secrets["azure"]?.apiKey && prefs["azure"]?.endpoint);
     }
-    if (id === "bytedance") {
-      return !!(secrets.bytedance?.apiKey && prefs.bytedance?.endpoint);
+    if (id === "byteplus") {
+      return !!(secrets.byteplus?.apiKey && prefs.byteplus?.endpoint);
+    }
+    if (id === "volcengine") {
+      return !!(secrets.volcengine?.apiKey && prefs.volcengine?.endpoint);
     }
     const custom = prefs.customOpenAI?.[id];
     if (custom) return !!custom.baseUrl;
@@ -1601,7 +1616,8 @@ function maskSecrets(s: ProviderSecrets): {
   azure?: { apiKey: string | null };
   google?: { apiKey: string | null };
   "flux-bfl"?: { apiKey: string | null };
-  bytedance?: { apiKey: string | null };
+  byteplus?: { apiKey: string | null };
+  volcengine?: { apiKey: string | null };
   xai?: { apiKey: string | null };
   customOpenAI?: Record<string, { apiKey: string | null }>;
 } {
@@ -1610,7 +1626,8 @@ function maskSecrets(s: ProviderSecrets): {
   if (s["azure"]) out["azure"] = { apiKey: maskValue(s["azure"].apiKey) };
   if (s.google) out.google = { apiKey: maskValue(s.google.apiKey) };
   if (s["flux-bfl"]) out["flux-bfl"] = { apiKey: maskValue(s["flux-bfl"].apiKey) };
-  if (s.bytedance) out.bytedance = { apiKey: maskValue(s.bytedance.apiKey) };
+  if (s.byteplus) out.byteplus = { apiKey: maskValue(s.byteplus.apiKey) };
+  if (s.volcengine) out.volcengine = { apiKey: maskValue(s.volcengine.apiKey) };
   if (s.xai) out.xai = { apiKey: maskValue(s.xai.apiKey) };
   if (s.customOpenAI) {
     out.customOpenAI = Object.fromEntries(
@@ -1634,7 +1651,8 @@ function prefsPayloadFromConfig(p: ProviderPreferences): ProviderPreferencesPayl
     azure: p["azure"] ?? {},
     google: p.google ?? {},
     "flux-bfl": p["flux-bfl"] ?? {},
-    bytedance: p.bytedance ?? {},
+    byteplus: p.byteplus ?? {},
+    volcengine: p.volcengine ?? {},
     xai: p.xai ?? {},
     customOpenAI: p.customOpenAI ?? {},
   };
@@ -1646,7 +1664,8 @@ function prefsConfigFromPayload(payload: ProviderPreferencesPayload): ProviderPr
     azure: payload["azure"],
     google: payload.google,
     "flux-bfl": payload["flux-bfl"],
-    bytedance: payload.bytedance,
+    byteplus: payload.byteplus,
+    volcengine: payload.volcengine,
     xai: payload.xai,
     customOpenAI: payload.customOpenAI,
   };

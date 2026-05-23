@@ -30,7 +30,7 @@ export function registerVideoCommand(program: Command): void {
     )
     .option(
       "--provider <id>",
-      "Video provider id (bytedance | google | xai). See `imagent doctor`.",
+      "Video provider id (byteplus | volcengine | google | xai). See `imagent doctor`.",
     )
     .option(
       "--model <id>",

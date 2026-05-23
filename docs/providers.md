@@ -1,10 +1,10 @@
 ---
-description: Connect OpenAI, Azure OpenAI, Google, Flux, ByteDance, and xAI models.
+description: Connect OpenAI, Azure OpenAI, Google, Flux, BytePlus, 火山引擎, and xAI models.
 ---
 
 # Providers
 
-imagent supports six built-in provider IDs:
+imagent supports seven built-in provider IDs:
 
 | Provider ID | Display name | Images | Videos | Required secret fields |
 | --- | --- | --- | --- | --- |
@@ -12,7 +12,8 @@ imagent supports six built-in provider IDs:
 | `azure` | Azure Foundry | Yes | No | `endpoint`, `apiKey` |
 | `google` | Google AI Studio | Yes | Yes | `apiKey` |
 | `flux-bfl` | Black Forest Labs | Yes | No | `apiKey` |
-| `bytedance` | ByteDance / BytePlus ModelArk | Yes | Yes | `endpoint`, `apiKey` |
+| `byteplus` | BytePlus ModelArk (international) | Yes | Yes | `endpoint`, `apiKey` |
+| `volcengine` | 火山引擎 (Volcano Ark, mainland China) | Yes | Yes | `endpoint`, `apiKey` |
 | `xai` | xAI | Yes | Yes | `apiKey` |
 
 Providers without configured secrets are skipped at runtime. `imagent doctor` reports how many built-in providers are configured.
@@ -199,30 +200,69 @@ imagent image generate "high-detail fantasy landscape, morning mist" \
   --option aspect=16:9
 ```
 
-### ByteDance / BytePlus ModelArk (`bytedance`)
+### BytePlus ModelArk (`byteplus`)
 
-ByteDance uses one provider ID for Seedream image models and Seedance video models. Both require an endpoint and an API key. The endpoint includes the Ark region.
+BytePlus is the international ByteDance ModelArk endpoint. It serves Seedream image models and Seedance video models on un-prefixed model ids (e.g. `seedream-4-0-250828`, `dreamina-seedance-2-0-260128`). Requires an endpoint and an API key.
 
 CLI setup:
 
 ```bash
-imagent config set bytedance.endpoint https://ark.cn-beijing.volces.com/api/v3
-imagent config set bytedance.apiKey <bytedance-key>
+imagent config set byteplus.endpoint https://ark.ap-southeast.bytepluses.com/api/v3
+imagent config set byteplus.apiKey <byteplus-key>
 ```
 
 Environment variables:
 
 ```bash
-BYTEDANCE_ENDPOINT=https://ark.cn-beijing.volces.com/api/v3 \
-BYTEDANCE_API_KEY=<bytedance-key> \
-imagent video generate "prompt" --provider bytedance
+BYTEPLUS_ENDPOINT=https://ark.ap-southeast.bytepluses.com/api/v3 \
+BYTEPLUS_API_KEY=<byteplus-key> \
+imagent video generate "prompt" --provider byteplus
 ```
 
 Image example:
 
 ```bash
 imagent image generate "polished character key art" \
-  --provider bytedance \
+  --provider byteplus \
+  --model seedream-4-0-250828 \
+  --option size=2K \
+  --option count=2
+```
+
+Video example:
+
+```bash
+imagent video generate "a sweeping shot over a cyberpunk street" \
+  --provider byteplus \
+  --model dreamina-seedance-2-0-260128 \
+  --option duration=5 \
+  --option resolution=720p
+```
+
+### 火山引擎 / Volcano Ark (`volcengine`)
+
+火山引擎 is the mainland China ByteDance Ark endpoint. It serves the same Seedream and Seedance models, but exposes them under `doubao-`-prefixed model ids (e.g. `doubao-seedream-4-0-250828`, `doubao-seedance-2-0-260128`). Requires an endpoint and an API key.
+
+CLI setup:
+
+```bash
+imagent config set volcengine.endpoint https://ark.cn-beijing.volces.com/api/v3
+imagent config set volcengine.apiKey <volcengine-key>
+```
+
+Environment variables:
+
+```bash
+VOLCENGINE_ENDPOINT=https://ark.cn-beijing.volces.com/api/v3 \
+VOLCENGINE_API_KEY=<volcengine-key> \
+imagent video generate "prompt" --provider volcengine
+```
+
+Image example:
+
+```bash
+imagent image generate "polished character key art" \
+  --provider volcengine \
   --model doubao-seedream-4-0-250828 \
   --option size=2K \
   --option count=2
@@ -232,13 +272,13 @@ Video example:
 
 ```bash
 imagent video generate "a sweeping shot over a cyberpunk street" \
-  --provider bytedance \
-  --model doubao-seedance-1-0-pro-250528 \
+  --provider volcengine \
+  --model doubao-seedance-2-0-260128 \
   --option duration=5 \
   --option resolution=720p
 ```
 
-If you use a different ByteDance/Ark region, replace the endpoint with the region-specific base URL from your account.
+If you use a different Ark region, replace the endpoint with the region-specific base URL from your account.
 
 ### xAI (`xai`)
 

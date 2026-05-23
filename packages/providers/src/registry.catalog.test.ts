@@ -10,16 +10,24 @@ function emptyPrefs(): ProviderPreferences {
     "azure": {},
     google: {},
     "flux-bfl": {},
-    bytedance: {},
+    byteplus: {},
+    volcengine: {},
     xai: {},
     customOpenAI: {},
   };
 }
 
-function bytedancePrefs(): ProviderPreferences {
+function bytePlusPrefs(): ProviderPreferences {
   return {
     ...emptyPrefs(),
-    bytedance: { endpoint: "https://ark.cn-beijing.volces.com/api/v3" },
+    byteplus: { endpoint: "https://ark.ap-southeast.bytepluses.com/api/v3" },
+  };
+}
+
+function volcenginePrefs(): ProviderPreferences {
+  return {
+    ...emptyPrefs(),
+    volcengine: { endpoint: "https://ark.cn-beijing.volces.com/api/v3" },
   };
 }
 
@@ -36,14 +44,20 @@ describe("createImageRegistry (catalog-driven)", () => {
       openai: { apiKey: "sk" },
       google: { apiKey: "g" },
       "flux-bfl": { apiKey: "f" },
-      bytedance: { apiKey: "v" },
+      byteplus: { apiKey: "bp" },
+      volcengine: { apiKey: "v" },
       xai: { apiKey: "x" },
     };
     const catalog = buildTestCatalog();
-    const reg = createImageRegistry(secrets, bytedancePrefs(), catalog);
+    const prefs: ProviderPreferences = {
+      ...emptyPrefs(),
+      byteplus: bytePlusPrefs().byteplus,
+      volcengine: volcenginePrefs().volcengine,
+    };
+    const reg = createImageRegistry(secrets, prefs, catalog);
 
     expect([...reg.keys()].sort()).toEqual(
-      ["bytedance", "flux-bfl", "google", "openai", "xai"].sort(),
+      ["byteplus", "flux-bfl", "google", "openai", "volcengine", "xai"].sort(),
     );
 
     // OpenAI provider sees both fixture models.
@@ -52,9 +66,14 @@ describe("createImageRegistry (catalog-driven)", () => {
       catalog.providers.openai!.image!.map((m) => m.id).sort(),
     );
 
-    // ByteDance provider sees Seedream entries (image side only).
-    const bd = reg.get("bytedance")!;
-    expect([...bd.models.keys()]).toContain("seedream-5-0-260128");
+    // BytePlus provider sees Seedream entries (image side only).
+    const bp = reg.get("byteplus")!;
+    expect([...bp.models.keys()]).toContain("seedream-5-0-260128");
+
+    // 火山引擎 provider sees the same canonical models, but exposed under
+    // their `doubao-`-prefixed offering ids.
+    const volc = reg.get("volcengine")!;
+    expect([...volc.models.keys()]).toContain("doubao-seedream-5-0-260128");
   });
 
   it("Azure: deployment names resolve against canonical model capabilities", () => {
@@ -154,14 +173,20 @@ describe("createImageRegistry (catalog-driven)", () => {
 });
 
 describe("createVideoRegistry (catalog-driven)", () => {
-  it("includes ByteDance, Google, and xAI when their secrets are present", () => {
+  it("includes BytePlus, 火山引擎, Google, and xAI when their secrets are present", () => {
     const secrets: ProviderSecrets = {
-      bytedance: { apiKey: "v" },
+      byteplus: { apiKey: "bp" },
+      volcengine: { apiKey: "v" },
       google: { apiKey: "g" },
       xai: { apiKey: "x" },
     };
-    const reg = createVideoRegistry(secrets, bytedancePrefs(), buildTestCatalog());
-    expect([...reg.keys()].sort()).toEqual(["bytedance", "google", "xai"]);
+    const prefs: ProviderPreferences = {
+      ...emptyPrefs(),
+      byteplus: { endpoint: "https://ark.ap-southeast.bytepluses.com/api/v3" },
+      volcengine: { endpoint: "https://ark.cn-beijing.volces.com/api/v3" },
+    };
+    const reg = createVideoRegistry(secrets, prefs, buildTestCatalog());
+    expect([...reg.keys()].sort()).toEqual(["byteplus", "google", "volcengine", "xai"]);
   });
 
   it("Google / xAI video providers expose real submit/poll/fetch/test methods", () => {
@@ -193,13 +218,14 @@ describe("createVideoRegistry (catalog-driven)", () => {
     expect(xai.models.size).toBeGreaterThan(0);
   });
 
-  it("ByteDance video without endpoint in prefs is skipped", () => {
+  it("BytePlus / 火山引擎 video without endpoint in prefs is skipped", () => {
     const reg = createVideoRegistry(
-      { bytedance: { apiKey: "v" } },
+      { byteplus: { apiKey: "bp" }, volcengine: { apiKey: "v" } },
       emptyPrefs(),
       buildTestCatalog(),
     );
-    expect(reg.has("bytedance")).toBe(false);
+    expect(reg.has("byteplus")).toBe(false);
+    expect(reg.has("volcengine")).toBe(false);
   });
 
   it("provider video offerings can override capabilities and defaults", () => {

@@ -24,6 +24,14 @@ import { buildOpenAIImageBody, rethrowOpenAIError } from "../openai/image.js";
 export const DEFAULT_BYTEDANCE_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3";
 
 export interface ByteDanceImageProviderOptions {
+  /**
+   * Logical provider id this instance reports as — `"byteplus"` for the
+   * international BytePlus ModelArk endpoint or `"volcengine"` for the
+   * mainland 火山引擎 Ark endpoint. The underlying HTTP shape is the same;
+   * only the routing + model id set differ between the two.
+   */
+  providerId: string;
+  displayName: string;
   apiKey: string;
   endpoint: string;
   models: ReadonlyMap<string, ImageModelDef>;
@@ -32,10 +40,11 @@ export interface ByteDanceImageProviderOptions {
 }
 
 /**
- * ByteDance image provider — backed by Ark's OpenAI-compatible image API.
- * Constructs its own `OpenAI` SDK client with the Ark base URL. Default
- * model family is Seedream. Shares an Ark API key with
- * `ByteDanceVideoProvider`; both report `id = "bytedance"`.
+ * ByteDance Ark image provider — backed by Ark's OpenAI-compatible image
+ * API. Constructs its own `OpenAI` SDK client with the Ark base URL. Used
+ * by both `byteplus` (international BytePlus ModelArk) and `volcengine`
+ * (mainland 火山方舟). The caller picks which logical provider id this
+ * instance reports as via the `providerId` / `displayName` options.
  */
 export class ByteDanceImageProvider extends OpenAICompatibleImageProvider {
   constructor(options: ByteDanceImageProviderOptions) {
@@ -46,8 +55,8 @@ export class ByteDanceImageProvider extends OpenAICompatibleImageProvider {
         baseURL: options.endpoint.replace(/\/+$/, ""),
       }) as unknown as OpenAIClientLike);
     super({
-      providerId: "bytedance",
-      displayName: "ByteDance",
+      providerId: options.providerId,
+      displayName: options.displayName,
       models: options.models,
       ...(options.logger !== undefined ? { logger: options.logger } : {}),
       client,
@@ -62,7 +71,7 @@ export class ByteDanceImageProvider extends OpenAICompatibleImageProvider {
     model: ImageModelDef,
   ): Promise<OpenAICompatibleBody> {
     const quality = normalizeSeedreamQuality(merged.quality);
-    const body = await buildOpenAIImageBody({ ...merged, quality: undefined }, model, "bytedance");
+    const body = await buildOpenAIImageBody({ ...merged, quality: undefined }, model, this.id);
     delete body.quality;
 
     const customSize = parseSize(merged.size).width !== undefined ? merged.size : undefined;

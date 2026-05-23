@@ -24,7 +24,8 @@ const BUILT_IN_PROVIDER_IDS = [
   "azure",
   "google",
   "flux-bfl",
-  "bytedance",
+  "byteplus",
+  "volcengine",
   "xai",
 ] as const;
 
@@ -35,15 +36,17 @@ const BUILT_IN_PROVIDER_IDS = [
  * collisions; see `effectiveImageOfferings` for the merge semantics.
  *
  * Each provider is **its own class** with its own SDK client:
- *   - OpenAI / Azure / xAI / ByteDance image → `openai` SDK.
+ *   - OpenAI / Azure / xAI / BytePlus / 火山引擎 image → `openai` SDK.
  *   - Google image / video → `@google/genai` SDK.
- *   - Flux + ByteDance Seedance + xAI video → raw HTTP (no usable SDK).
+ *   - Flux + BytePlus / 火山引擎 Seedance + xAI video → raw HTTP (no
+ *     usable SDK).
  *
  * Providers without configured secrets are skipped silently — `imagent
  * doctor` reports the gap.
  *
- * Built-in keys: `"openai" | "azure" | "google" | "flux-bfl" | "bytedance" | "xai"`.
- * Custom OpenAI-compatible providers are keyed by their declared id.
+ * Built-in keys: `"openai" | "azure" | "google" | "flux-bfl" | "byteplus" |
+ * "volcengine" | "xai"`. Custom OpenAI-compatible providers are keyed by
+ * their declared id.
  */
 export function createImageRegistry(
   secrets: ProviderSecrets,
@@ -94,14 +97,28 @@ export function createImageRegistry(
     out.set("flux-bfl", new FluxImageProvider(fluxOpts));
   }
 
-  const bdEndpoint = prefs.bytedance?.endpoint;
-  if (secrets.bytedance?.apiKey && bdEndpoint) {
-    const bdOpts: ConstructorParameters<typeof ByteDanceImageProvider>[0] = {
-      apiKey: secrets.bytedance.apiKey,
-      endpoint: bdEndpoint,
-      models: mapFromList(resolveImageProviderModels(catalog, "bytedance", prefs)),
+  const bpEndpoint = prefs.byteplus?.endpoint;
+  if (secrets.byteplus?.apiKey && bpEndpoint) {
+    const bpOpts: ConstructorParameters<typeof ByteDanceImageProvider>[0] = {
+      providerId: "byteplus",
+      displayName: effectiveProviderDisplayName(catalog, prefs, "byteplus"),
+      apiKey: secrets.byteplus.apiKey,
+      endpoint: bpEndpoint,
+      models: mapFromList(resolveImageProviderModels(catalog, "byteplus", prefs)),
     };
-    out.set("bytedance", new ByteDanceImageProvider(bdOpts));
+    out.set("byteplus", new ByteDanceImageProvider(bpOpts));
+  }
+
+  const volcEndpoint = prefs.volcengine?.endpoint;
+  if (secrets.volcengine?.apiKey && volcEndpoint) {
+    const volcOpts: ConstructorParameters<typeof ByteDanceImageProvider>[0] = {
+      providerId: "volcengine",
+      displayName: effectiveProviderDisplayName(catalog, prefs, "volcengine"),
+      apiKey: secrets.volcengine.apiKey,
+      endpoint: volcEndpoint,
+      models: mapFromList(resolveImageProviderModels(catalog, "volcengine", prefs)),
+    };
+    out.set("volcengine", new ByteDanceImageProvider(volcOpts));
   }
 
   if (secrets.xai) {
@@ -142,7 +159,8 @@ export function createImageRegistry(
 
 /**
  * Video registry. Wires raw-HTTP implementations for all video vendors:
- *   - ByteDance (Seedance) — Ark `contents/generations/tasks` long-poll.
+ *   - BytePlus / 火山引擎 (Seedance) — Ark `contents/generations/tasks`
+ *     long-poll. Two distinct provider ids share one ByteDance class.
  *   - Google (Veo) — Gemini `predictLongRunning` long operation.
  *   - xAI (Grok Imagine Video) — `/v1/videos/generations` + `/v1/videos/{id}`.
  *
@@ -155,14 +173,28 @@ export function createVideoRegistry(
 ): VideoRegistry {
   const out = new Map<string, VideoProvider>();
 
-  const bdEndpoint = prefs.bytedance?.endpoint;
-  if (secrets.bytedance?.apiKey && bdEndpoint) {
+  const bpEndpoint = prefs.byteplus?.endpoint;
+  if (secrets.byteplus?.apiKey && bpEndpoint) {
     const opts: ConstructorParameters<typeof ByteDanceVideoProvider>[0] = {
-      apiKey: secrets.bytedance.apiKey,
-      endpoint: bdEndpoint,
-      models: mapFromList(resolveVideoProviderModels(catalog, "bytedance", prefs)),
+      providerId: "byteplus",
+      displayName: effectiveProviderDisplayName(catalog, prefs, "byteplus"),
+      apiKey: secrets.byteplus.apiKey,
+      endpoint: bpEndpoint,
+      models: mapFromList(resolveVideoProviderModels(catalog, "byteplus", prefs)),
     };
-    out.set("bytedance", new ByteDanceVideoProvider(opts));
+    out.set("byteplus", new ByteDanceVideoProvider(opts));
+  }
+
+  const volcEndpoint = prefs.volcengine?.endpoint;
+  if (secrets.volcengine?.apiKey && volcEndpoint) {
+    const opts: ConstructorParameters<typeof ByteDanceVideoProvider>[0] = {
+      providerId: "volcengine",
+      displayName: effectiveProviderDisplayName(catalog, prefs, "volcengine"),
+      apiKey: secrets.volcengine.apiKey,
+      endpoint: volcEndpoint,
+      models: mapFromList(resolveVideoProviderModels(catalog, "volcengine", prefs)),
+    };
+    out.set("volcengine", new ByteDanceVideoProvider(opts));
   }
 
   if (secrets.google) {
@@ -204,7 +236,8 @@ export function configuredProviderCount(
   if (secrets.azure?.apiKey && prefs?.azure?.endpoint) n += 1;
   if (secrets.google) n += 1;
   if (secrets["flux-bfl"]) n += 1;
-  if (secrets.bytedance?.apiKey && prefs?.bytedance?.endpoint) n += 1;
+  if (secrets.byteplus?.apiKey && prefs?.byteplus?.endpoint) n += 1;
+  if (secrets.volcengine?.apiKey && prefs?.volcengine?.endpoint) n += 1;
   if (secrets.xai) n += 1;
   for (const routing of Object.values(prefs?.customOpenAI ?? {})) {
     if (routing.baseUrl) n += 1;

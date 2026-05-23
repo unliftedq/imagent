@@ -108,8 +108,10 @@ function secretHintFor(providerId: string): string {
   switch (providerId) {
     case "azure":
       return "azure.endpoint <url> && imagent config set azure.apiKey <key>";
-    case "bytedance":
-      return "bytedance.endpoint <url> && imagent config set bytedance.apiKey <key>";
+    case "byteplus":
+      return "byteplus.endpoint <url> && imagent config set byteplus.apiKey <key>";
+    case "volcengine":
+      return "volcengine.endpoint <url> && imagent config set volcengine.apiKey <key>";
     default:
       return `${providerId}.apiKey <key>`;
   }

@@ -33,6 +33,8 @@ function videoResponse(bytes = MP4_BYTES, mimeType = "video/mp4"): Response {
 
 function makeProvider(fetcher: typeof fetch): ByteDanceVideoProvider {
   return new ByteDanceVideoProvider({
+    providerId: "byteplus",
+    displayName: "BytePlus",
     apiKey: "volc-key",
     endpoint: "https://ark.cn-beijing.volces.com/api/v3",
     models: new Map(Object.entries(BYTEDANCE_VIDEO_MODELS)),
@@ -42,7 +44,7 @@ function makeProvider(fetcher: typeof fetch): ByteDanceVideoProvider {
 
 const baseRequest: VideoRequest = {
   prompt: "rotating crystal in a misty forest",
-  providerId: "bytedance",
+  providerId: "byteplus",
   model: "dreamina-seedance-2-0-260128",
   durationSec: 5,
   fps: 24,
@@ -62,7 +64,7 @@ describe("ByteDanceVideoProvider", () => {
     const handle = await p.submit(baseRequest);
 
     expect(handle).toMatchObject({
-      providerId: "bytedance",
+      providerId: "byteplus",
       providerJobId: "task-123",
       pollingUrl: "/contents/generations/tasks/task-123",
       meta: { durationSec: 5 },
@@ -152,7 +154,7 @@ describe("ByteDanceVideoProvider", () => {
         }),
       );
     const p = makeProvider(fetchMock as unknown as typeof fetch);
-    const handle = { providerId: "bytedance", providerJobId: "task-123" };
+    const handle = { providerId: "byteplus", providerJobId: "task-123" };
 
     expect(await p.poll(handle)).toEqual({ state: "running" });
     expect(await p.poll(handle)).toEqual({ state: "succeeded" });
@@ -175,7 +177,7 @@ describe("ByteDanceVideoProvider", () => {
     const p = makeProvider(fetchMock as unknown as typeof fetch);
 
     const r = await p.fetch({
-      providerId: "bytedance",
+      providerId: "byteplus",
       providerJobId: "task-123",
       meta: { durationSec: 5 },
     });
@@ -198,7 +200,7 @@ describe("ByteDanceVideoProvider", () => {
     const p = makeProvider(fetchMock as unknown as typeof fetch);
 
     await expect(
-      p.fetch({ providerId: "bytedance", providerJobId: "task-123" }),
+      p.fetch({ providerId: "byteplus", providerJobId: "task-123" }),
     ).rejects.toBeInstanceOf(ProviderError);
   });
 
@@ -206,7 +208,7 @@ describe("ByteDanceVideoProvider", () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
     const p = makeProvider(fetchMock as unknown as typeof fetch);
 
-    await p.cancel({ providerId: "bytedance", providerJobId: "task-123" });
+    await p.cancel({ providerId: "byteplus", providerJobId: "task-123" });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];

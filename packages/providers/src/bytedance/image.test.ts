@@ -25,6 +25,8 @@ function makeFakeClient(): FakeClient {
 
 function makeProvider(client: FakeClient): ByteDanceImageProvider {
   return new ByteDanceImageProvider({
+    providerId: "byteplus",
+    displayName: "BytePlus",
     apiKey: "volc-key",
     endpoint: "https://ark.cn-beijing.volces.com/api/v3",
     models: new Map(Object.entries(BYTEDANCE_IMAGE_MODELS)),
@@ -34,7 +36,7 @@ function makeProvider(client: FakeClient): ByteDanceImageProvider {
 
 const baseRequest: ImageRequest = {
   prompt: "neon koi pond",
-  providerId: "bytedance",
+  providerId: "byteplus",
   model: "seedream-5-0-260128",
   count: 1,
   references: [],
@@ -130,10 +132,21 @@ describe("ByteDanceImageProvider", () => {
     await expect(p.generate(baseRequest)).rejects.toBeInstanceOf(ProviderError);
   });
 
-  it("provider id is 'bytedance' (consolidated with Seedance)", () => {
+  it("provider id is configurable for BytePlus vs Volcengine", () => {
     const client = makeFakeClient();
-    const p = makeProvider(client);
-    expect(p.id).toBe("bytedance");
-    expect(p.displayName).toBe("ByteDance");
+    const bp = makeProvider(client);
+    expect(bp.id).toBe("byteplus");
+    expect(bp.displayName).toBe("BytePlus");
+
+    const volc = new ByteDanceImageProvider({
+      providerId: "volcengine",
+      displayName: "Volcengine",
+      apiKey: "k",
+      endpoint: "https://ark.cn-beijing.volces.com/api/v3",
+      models: new Map(Object.entries(BYTEDANCE_IMAGE_MODELS)),
+      client: client as unknown as OpenAIClientLike,
+    });
+    expect(volc.id).toBe("volcengine");
+    expect(volc.displayName).toBe("Volcengine");
   });
 });

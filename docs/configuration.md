@@ -10,7 +10,7 @@ By default, imagent stores all local data in a dedicated local workspace directo
 
 | Path | Purpose |
 | --- | --- |
-| `config.json` | Non-sensitive app preferences and per-user provider routing (Azure / ByteDance endpoints, custom OpenAI base URLs, deployment / model id mappings). |
+| `config.json` | Non-sensitive app preferences and per-user provider routing (Azure / BytePlus / 火山引擎 endpoints, custom OpenAI base URLs, deployment / model id mappings). |
 | `secrets.json` | Provider API keys only (chmod 600). Non-sensitive routing lives in `config.json`. |
 | `catalog.json` | User-editable canonical model catalog (capabilities + bundled provider offerings). |
 | `studio.db` | Local SQLite database for assets, gallery, boards, jobs, and metadata. |
@@ -32,7 +32,7 @@ The desktop application and CLI both use this workspace, so changes made in one 
   "app": {
     "theme": "system",
     "defaultImageModel": { "providerId": "openai", "modelId": "gpt-image-2" },
-    "defaultVideoModel": { "providerId": "bytedance", "modelId": "doubao-seedance-1-0-pro-250528" },
+    "defaultVideoModel": { "providerId": "volcengine", "modelId": "doubao-seedance-2-0-260128" },
     "defaultOutputDir": null,
     "generationConcurrency": 2,
     "keepPromptHistory": true,
@@ -48,7 +48,10 @@ The desktop application and CLI both use this workspace, so changes made in one 
     },
     "google": {},
     "flux-bfl": {},
-    "bytedance": {
+    "byteplus": {
+      "endpoint": "https://ark.ap-southeast.bytepluses.com/api/v3"
+    },
+    "volcengine": {
       "endpoint": "https://ark.cn-beijing.volces.com/api/v3"
     },
     "xai": {},
@@ -74,7 +77,7 @@ App preferences:
 
 Provider routing block (`providers.<id>`):
 
-- `endpoint` (Azure / ByteDance): resource URL the provider hits. Required for these vendors before generation will run.
+- `endpoint` (Azure / BytePlus / 火山引擎): resource URL the provider hits. Required for these vendors before generation will run.
 - `baseUrl`: optional override for OpenAI-compatible vendors (proxy / self-hosted). Required for `customOpenAI.<id>` entries.
 - `image[]` / `video[]`: provider-facing offerings. Each entry maps a deployment / model id (`id`) to a canonical catalog model (`modelId`); capabilities + defaults are inherited and may be overridden.
 - `displayName`: optional override for the provider's display name (mainly for custom providers).
@@ -92,7 +95,8 @@ Use `imagent config provider add|rm|list` to manage these entries from the CLI, 
   "azure": { "apiKey": "..." },
   "google": { "apiKey": "..." },
   "flux-bfl": { "apiKey": "..." },
-  "bytedance": { "apiKey": "..." },
+  "byteplus": { "apiKey": "..." },
+  "volcengine": { "apiKey": "..." },
   "xai": { "apiKey": "..." },
   "customOpenAI": {
     "my-provider": { "apiKey": "..." }
@@ -113,8 +117,10 @@ Supported environment variables are:
 | `AZURE_ENDPOINT` | `config.providers.azure.endpoint` (overlay) |
 | `GOOGLE_API_KEY` | `secrets.google.apiKey` |
 | `FLUX_BFL_API_KEY` | `secrets.flux-bfl.apiKey` |
-| `BYTEDANCE_API_KEY` | `secrets.bytedance.apiKey` |
-| `BYTEDANCE_ENDPOINT` | `config.providers.bytedance.endpoint` (overlay) |
+| `BYTEPLUS_API_KEY` | `secrets.byteplus.apiKey` |
+| `BYTEPLUS_ENDPOINT` | `config.providers.byteplus.endpoint` (overlay) |
+| `VOLCENGINE_API_KEY` | `secrets.volcengine.apiKey` |
+| `VOLCENGINE_ENDPOINT` | `config.providers.volcengine.endpoint` (overlay) |
 | `XAI_API_KEY` | `secrets.xai.apiKey` |
 
 API-key env vars override the file-stored secrets. Endpoint env vars overlay the file-stored routing for the duration of the CLI invocation without writing to disk.
