@@ -14,7 +14,7 @@
     },
     "apps/cli": {
       "name": "@imagent/cli",
-      "version": "0.2.5",
+      "version": "0.2.6",
       "bin": {
         "imagent": "dist/cli.js",
       },
@@ -44,7 +44,7 @@
     },
     "apps/desktop": {
       "name": "@imagent/studio",
-      "version": "0.2.5",
+      "version": "0.2.6",
       "dependencies": {
         "@dnd-kit/core": "catalog:",
         "@imagent/config": "workspace:*",
@@ -81,7 +81,7 @@
     },
     "apps/site": {
       "name": "@imagent/site",
-      "version": "0.2.5",
+      "version": "0.2.6",
       "dependencies": {
         "@gsap/react": "^2.1.1",
         "@phosphor-icons/react": "catalog:",
@@ -100,7 +100,7 @@
     },
     "packages/config": {
       "name": "@imagent/config",
-      "version": "0.2.5",
+      "version": "0.2.6",
       "dependencies": {
         "@imagent/core": "workspace:*",
         "zod": "catalog:",
@@ -112,7 +112,7 @@
     },
     "packages/core": {
       "name": "@imagent/core",
-      "version": "0.2.5",
+      "version": "0.2.6",
       "dependencies": {
         "zod": "catalog:",
       },
@@ -123,7 +123,7 @@
     },
     "packages/ipc": {
       "name": "@imagent/ipc",
-      "version": "0.2.5",
+      "version": "0.2.6",
       "dependencies": {
         "@imagent/core": "workspace:*",
         "zod": "catalog:",
@@ -136,7 +136,7 @@
     },
     "packages/persistence": {
       "name": "@imagent/persistence",
-      "version": "0.2.5",
+      "version": "0.2.6",
       "dependencies": {
         "@imagent/core": "workspace:*",
         "@node-rs/jieba": "catalog:",
@@ -152,7 +152,7 @@
     },
     "packages/providers": {
       "name": "@imagent/providers",
-      "version": "0.2.5",
+      "version": "0.2.6",
       "dependencies": {
         "@ai-sdk/xai": "catalog:",
         "@google/genai": "catalog:",
@@ -169,7 +169,7 @@
     },
     "packages/ui": {
       "name": "@imagent/ui",
-      "version": "0.2.5",
+      "version": "0.2.6",
       "dependencies": {
         "@dnd-kit/core": "catalog:",
         "@imagent/core": "workspace:*",
