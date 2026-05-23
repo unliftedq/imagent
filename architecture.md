@@ -6,8 +6,8 @@ imagent is a local-first image and video generation workspace. It ships two user
 
 The application supports:
 
-- Image generation through OpenAI, Azure, Google, Flux/BFL, ByteDance, xAI, and custom OpenAI-compatible providers.
-- Video generation through ByteDance, Google, and xAI providers when configured.
+- Image generation through OpenAI, Azure, Google, Flux/BFL, BytePlus, 火山引擎, xAI, and custom OpenAI-compatible providers.
+- Video generation through BytePlus, 火山引擎, Google, and xAI providers when configured.
 - Reusable assets for characters, objects, backgrounds, and styles.
 - Gallery and board-oriented curation in the desktop app.
 - CLI workflows for provider setup, model discovery, generation, video task tracking, gallery inspection, and MCP integration.

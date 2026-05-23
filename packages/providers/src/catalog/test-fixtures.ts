@@ -317,9 +317,28 @@ export function buildTestCatalog(): ModelCatalog {
         image: Object.keys(FLUX_IMAGE_MODELS).map((id) => ({ id, modelId: id })),
       },
       bytedance: {
+        // Legacy entry kept only so older fixtures that reference
+        // `bytedance` don't blow up; the registry only wires `byteplus` and
+        // `volcengine` now.
         displayName: "ByteDance",
         image: Object.keys(BYTEDANCE_IMAGE_MODELS).map((id) => ({ id, modelId: id })),
         video: Object.keys(BYTEDANCE_VIDEO_MODELS).map((id) => ({ id, modelId: id })),
+      },
+      byteplus: {
+        displayName: "BytePlus",
+        image: Object.keys(BYTEDANCE_IMAGE_MODELS).map((id) => ({ id, modelId: id })),
+        video: Object.keys(BYTEDANCE_VIDEO_MODELS).map((id) => ({ id, modelId: id })),
+      },
+      volcengine: {
+        displayName: "Volcengine",
+        image: Object.keys(BYTEDANCE_IMAGE_MODELS).map((id) => ({
+          id: `doubao-${id}`,
+          modelId: id,
+        })),
+        video: Object.keys(BYTEDANCE_VIDEO_MODELS).map((id) => ({
+          id: `doubao-${id.replace(/^dreamina-/, "")}`,
+          modelId: id,
+        })),
       },
       xai: {
         displayName: "xAI",

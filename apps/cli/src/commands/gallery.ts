@@ -317,7 +317,7 @@ async function runRemix(itemId: string, options: GalleryRemixOptions): Promise<v
     const provider = runtime.videoRegistry.get(providerId);
     if (!provider) {
       throw new Error(
-        `video provider '${providerId}' is not configured. Run \`imagent config set bytedance.apiKey ...\` first.`,
+        `video provider '${providerId}' is not configured. Run \`imagent config set byteplus.apiKey ...\` or \`imagent config set volcengine.apiKey ...\` first.`,
       );
     }
     const req: VideoRequest = {

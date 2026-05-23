@@ -37,6 +37,8 @@ describe("ByteDanceImageProvider.test()", () => {
       ],
     });
     const p = new ByteDanceImageProvider({
+      providerId: "byteplus",
+      displayName: "BytePlus",
       apiKey: "ark-key",
       endpoint: "https://ark.cn-beijing.volces.com/api/v3",
       models: new Map(Object.entries(BYTEDANCE_IMAGE_MODELS)),
@@ -53,6 +55,8 @@ describe("ByteDanceImageProvider.test()", () => {
       new APIError(401, { error: "auth" }, "401 Unauthorized", new Headers()),
     );
     const p = new ByteDanceImageProvider({
+      providerId: "byteplus",
+      displayName: "BytePlus",
       apiKey: "ark-bad",
       endpoint: "https://ark.cn-beijing.volces.com/api/v3",
       models: new Map(Object.entries(BYTEDANCE_IMAGE_MODELS)),
@@ -70,6 +74,8 @@ describe("ByteDanceVideoProvider.test()", () => {
       jsonResponse(200, { data: [{ id: "dreamina-seedance-2-0-260128" }] }),
     );
     const p = new ByteDanceVideoProvider({
+      providerId: "byteplus",
+      displayName: "BytePlus",
       apiKey: "ark-key",
       endpoint: "https://ark.cn-beijing.volces.com/api/v3",
       models: new Map(Object.entries(BYTEDANCE_VIDEO_MODELS)),
@@ -83,6 +89,8 @@ describe("ByteDanceVideoProvider.test()", () => {
   it("bad auth: 401", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(401, { error: "auth" }));
     const p = new ByteDanceVideoProvider({
+      providerId: "byteplus",
+      displayName: "BytePlus",
       apiKey: "ark-bad",
       endpoint: "https://ark.cn-beijing.volces.com/api/v3",
       models: new Map(Object.entries(BYTEDANCE_VIDEO_MODELS)),
@@ -96,6 +104,8 @@ describe("ByteDanceVideoProvider.test()", () => {
   it("network failure", async () => {
     const fetchMock = vi.fn().mockRejectedValue(new Error("offline"));
     const p = new ByteDanceVideoProvider({
+      providerId: "byteplus",
+      displayName: "BytePlus",
       apiKey: "ark-key",
       endpoint: "https://ark.cn-beijing.volces.com/api/v3",
       models: new Map(Object.entries(BYTEDANCE_VIDEO_MODELS)),

@@ -6,9 +6,10 @@ export const ProviderIdSchema = z.string().regex(/^[a-z0-9][a-z0-9_-]*$/);
 export type ProviderId = z.infer<typeof ProviderIdSchema>;
 
 /**
- * Which generation kinds a provider participates in. ByteDance spans both
- * `image` and `video` because Seedream + Seedance share Ark credentials
- * under one provider id (architecture.md §4 vendor=provider).
+ * Which generation kinds a provider participates in. BytePlus and 火山引擎
+ * (Volcengine) each span both `image` and `video` because Seedream +
+ * Seedance share Ark credentials under one provider id (architecture.md §4
+ * vendor=provider).
  */
 export const ProviderKindSchema = z.enum(["image", "video"]);
 export type ProviderKind = z.infer<typeof ProviderKindSchema>;
@@ -42,9 +43,10 @@ export type ProviderTestResult = z.infer<typeof ProviderTestResultSchema>;
 /**
  * Provider preferences block — non-secret per-provider config. The catalog
  * holds canonical (bundled) provider offerings; this payload carries the
- * per-user overlay merged on top at runtime: Azure / ByteDance endpoint URLs,
- * custom OpenAI-compatible base URLs, deployment / model id mappings, and
- * optional displayName overrides. Schema mirrors `config.providers` in shape.
+ * per-user overlay merged on top at runtime: Azure / BytePlus / 火山引擎
+ * endpoint URLs, custom OpenAI-compatible base URLs, deployment / model id
+ * mappings, and optional displayName overrides. Schema mirrors
+ * `config.providers` in shape.
  */
 export const IpcProviderRoutingSchema = z.object({
   displayName: z.string().optional(),
@@ -60,7 +62,8 @@ export const ProviderPreferencesPayloadSchema = z.object({
   azure: IpcProviderRoutingSchema,
   google: IpcProviderRoutingSchema,
   "flux-bfl": IpcProviderRoutingSchema,
-  bytedance: IpcProviderRoutingSchema,
+  byteplus: IpcProviderRoutingSchema,
+  volcengine: IpcProviderRoutingSchema,
   xai: IpcProviderRoutingSchema,
   customOpenAI: z.record(ProviderIdSchema, IpcProviderRoutingSchema),
 });
@@ -78,7 +81,8 @@ export const MaskedSecretsSchema = z.object({
   azure: MaskedKey.optional(),
   google: MaskedKey.optional(),
   "flux-bfl": MaskedKey.optional(),
-  bytedance: MaskedKey.optional(),
+  byteplus: MaskedKey.optional(),
+  volcengine: MaskedKey.optional(),
   xai: MaskedKey.optional(),
   customOpenAI: z.record(ProviderIdSchema, MaskedKey).optional(),
 });
@@ -94,7 +98,8 @@ export const SecretsWriteSchema = z.object({
   azure: WriteKey.optional(),
   google: WriteKey.optional(),
   "flux-bfl": WriteKey.optional(),
-  bytedance: WriteKey.optional(),
+  byteplus: WriteKey.optional(),
+  volcengine: WriteKey.optional(),
   xai: WriteKey.optional(),
   customOpenAI: z.record(ProviderIdSchema, z.object({ apiKey: z.string().min(1) })).optional(),
 });

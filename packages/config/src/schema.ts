@@ -2,36 +2,69 @@ import { z } from "zod";
 import { ImageProviderModelSchema, VideoProviderModelSchema } from "@imagent/core";
 
 /**
+ * Rename the legacy `bytedance` provider key onto its replacement
+ * `byteplus`. Both the secrets file (`secrets.json`) and the prefs file
+ * (`config.json`) previously stored ByteDance credentials / routing under
+ * `bytedance`; the provider was split into `byteplus` (international Ark)
+ * and `volcengine` (火山引擎, mainland Ark) in May 2026.
+ *
+ * Existing user data loads cleanly thanks to this preprocess step — the
+ * legacy block is moved onto `byteplus` (BytePlus inherits the original
+ * un-prefixed Seedream / Seedance ids). The next time the file is written
+ * by the schema-validated stores it round-trips under the new key, so the
+ * legacy `bytedance` field naturally disappears on first save.
+ *
+ * If the user has BOTH keys for any reason, the new `byteplus` value wins.
+ */
+function renameLegacyByteDance<T extends Record<string, unknown>>(input: unknown): unknown {
+  if (input === null || typeof input !== "object" || Array.isArray(input)) return input;
+  const next = { ...(input as T) } as Record<string, unknown>;
+  if ("bytedance" in next) {
+    if (next.byteplus === undefined) {
+      next.byteplus = next.bytedance;
+    }
+    delete next.bytedance;
+  }
+  return next;
+}
+
+/**
  * Secrets are keyed by **vendor** and only carry the things you'd hate to
  * have leak — currently just `apiKey`. Routing data (endpoint URL, base URL
  * override, custom OpenAI provider URLs) is non-sensitive and lives in the
  * preferences file under `ProviderPreferencesSchema` instead.
  *
- * ByteDance secrets unlock both image (Seedream) and video (Seedance) ports
- * under the single `bytedance` provider id. xAI is OpenAI-API-compatible
- * image-only at v1.
+ * BytePlus and 火山引擎 (Volcengine) secrets each unlock both image (Seedream)
+ * and video (Seedance) ports under their respective provider id. The two
+ * providers share the same Ark HTTP shape but require their own apiKey and
+ * endpoint (international BytePlus vs mainland Volcengine). xAI is
+ * OpenAI-API-compatible image-only at v1.
  */
-export const ProviderSecretsSchema = z.object({
-  openai: z.object({ apiKey: z.string() }).optional(),
-  azure: z.object({ apiKey: z.string() }).optional(),
-  google: z.object({ apiKey: z.string() }).optional(),
-  "flux-bfl": z.object({ apiKey: z.string() }).optional(),
-  bytedance: z.object({ apiKey: z.string() }).optional(),
-  xai: z.object({ apiKey: z.string() }).optional(),
-  customOpenAI: z
-    .record(
-      z.string().regex(/^[a-z0-9][a-z0-9_-]*$/),
-      z.object({ apiKey: z.string() }),
-    )
-    .optional(),
-});
+export const ProviderSecretsSchema = z.preprocess(
+  renameLegacyByteDance,
+  z.object({
+    openai: z.object({ apiKey: z.string() }).optional(),
+    azure: z.object({ apiKey: z.string() }).optional(),
+    google: z.object({ apiKey: z.string() }).optional(),
+    "flux-bfl": z.object({ apiKey: z.string() }).optional(),
+    byteplus: z.object({ apiKey: z.string() }).optional(),
+    volcengine: z.object({ apiKey: z.string() }).optional(),
+    xai: z.object({ apiKey: z.string() }).optional(),
+    customOpenAI: z
+      .record(
+        z.string().regex(/^[a-z0-9][a-z0-9_-]*$/),
+        z.object({ apiKey: z.string() }),
+      )
+      .optional(),
+  }),
+);
 export type ProviderSecrets = z.infer<typeof ProviderSecretsSchema>;
 
 /**
  * Per-user routing overlay for a provider. Carries everything non-sensitive:
  *
  *   - `endpoint` — Azure resource URL (`https://<resource>.openai.azure.com`)
- *     or ByteDance Ark region URL.
+ *     or Ark region URL for BytePlus / 火山引擎.
  *   - `baseUrl` — optional override for OpenAI-compatible vendors (proxy /
  *     self-hosted). Required for `customOpenAI.<id>` entries.
  *   - `image[]` / `video[]` — provider-facing offerings, same shape as
@@ -65,17 +98,21 @@ export type ProviderRouting = z.infer<typeof ProviderRoutingSchema>;
  * `customOpenAI.<providerId>` and combined with credentials from
  * `ProviderSecrets.customOpenAI.<providerId>`.
  */
-export const ProviderPreferencesSchema = z.object({
-  openai: ProviderRoutingSchema.default({}),
-  azure: ProviderRoutingSchema.default({}),
-  google: ProviderRoutingSchema.default({}),
-  "flux-bfl": ProviderRoutingSchema.default({}),
-  bytedance: ProviderRoutingSchema.default({}),
-  xai: ProviderRoutingSchema.default({}),
-  customOpenAI: z
-    .record(z.string().regex(/^[a-z0-9][a-z0-9_-]*$/), ProviderRoutingSchema)
-    .default({}),
-});
+export const ProviderPreferencesSchema = z.preprocess(
+  renameLegacyByteDance,
+  z.object({
+    openai: ProviderRoutingSchema.default({}),
+    azure: ProviderRoutingSchema.default({}),
+    google: ProviderRoutingSchema.default({}),
+    "flux-bfl": ProviderRoutingSchema.default({}),
+    byteplus: ProviderRoutingSchema.default({}),
+    volcengine: ProviderRoutingSchema.default({}),
+    xai: ProviderRoutingSchema.default({}),
+    customOpenAI: z
+      .record(z.string().regex(/^[a-z0-9][a-z0-9_-]*$/), ProviderRoutingSchema)
+      .default({}),
+  }),
+);
 export type ProviderPreferences = z.infer<typeof ProviderPreferencesSchema>;
 
 export const DefaultModelPreferenceSchema = z.object({
@@ -121,7 +158,8 @@ export const DEFAULT_CONFIG: ConfigFile = {
     azure: {},
     google: {},
     "flux-bfl": {},
-    bytedance: {},
+    byteplus: {},
+    volcengine: {},
     xai: {},
     customOpenAI: {},
   },

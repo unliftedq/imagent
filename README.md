@@ -14,7 +14,7 @@ It ships as a desktop application, a command-line tool, and an installable agent
 | --- | --- |
 | **Local-first workspace** | Data lives under `~/.imagent/`, including SQLite state, configuration, assets, and generated outputs. No remote account or backend is required. |
 | **One library across interfaces** | The desktop app, CLI, and agent integrations work against the same gallery, boards, favorites, and reusable assets. |
-| **Multi-provider generation** | OpenAI, Azure OpenAI, Google Imagen/Gemini, Flux/BFL, ByteDance Seedream/Seedance, and xAI Grok can be configured side by side. |
+| **Multi-provider generation** | OpenAI, Azure OpenAI, Google Imagen/Gemini, Flux/BFL, BytePlus / 火山引擎 Seedream/Seedance, and xAI Grok can be configured side by side. |
 | **Asset-driven creation** | Reusable characters, objects, backgrounds, styles, and references help keep ongoing projects visually consistent. |
 | **Agent-ready automation** | The bundled skill lets compatible agents call the `imagent` CLI instead of using a one-off image or video tool. |
 

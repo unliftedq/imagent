@@ -22,7 +22,8 @@ const ENV_KEYS = {
   },
   google: { apiKey: "GOOGLE_API_KEY" },
   "flux-bfl": { apiKey: "FLUX_BFL_API_KEY" },
-  bytedance: { apiKey: "BYTEDANCE_API_KEY", endpoint: "BYTEDANCE_ENDPOINT" },
+  byteplus: { apiKey: "BYTEPLUS_API_KEY", endpoint: "BYTEPLUS_ENDPOINT" },
+  volcengine: { apiKey: "VOLCENGINE_API_KEY", endpoint: "VOLCENGINE_ENDPOINT" },
   xai: { apiKey: "XAI_API_KEY" },
 } as const;
 
@@ -89,8 +90,11 @@ export function createEnvSecretsStore(env: NodeJS.ProcessEnv): SecretsStore {
       const fluxKey = env[ENV_KEYS["flux-bfl"].apiKey];
       if (fluxKey) out["flux-bfl"] = { apiKey: fluxKey };
 
-      const bdKey = env[ENV_KEYS.bytedance.apiKey];
-      if (bdKey) out.bytedance = { apiKey: bdKey };
+      const bpKey = env[ENV_KEYS.byteplus.apiKey];
+      if (bpKey) out.byteplus = { apiKey: bpKey };
+
+      const volcKey = env[ENV_KEYS.volcengine.apiKey];
+      if (volcKey) out.volcengine = { apiKey: volcKey };
 
       const xaiKey = env[ENV_KEYS.xai.apiKey];
       if (xaiKey) out.xai = { apiKey: xaiKey };
@@ -114,19 +118,24 @@ export function envProviderRoutingOverlay(
   prefs: ProviderPreferences,
 ): ProviderPreferences {
   const azureEndpoint = env[ENV_KEYS.azure.endpoint];
-  const bdEndpoint = env[ENV_KEYS.bytedance.endpoint];
-  if (!azureEndpoint && !bdEndpoint) return prefs;
+  const bpEndpoint = env[ENV_KEYS.byteplus.endpoint];
+  const volcEndpoint = env[ENV_KEYS.volcengine.endpoint];
+  if (!azureEndpoint && !bpEndpoint && !volcEndpoint) return prefs;
 
   const next: ProviderPreferences = {
     ...prefs,
     azure: { ...(prefs.azure ?? {}) },
-    bytedance: { ...(prefs.bytedance ?? {}) },
+    byteplus: { ...(prefs.byteplus ?? {}) },
+    volcengine: { ...(prefs.volcengine ?? {}) },
   };
   if (azureEndpoint) {
     (next.azure as ProviderRouting).endpoint = azureEndpoint;
   }
-  if (bdEndpoint) {
-    (next.bytedance as ProviderRouting).endpoint = bdEndpoint;
+  if (bpEndpoint) {
+    (next.byteplus as ProviderRouting).endpoint = bpEndpoint;
+  }
+  if (volcEndpoint) {
+    (next.volcengine as ProviderRouting).endpoint = volcEndpoint;
   }
   return ProviderPreferencesSchema.parse(next);
 }

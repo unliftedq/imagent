@@ -73,7 +73,8 @@ function prefsPayloadFromConfig(p: ProviderPreferences): ProviderPreferencesPayl
     "azure": p["azure"] ?? {},
     google: p.google ?? {},
     "flux-bfl": p["flux-bfl"] ?? {},
-    bytedance: p.bytedance ?? {},
+    byteplus: p.byteplus ?? {},
+    volcengine: p.volcengine ?? {},
     xai: p.xai ?? {},
     customOpenAI: p.customOpenAI ?? {},
   };
@@ -85,7 +86,8 @@ function prefsConfigFromPayload(payload: ProviderPreferencesPayload): ProviderPr
     "azure": payload["azure"],
     google: payload.google,
     "flux-bfl": payload["flux-bfl"],
-    bytedance: payload.bytedance,
+    byteplus: payload.byteplus,
+    volcengine: payload.volcengine,
     xai: payload.xai,
     customOpenAI: payload.customOpenAI,
   };
@@ -103,7 +105,8 @@ function maskSecrets(s: ProviderSecrets): MaskedSecrets {
   if (s["azure"]) out["azure"] = { apiKey: maskValue(s["azure"].apiKey) };
   if (s.google) out.google = { apiKey: maskValue(s.google.apiKey) };
   if (s["flux-bfl"]) out["flux-bfl"] = { apiKey: maskValue(s["flux-bfl"].apiKey) };
-  if (s.bytedance) out.bytedance = { apiKey: maskValue(s.bytedance.apiKey) };
+  if (s.byteplus) out.byteplus = { apiKey: maskValue(s.byteplus.apiKey) };
+  if (s.volcengine) out.volcengine = { apiKey: maskValue(s.volcengine.apiKey) };
   if (s.xai) out.xai = { apiKey: maskValue(s.xai.apiKey) };
   return out;
 }
@@ -116,7 +119,8 @@ async function applySecretsWrite(store: SecretsStore, input: SecretsWrite): Prom
   }
   if (input.google?.apiKey) patch.google = { apiKey: input.google.apiKey };
   if (input["flux-bfl"]?.apiKey) patch["flux-bfl"] = { apiKey: input["flux-bfl"].apiKey };
-  if (input.bytedance?.apiKey) patch.bytedance = { apiKey: input.bytedance.apiKey };
+  if (input.byteplus?.apiKey) patch.byteplus = { apiKey: input.byteplus.apiKey };
+  if (input.volcengine?.apiKey) patch.volcengine = { apiKey: input.volcengine.apiKey };
   if (input.xai?.apiKey) patch.xai = { apiKey: input.xai.apiKey };
   await store.saveSecrets(patch);
 }
@@ -198,10 +202,16 @@ describe("providers.config.set + providers.config.get round-trip", () => {
     expect(reloaded["flux-bfl"]).toEqual({});
   });
 
-  it("bytedance: empty slot round-trips", async () => {
+  it("byteplus: empty slot round-trips", async () => {
     const client = buildClient();
     const reloaded = await client["providers.config.get"]();
-    expect(reloaded.bytedance).toEqual({});
+    expect(reloaded.byteplus).toEqual({});
+  });
+
+  it("volcengine: empty slot round-trips", async () => {
+    const client = buildClient();
+    const reloaded = await client["providers.config.get"]();
+    expect(reloaded.volcengine).toEqual({});
   });
 
   it("xai: empty slot round-trips", async () => {
@@ -249,14 +259,24 @@ describe("providers.secrets.set + providers.secrets.get round-trip", () => {
     expect(raw["azure"]).toEqual({ apiKey: "azure-key-123456" });
   });
 
-  it("bytedance: persists apiKey only (endpoint moved to providers.config)", async () => {
+  it("byteplus: persists apiKey only (endpoint moved to providers.config)", async () => {
     const client = buildClient();
     const patch: SecretsWrite = {
-      bytedance: { apiKey: "volc-key-12345" },
+      byteplus: { apiKey: "bp-key-12345" },
     };
     await client["providers.secrets.set"](patch);
     const raw = await secretsStore.loadSecrets();
-    expect(raw.bytedance).toEqual({ apiKey: "volc-key-12345" });
+    expect(raw.byteplus).toEqual({ apiKey: "bp-key-12345" });
+  });
+
+  it("volcengine: persists apiKey only (endpoint moved to providers.config)", async () => {
+    const client = buildClient();
+    const patch: SecretsWrite = {
+      volcengine: { apiKey: "volc-key-12345" },
+    };
+    await client["providers.secrets.set"](patch);
+    const raw = await secretsStore.loadSecrets();
+    expect(raw.volcengine).toEqual({ apiKey: "volc-key-12345" });
   });
 
   it("azure apiKey can be re-saved without resending the endpoint", async () => {
@@ -277,7 +297,8 @@ describe("DEFAULT_CONFIG sanity", () => {
     expect(DEFAULT_CONFIG.providers["azure"]).toBeDefined();
     expect(DEFAULT_CONFIG.providers.google).toBeDefined();
     expect(DEFAULT_CONFIG.providers["flux-bfl"]).toBeDefined();
-    expect(DEFAULT_CONFIG.providers.bytedance).toBeDefined();
+    expect(DEFAULT_CONFIG.providers.byteplus).toBeDefined();
+    expect(DEFAULT_CONFIG.providers.volcengine).toBeDefined();
     expect(DEFAULT_CONFIG.providers.xai).toBeDefined();
   });
 });

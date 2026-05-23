@@ -906,8 +906,8 @@
         }
       ]
     },
-    "bytedance": {
-      "displayName": "ByteDance",
+    "byteplus": {
+      "displayName": "BytePlus",
       "image": [
         {
           "id": "seedream-5-0-260128",
@@ -933,6 +933,37 @@
         },
         {
           "id": "seedance-1-5-pro-251215",
+          "modelId": "seedance-1-5-pro-251215"
+        }
+      ]
+    },
+    "volcengine": {
+      "displayName": "Volcengine",
+      "image": [
+        {
+          "id": "doubao-seedream-5-0-260128",
+          "modelId": "seedream-5-0-260128"
+        },
+        {
+          "id": "doubao-seedream-4-5-251128",
+          "modelId": "seedream-4-5-251128"
+        },
+        {
+          "id": "doubao-seedream-4-0-250828",
+          "modelId": "seedream-4-0-250828"
+        }
+      ],
+      "video": [
+        {
+          "id": "doubao-seedance-2-0-260128",
+          "modelId": "dreamina-seedance-2-0-260128"
+        },
+        {
+          "id": "doubao-seedance-2-0-fast-260128",
+          "modelId": "dreamina-seedance-2-0-fast-260128"
+        },
+        {
+          "id": "doubao-seedance-1-5-pro-251215",
           "modelId": "seedance-1-5-pro-251215"
         }
       ]

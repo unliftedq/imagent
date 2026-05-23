@@ -62,7 +62,7 @@ Set a provider secret:
 
 ```bash
 imagent config set openai.apiKey sk-...
-imagent config set bytedance.endpoint https://ark.cn-beijing.volces.com/api/v3
+imagent config set volcengine.endpoint https://ark.cn-beijing.volces.com/api/v3
 ```
 
 Read provider secrets with API keys masked:
@@ -170,7 +170,7 @@ Attach reference images and assets:
 
 ```bash
 imagent video generate "Nova turns toward the camera as leaves drift past" \
-  --provider bytedance \
+  --provider volcengine \
   --character nova \
   --ref ./first-frame.png \
   --option duration=5

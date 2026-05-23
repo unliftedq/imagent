@@ -42,8 +42,10 @@ export function videoProviderConfigHint(providerId: string): string {
   switch (providerId) {
     case "azure":
       return "imagent config set azure.endpoint <url> && imagent config set azure.apiKey <key>";
-    case "bytedance":
-      return "imagent config set bytedance.endpoint <url> && imagent config set bytedance.apiKey <key>";
+    case "byteplus":
+      return "imagent config set byteplus.endpoint <url> && imagent config set byteplus.apiKey <key>";
+    case "volcengine":
+      return "imagent config set volcengine.endpoint <url> && imagent config set volcengine.apiKey <key>";
     default:
       return `imagent config set ${providerId}.apiKey <key>`;
   }

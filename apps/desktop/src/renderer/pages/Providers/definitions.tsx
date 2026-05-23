@@ -10,6 +10,7 @@ import bflUrl from "../../assets/logos/bfl.svg?url";
 import bytedanceUrl from "../../assets/logos/bytedance.svg?url";
 import googleUrl from "../../assets/logos/google.svg?url";
 import openaiUrl from "../../assets/logos/openai.svg?url";
+import volcengineUrl from "../../assets/logos/volcengine.svg?url";
 import xaiUrl from "../../assets/logos/xai.svg?url";
 import type { MessageKey } from "../../i18n/index.js";
 
@@ -23,6 +24,13 @@ export interface BuiltInProvider {
   iconAlt: string;
   endpointLabel?: string;
   endpointPlaceholder?: string;
+  /**
+   * Pre-filled into the endpoint field when the user hasn't set one yet.
+   * Use only for providers whose default endpoint is a real, working URL
+   * (e.g. BytePlus / Volcengine Ark regions). Azure stays placeholder-only
+   * because the endpoint URL is unique to each user's resource.
+   */
+  defaultEndpoint?: string;
   mappingLabel?: string;
 }
 
@@ -78,13 +86,25 @@ export const BUILT_IN_PROVIDERS: readonly BuiltInProvider[] = [
     iconAlt: "Black Forest Labs",
   },
   {
-    id: "bytedance",
-    name: "ByteDance",
+    id: "byteplus",
+    name: "BytePlus",
     description: "Seedream and Seedance through BytePlus ModelArk endpoints.",
     iconSrc: bytedanceUrl,
-    iconAlt: "ByteDance",
+    iconAlt: "BytePlus",
+    endpointLabel: "Endpoint",
+    endpointPlaceholder: "https://ark.ap-southeast.bytepluses.com/api/v3",
+    defaultEndpoint: "https://ark.ap-southeast.bytepluses.com/api/v3",
+  },
+  {
+    id: "volcengine",
+    name: "Volcengine",
+    description:
+      "通过火山方舟 Ark 调用 doubao-前缀的 Seedream / Seedance 模型。",
+    iconSrc: volcengineUrl,
+    iconAlt: "Volcengine",
     endpointLabel: "Endpoint",
     endpointPlaceholder: "https://ark.cn-beijing.volces.com/api/v3",
+    defaultEndpoint: "https://ark.cn-beijing.volces.com/api/v3",
   },
   {
     id: "xai",
@@ -123,10 +143,14 @@ export function formFromProvider(
   // Endpoint/baseUrl now live in providers config (non-secret), not in
   // secrets. Read them from the prefs payload.
   const routing = readRouting(prefs, id);
+  // Pre-fill the default endpoint (e.g. BytePlus / Volcengine Ark regions)
+  // when the user hasn't saved one yet, so it's visible and editable
+  // rather than hidden behind a placeholder.
+  const fallbackEndpoint = providerDef(id)?.defaultEndpoint ?? "";
   return {
     providerId: id,
     displayName,
-    endpoint: routing?.endpoint ?? "",
+    endpoint: routing?.endpoint ?? fallbackEndpoint,
     baseUrl: routing?.baseUrl ?? "",
     apiKey: "",
     mappings: id === "azure" ? mappingsForBuiltIn(prefs, catalog, id) : [],
@@ -248,8 +272,11 @@ export function validateModal(
   if (activeModal.id === "azure" && !form.endpoint.trim()) {
     return t("providers.validation.azureEndpointRequired");
   }
-  if (activeModal.id === "bytedance" && !form.endpoint.trim()) {
-    return t("providers.validation.bytedanceEndpointRequired");
+  if (
+    (activeModal.id === "byteplus" || activeModal.id === "volcengine") &&
+    !form.endpoint.trim()
+  ) {
+    return t("providers.validation.arkEndpointRequired");
   }
 
   const masked = maskForModal(activeModal, form.providerId, secrets);
@@ -275,8 +302,10 @@ export function providerDisplayName(id: string, t: (key: MessageKey) => string):
       return t("providers.def.google.name");
     case "flux-bfl":
       return t("providers.def.fluxBfl.name");
-    case "bytedance":
-      return t("providers.def.bytedance.name");
+    case "byteplus":
+      return t("providers.def.byteplus.name");
+    case "volcengine":
+      return t("providers.def.volcengine.name");
     case "xai":
       return t("providers.def.xai.name");
     default:
@@ -295,8 +324,10 @@ export function providerDescription(id: string, t: (key: MessageKey) => string):
       return t("providers.def.google.description");
     case "flux-bfl":
       return t("providers.def.fluxBfl.description");
-    case "bytedance":
-      return t("providers.def.bytedance.description");
+    case "byteplus":
+      return t("providers.def.byteplus.description");
+    case "volcengine":
+      return t("providers.def.volcengine.description");
     case "xai":
       return t("providers.def.xai.description");
     default:
@@ -332,8 +363,11 @@ export function buildSecretsPatch(activeModal: ActiveModal, form: ModalState): S
     case "azure":
       patch.azure = { apiKey };
       break;
-    case "bytedance":
-      patch.bytedance = { apiKey };
+    case "byteplus":
+      patch.byteplus = { apiKey };
+      break;
+    case "volcengine":
+      patch.volcengine = { apiKey };
       break;
   }
   return patch;
@@ -411,8 +445,10 @@ export function maskForModal(
       return secrets.google?.apiKey ?? null;
     case "flux-bfl":
       return secrets["flux-bfl"]?.apiKey ?? null;
-    case "bytedance":
-      return secrets.bytedance?.apiKey ?? null;
+    case "byteplus":
+      return secrets.byteplus?.apiKey ?? null;
+    case "volcengine":
+      return secrets.volcengine?.apiKey ?? null;
     case "xai":
       return secrets.xai?.apiKey ?? null;
     default:

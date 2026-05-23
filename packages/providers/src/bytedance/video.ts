@@ -22,6 +22,14 @@ import { createHttpClient, type HttpClient } from "../http/index.js";
 import { resolveImageUrlInput } from "../reference-images.js";
 
 export interface ByteDanceVideoProviderOptions {
+  /**
+   * Logical provider id this instance reports as — `"byteplus"` for the
+   * international BytePlus ModelArk endpoint or `"volcengine"` for the
+   * mainland 火山引擎 Ark endpoint. The underlying ModelArk HTTP API is the
+   * same; only the routing + model id set differ between the two.
+   */
+  providerId: string;
+  displayName: string;
   apiKey: string;
   /**
    * Ark base URL — required, mirrors Azure's `endpoint + apiKey` shape. The
@@ -71,8 +79,8 @@ export class ByteDanceVideoProvider extends BaseVideoProvider {
 
   constructor(options: ByteDanceVideoProviderOptions) {
     super({
-      providerId: "bytedance",
-      displayName: "ByteDance",
+      providerId: options.providerId,
+      displayName: options.displayName,
       models: options.models,
       ...(options.logger !== undefined ? { logger: options.logger } : {}),
     });
@@ -90,7 +98,7 @@ export class ByteDanceVideoProvider extends BaseVideoProvider {
     merged: VideoRequest,
     modelDef: VideoModelDef,
   ): Promise<VideoJobHandle> {
-    const body = await buildCreateTaskBody(merged, modelDef);
+    const body = await buildCreateTaskBody(merged, modelDef, this.id);
     const res = await this.http.post<ArkTaskCreateResponse>(TASKS_PATH, body);
     const taskId = res?.id;
     if (!taskId) {
@@ -182,10 +190,11 @@ export class ByteDanceVideoProvider extends BaseVideoProvider {
 async function buildCreateTaskBody(
   req: VideoRequest,
   model: VideoModelDef,
+  vendorId: string,
 ): Promise<Record<string, unknown>> {
   const body: Record<string, unknown> = {
     model: model.id,
-    content: await buildContent(req),
+    content: await buildContent(req, vendorId),
   };
   if (req.aspectRatio) body.ratio = req.aspectRatio;
   if (req.durationSec !== undefined) body.duration = req.durationSec;
@@ -195,26 +204,26 @@ async function buildCreateTaskBody(
   return body;
 }
 
-async function buildContent(req: VideoRequest): Promise<ByteDanceContentPart[]> {
+async function buildContent(req: VideoRequest, vendorId: string): Promise<ByteDanceContentPart[]> {
   const content: ByteDanceContentPart[] = [{ type: "text", text: req.prompt }];
   if (req.firstFrame) {
     content.push({
       type: "image_url",
-      image_url: { url: await resolveImageUrlInput(req.firstFrame, "bytedance") },
+      image_url: { url: await resolveImageUrlInput(req.firstFrame, vendorId) },
       role: "first_frame",
     });
   }
   if (req.lastFrame) {
     content.push({
       type: "image_url",
-      image_url: { url: await resolveImageUrlInput(req.lastFrame, "bytedance") },
+      image_url: { url: await resolveImageUrlInput(req.lastFrame, vendorId) },
       role: "last_frame",
     });
   }
   for (const ref of req.references) {
     content.push({
       type: "image_url",
-      image_url: { url: await resolveImageUrlInput(ref.path, "bytedance") },
+      image_url: { url: await resolveImageUrlInput(ref.path, vendorId) },
       role: "reference_image",
     });
   }

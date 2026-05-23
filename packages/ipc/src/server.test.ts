@@ -334,7 +334,7 @@ describe("registerIpcHandlers", () => {
           kind: "video" as const,
           request: {
             prompt: "rotating crystal",
-            providerId: "bytedance",
+            providerId: "byteplus",
             model: "seedance-1.0-pro",
             durationSec: 5,
             fps: 24,
@@ -364,7 +364,7 @@ describe("registerIpcHandlers", () => {
       });
       const reply = (await invoke("video.submit", {
         prompt: "rotating crystal",
-        providerId: "bytedance",
+        providerId: "byteplus",
         model: "seedance-1.0-pro",
         durationSec: 5,
         references: [],

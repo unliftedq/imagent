@@ -29,7 +29,7 @@ const workflowItems = [
   {
     icon: BracketsCurly,
     title: "Provider choice stays explicit",
-    copy: "OpenAI, Azure, Google, Flux/BFL, ByteDance, and xAI provider IDs can be configured side by side.",
+    copy: "OpenAI, Azure, Google, Flux/BFL, BytePlus, 火山引擎, and xAI provider IDs can be configured side by side.",
   },
   {
     icon: Command,
@@ -61,7 +61,7 @@ const startItems = [
   },
   {
     title: "Providers",
-    copy: "Connect OpenAI, Azure, Google, Flux/BFL, ByteDance, or xAI side by side.",
+    copy: "Connect OpenAI, Azure, Google, Flux/BFL, BytePlus, 火山引擎, or xAI side by side.",
     to: "/docs/providers",
   },
   {

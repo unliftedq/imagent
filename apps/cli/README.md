@@ -32,7 +32,7 @@ imagent image generate "a cinematic portrait of a red fox"
 Generate a video:
 
 ```bash
-imagent video generate "a slow camera move through a neon city" --provider bytedance
+imagent video generate "a slow camera move through a neon city" --provider volcengine
 ```
 
 ## Common commands
@@ -116,8 +116,8 @@ Common options:
 
 ```bash
 imagent video generate "prompt" \
-  --provider bytedance \
-  --model doubao-seedance-1-0-pro-250528 \
+  --provider volcengine \
+  --model doubao-seedance-2-0-260128 \
   --option durationSec=5 \
   --option aspectRatio=16:9 \
   --ref ./first-frame.png \

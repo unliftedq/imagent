@@ -51,7 +51,7 @@ The CLI prints the generated file path when the job completes. Generated outputs
 
 ```bash
 imagent video generate "a slow camera move through a neon city" \
-  --provider bytedance \
+  --provider volcengine \
   --option duration=5 \
   --option resolution=720p
 ```

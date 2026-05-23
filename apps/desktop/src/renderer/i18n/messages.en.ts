@@ -174,7 +174,7 @@ export const en = {
   "providers.validation.displayNameRequired": "Display name is required.",
   "providers.validation.baseUrlRequired": "Base URL is required.",
   "providers.validation.azureEndpointRequired": "Azure endpoint is required.",
-  "providers.validation.bytedanceEndpointRequired": "ByteDance endpoint is required.",
+  "providers.validation.arkEndpointRequired": "Ark endpoint is required.",
   "providers.validation.apiKeyRequired": "API key is required.",
   "providers.validation.atLeastOneMapping": "Add at least one model mapping.",
   "providers.validation.reservedCustomOpenAI": "Provider id 'customOpenAI' is reserved",
@@ -190,9 +190,12 @@ export const en = {
   "providers.def.google.description": "Imagen, Nano Banana, and Veo with a shared Google API key.",
   "providers.def.fluxBfl.name": "Black Forest Labs",
   "providers.def.fluxBfl.description": "Black Forest Labs image generation models.",
-  "providers.def.bytedance.name": "ByteDance",
-  "providers.def.bytedance.description":
+  "providers.def.byteplus.name": "BytePlus",
+  "providers.def.byteplus.description":
     "Seedream and Seedance through BytePlus ModelArk endpoints.",
+  "providers.def.volcengine.name": "Volcengine",
+  "providers.def.volcengine.description":
+    "Seedream and Seedance through Volcano Ark (火山方舟) endpoints with `doubao-` model ids.",
   "providers.def.xai.name": "xAI",
   "providers.def.xai.description": "Grok image and video generation APIs.",
 
@@ -387,7 +390,7 @@ export const en = {
   "studio.generationFailed": "{provider} generation failed",
   "studio.fps": "FPS",
   "studio.noVideoProvider": "No video provider",
-  "studio.noVideoProviderDesc": "Configure ByteDance to start generating videos.",
+  "studio.noVideoProviderDesc": "Configure BytePlus or Volcengine to start generating videos.",
   "studio.references": "References",
   "studio.maxReferences": "Max {max}",
   "studio.uploadLocalImage": "Upload local image",
