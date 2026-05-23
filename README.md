@@ -27,6 +27,17 @@ npm install -g @imagent/cli
 imagent doctor
 ```
 
+Install the desktop app:
+
+- Download the macOS or Windows installer from the [latest release](https://github.com/unliftedq/imagent/releases/latest).
+- The desktop app is not signed yet. On macOS, remove quarantine before opening the app:
+
+  ```bash
+  xattr -cr Imagent.app
+  ```
+
+- On Windows, bypass the SmartScreen warning by choosing **More info** → **Run anyway**.
+
 Generate with defaults:
 
 ```bash
@@ -74,7 +85,7 @@ imagent/
 
 ## Current status
 
-imagent remains in an early stage. Data structures, packaging, and parts of the feature set may continue to evolve. The current version does not include telemetry, automatic updates, cloud sync, or account systems. The Windows installer is unsigned and may trigger a SmartScreen warning on first launch.
+imagent remains in an early stage. Data structures, packaging, and parts of the feature set may continue to evolve. The current version does not include telemetry, automatic updates, cloud sync, or account systems. Desktop packages are unsigned, so macOS may require removing quarantine and Windows may show a SmartScreen warning on first launch.
 
 ## License
 

@@ -4,19 +4,19 @@ description: Default image and video model capabilities.
 
 # Model capabilities
 
-This page summarizes the bundled default model catalog in `packages/providers/src/catalog.default.json`. Limits are included only when provider documentation confirms them.
+This page summarizes the bundled default model catalog in `packages/providers/src/catalog.default.json`. Limits are included only when provider documentation or the bundled catalog confirms them.
 
 ## Reference-image fields
 
 - **Reference images** means image inputs attached to an image edit/generation request, video first/last-frame input, or provider-specific multimodal reference input.
-- **Max references** is the maximum number of image references accepted by the model where the provider documents one.
+- **Max references** is the maximum number of image references accepted by the model where the provider documents one or the catalog sets one.
 - **Max reference size** is the provider-documented per-image upload/input limit. Empty values mean no official limit was found during the 2026-05-07 review.
 
 ## Image models
 
 ### OpenAI / Azure OpenAI: `gpt-image-2`
 
-- **Size / ratio controls:** Standard presets `1024x1024`, `1536x1024`, `1024x1536`; arbitrary `WIDTHxHEIGHT` also supported when dimensions are divisible by 16, aspect ratio is between 1:3 and 3:1, and resolution is within current OpenAI limits (catalog records max edge/pixel limits from current API docs).
+- **Size / ratio controls:** Presets `1024x1024`, `1536x1024`, `1024x1536`, `2048x2048`, `2048x1152`, `1152x2048`, `3840x2160`, and `2160x3840`; arbitrary `WIDTHxHEIGHT` also supported when dimensions are divisible by 16, aspect ratio is between 1:3 and 3:1, and total pixels are ≤ 8,294,400.
 - **Output controls:** `quality`: `low`, `medium`, `high`; `outputFormat`: `png`, `jpeg`, `webp`; max outputs 10.
 - **Reference-image support:** Supported; max 16 images; each PNG/JPEG/WebP reference must be under 50 MB.
 
@@ -35,69 +35,39 @@ This page summarizes the bundled default model catalog in `packages/providers/sr
 ### Azure Foundry / Microsoft MAI Image: `MAI-Image-2` / `MAI-Image-2e`
 
 - **Request shape:** These models do not use OpenAI-style image generation parameters on Azure. imagent sends them to `/mai/v1/images/generations` with raw `width` / `height` integers derived from the CLI `size=WIDTHxHEIGHT` option.
-- **Size controls:** The bundled catalog includes the common presets `1024x1024`, `1024x768`, `768x1024`, `1280x768`, `768x1280`, `1365x768`, and `768x1365`. Arbitrary `WIDTHxHEIGHT` values are also supported, but both dimensions must stay within 768–1365 pixels and `width × height` must be ≤ 1,048,576.
+- **Size controls:** Presets `1024x1024`, `1024x768`, `768x1024`, `1280x768`, `768x1280`, `1365x768`, and `768x1365`. Arbitrary `WIDTHxHEIGHT` values are also supported, but both dimensions must stay within 768–1365 pixels and `width × height` must be ≤ 1,048,576.
 - **Output controls:** PNG only; default size `1024x1024`; max outputs 1.
 - **Reference-image support:** Not supported. MAI Image does not accept reference-image or style-reference inputs in the current Azure route.
 
 ### Google AI Studio: `gemini-2.5-flash-image`
 
-- **Size / ratio controls:** Aspect ratios: `1:1`, `2:3`, `3:2`, `3:4`, `4:3`, `4:5`, `5:4`, `9:16`, `16:9`, `21:9`; default resolution `1K`.
+- **Size / ratio controls:** Aspect ratios: `1:1`, `2:3`, `3:2`, `3:4`, `4:3`, `4:5`, `5:4`, `9:16`, `16:9`, `21:9`.
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Supported; max 3 images. Official per-image size limit was not found.
 
 ### Google AI Studio: `gemini-3.1-flash-image-preview`
 
-- **Size / ratio controls:** Aspect ratios include standard ratios plus extreme ratios `1:4`, `1:8`, `4:1`, `8:1`; default resolution `1K`.
-- **Output controls:** Max outputs 1.
+- **Size / ratio controls:** Aspect ratios: `1:1`, `1:4`, `1:8`, `2:3`, `3:2`, `3:4`, `4:1`, `4:3`, `4:5`, `5:4`, `8:1`, `9:16`, `16:9`, `21:9`.
+- **Output controls:** `quality`: `512`, `1K`, `2K`, `4K`; max outputs 1.
 - **Reference-image support:** Supported in catalog with max 14 images; official sources found during review did not explicitly confirm the exact count for this preview model.
 
 ### Google AI Studio: `gemini-3-pro-image-preview`
 
-- **Size / ratio controls:** Aspect ratios: `1:1`, `2:3`, `3:2`, `3:4`, `4:3`, `4:5`, `5:4`, `9:16`, `16:9`, `21:9`; default resolution `1K`. Official examples also describe 2K and 4K generation.
-- **Output controls:** Max outputs 1.
+- **Size / ratio controls:** Aspect ratios: `1:1`, `2:3`, `3:2`, `3:4`, `4:3`, `4:5`, `5:4`, `9:16`, `16:9`, `21:9`.
+- **Output controls:** `quality`: `1K`, `2K`, `4K`; max outputs 1.
 - **Reference-image support:** Supported; max 14 images. Official per-image size limit was not found.
 
-### Black Forest Labs: `flux-2-pro`
+### Black Forest Labs: `flux-2-pro` / `flux-2-max` / `flux-2-flex`
 
-- **Size controls:** Catalog exposes common `WIDTHxHEIGHT` presets and allows arbitrary `WIDTHxHEIGHT` values; custom width/height must be 256–2048 pixels and multiples of 32.
-- **Output controls:** Max outputs 1.
-- **Reference-image support:** Supported; max 8 input images. Official per-image file-size limit was not found.
-
-### Black Forest Labs: `flux-2-max`
-
-- **Size controls:** Same common `WIDTHxHEIGHT` presets and arbitrary-size support as `flux-2-pro`; custom width/height must be 256–2048 pixels and multiples of 32.
-- **Output controls:** Max outputs 1.
-- **Reference-image support:** Supported; max 8 input images through the API.
-
-### Black Forest Labs: `flux-2-flex`
-
-- **Size controls:** Same common `WIDTHxHEIGHT` presets and arbitrary-size support as `flux-2-pro`; custom width/height must be 256–2048 pixels and multiples of 32.
+- **Size controls:** Presets `1024x1024`, `1024x768`, `768x1024`, `1280x720`, `720x1280`, `1440x720`, and `720x1440`; arbitrary `WIDTHxHEIGHT` values are also supported, with width and height 256–2048 pixels and multiples of 32.
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Supported; max 8 input images.
 
-### Black Forest Labs: `flux-2-klein-9b`
+### Black Forest Labs: `flux-2-klein-9b` / `flux-2-klein-4b`
 
 - **Size controls:** Same common `WIDTHxHEIGHT` presets and arbitrary-size support as the other FLUX.2 endpoints; custom width/height must be 256–2048 pixels and multiples of 32.
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Supported; max 4 input images.
-
-### Black Forest Labs: `flux-2-klein-4b`
-
-- **Size controls:** Same common `WIDTHxHEIGHT` presets and arbitrary-size support as the other FLUX.2 endpoints; custom width/height must be 256–2048 pixels and multiples of 32.
-- **Output controls:** Max outputs 1.
-- **Reference-image support:** Supported; max 4 input images.
-
-### ByteDance / Volcano Ark: `doubao-seedream-4-0-250828`
-
-- **Size / ratio controls:** Resolution tokens `1K`, `2K`, `4K`.
-- **Output controls:** Max outputs 15.
-- **Reference-image support:** Supported by the API's image input field; catalog keeps the existing conservative max of 3 because an official maximum was not found.
-
-### ByteDance / Volcano Ark: `doubao-seedream-3-0-t2i-250415`
-
-- **Size / ratio controls:** `1024x1024`, `864x1152`, `1152x864`, `1280x720`, `720x1280`, `832x1248`, `1248x832`, `1512x648`.
-- **Output controls:** Max outputs 1.
-- **Reference-image support:** Not supported for this text-to-image model in the default catalog.
 
 ### xAI: `grok-imagine-image`
 
@@ -105,70 +75,73 @@ This page summarizes the bundled default model catalog in `packages/providers/sr
 - **Output controls:** Max outputs 10.
 - **Reference-image support:** Supported; max 5 images. Official per-image size limit was not found.
 
+### BytePlus / Volcano Ark: `seedream-5-0-260128`
+
+- **Provider-facing ids:** BytePlus uses `seedream-5-0-260128`; 火山引擎 uses `doubao-seedream-5-0-260128`.
+- **Size / ratio controls:** Aspect ratios `auto`, `1:1`, `2:3`, `3:2`, `3:4`, `4:3`, `4:5`, `5:4`, `16:9`, `9:16`, `21:9`; arbitrary dimensions from 256–8192 pixels per edge, aspect ratio between 1:16 and 16:1, and total pixels ≤ 16,777,216.
+- **Output controls:** `quality`: `2k`, `3k`, `4k`; max outputs 15.
+- **Reference-image support:** Supported; max 10 images; each image under 30 MB.
+
+### BytePlus / Volcano Ark: `seedream-4-5-251128`
+
+- **Provider-facing ids:** BytePlus uses `seedream-4-5-251128`; 火山引擎 uses `doubao-seedream-4-5-251128`.
+- **Size / ratio controls:** Same aspect ratios and arbitrary-size bounds as Seedream 5.0.
+- **Output controls:** `quality`: `2k`, `4k`; max outputs 15.
+- **Reference-image support:** Supported; max 10 images; each image under 30 MB.
+
+### BytePlus / Volcano Ark: `seedream-4-0-250828`
+
+- **Provider-facing ids:** BytePlus uses `seedream-4-0-250828`; 火山引擎 uses `doubao-seedream-4-0-250828`.
+- **Size / ratio controls:** Same aspect ratios and arbitrary-size bounds as Seedream 5.0.
+- **Output controls:** `quality`: `1k`, `2k`, `4k`; max outputs 15.
+- **Reference-image support:** Supported; max 10 images; each image under 30 MB.
+
 ## Video models
 
 ### Google AI Studio: `veo-3.0-generate-001`
 
 - **Duration / FPS:** 8 seconds; 24 FPS.
 - **Resolution / aspect ratio:** `720p`, `1080p`; `16:9`, `9:16`.
-- **Reference-image support:** First frame and last frame are supported; multimodal reference images are not enabled for Veo 3.0 in the default catalog because official examples scope reference-to-video to Veo 3.1.
+- **Reference-image support:** Not enabled in the default catalog.
 - **Other capabilities:** Max outputs 1.
 
 ### Google AI Studio: `veo-3.0-fast-generate-001`
 
 - **Duration / FPS:** 8 seconds; 24 FPS.
 - **Resolution / aspect ratio:** `720p`, `1080p`; `16:9`, `9:16`.
-- **Reference-image support:** First frame and last frame are supported; multimodal reference images are not enabled for Veo 3.0 Fast.
+- **Reference-image support:** Not enabled in the default catalog.
 - **Other capabilities:** Max outputs 1.
-
-### ByteDance / Volcano Ark: `doubao-seedance-1-0-pro-250528`
-
-- **Duration / FPS:** 2-12 seconds; fixed 24 FPS.
-- **Resolution / aspect ratio:** `480p`, `720p`, `1080p`; `16:9`, `9:16`, `1:1`, `4:3`, `3:4`, `21:9`.
-- **Reference-image support:** First and last frame are supported; multimodal reference images are not supported. Input images must be under 30 MB.
-- **Other capabilities:** The prior `250428` suffix was replaced with the official `250528` model ID.
-
-### ByteDance / Volcano Ark: `doubao-seedance-1-0-lite-t2v-250428`
-
-- **Duration / FPS:** 2-12 seconds; fixed 24 FPS.
-- **Resolution / aspect ratio:** `480p`, `720p`, `1080p`; same Seedance aspect ratios.
-- **Reference-image support:** No first frame, last frame, or reference images.
-- **Other capabilities:** Text-to-video variant.
-
-### ByteDance / Volcano Ark: `doubao-seedance-1-0-lite-i2v-250428`
-
-- **Duration / FPS:** 2-12 seconds; fixed 24 FPS.
-- **Resolution / aspect ratio:** `480p`, `720p`, `1080p`; same Seedance aspect ratios.
-- **Reference-image support:** First frame, last frame, and image references are supported; max 4 images; each image under 30 MB.
-- **Other capabilities:** Image-to-video variant.
-
-### ByteDance / Volcano Ark: `doubao-seedance-1-5-pro-251215`
-
-- **Duration / FPS:** 4-12 seconds; fixed 24 FPS.
-- **Resolution / aspect ratio:** `480p`, `720p`, `1080p`; same Seedance aspect ratios.
-- **Reference-image support:** First and last frame are supported; multimodal reference images are not supported. Input images must be under 30 MB.
-- **Other capabilities:** Draft mode is provider-specific and can be passed through raw options if exposed later.
-
-### ByteDance / Volcano Ark: `doubao-seedance-2-0-260128`
-
-- **Duration / FPS:** 4-15 seconds; fixed 24 FPS.
-- **Resolution / aspect ratio:** `480p`, `720p`; same Seedance aspect ratios.
-- **Reference-image support:** First frame, last frame, and multimodal references are supported. Official per-count limit was not found; image inputs must be under 30 MB.
-- **Other capabilities:** Default resolution is `720p`.
-
-### ByteDance / Volcano Ark: `doubao-seedance-2-0-fast-260128`
-
-- **Duration / FPS:** 4-15 seconds; fixed 24 FPS.
-- **Resolution / aspect ratio:** `480p`, `720p`; same Seedance aspect ratios.
-- **Reference-image support:** First frame, last frame, and multimodal references are supported. Official per-count limit was not found; image inputs must be under 30 MB.
-- **Other capabilities:** Fast Seedance 2.0 variant.
 
 ### xAI: `grok-imagine-video`
 
-- **Duration / FPS:** 1-15 seconds; the API does not expose configurable FPS.
+- **Duration / FPS:** 1–15 seconds; the catalog default is 8 seconds at 24 FPS.
 - **Resolution / aspect ratio:** `480p`, `720p`; `1:1`, `16:9`, `9:16`, `4:3`, `3:4`, `3:2`, `2:3`.
-- **Reference-image support:** First-frame and reference-image inputs are supported; last-frame input is not supported. Official reference count and file-size limits were not found.
-- **Other capabilities:** Default duration is 8 seconds.
+- **Reference-image support:** Not enabled in the default catalog.
+- **Other capabilities:** Default resolution is `720p`.
+
+### BytePlus / Volcano Ark: `dreamina-seedance-2-0-260128`
+
+- **Provider-facing ids:** BytePlus uses `dreamina-seedance-2-0-260128`; 火山引擎 uses `doubao-seedance-2-0-260128`.
+- **Duration / FPS:** 4–15 seconds; fixed 24 FPS.
+- **Resolution / aspect ratio:** `480p`, `720p`; `16:9`, `9:16`, `1:1`, `4:3`, `3:4`, `21:9`.
+- **Reference-image support:** First frame, last frame, and multimodal references are supported; max 9 images; each image under 30 MB.
+- **Other capabilities:** Default duration is 5 seconds; default resolution is `720p`.
+
+### BytePlus / Volcano Ark: `dreamina-seedance-2-0-fast-260128`
+
+- **Provider-facing ids:** BytePlus uses `dreamina-seedance-2-0-fast-260128`; 火山引擎 uses `doubao-seedance-2-0-fast-260128`.
+- **Duration / FPS:** 4–15 seconds; fixed 24 FPS.
+- **Resolution / aspect ratio:** `480p`, `720p`; `16:9`, `9:16`, `1:1`, `4:3`, `3:4`, `21:9`.
+- **Reference-image support:** First frame, last frame, and multimodal references are supported; max 9 images; each image under 30 MB.
+- **Other capabilities:** Fast Seedance 2.0 variant; default duration is 5 seconds and default resolution is `720p`.
+
+### BytePlus / Volcano Ark: `seedance-1-5-pro-251215`
+
+- **Provider-facing ids:** BytePlus uses `seedance-1-5-pro-251215`; 火山引擎 uses `doubao-seedance-1-5-pro-251215`.
+- **Duration / FPS:** 4–12 seconds; fixed 24 FPS.
+- **Resolution / aspect ratio:** `480p`, `720p`, `1080p`; `16:9`, `9:16`, `1:1`, `4:3`, `3:4`, `21:9`.
+- **Reference-image support:** First and last frame are supported; multimodal reference images are not supported. Input images must be under 30 MB.
+- **Other capabilities:** Default duration is 5 seconds; default resolution is `720p`.
 
 ## Official documentation links reviewed
 
