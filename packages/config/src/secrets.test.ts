@@ -84,6 +84,16 @@ describe("createEnvSecretsStore", () => {
     });
   });
 
+  it("accepts legacy ByteDance env var aliases for BytePlus", async () => {
+    const store = createEnvSecretsStore({
+      BYTEDANCE_API_KEY: "legacy-bp",
+    });
+
+    await expect(store.loadSecrets()).resolves.toEqual({
+      byteplus: { apiKey: "legacy-bp" },
+    });
+  });
+
   it("does not surface endpoint env vars in the secrets shape (those are routing)", async () => {
     const store = createEnvSecretsStore({
       AZURE_ENDPOINT: "https://example.openai.azure.com",
@@ -110,6 +120,18 @@ describe("envProviderRoutingOverlay", () => {
     expect(overlaid.azure?.endpoint).toBe("https://example.openai.azure.com");
     expect(overlaid.byteplus?.endpoint).toBe("https://ark.ap-southeast.bytepluses.com/api/v3");
     expect(overlaid.volcengine?.endpoint).toBe("https://ark.cn-beijing.volces.com/api/v3");
+  });
+
+  it("accepts the legacy ByteDance endpoint env var alias for BytePlus", () => {
+    const empty = ProviderPreferencesSchema.parse({});
+    const overlaid = envProviderRoutingOverlay(
+      {
+        BYTEDANCE_ENDPOINT: "https://legacy.byteplus.example/api/v3",
+      },
+      empty,
+    );
+
+    expect(overlaid.byteplus?.endpoint).toBe("https://legacy.byteplus.example/api/v3");
   });
 
   it("returns the same prefs object when no relevant env vars are set", () => {

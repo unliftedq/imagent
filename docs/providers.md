@@ -4,7 +4,7 @@ description: Connect OpenAI, Azure OpenAI, Google, Flux, BytePlus, 火山引擎,
 
 # Providers
 
-imagent supports six built-in provider IDs:
+imagent supports seven built-in provider IDs:
 
 | Provider ID | Display name | Images | Videos | Required secret fields |
 | --- | --- | --- | --- | --- |

@@ -22,10 +22,25 @@ const ENV_KEYS = {
   },
   google: { apiKey: "GOOGLE_API_KEY" },
   "flux-bfl": { apiKey: "FLUX_BFL_API_KEY" },
-  byteplus: { apiKey: "BYTEPLUS_API_KEY", endpoint: "BYTEPLUS_ENDPOINT" },
+  byteplus: {
+    apiKey: ["BYTEPLUS_API_KEY", "BYTEDANCE_API_KEY"],
+    endpoint: ["BYTEPLUS_ENDPOINT", "BYTEDANCE_ENDPOINT"],
+  },
   volcengine: { apiKey: "VOLCENGINE_API_KEY", endpoint: "VOLCENGINE_ENDPOINT" },
   xai: { apiKey: "XAI_API_KEY" },
 } as const;
+
+function firstEnvValue(
+  env: NodeJS.ProcessEnv,
+  key: string | readonly string[],
+): string | undefined {
+  const keys = Array.isArray(key) ? key : [key];
+  for (const name of keys) {
+    const value = env[name];
+    if (value) return value;
+  }
+  return undefined;
+}
 
 /**
  * File-backed secrets store. On save it best-effort chmod 600; chmod is a
@@ -90,7 +105,7 @@ export function createEnvSecretsStore(env: NodeJS.ProcessEnv): SecretsStore {
       const fluxKey = env[ENV_KEYS["flux-bfl"].apiKey];
       if (fluxKey) out["flux-bfl"] = { apiKey: fluxKey };
 
-      const bpKey = env[ENV_KEYS.byteplus.apiKey];
+      const bpKey = firstEnvValue(env, ENV_KEYS.byteplus.apiKey);
       if (bpKey) out.byteplus = { apiKey: bpKey };
 
       const volcKey = env[ENV_KEYS.volcengine.apiKey];
@@ -117,9 +132,9 @@ export function envProviderRoutingOverlay(
   env: NodeJS.ProcessEnv,
   prefs: ProviderPreferences,
 ): ProviderPreferences {
-  const azureEndpoint = env[ENV_KEYS.azure.endpoint];
-  const bpEndpoint = env[ENV_KEYS.byteplus.endpoint];
-  const volcEndpoint = env[ENV_KEYS.volcengine.endpoint];
+  const azureEndpoint = firstEnvValue(env, ENV_KEYS.azure.endpoint);
+  const bpEndpoint = firstEnvValue(env, ENV_KEYS.byteplus.endpoint);
+  const volcEndpoint = firstEnvValue(env, ENV_KEYS.volcengine.endpoint);
   if (!azureEndpoint && !bpEndpoint && !volcEndpoint) return prefs;
 
   const next: ProviderPreferences = {

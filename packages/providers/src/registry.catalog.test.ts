@@ -51,8 +51,8 @@ describe("createImageRegistry (catalog-driven)", () => {
     const catalog = buildTestCatalog();
     const prefs: ProviderPreferences = {
       ...emptyPrefs(),
-      byteplus: { endpoint: "https://ark.ap-southeast.bytepluses.com/api/v3" },
-      volcengine: { endpoint: "https://ark.cn-beijing.volces.com/api/v3" },
+      byteplus: bytePlusPrefs().byteplus,
+      volcengine: volcenginePrefs().volcengine,
     };
     const reg = createImageRegistry(secrets, prefs, catalog);
 
