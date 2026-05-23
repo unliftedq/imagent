@@ -2,6 +2,7 @@ import * as SelectPrimitive from "@radix-ui/react-select";
 import { CaretDown, CaretUp, Check } from "@phosphor-icons/react";
 import { forwardRef, type ComponentPropsWithoutRef, type ElementRef } from "react";
 import { cn } from "../lib/cn.js";
+import { useDialogPortalContainer } from "./Dialog.js";
 
 export const SelectRoot = SelectPrimitive.Root;
 export const SelectGroup = SelectPrimitive.Group;
@@ -38,8 +39,9 @@ export const SelectContent = forwardRef<
   ElementRef<typeof SelectPrimitive.Content>,
   ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
 >(function SelectContent({ className, children, position = "popper", ...rest }, ref) {
+  const dialogContainer = useDialogPortalContainer();
   return (
-    <SelectPrimitive.Portal>
+    <SelectPrimitive.Portal container={dialogContainer ?? undefined}>
       <SelectPrimitive.Content
         ref={ref}
         position={position}
@@ -50,7 +52,7 @@ export const SelectContent = forwardRef<
         // built-in ScrollUp/Down buttons handle scrolling.
         collisionPadding={8}
         className={cn(
-          "z-50 min-w-[var(--radix-select-trigger-width)] overflow-hidden " +
+          "pointer-events-auto z-50 min-w-[var(--radix-select-trigger-width)] overflow-hidden " +
             "max-h-[var(--radix-select-content-available-height)] " +
             "rounded-(--radius-md) border border-(--border) bg-(--bg) " +
             "shadow-[0_4px_24px_-8px_rgba(0,0,0,0.08)]",
