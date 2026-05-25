@@ -6,7 +6,13 @@
 
 It ships as a desktop application, a command-line tool, and an installable agent skill. All surfaces share the same local workspace, provider configuration, asset library, generated outputs, and result history.
 
-[Introduction video](https://youtu.be/z9IqZe0VIo4) · [Documentation](https://unliftedq.github.io/imagent/docs) · [Desktop app](./apps/desktop/README.md) · [CLI](./apps/cli/README.md) · [Architecture](./architecture.md)
+<p align="center">
+  <a href="https://youtu.be/z9IqZe0VIo4">
+    <img src="./assets/introduction-video.svg" alt="Watch the Imagent introduction video on YouTube" width="100%">
+  </a>
+</p>
+
+[Documentation](https://unliftedq.github.io/imagent/docs) · [Desktop app](./apps/desktop/README.md) · [CLI](./apps/cli/README.md) · [Architecture](./architecture.md)
 
 ## Why imagent?
 

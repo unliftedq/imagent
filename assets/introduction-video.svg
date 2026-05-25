@@ -1,0 +1,22 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Imagent introduction video</title>
+  <desc id="desc">A poster image for the Imagent introduction video with a play button and the text Watch the introduction video on YouTube.</desc>
+  <rect width="1280" height="720" rx="32" fill="#0B1120"/>
+  <rect x="24" y="24" width="1232" height="672" rx="24" fill="url(#background)"/>
+  <rect x="24" y="24" width="1232" height="672" rx="24" fill="url(#overlay)"/>
+  <circle cx="640" cy="318" r="88" fill="white" fill-opacity="0.92"/>
+  <path d="M613 262.287C613 254.303 621.826 249.532 628.475 253.894L716.159 311.408C722.248 315.402 722.248 324.328 716.159 328.322L628.475 385.836C621.826 390.198 613 385.427 613 377.443V262.287Z" fill="#0B1120"/>
+  <text x="640" y="470" text-anchor="middle" fill="white" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="54" font-weight="700">Watch the introduction video</text>
+  <text x="640" y="528" text-anchor="middle" fill="#D1D5DB" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="28">Open the YouTube walkthrough for Imagent</text>
+  <defs>
+    <linearGradient id="background" x1="92" y1="88" x2="1184" y2="632" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#111827"/>
+      <stop offset="0.5" stop-color="#1D4ED8"/>
+      <stop offset="1" stop-color="#0F172A"/>
+    </linearGradient>
+    <linearGradient id="overlay" x1="640" y1="24" x2="640" y2="696" gradientUnits="userSpaceOnUse">
+      <stop stop-color="white" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="white" stop-opacity="0.02"/>
+    </linearGradient>
+  </defs>
+</svg>
