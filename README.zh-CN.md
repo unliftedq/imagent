@@ -2,9 +2,9 @@
   <img src="./assets/banner.png" alt="Imagent" width="100%">
 </p>
 
-**Imagent** 取自 **Imagine agent**：它是一个本地优先的图像与视频生成工作台，面向独立创作者、高度自动化的创作流程，以及需要稳定调用生成能力的 AI Agent。
+<p align="center"><a href="./README.md">English</a> · 简体中文</p>
 
-[English](./README.md) · 简体中文
+**Imagent** 取自 **Imagine agent**：它是一个本地优先的图像与视频生成工作台，面向独立创作者、高度自动化的创作流程，以及需要稳定调用生成能力的 AI Agent。
 
 它同时提供桌面应用、命令行工具和可安装的 Agent Skill。不同入口共享同一个本地工作区：Provider 配置、素材库、生成结果、项目资产与历史记录都保存在一起，方便在桌面整理、在终端自动化，或交给 Agent 调用。
 

@@ -2,9 +2,9 @@
   <img src="./assets/banner.png" alt="Imagent" width="100%">
 </p>
 
-**Imagent** means **Imagine agent**: a local-first image and video generation workspace for individual creators, automation-heavy workflows, and AI agents.
+<p align="center">English · <a href="./README.zh-CN.md">简体中文</a></p>
 
-English · [简体中文](./README.zh-CN.md)
+**Imagent** means **Imagine agent**: a local-first image and video generation workspace for individual creators, automation-heavy workflows, and AI agents.
 
 It ships as a desktop application, a command-line tool, and an installable agent skill. All surfaces share the same local workspace, provider configuration, asset library, generated outputs, and result history.
 
