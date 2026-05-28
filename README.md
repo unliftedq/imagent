@@ -4,6 +4,8 @@
 
 **Imagent** means **Imagine agent**: a local-first image and video generation workspace for individual creators, automation-heavy workflows, and AI agents.
 
+English · [简体中文](./README.zh-CN.md)
+
 It ships as a desktop application, a command-line tool, and an installable agent skill. All surfaces share the same local workspace, provider configuration, asset library, generated outputs, and result history.
 
 [Documentation](https://unliftedq.github.io/imagent/docs) · [Desktop app](./apps/desktop/README.md) · [CLI](./apps/cli/README.md) · [Architecture](./architecture.md)
