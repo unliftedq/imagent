@@ -10,6 +10,12 @@ It ships as a desktop application, a command-line tool, and an installable agent
 
 [Documentation](https://unliftedq.github.io/imagent/docs) · [Desktop app](./apps/desktop/README.md) · [CLI](./apps/cli/README.md) · [Architecture](./architecture.md)
 
+<p align="center">
+  <a href="https://youtu.be/qeZXnmGw_8s">
+    <img src="./assets/youtube_thumbnail.png" alt="Watch Imagent on YouTube" width="100%">
+  </a>
+</p>
+
 ## Why imagent?
 
 | Capability | What it gives you |
