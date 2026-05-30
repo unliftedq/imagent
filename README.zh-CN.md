@@ -10,6 +10,12 @@
 
 [文档](https://unliftedq.github.io/imagent/docs) · [桌面应用](./apps/desktop/README.md) · [CLI](./apps/cli/README.md) · [架构](./architecture.md)
 
+<p align="center">
+  <a href="https://youtu.be/qeZXnmGw_8s">
+    <img src="./assets/youtube_thumbnail.png" alt="在 YouTube 上观看 Imagent" width="100%">
+  </a>
+</p>
+
 ## 为什么选择 imagent？
 
 | 能力 | 价值 |
