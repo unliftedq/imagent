@@ -20,6 +20,7 @@ const BUILT_IN_ROUTING_IDS = new Set<string>([
   "byteplus",
   "volcengine",
   "xai",
+  "minimax",
 ]);
 
 export async function runProviderAdd(

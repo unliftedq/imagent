@@ -1,10 +1,10 @@
 ---
-description: Connect OpenAI, Azure OpenAI, Google, Flux, BytePlus, 火山引擎, and xAI models.
+description: Connect OpenAI, Azure OpenAI, Google, Flux, BytePlus, 火山引擎, xAI, and MiniMax models.
 ---
 
 # Providers
 
-imagent supports seven built-in provider IDs:
+imagent supports eight built-in provider IDs:
 
 | Provider ID | Display name | Images | Videos | Required secret fields |
 | --- | --- | --- | --- | --- |
@@ -15,6 +15,7 @@ imagent supports seven built-in provider IDs:
 | `byteplus` | BytePlus ModelArk (international) | Yes | Yes | `endpoint`, `apiKey` |
 | `volcengine` | 火山引擎 (Volcano Ark, mainland China) | Yes | Yes | `endpoint`, `apiKey` |
 | `xai` | xAI | Yes | Yes | `apiKey` |
+| `minimax` | MiniMax | Yes | Yes | `apiKey` |
 
 Providers without configured secrets are skipped at runtime. `imagent doctor` reports how many built-in providers are configured.
 
@@ -318,6 +319,47 @@ imagent video generate "a dramatic hero shot with drifting fog" \
   --provider xai \
   --model grok-imagine-video \
   --option duration=10
+```
+
+### MiniMax (`minimax`)
+
+MiniMax supports image generation (`image-01`, canonical catalog model `minimax-image-01`) and Hailuo video generation (`MiniMax-Hailuo-2.3`) through the MiniMax API.
+
+CLI setup:
+
+```bash
+imagent config set minimax.apiKey <minimax-key>
+```
+
+Environment variable:
+
+```bash
+MINIMAX_API_KEY=<minimax-key> imagent image generate "prompt" --provider minimax
+```
+
+Optional advanced secret field (defaults to `https://api.minimax.io/v1`):
+
+```bash
+imagent config set minimax.baseUrl https://api.minimax.io/v1
+```
+
+Image example:
+
+```bash
+imagent image generate "a neon koi swimming through clouds" \
+  --provider minimax \
+  --model image-01 \
+  --option aspect=16:9
+```
+
+Video example:
+
+```bash
+imagent video generate "a paper boat drifting down a rain-soaked street" \
+  --provider minimax \
+  --model MiniMax-Hailuo-2.3 \
+  --option duration=6 \
+  --option resolution=1080P
 ```
 
 ### Custom OpenAI-compatible image providers

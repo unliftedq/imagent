@@ -280,6 +280,44 @@ export const XAI_IMAGE_MODELS: Record<string, ImageModelDef> = {
   },
 };
 
+export const MINIMAX_IMAGE_MODELS: Record<string, ImageModelDef> = {
+  "image-01": {
+    id: "image-01",
+    baseModelId: "minimax-image-01",
+    displayName: "MiniMax Image 01",
+    capabilities: {
+      aspectRatios: ["1:1", "16:9", "4:3", "3:2", "2:3", "3:4", "9:16", "21:9"],
+      supportsArbitrarySize: true,
+      minWidth: 512,
+      maxWidth: 2048,
+      minHeight: 512,
+      maxHeight: 2048,
+      widthMultiple: 8,
+      heightMultiple: 8,
+      maxReferences: 1,
+      maxOutputs: 9,
+      supportsStyleRef: true,
+    },
+    defaults: { aspectRatio: "1:1", count: 1 },
+  },
+};
+
+export const MINIMAX_VIDEO_MODELS: Record<string, VideoModelDef> = {
+  "MiniMax-Hailuo-2.3": {
+    id: "MiniMax-Hailuo-2.3",
+    displayName: "MiniMax Hailuo 2.3",
+    capabilities: {
+      durationsSec: [6, 10],
+      maxDurationSec: 10,
+      resolutions: ["768P", "1080P"],
+      supportsFirstFrame: true,
+      supportsLastFrame: false,
+      supportsRefImages: false,
+    },
+    defaults: { durationSec: 6, resolution: "1080P" },
+  },
+};
+
 /** Build a small in-memory ModelCatalog from the fixtures above. */
 export function buildTestCatalog(): ModelCatalog {
   return {
@@ -291,11 +329,13 @@ export function buildTestCatalog(): ModelCatalog {
         ...FLUX_IMAGE_MODELS,
         ...BYTEDANCE_IMAGE_MODELS,
         ...XAI_IMAGE_MODELS,
+        ...MINIMAX_IMAGE_MODELS,
       },
       video: {
         ...BYTEDANCE_VIDEO_MODELS,
         ...GOOGLE_VIDEO_MODELS,
         ...XAI_VIDEO_MODELS,
+        ...MINIMAX_VIDEO_MODELS,
       },
     },
     providers: {
@@ -344,6 +384,11 @@ export function buildTestCatalog(): ModelCatalog {
         displayName: "xAI",
         image: Object.keys(XAI_IMAGE_MODELS).map((id) => ({ id, modelId: id })),
         video: Object.keys(XAI_VIDEO_MODELS).map((id) => ({ id, modelId: id })),
+      },
+      minimax: {
+        displayName: "MiniMax",
+        image: Object.keys(MINIMAX_IMAGE_MODELS).map((id) => ({ id, modelId: id })),
+        video: Object.keys(MINIMAX_VIDEO_MODELS).map((id) => ({ id, modelId: id })),
       },
     },
   };

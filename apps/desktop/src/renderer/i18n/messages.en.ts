@@ -198,6 +198,9 @@ export const en = {
     "Seedream and Seedance through Volcano Ark (火山方舟) endpoints with `doubao-` model ids.",
   "providers.def.xai.name": "xAI",
   "providers.def.xai.description": "Grok image and video generation APIs.",
+  "providers.def.minimax.name": "MiniMax",
+  "providers.def.minimax.description":
+    "MiniMax image (image-01) and Hailuo video generation APIs.",
 
   // Gallery
   "gallery.library": "Library",

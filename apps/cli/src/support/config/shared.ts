@@ -11,6 +11,7 @@ export const VENDOR_KEYS = [
   "byteplus",
   "volcengine",
   "xai",
+  "minimax",
 ] as const;
 export type VendorId = (typeof VENDOR_KEYS)[number];
 
@@ -29,6 +30,7 @@ export const ALLOWED_FIELDS: Record<VendorId, Record<string, FieldDef>> = {
   byteplus: { apiKey: { store: "secrets" }, endpoint: { store: "config" } },
   volcengine: { apiKey: { store: "secrets" }, endpoint: { store: "config" } },
   xai: { apiKey: { store: "secrets" }, baseUrl: { store: "config" } },
+  minimax: { apiKey: { store: "secrets" }, baseUrl: { store: "config" } },
 };
 
 type DefaultModelConfigKey = "image.defaultModel" | "video.defaultModel";

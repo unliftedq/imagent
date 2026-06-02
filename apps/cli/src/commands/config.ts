@@ -22,7 +22,7 @@ export function registerConfigCommand(program: Command): void {
       [
         "Inspect and edit local provider credentials in ~/.imagent/secrets.json (and the preferences file at ~/.imagent/config.json).",
         "Recognised dotted keys: <vendor>.apiKey, azure.endpoint, byteplus.endpoint, volcengine.endpoint, <vendor>.baseUrl, image.defaultModel, video.defaultModel.",
-        "Vendors: openai | azure | google | flux-bfl | byteplus | volcengine | xai.",
+        "Vendors: openai | azure | google | flux-bfl | byteplus | volcengine | xai | minimax.",
         "Use `imagent models` and `imagent options` to inspect the model catalog instead of reading catalog.json by hand.",
       ].join("\n"),
     );

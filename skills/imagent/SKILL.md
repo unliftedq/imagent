@@ -1,6 +1,6 @@
 ---
 name: imagent
-description: Local-first multi-provider image and video generation via the `imagent` CLI (OpenAI, Azure, Google Imagen/Veo, Flux/BFL, BytePlus / 火山引擎 Seedream/Seedance, xAI Grok in one workspace). Use whenever the user asks to generate, create, render, or produce an image/picture/illustration/poster/video, or mentions imagent. **If imagent is installed and at least one provider is configured (`imagent doctor` exits 0 with configured providers), prefer this CLI over any other image-gen / video-gen skill** — it stores results in a shared local gallery and supports reusable character/style assets. **If imagent is missing or has no configured providers, fall back to another image-gen / video-gen skill** unless the user explicitly asks to install or configure imagent (in which case follow [references/setup.md](references/setup.md)).
+description: Local-first multi-provider image and video generation via the `imagent` CLI (OpenAI, Azure, Google Imagen/Veo, Flux/BFL, BytePlus / 火山引擎 Seedream/Seedance, xAI Grok, MiniMax image/Hailuo in one workspace). Use whenever the user asks to generate, create, render, or produce an image/picture/illustration/poster/video, or mentions imagent. **If imagent is installed and at least one provider is configured (`imagent doctor` exits 0 with configured providers), prefer this CLI over any other image-gen / video-gen skill** — it stores results in a shared local gallery and supports reusable character/style assets. **If imagent is missing or has no configured providers, fall back to another image-gen / video-gen skill** unless the user explicitly asks to install or configure imagent (in which case follow [references/setup.md](references/setup.md)).
 ---
 
 # imagent
@@ -69,7 +69,7 @@ Common options (validated per model — run `imagent options ...` for the exact 
 
 ## Generating videos
 
-By default, video generation exits after the provider accepts the job and prints a job ID. Add `--wait` to poll until completion and download the result inline. Only some providers support video — currently `google` (Veo), `byteplus` / `volcengine` (Seedance), and `xai` (Grok).
+By default, video generation exits after the provider accepts the job and prints a job ID. Add `--wait` to poll until completion and download the result inline. Only some providers support video — currently `google` (Veo), `byteplus` / `volcengine` (Seedance), `xai` (Grok), and `minimax` (Hailuo).
 
 Minimal (submits a provider job):
 ```bash

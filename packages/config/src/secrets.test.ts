@@ -71,6 +71,7 @@ describe("createEnvSecretsStore", () => {
       BYTEPLUS_API_KEY: "bp",
       VOLCENGINE_API_KEY: "v",
       XAI_API_KEY: "x",
+      MINIMAX_API_KEY: "mm",
     });
 
     await expect(store.loadSecrets()).resolves.toEqual({
@@ -81,6 +82,7 @@ describe("createEnvSecretsStore", () => {
       byteplus: { apiKey: "bp" },
       volcengine: { apiKey: "v" },
       xai: { apiKey: "x" },
+      minimax: { apiKey: "mm" },
     });
   });
 

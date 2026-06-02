@@ -75,6 +75,13 @@ This page summarizes the bundled default model catalog in `packages/providers/sr
 - **Output controls:** Max outputs 10.
 - **Reference-image support:** Supported; max 5 images. Official per-image size limit was not found.
 
+### MiniMax: `image-01`
+
+- **Provider-facing id:** Offering id `image-01` (the MiniMax API model name); canonical catalog model `minimax-image-01`.
+- **Size / ratio controls:** Aspect ratios `1:1`, `16:9`, `4:3`, `3:2`, `2:3`, `3:4`, `9:16`, `21:9`; or explicit width/height from 512–2048 pixels per edge in multiples of 8.
+- **Output controls:** Max outputs 9.
+- **Reference-image support:** Supported; max 1 image (mapped to a `character` subject reference).
+
 ### BytePlus / Volcano Ark: `seedream-5-0-260128`
 
 - **Provider-facing ids:** BytePlus uses `seedream-5-0-260128`; 火山引擎 uses `doubao-seedream-5-0-260128`.
@@ -119,6 +126,14 @@ This page summarizes the bundled default model catalog in `packages/providers/sr
 - **Reference-image support:** Not enabled in the default catalog.
 - **Other capabilities:** Default resolution is `720p`.
 
+### MiniMax: `MiniMax-Hailuo-2.3`
+
+- **Provider-facing id:** `MiniMax-Hailuo-2.3` (same id used in the catalog and the MiniMax API).
+- **Duration / FPS:** 6 or 10 seconds; the catalog default is 6 seconds.
+- **Resolution / aspect ratio:** `768P`, `1080P`; aspect ratio is controlled by the prompt/first frame rather than a dedicated parameter.
+- **Reference-image support:** First-frame image is supported; multimodal reference images are not.
+- **Other capabilities:** Default resolution is `1080P`.
+
 ### BytePlus / Volcano Ark: `dreamina-seedance-2-0-260128`
 
 - **Provider-facing ids:** BytePlus uses `dreamina-seedance-2-0-260128`; 火山引擎 uses `doubao-seedance-2-0-260128`.
@@ -157,3 +172,5 @@ This page summarizes the bundled default model catalog in `packages/providers/sr
 - ByteDance / Volcano Ark video generation API: <https://www.volcengine.com/docs/82379>
 - xAI image/video generation docs: <https://docs.x.ai/developers/model-capabilities/images/generation>
 - xAI Python SDK: <https://github.com/xai-org/xai-sdk-python>
+- MiniMax image generation guide: <https://platform.minimax.io/docs/guides/image-generation>
+- MiniMax video generation guide: <https://platform.minimax.io/docs/guides/video-generation>

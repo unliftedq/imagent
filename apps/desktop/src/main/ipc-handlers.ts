@@ -471,6 +471,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       if (input.byteplus?.apiKey) patch.byteplus = { apiKey: input.byteplus.apiKey };
       if (input.volcengine?.apiKey) patch.volcengine = { apiKey: input.volcengine.apiKey };
       if (input.xai?.apiKey) patch.xai = { apiKey: input.xai.apiKey };
+      if (input.minimax?.apiKey) patch.minimax = { apiKey: input.minimax.apiKey };
       if (input.customOpenAI) {
         const currentSecrets = await secretsStore.loadSecrets();
         const nextCustom = { ...(currentSecrets.customOpenAI ?? {}) };
@@ -1343,6 +1344,7 @@ const WELL_KNOWN_PROVIDER_IDS = [
   "byteplus",
   "volcengine",
   "xai",
+  "minimax",
 ] as const;
 
 const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
@@ -1353,6 +1355,7 @@ const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   byteplus: "BytePlus",
   volcengine: "Volcengine",
   xai: "xAI",
+  minimax: "MiniMax",
 };
 
 function providerSummaryList(
@@ -1451,6 +1454,15 @@ function providerSummaryList(
       kinds: ["image", "video"],
       defaultModel: firstImage("xai"),
       modelIds: [...imageIds("xai"), ...videoIds("xai")],
+    },
+    {
+      id: "minimax",
+      displayName: "MiniMax",
+      configured: !!secrets.minimax,
+      // MiniMax spans both kinds: image-01 image + Hailuo video.
+      kinds: ["image", "video"],
+      defaultModel: firstImage("minimax"),
+      modelIds: [...imageIds("minimax"), ...videoIds("minimax")],
     },
   ];
   // Custom OpenAI-compatible providers: routing lives in config; catalog may
@@ -1619,6 +1631,7 @@ function maskSecrets(s: ProviderSecrets): {
   byteplus?: { apiKey: string | null };
   volcengine?: { apiKey: string | null };
   xai?: { apiKey: string | null };
+  minimax?: { apiKey: string | null };
   customOpenAI?: Record<string, { apiKey: string | null }>;
 } {
   const out: Record<string, unknown> = {};
@@ -1629,6 +1642,7 @@ function maskSecrets(s: ProviderSecrets): {
   if (s.byteplus) out.byteplus = { apiKey: maskValue(s.byteplus.apiKey) };
   if (s.volcengine) out.volcengine = { apiKey: maskValue(s.volcengine.apiKey) };
   if (s.xai) out.xai = { apiKey: maskValue(s.xai.apiKey) };
+  if (s.minimax) out.minimax = { apiKey: maskValue(s.minimax.apiKey) };
   if (s.customOpenAI) {
     out.customOpenAI = Object.fromEntries(
       Object.entries(s.customOpenAI).map(([id, block]) => [
@@ -1654,6 +1668,7 @@ function prefsPayloadFromConfig(p: ProviderPreferences): ProviderPreferencesPayl
     byteplus: p.byteplus ?? {},
     volcengine: p.volcengine ?? {},
     xai: p.xai ?? {},
+    minimax: p.minimax ?? {},
     customOpenAI: p.customOpenAI ?? {},
   };
 }
@@ -1667,6 +1682,7 @@ function prefsConfigFromPayload(payload: ProviderPreferencesPayload): ProviderPr
     byteplus: payload.byteplus,
     volcengine: payload.volcengine,
     xai: payload.xai,
+    minimax: payload.minimax,
     customOpenAI: payload.customOpenAI,
   };
 }

@@ -50,6 +50,7 @@ export const ProviderSecretsSchema = z.preprocess(
     byteplus: z.object({ apiKey: z.string() }).optional(),
     volcengine: z.object({ apiKey: z.string() }).optional(),
     xai: z.object({ apiKey: z.string() }).optional(),
+    minimax: z.object({ apiKey: z.string() }).optional(),
     customOpenAI: z
       .record(
         z.string().regex(/^[a-z0-9][a-z0-9_-]*$/),
@@ -108,6 +109,7 @@ export const ProviderPreferencesSchema = z.preprocess(
     byteplus: ProviderRoutingSchema.default({}),
     volcengine: ProviderRoutingSchema.default({}),
     xai: ProviderRoutingSchema.default({}),
+    minimax: ProviderRoutingSchema.default({}),
     customOpenAI: z
       .record(z.string().regex(/^[a-z0-9][a-z0-9_-]*$/), ProviderRoutingSchema)
       .default({}),
@@ -161,6 +163,7 @@ export const DEFAULT_CONFIG: ConfigFile = {
     byteplus: {},
     volcengine: {},
     xai: {},
+    minimax: {},
     customOpenAI: {},
   },
 };

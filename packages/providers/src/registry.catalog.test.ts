@@ -13,6 +13,7 @@ function emptyPrefs(): ProviderPreferences {
     byteplus: {},
     volcengine: {},
     xai: {},
+    minimax: {},
     customOpenAI: {},
   };
 }

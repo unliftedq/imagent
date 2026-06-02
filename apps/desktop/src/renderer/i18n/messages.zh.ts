@@ -200,6 +200,8 @@ export const zh: Dict = {
     "通过火山方舟 Ark 端点调用 doubao-前缀的 Seedream / Seedance 模型。",
   "providers.def.xai.name": "xAI",
   "providers.def.xai.description": "Grok 图像与视频生成 API。",
+  "providers.def.minimax.name": "MiniMax",
+  "providers.def.minimax.description": "MiniMax 图像（image-01）与海螺视频生成 API。",
 
   // Gallery
   "gallery.library": "资料库",
