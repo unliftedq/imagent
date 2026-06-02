@@ -65,6 +65,7 @@ export const ProviderPreferencesPayloadSchema = z.object({
   byteplus: IpcProviderRoutingSchema,
   volcengine: IpcProviderRoutingSchema,
   xai: IpcProviderRoutingSchema,
+  minimax: IpcProviderRoutingSchema,
   customOpenAI: z.record(ProviderIdSchema, IpcProviderRoutingSchema),
 });
 export type ProviderPreferencesPayload = z.infer<typeof ProviderPreferencesPayloadSchema>;
@@ -84,6 +85,7 @@ export const MaskedSecretsSchema = z.object({
   byteplus: MaskedKey.optional(),
   volcengine: MaskedKey.optional(),
   xai: MaskedKey.optional(),
+  minimax: MaskedKey.optional(),
   customOpenAI: z.record(ProviderIdSchema, MaskedKey).optional(),
 });
 export type MaskedSecrets = z.infer<typeof MaskedSecretsSchema>;
@@ -101,6 +103,7 @@ export const SecretsWriteSchema = z.object({
   byteplus: WriteKey.optional(),
   volcengine: WriteKey.optional(),
   xai: WriteKey.optional(),
+  minimax: WriteKey.optional(),
   customOpenAI: z.record(ProviderIdSchema, z.object({ apiKey: z.string().min(1) })).optional(),
 });
 export type SecretsWrite = z.infer<typeof SecretsWriteSchema>;

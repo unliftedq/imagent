@@ -570,6 +570,36 @@
           "aspectRatio": "auto",
           "count": 1
         }
+      },
+      "minimax-image-01": {
+        "id": "minimax-image-01",
+        "displayName": "MiniMax Image 01",
+        "capabilities": {
+          "aspectRatios": [
+            "1:1",
+            "16:9",
+            "4:3",
+            "3:2",
+            "2:3",
+            "3:4",
+            "9:16",
+            "21:9"
+          ],
+          "supportsArbitrarySize": true,
+          "minWidth": 512,
+          "maxWidth": 2048,
+          "minHeight": 512,
+          "maxHeight": 2048,
+          "widthMultiple": 8,
+          "heightMultiple": 8,
+          "maxReferences": 1,
+          "maxOutputs": 9,
+          "supportsStyleRef": true
+        },
+        "defaults": {
+          "aspectRatio": "1:1",
+          "count": 1
+        }
       }
     },
     "video": {
@@ -813,6 +843,28 @@
           "fps": 24,
           "resolution": "720p"
         }
+      },
+      "MiniMax-Hailuo-2.3": {
+        "id": "MiniMax-Hailuo-2.3",
+        "displayName": "MiniMax Hailuo 2.3",
+        "capabilities": {
+          "durationsSec": [
+            6,
+            10
+          ],
+          "maxDurationSec": 10,
+          "resolutions": [
+            "768P",
+            "1080P"
+          ],
+          "supportsFirstFrame": true,
+          "supportsLastFrame": false,
+          "supportsRefImages": false
+        },
+        "defaults": {
+          "durationSec": 6,
+          "resolution": "1080P"
+        }
       }
     }
   },
@@ -980,6 +1032,21 @@
         {
           "id": "grok-imagine-video",
           "modelId": "grok-imagine-video"
+        }
+      ]
+    },
+    "minimax": {
+      "displayName": "MiniMax",
+      "image": [
+        {
+          "id": "minimax-image-01",
+          "modelId": "minimax-image-01"
+        }
+      ],
+      "video": [
+        {
+          "id": "MiniMax-Hailuo-2.3",
+          "modelId": "MiniMax-Hailuo-2.3"
         }
       ]
     }

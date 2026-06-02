@@ -28,6 +28,7 @@ const ENV_KEYS = {
   },
   volcengine: { apiKey: "VOLCENGINE_API_KEY", endpoint: "VOLCENGINE_ENDPOINT" },
   xai: { apiKey: "XAI_API_KEY" },
+  minimax: { apiKey: "MINIMAX_API_KEY" },
 } as const;
 
 function firstEnvValue(
@@ -113,6 +114,9 @@ export function createEnvSecretsStore(env: NodeJS.ProcessEnv): SecretsStore {
 
       const xaiKey = env[ENV_KEYS.xai.apiKey];
       if (xaiKey) out.xai = { apiKey: xaiKey };
+
+      const minimaxKey = env[ENV_KEYS.minimax.apiKey];
+      if (minimaxKey) out.minimax = { apiKey: minimaxKey };
       return ProviderSecretsSchema.parse(out);
     },
     async saveSecrets(): Promise<void> {

@@ -12,6 +12,8 @@ import type { ModelCatalog } from "./catalog/schema.js";
 import { FluxImageProvider } from "./flux/image.js";
 import { GoogleImageProvider } from "./google/image.js";
 import { GoogleVideoProvider } from "./google/video.js";
+import { MiniMaxImageProvider } from "./minimax/image.js";
+import { MiniMaxVideoProvider } from "./minimax/video.js";
 import { OpenAIImageProvider } from "./openai/image.js";
 import { XaiImageProvider } from "./xai/image.js";
 import { XaiVideoProvider } from "./xai/video.js";
@@ -27,6 +29,7 @@ const BUILT_IN_PROVIDER_IDS = [
   "byteplus",
   "volcengine",
   "xai",
+  "minimax",
 ] as const;
 
 /**
@@ -131,6 +134,16 @@ export function createImageRegistry(
     out.set("xai", new XaiImageProvider(xaiOpts));
   }
 
+  if (secrets.minimax) {
+    const minimaxOpts: ConstructorParameters<typeof MiniMaxImageProvider>[0] = {
+      apiKey: secrets.minimax.apiKey,
+      models: mapFromList(resolveImageProviderModels(catalog, "minimax", prefs)),
+    };
+    const baseUrl = prefs.minimax?.baseUrl;
+    if (baseUrl) minimaxOpts.baseUrl = baseUrl;
+    out.set("minimax", new MiniMaxImageProvider(minimaxOpts));
+  }
+
   // Custom OpenAI-compatible providers: routing in prefs (baseUrl required),
   // credentials in secrets. We skip entries that don't have both a baseUrl
   // and an offering list — without those there's nothing to dispatch to.
@@ -217,6 +230,16 @@ export function createVideoRegistry(
     out.set("xai", new XaiVideoProvider(xaiOpts));
   }
 
+  if (secrets.minimax) {
+    const minimaxOpts: ConstructorParameters<typeof MiniMaxVideoProvider>[0] = {
+      apiKey: secrets.minimax.apiKey,
+      models: mapFromList(resolveVideoProviderModels(catalog, "minimax", prefs)),
+    };
+    const baseUrl = prefs.minimax?.baseUrl;
+    if (baseUrl) minimaxOpts.baseUrl = baseUrl;
+    out.set("minimax", new MiniMaxVideoProvider(minimaxOpts));
+  }
+
   return out;
 }
 
@@ -239,6 +262,7 @@ export function configuredProviderCount(
   if (secrets.byteplus?.apiKey && prefs?.byteplus?.endpoint) n += 1;
   if (secrets.volcengine?.apiKey && prefs?.volcengine?.endpoint) n += 1;
   if (secrets.xai) n += 1;
+  if (secrets.minimax) n += 1;
   for (const routing of Object.values(prefs?.customOpenAI ?? {})) {
     if (routing.baseUrl) n += 1;
   }

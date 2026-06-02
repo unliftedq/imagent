@@ -19,6 +19,8 @@ export * from "./bytedance/image.js";
 export * from "./bytedance/video.js";
 export * from "./xai/image.js";
 export * from "./xai/video.js";
+export * from "./minimax/image.js";
+export * from "./minimax/video.js";
 
 // Catalog primitives re-exported for IPC + bootstrap consumers.
 export {
