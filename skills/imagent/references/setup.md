@@ -47,6 +47,7 @@ Providers without credentials are silently skipped at runtime. Pick the provider
 | `byteplus`  | `endpoint`, `apiKey`    | Yes    | Yes    |
 | `volcengine`| `endpoint`, `apiKey`    | Yes    | Yes    |
 | `xai`       | `apiKey`                | Yes    | Yes    |
+| `minimax`   | `apiKey`                | Yes    | Yes    |
 
 ```bash
 imagent config set openai.apiKey sk-...
@@ -57,6 +58,7 @@ imagent config set volcengine.endpoint https://ark.cn-beijing.volces.com/api/v3
 imagent config set volcengine.apiKey <volcengine-key>
 imagent config set flux-bfl.apiKey <bfl-key>
 imagent config set xai.apiKey <xai-key>
+imagent config set minimax.apiKey <minimax-key>
 ```
 
 Optional advanced fields for OpenAI-compatible proxies / alternate endpoints:
@@ -65,6 +67,7 @@ imagent config set openai.baseUrl https://your-openai-compatible-proxy/v1
 imagent config set google.baseUrl https://your-google-compatible-endpoint
 imagent config set flux-bfl.baseUrl https://api.bfl.ai
 imagent config set xai.baseUrl https://api.x.ai/v1
+imagent config set minimax.baseUrl https://api.minimax.io/v1
 ```
 
 Verify:
@@ -86,6 +89,7 @@ VOLCENGINE_ENDPOINT=https://... VOLCENGINE_API_KEY=<key> \
                                       imagent video generate "<prompt>" --provider volcengine
 FLUX_BFL_API_KEY=<key>                imagent image generate "<prompt>" --provider flux-bfl
 XAI_API_KEY=<key>                     imagent image generate "<prompt>" --provider xai
+MINIMAX_API_KEY=<key>                 imagent image generate "<prompt>" --provider minimax
 ```
 
 Env values override `secrets.json` for that single CLI invocation.

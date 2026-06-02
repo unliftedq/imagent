@@ -2,6 +2,7 @@ import bflUrl from "../../assets/logos/bfl.svg?url";
 import bytedanceUrl from "../../assets/logos/bytedance.svg?url";
 import googleUrl from "../../assets/logos/google.svg?url";
 import microsoftUrl from "../../assets/logos/microsoft.svg?url";
+import minimaxUrl from "../../assets/logos/minimax.svg?url";
 import nanoBananaUrl from "../../assets/logos/nanobanana.svg?url";
 import openaiUrl from "../../assets/logos/openai.svg?url";
 import xaiUrl from "../../assets/logos/xai.svg?url";
@@ -48,6 +49,9 @@ export function pickModelLogo(modelId: string): ModelLogo | undefined {
   }
   if (modelId.startsWith("grok-")) {
     return { src: xaiUrl, alt: "xAI" };
+  }
+  if (modelId.startsWith("minimax-") || modelId.startsWith("MiniMax-")) {
+    return { src: minimaxUrl, alt: "MiniMax" };
   }
   return undefined;
 }

@@ -76,6 +76,7 @@ function prefsPayloadFromConfig(p: ProviderPreferences): ProviderPreferencesPayl
     byteplus: p.byteplus ?? {},
     volcengine: p.volcengine ?? {},
     xai: p.xai ?? {},
+    minimax: p.minimax ?? {},
     customOpenAI: p.customOpenAI ?? {},
   };
 }
@@ -89,6 +90,7 @@ function prefsConfigFromPayload(payload: ProviderPreferencesPayload): ProviderPr
     byteplus: payload.byteplus,
     volcengine: payload.volcengine,
     xai: payload.xai,
+    minimax: payload.minimax,
     customOpenAI: payload.customOpenAI,
   };
 }
@@ -108,6 +110,7 @@ function maskSecrets(s: ProviderSecrets): MaskedSecrets {
   if (s.byteplus) out.byteplus = { apiKey: maskValue(s.byteplus.apiKey) };
   if (s.volcengine) out.volcengine = { apiKey: maskValue(s.volcengine.apiKey) };
   if (s.xai) out.xai = { apiKey: maskValue(s.xai.apiKey) };
+  if (s.minimax) out.minimax = { apiKey: maskValue(s.minimax.apiKey) };
   return out;
 }
 
@@ -122,6 +125,7 @@ async function applySecretsWrite(store: SecretsStore, input: SecretsWrite): Prom
   if (input.byteplus?.apiKey) patch.byteplus = { apiKey: input.byteplus.apiKey };
   if (input.volcengine?.apiKey) patch.volcengine = { apiKey: input.volcengine.apiKey };
   if (input.xai?.apiKey) patch.xai = { apiKey: input.xai.apiKey };
+  if (input.minimax?.apiKey) patch.minimax = { apiKey: input.minimax.apiKey };
   await store.saveSecrets(patch);
 }
 
@@ -220,6 +224,12 @@ describe("providers.config.set + providers.config.get round-trip", () => {
     expect(reloaded.xai).toEqual({});
   });
 
+  it("minimax: empty slot round-trips", async () => {
+    const client = buildClient();
+    const reloaded = await client["providers.config.get"]();
+    expect(reloaded.minimax).toEqual({});
+  });
+
   it("regression: full multi-provider save reloads exactly", async () => {
     // Reproduces the original bug: the renderer ships the FULL prefs payload
     // on every Save click. If `prefsConfigFromPayload` (or a side-channel)
@@ -300,5 +310,6 @@ describe("DEFAULT_CONFIG sanity", () => {
     expect(DEFAULT_CONFIG.providers.byteplus).toBeDefined();
     expect(DEFAULT_CONFIG.providers.volcengine).toBeDefined();
     expect(DEFAULT_CONFIG.providers.xai).toBeDefined();
+    expect(DEFAULT_CONFIG.providers.minimax).toBeDefined();
   });
 });

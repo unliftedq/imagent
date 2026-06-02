@@ -9,6 +9,7 @@ import azureUrl from "../../assets/logos/azure.svg?url";
 import bflUrl from "../../assets/logos/bfl.svg?url";
 import bytedanceUrl from "../../assets/logos/bytedance.svg?url";
 import googleUrl from "../../assets/logos/google.svg?url";
+import minimaxUrl from "../../assets/logos/minimax.svg?url";
 import openaiUrl from "../../assets/logos/openai.svg?url";
 import volcengineUrl from "../../assets/logos/volcengine.svg?url";
 import xaiUrl from "../../assets/logos/xai.svg?url";
@@ -112,6 +113,13 @@ export const BUILT_IN_PROVIDERS: readonly BuiltInProvider[] = [
     description: "Grok image and video generation APIs.",
     iconSrc: xaiUrl,
     iconAlt: "xAI",
+  },
+  {
+    id: "minimax",
+    name: "MiniMax",
+    description: "MiniMax image (image-01) and Hailuo video generation APIs.",
+    iconSrc: minimaxUrl,
+    iconAlt: "MiniMax",
   },
 ] as const;
 
@@ -308,6 +316,8 @@ export function providerDisplayName(id: string, t: (key: MessageKey) => string):
       return t("providers.def.volcengine.name");
     case "xai":
       return t("providers.def.xai.name");
+    case "minimax":
+      return t("providers.def.minimax.name");
     default:
       return id;
   }
@@ -330,6 +340,8 @@ export function providerDescription(id: string, t: (key: MessageKey) => string):
       return t("providers.def.volcengine.description");
     case "xai":
       return t("providers.def.xai.description");
+    case "minimax":
+      return t("providers.def.minimax.description");
     default:
       return "";
   }
@@ -359,6 +371,9 @@ export function buildSecretsPatch(activeModal: ActiveModal, form: ModalState): S
       break;
     case "xai":
       patch.xai = { apiKey };
+      break;
+    case "minimax":
+      patch.minimax = { apiKey };
       break;
     case "azure":
       patch.azure = { apiKey };
@@ -451,6 +466,8 @@ export function maskForModal(
       return secrets.volcengine?.apiKey ?? null;
     case "xai":
       return secrets.xai?.apiKey ?? null;
+    case "minimax":
+      return secrets.minimax?.apiKey ?? null;
     default:
       return null;
   }

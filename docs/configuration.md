@@ -55,6 +55,7 @@ The desktop application and CLI both use this workspace, so changes made in one 
       "endpoint": "https://ark.cn-beijing.volces.com/api/v3"
     },
     "xai": {},
+    "minimax": {},
     "customOpenAI": {
       "lmstudio": {
         "displayName": "LM Studio",
@@ -98,6 +99,7 @@ Use `imagent config provider add|rm|list` to manage these entries from the CLI, 
   "byteplus": { "apiKey": "..." },
   "volcengine": { "apiKey": "..." },
   "xai": { "apiKey": "..." },
+  "minimax": { "apiKey": "..." },
   "customOpenAI": {
     "my-provider": { "apiKey": "..." }
   }
@@ -122,6 +124,7 @@ Supported environment variables are:
 | `VOLCENGINE_API_KEY` | `secrets.volcengine.apiKey` |
 | `VOLCENGINE_ENDPOINT` | `config.providers.volcengine.endpoint` (overlay) |
 | `XAI_API_KEY` | `secrets.xai.apiKey` |
+| `MINIMAX_API_KEY` | `secrets.minimax.apiKey` |
 
 API-key env vars override the file-stored secrets. Endpoint env vars overlay the file-stored routing for the duration of the CLI invocation without writing to disk.
 

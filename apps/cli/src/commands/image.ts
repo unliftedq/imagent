@@ -71,7 +71,7 @@ export function registerImageCommand(program: Command): void {
     )
     .option(
       "--provider <id>",
-      "Provider id (openai | azure | google | flux-bfl | byteplus | volcengine | xai). See `imagent doctor` for what is configured.",
+      "Provider id (openai | azure | google | flux-bfl | byteplus | volcengine | xai | minimax). See `imagent doctor` for what is configured.",
     )
     .option(
       "--model <id>",
