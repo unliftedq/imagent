@@ -1039,7 +1039,7 @@
       "displayName": "MiniMax",
       "image": [
         {
-          "id": "minimax-image-01",
+          "id": "image-01",
           "modelId": "minimax-image-01"
         }
       ],

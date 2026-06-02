@@ -323,7 +323,7 @@ imagent video generate "a dramatic hero shot with drifting fog" \
 
 ### MiniMax (`minimax`)
 
-MiniMax supports image generation (`minimax-image-01`, served by the `image-01` API model) and Hailuo video generation (`MiniMax-Hailuo-2.3`) through the MiniMax API.
+MiniMax supports image generation (`image-01`, canonical catalog model `minimax-image-01`) and Hailuo video generation (`MiniMax-Hailuo-2.3`) through the MiniMax API.
 
 CLI setup:
 
@@ -348,7 +348,7 @@ Image example:
 ```bash
 imagent image generate "a neon koi swimming through clouds" \
   --provider minimax \
-  --model minimax-image-01 \
+  --model image-01 \
   --option aspect=16:9
 ```
 

@@ -17,7 +17,6 @@ import {
 import { createHttpClient, type HttpClient } from "../http/index.js";
 import { imageDataUrl, loadImageReferences } from "../reference-images.js";
 import {
-  apiModelName,
   assertMiniMaxOk,
   DEFAULT_MINIMAX_BASE_URL,
   type MiniMaxBaseResp,
@@ -119,7 +118,7 @@ export class MiniMaxImageProvider extends BaseImageProvider {
     model: ImageModelDef,
   ): Promise<Record<string, unknown>> {
     const body: Record<string, unknown> = {
-      model: apiModelName(model.id),
+      model: model.id,
       prompt: appendImageReferenceInstructions(merged.prompt, merged.references),
       response_format: "base64",
       n: merged.count,

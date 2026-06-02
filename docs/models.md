@@ -75,9 +75,9 @@ This page summarizes the bundled default model catalog in `packages/providers/sr
 - **Output controls:** Max outputs 10.
 - **Reference-image support:** Supported; max 5 images. Official per-image size limit was not found.
 
-### MiniMax: `minimax-image-01`
+### MiniMax: `image-01`
 
-- **Provider-facing id:** Catalog id `minimax-image-01`; the MiniMax API model name is `image-01`.
+- **Provider-facing id:** Offering id `image-01` (the MiniMax API model name); canonical catalog model `minimax-image-01`.
 - **Size / ratio controls:** Aspect ratios `1:1`, `16:9`, `4:3`, `3:2`, `2:3`, `3:4`, `9:16`, `21:9`; or explicit width/height from 512–2048 pixels per edge in multiples of 8.
 - **Output controls:** Max outputs 9.
 - **Reference-image support:** Supported; max 1 image (mapped to a `character` subject reference).

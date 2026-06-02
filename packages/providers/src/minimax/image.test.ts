@@ -29,7 +29,7 @@ function makeProvider(fetcher: typeof fetch): MiniMaxImageProvider {
 const baseRequest: ImageRequest = {
   prompt: "a neon koi swimming through clouds",
   providerId: "minimax",
-  model: "minimax-image-01",
+  model: "image-01",
   aspectRatio: "16:9",
   count: 1,
   references: [],
@@ -51,7 +51,7 @@ describe("MiniMaxImageProvider", () => {
     const [url, init] = fetchMock.mock.calls[0]!;
     expect(String(url)).toBe("https://api.minimax.io/v1/image_generation");
     const body = JSON.parse((init as RequestInit).body as string);
-    // Catalog id is `minimax-image-01`, API model param must be `image-01`.
+    // Offering id `image-01` is the MiniMax API model name, passed through.
     expect(body.model).toBe("image-01");
     expect(body.response_format).toBe("base64");
     expect(body.aspect_ratio).toBe("16:9");

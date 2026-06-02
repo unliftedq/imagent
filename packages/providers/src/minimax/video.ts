@@ -20,7 +20,6 @@ import {
 import { createHttpClient, type HttpClient } from "../http/index.js";
 import { resolveImageUrlInput } from "../reference-images.js";
 import {
-  apiModelName,
   assertMiniMaxOk,
   DEFAULT_MINIMAX_BASE_URL,
   type MiniMaxBaseResp,
@@ -195,7 +194,7 @@ async function buildSubmitBody(
   vendorId: string,
 ): Promise<Record<string, unknown>> {
   const body: Record<string, unknown> = {
-    model: apiModelName(model.id),
+    model: model.id,
     prompt: req.prompt,
   };
   if (req.durationSec !== undefined) body.duration = req.durationSec;

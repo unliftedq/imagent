@@ -24,20 +24,6 @@ export interface MiniMaxBaseResp {
 export const MINIMAX_AUTH_ERROR_CODES = new Set<number>([1004, 1039, 1041]);
 
 /**
- * Map a catalog model id to the model name MiniMax's API expects in the
- * request body. The catalog surfaces the image model as `minimax-image-01`
- * (per the product naming) while the API parameter is `image-01`; the video
- * model id (`MiniMax-Hailuo-2.3`) is already the API name and passes through.
- */
-const API_MODEL_NAMES: Record<string, string> = {
-  "minimax-image-01": "image-01",
-};
-
-export function apiModelName(modelId: string): string {
-  return API_MODEL_NAMES[modelId] ?? modelId;
-}
-
-/**
  * Throw when MiniMax reports a non-success `base_resp.status_code`. Auth
  * failures map to {@link ProviderHttpError} (so callers see an HTTP-ish 401),
  * everything else to {@link ProviderResponseError}.

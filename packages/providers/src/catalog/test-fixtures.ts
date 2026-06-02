@@ -281,8 +281,9 @@ export const XAI_IMAGE_MODELS: Record<string, ImageModelDef> = {
 };
 
 export const MINIMAX_IMAGE_MODELS: Record<string, ImageModelDef> = {
-  "minimax-image-01": {
-    id: "minimax-image-01",
+  "image-01": {
+    id: "image-01",
+    baseModelId: "minimax-image-01",
     displayName: "MiniMax Image 01",
     capabilities: {
       aspectRatios: ["1:1", "16:9", "4:3", "3:2", "2:3", "3:4", "9:16", "21:9"],
