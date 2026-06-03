@@ -76,7 +76,10 @@ const MaiResponseSchema = z.object({
  *     `Authorization: Bearer <key>` (set by the SDK).
  *   - `mai-images` (MAI-Image-2 / 2e / 2.5 / 2.5-Flash):
  *     `{endpoint}/mai/v1/images/generations` — raw HTTP, `api-key: <key>`
- *     header, body `{model, prompt, width, height}`, PNG-only response.
+ *     header, body `{model, prompt, width, height}`, PNG-only response. The
+ *     2.5 models also expose `{endpoint}/mai/v1/images/edits` for
+ *     image-to-image edits via multipart form data (`model`, `prompt`,
+ *     `image`).
  *   - `flux-bfl` (FLUX.2 [pro|flex]):
  *     `{endpoint}/providers/blackforestlabs/v1/<path>?api-version=preview`
  *     on the same Foundry host as everything else. `Authorization: Bearer
@@ -244,10 +247,20 @@ export class AzureImageProvider extends BaseImageProvider {
   }
 
   /**
-   * MAI Image family (MAI-Image-2 / 2e / 2.5 / 2.5-Flash). The MAI surface accepts
-   * raw `width`/`height` integers (the OpenAI-style `size` string is not
-   * supported), only emits PNG, and returns a single base64 image at
-   * `data[0].b64_json`. Reference images are not supported by the API.
+   * MAI Image family (MAI-Image-2 / 2e / 2.5 / 2.5-Flash). Two surfaces:
+   *
+   *   - Text-to-image generation (`/mai/v1/images/generations`): JSON body with
+   *     raw `width`/`height` integers (the OpenAI-style `size` string is not
+   *     supported), PNG-only output, single base64 image at `data[0].b64_json`.
+   *   - Image-to-image edits (`/mai/v1/images/edits`): only `MAI-Image-2.5` and
+   *     `MAI-Image-2.5-Flash` support edits. The request is **multipart form
+   *     data** carrying `model`, `prompt`, and a single `image` file; PNG-only
+   *     output returned the same way. Dimensions follow the input image, so no
+   *     `width`/`height` are sent.
+   *
+   * Routing is by reference count: a request with reference images uses the
+   * edits surface (rejected if the model doesn't allow references), otherwise
+   * the generations surface.
    */
   private async generateMai(
     req: ImageRequest,
@@ -255,10 +268,7 @@ export class AzureImageProvider extends BaseImageProvider {
     signal?: AbortSignal,
   ): Promise<ImageGenerationResult> {
     if (req.references.length > 0) {
-      throw new ProviderRequestError(
-        `model ${model.id} (MAI Image) does not accept reference images`,
-        { vendorId: this.id },
-      );
+      return this.generateMaiEdit(req, model, signal);
     }
     const dims = parseSize(req.size);
     if (dims.width === undefined || dims.height === undefined) {
@@ -282,6 +292,71 @@ export class AzureImageProvider extends BaseImageProvider {
     if (signal) opts.signal = signal;
     const response = await this.http.post<z.infer<typeof MaiResponseSchema>>(url, body, opts);
 
+    return this.decodeMaiResponse(response, dims.width, dims.height);
+  }
+
+  /**
+   * MAI image-to-image edit (`/mai/v1/images/edits`). Supported only by
+   * `MAI-Image-2.5` / `MAI-Image-2.5-Flash`. The MAI edits surface accepts a
+   * single reference image as multipart form data and ignores any
+   * `width`/`height` — the output follows the input image.
+   */
+  private async generateMaiEdit(
+    req: ImageRequest,
+    model: ImageModelDef,
+    signal?: AbortSignal,
+  ): Promise<ImageGenerationResult> {
+    const maxReferences = model.capabilities?.maxReferences ?? 0;
+    if (maxReferences < 1) {
+      throw new ProviderRequestError(
+        `model ${model.id} (MAI Image) does not accept reference images`,
+        { vendorId: this.id },
+      );
+    }
+    const [reference] = await loadImageReferences(req.references.slice(0, 1), this.id);
+    if (!reference) {
+      throw new ProviderRequestError(
+        `model ${model.id} (MAI Image) edit requires a reference image`,
+        { vendorId: this.id },
+      );
+    }
+
+    const form = new FormData();
+    form.append("model", model.id);
+    form.append("prompt", req.prompt);
+    form.append(
+      "image",
+      new Blob([reference.bytes], { type: reference.mimeType }),
+      reference.filename,
+    );
+    if (req.raw) {
+      for (const [key, value] of Object.entries(req.raw)) {
+        if (typeof value === "string") form.append(key, value);
+      }
+    }
+
+    const url = `${this.endpoint}/mai/v1/images/edits`;
+    const init: RequestInit = { method: "POST", body: form };
+    const opts: { signal?: AbortSignal } = {};
+    if (signal) opts.signal = signal;
+    const res = await this.http.raw(url, init, opts);
+    const parsed = MaiResponseSchema.safeParse(await res.json());
+    if (!parsed.success) {
+      throw new ProviderResponseError(`MAI edit response shape mismatch: ${parsed.error.message}`, {
+        vendorId: this.id,
+        status: res.status,
+      });
+    }
+
+    return this.decodeMaiResponse(parsed.data);
+  }
+
+  /** Decode the shared MAI `data[].b64_json` PNG payload into outputs. */
+  private decodeMaiResponse(
+    response: z.infer<typeof MaiResponseSchema>,
+    width?: number,
+    height?: number,
+  ): ImageGenerationResult {
     const outputs: ImageOutput[] = [];
     for (const entry of response.data) {
       if (!entry.b64_json) {
@@ -292,8 +367,8 @@ export class AzureImageProvider extends BaseImageProvider {
       outputs.push({
         bytes: decodeBase64(entry.b64_json),
         mimeType: "image/png",
-        width: dims.width,
-        height: dims.height,
+        ...(width !== undefined ? { width } : {}),
+        ...(height !== undefined ? { height } : {}),
       });
     }
     if (outputs.length === 0) {

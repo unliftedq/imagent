@@ -9,7 +9,8 @@ import type { ImageModelDef } from "@imagent/core";
  *   - `mai-images` — Microsoft MAI-Image family (2 / 2e / 2.5 / 2.5-Flash).
  *     Routed via
  *     `/mai/v1/images/generations` with raw `width`/`height` parameters and
- *     PNG-only output.
+ *     PNG-only output. The 2.5 models additionally support image-to-image
+ *     edits via `/mai/v1/images/edits` (multipart form data).
  *   - `flux-bfl` — Black Forest Labs FLUX models (FLUX.2 family:
  *     [pro|max|flex|Klein 9B|Klein 4B]). Routed via the BFL
  *     provider-specific API at

@@ -194,7 +194,7 @@
           "outputFormats": [
             "png"
           ],
-          "maxReferences": 0,
+          "maxReferences": 1,
           "maxOutputs": 1,
           "supportsStyleRef": false
         },
@@ -226,7 +226,7 @@
           "outputFormats": [
             "png"
           ],
-          "maxReferences": 0,
+          "maxReferences": 1,
           "maxOutputs": 1,
           "supportsStyleRef": false
         },
