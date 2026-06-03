@@ -6,7 +6,8 @@ import type { ImageModelDef } from "@imagent/core";
  *
  *   - `openai-images` — Azure OpenAI image models (gpt-image-2 / 1.5 / mini).
  *     Routed via `/openai/v1/images/{generations,edits}`.
- *   - `mai-images` — Microsoft MAI-Image-2 / MAI-Image-2e. Routed via
+ *   - `mai-images` — Microsoft MAI-Image family (2 / 2e / 2.5 / 2.5-Flash).
+ *     Routed via
  *     `/mai/v1/images/generations` with raw `width`/`height` parameters and
  *     PNG-only output.
  *   - `flux-bfl` — Black Forest Labs FLUX models (FLUX.2 family:

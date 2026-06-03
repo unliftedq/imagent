@@ -74,7 +74,7 @@ const MaiResponseSchema = z.object({
  *   - `openai-images` (gpt-image-*):
  *     `{endpoint}/openai/v1/images/{generations,edits}` — OpenAI SDK,
  *     `Authorization: Bearer <key>` (set by the SDK).
- *   - `mai-images` (MAI-Image-2 / MAI-Image-2e):
+ *   - `mai-images` (MAI-Image-2 / 2e / 2.5 / 2.5-Flash):
  *     `{endpoint}/mai/v1/images/generations` — raw HTTP, `api-key: <key>`
  *     header, body `{model, prompt, width, height}`, PNG-only response.
  *   - `flux-bfl` (FLUX.2 [pro|flex]):
@@ -244,7 +244,7 @@ export class AzureImageProvider extends BaseImageProvider {
   }
 
   /**
-   * MAI Image family (MAI-Image-2 / MAI-Image-2e). The MAI surface accepts
+   * MAI Image family (MAI-Image-2 / 2e / 2.5 / 2.5-Flash). The MAI surface accepts
    * raw `width`/`height` integers (the OpenAI-style `size` string is not
    * supported), only emits PNG, and returns a single base64 image at
    * `data[0].b64_json`. Reference images are not supported by the API.
