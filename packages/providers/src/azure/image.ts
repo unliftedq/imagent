@@ -62,6 +62,46 @@ const MaiResponseSchema = z.object({
     .nonempty(),
 });
 
+const MAI_EDIT_MODEL_IDS = new Set(["MAI-Image-2.5", "MAI-Image-2.5-Flash"]);
+
+function maiSupportsEdits(model: ImageModelDef): boolean {
+  const maxReferences = model.capabilities?.maxReferences;
+  if (maxReferences !== undefined) return maxReferences >= 1;
+  return MAI_EDIT_MODEL_IDS.has(model.baseModelId ?? model.id);
+}
+
+function toMultipartValue(value: unknown): string | Blob | undefined {
+  if (value === undefined) return undefined;
+  if (value instanceof Blob) return value;
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  const serialized = JSON.stringify(value);
+  return serialized === undefined ? undefined : serialized;
+}
+
+async function parseMaiEditResponse(res: Response, vendorId: string): Promise<z.infer<typeof MaiResponseSchema>> {
+  let parsed: unknown;
+  try {
+    parsed = await res.json();
+  } catch (err) {
+    throw new ProviderResponseError("MAI edit response body is not valid JSON", {
+      vendorId,
+      status: res.status,
+      cause: err,
+    });
+  }
+  const result = MaiResponseSchema.safeParse(parsed);
+  if (!result.success) {
+    throw new ProviderResponseError(`MAI edit response shape mismatch: ${result.error.message}`, {
+      vendorId,
+      status: res.status,
+      bodyExcerpt: JSON.stringify(parsed).slice(0, 512),
+    });
+  }
+  return result.data;
+}
+
 /**
  * Azure Foundry image provider. One Azure resource hosts deployments from
  * multiple model families — GPT-Image (OpenAI-compatible), Microsoft
@@ -306,8 +346,7 @@ export class AzureImageProvider extends BaseImageProvider {
     model: ImageModelDef,
     signal?: AbortSignal,
   ): Promise<ImageGenerationResult> {
-    const maxReferences = model.capabilities?.maxReferences ?? 0;
-    if (maxReferences < 1) {
+    if (!maiSupportsEdits(model)) {
       throw new ProviderRequestError(
         `model ${model.id} (MAI Image) does not accept reference images`,
         { vendorId: this.id },
@@ -331,7 +370,8 @@ export class AzureImageProvider extends BaseImageProvider {
     );
     if (req.raw) {
       for (const [key, value] of Object.entries(req.raw)) {
-        if (typeof value === "string") form.append(key, value);
+        const formValue = toMultipartValue(value);
+        if (formValue !== undefined) form.set(key, formValue);
       }
     }
 
@@ -340,15 +380,7 @@ export class AzureImageProvider extends BaseImageProvider {
     const opts: { signal?: AbortSignal } = {};
     if (signal) opts.signal = signal;
     const res = await this.http.raw(url, init, opts);
-    const parsed = MaiResponseSchema.safeParse(await res.json());
-    if (!parsed.success) {
-      throw new ProviderResponseError(`MAI edit response shape mismatch: ${parsed.error.message}`, {
-        vendorId: this.id,
-        status: res.status,
-      });
-    }
-
-    return this.decodeMaiResponse(parsed.data);
+    return this.decodeMaiResponse(await parseMaiEditResponse(res, this.id));
   }
 
   /** Decode the shared MAI `data[].b64_json` PNG payload into outputs. */
