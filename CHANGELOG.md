@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.8 - 2026-06-04
+
+### Providers
+
+- Added `MAI-Image-2.5` and `MAI-Image-2.5-Flash` to the bundled catalog, including the Azure routing and image-edit support needed for image-to-image workflows.
+- Tightened MAI 2.5 size handling so oversized presets are excluded and requests stay within the documented limits.
+
+### Branding
+
+- Refreshed the MiniMax provider / Hailuo model branding assets and corrected the MiniMax offering id used by the catalog and UI.
+
 ## 0.2.7 - 2026-05-23
 
 ### UI & desktop
