@@ -1,5 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
-import { ProviderError, ProviderHttpError, ProviderRequestError, type ImageRequest } from "@imagent/core";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import {
+  ProviderError,
+  ProviderHttpError,
+  ProviderRequestError,
+  ProviderResponseError,
+  type ImageModelDef,
+  type ImageRequest,
+} from "@imagent/core";
 import { APIError } from "openai";
 import { AzureImageProvider, azureModelFamily } from "./image.js";
 import type { OpenAIClientLike } from "../openai/image.js";
@@ -20,11 +30,15 @@ function makeFakeClient(): FakeClient {
   };
 }
 
-function makeProvider(client: FakeClient, fetchImpl?: typeof fetch): AzureImageProvider {
+function makeProvider(
+  client: FakeClient,
+  fetchImpl?: typeof fetch,
+  models: Record<string, ImageModelDef> = AZURE_IMAGE_MODELS,
+): AzureImageProvider {
   return new AzureImageProvider({
     endpoint: "https://my-aoai.openai.azure.com",
     apiKey: "azure-key",
-    models: new Map(Object.entries(AZURE_IMAGE_MODELS)),
+    models: new Map(Object.entries(models)),
     client: client as unknown as OpenAIClientLike,
     ...(fetchImpl ? { fetch: fetchImpl } : {}),
   });
@@ -195,6 +209,133 @@ describe("AzureImageProvider — MAI image family", () => {
     ) as unknown as typeof fetch;
     const p = makeProvider(client, fetchMock);
     await expect(p.generate(maiRequest)).rejects.toBeInstanceOf(ProviderHttpError);
+  });
+
+  it("routes references to /mai/v1/images/edits as multipart form data (2.5)", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "imagent-azure-mai-ref-"));
+    try {
+      const ref = path.join(dir, "source.png");
+      await writeFile(ref, Buffer.from(PNG_B64, "base64"));
+      const client = makeFakeClient();
+      const fetchMock = vi.fn(
+        async () =>
+          new Response(JSON.stringify({ data: [{ b64_json: PNG_B64 }] }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          }),
+      ) as unknown as typeof fetch;
+      const p = makeProvider(client, fetchMock);
+
+      const r = await p.generate({
+        ...maiRequest,
+        model: "azure-prod-mai-image-2-5",
+        references: [{ path: ref, role: "freeform" }],
+      });
+      expect(r.outputs).toHaveLength(1);
+      expect(r.outputs[0]!.mimeType).toBe("image/png");
+
+      const calls = (fetchMock as unknown as ReturnType<typeof vi.fn>).mock.calls;
+      expect(calls).toHaveLength(1);
+      const [url, init] = calls[0]! as [string | URL, RequestInit | undefined];
+      expect(String(url)).toBe("https://my-aoai.openai.azure.com/mai/v1/images/edits");
+      expect(init?.method).toBe("POST");
+      const headers = new Headers(init?.headers as Record<string, string> | undefined);
+      expect(headers.get("api-key")).toBe("azure-key");
+      // Multipart: content-type must not be forced to JSON.
+      expect(headers.get("content-type")).not.toBe("application/json");
+      expect(init?.body).toBeInstanceOf(FormData);
+      const form = init?.body as FormData;
+      expect(form.get("model")).toBe("azure-prod-mai-image-2-5");
+      expect(form.get("prompt")).toBe(maiRequest.prompt);
+      expect(form.get("image")).toBeInstanceOf(Blob);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("allows MAI 2.5 edits when the deployment omits maxReferences", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "imagent-azure-mai-ref-"));
+    try {
+      const ref = path.join(dir, "source.png");
+      await writeFile(ref, Buffer.from(PNG_B64, "base64"));
+      const client = makeFakeClient();
+      const fetchMock = vi.fn(async () => jsonRes({ data: [{ b64_json: PNG_B64 }] })) as unknown as typeof fetch;
+      const models: Record<string, ImageModelDef> = {
+        ...AZURE_IMAGE_MODELS,
+        "azure-prod-mai-image-2-5": {
+          ...AZURE_IMAGE_MODELS["azure-prod-mai-image-2-5"]!,
+          capabilities: undefined,
+        },
+      };
+      const p = makeProvider(client, fetchMock, models);
+
+      await expect(
+        p.generate({
+          ...maiRequest,
+          model: "azure-prod-mai-image-2-5",
+          references: [{ path: ref, role: "freeform" }],
+        }),
+      ).resolves.toMatchObject({ outputs: [{ mimeType: "image/png" }] });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("applies raw edit fields with set semantics and stringifies non-string primitives", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "imagent-azure-mai-ref-"));
+    try {
+      const ref = path.join(dir, "source.png");
+      await writeFile(ref, Buffer.from(PNG_B64, "base64"));
+      const client = makeFakeClient();
+      const fetchMock = vi.fn(async () => jsonRes({ data: [{ b64_json: PNG_B64 }] })) as unknown as typeof fetch;
+      const p = makeProvider(client, fetchMock);
+
+      await p.generate({
+        ...maiRequest,
+        model: "azure-prod-mai-image-2-5",
+        references: [{ path: ref, role: "freeform" }],
+        raw: {
+          model: "override-model",
+          prompt: "override-prompt",
+          seed: 123,
+          transparent: false,
+        },
+      });
+
+      const [, init] = (fetchMock as unknown as ReturnType<typeof vi.fn>).mock.calls[0]! as [
+        string | URL,
+        RequestInit | undefined,
+      ];
+      const form = init?.body as FormData;
+      expect(form.getAll("model")).toEqual(["override-model"]);
+      expect(form.getAll("prompt")).toEqual(["override-prompt"]);
+      expect(form.get("seed")).toBe("123");
+      expect(form.get("transparent")).toBe("false");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("wraps MAI edit JSON parse failures as ProviderResponseError", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "imagent-azure-mai-ref-"));
+    try {
+      const ref = path.join(dir, "source.png");
+      await writeFile(ref, Buffer.from(PNG_B64, "base64"));
+      const client = makeFakeClient();
+      const fetchMock = vi.fn(async () => new Response("", { status: 200 })) as unknown as typeof fetch;
+      const p = makeProvider(client, fetchMock);
+
+      await expect(
+        p.generate({
+          ...maiRequest,
+          model: "azure-prod-mai-image-2-5",
+          references: [{ path: ref, role: "freeform" }],
+        }),
+      ).rejects.toBeInstanceOf(ProviderResponseError);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 });
 

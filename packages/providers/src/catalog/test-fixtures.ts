@@ -64,6 +64,20 @@ export const AZURE_IMAGE_MODELS: Record<string, ImageModelDef> = {
     },
     defaults: { size: "1024x1024", outputFormat: "png", count: 1 },
   },
+  "azure-prod-mai-image-2-5": {
+    id: "azure-prod-mai-image-2-5",
+    baseModelId: "MAI-Image-2.5",
+    displayName: "azure-prod-mai-image-2-5 (MAI Image 2.5)",
+    capabilities: {
+      sizes: ["1024x1024", "1024x768", "768x1024"],
+      supportsArbitrarySize: true,
+      outputFormats: ["png"],
+      maxReferences: 1,
+      maxOutputs: 1,
+      supportsStyleRef: false,
+    },
+    defaults: { size: "1024x1024", outputFormat: "png", count: 1 },
+  },
   "azure-prod-flux-2-pro": {
     id: "azure-prod-flux-2-pro",
     baseModelId: "flux-2-pro",

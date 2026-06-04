@@ -172,6 +172,62 @@
           "count": 1
         }
       },
+      "MAI-Image-2.5": {
+        "id": "MAI-Image-2.5",
+        "displayName": "MAI Image 2.5 (preview)",
+        "capabilities": {
+          "sizes": [
+            "1024x1024",
+            "1024x768",
+            "768x1024"
+          ],
+          "supportsArbitrarySize": true,
+          "minWidth": 768,
+          "maxWidth": 1024,
+          "minHeight": 768,
+          "maxHeight": 1024,
+          "maxPixels": 1048576,
+          "outputFormats": [
+            "png"
+          ],
+          "maxReferences": 1,
+          "maxOutputs": 1,
+          "supportsStyleRef": false
+        },
+        "defaults": {
+          "size": "1024x1024",
+          "outputFormat": "png",
+          "count": 1
+        }
+      },
+      "MAI-Image-2.5-Flash": {
+        "id": "MAI-Image-2.5-Flash",
+        "displayName": "MAI Image 2.5 Flash (preview)",
+        "capabilities": {
+          "sizes": [
+            "1024x1024",
+            "1024x768",
+            "768x1024"
+          ],
+          "supportsArbitrarySize": true,
+          "minWidth": 768,
+          "maxWidth": 1024,
+          "minHeight": 768,
+          "maxHeight": 1024,
+          "maxPixels": 1048576,
+          "outputFormats": [
+            "png"
+          ],
+          "maxReferences": 1,
+          "maxOutputs": 1,
+          "supportsStyleRef": false
+        },
+        "defaults": {
+          "size": "1024x1024",
+          "outputFormat": "png",
+          "count": 1
+        }
+      },
       "gemini-2.5-flash-image": {
         "id": "gemini-2.5-flash-image",
         "displayName": "Nano Banana (Gemini 2.5 Flash Image)",
