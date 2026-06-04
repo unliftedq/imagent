@@ -179,17 +179,13 @@
           "sizes": [
             "1024x1024",
             "1024x768",
-            "768x1024",
-            "1280x768",
-            "768x1280",
-            "1365x768",
-            "768x1365"
+            "768x1024"
           ],
           "supportsArbitrarySize": true,
           "minWidth": 768,
-          "maxWidth": 1365,
+          "maxWidth": 1024,
           "minHeight": 768,
-          "maxHeight": 1365,
+          "maxHeight": 1024,
           "maxPixels": 1048576,
           "outputFormats": [
             "png"
@@ -211,17 +207,13 @@
           "sizes": [
             "1024x1024",
             "1024x768",
-            "768x1024",
-            "1280x768",
-            "768x1280",
-            "1365x768",
-            "768x1365"
+            "768x1024"
           ],
           "supportsArbitrarySize": true,
           "minWidth": 768,
-          "maxWidth": 1365,
+          "maxWidth": 1024,
           "minHeight": 768,
-          "maxHeight": 1365,
+          "maxHeight": 1024,
           "maxPixels": 1048576,
           "outputFormats": [
             "png"
