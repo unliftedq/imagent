@@ -1,4 +1,6 @@
 import {
+  AudioModelCapsOverrideSchema,
+  AudioModelDefSchema,
   ImageModelCapsOverrideSchema,
   ImageModelDefSchema,
   VideoModelCapsOverrideSchema,
@@ -30,11 +32,20 @@ export const IpcVideoProviderModelSchema = z.object({
   defaults: z.record(z.string(), z.unknown()).optional(),
 });
 
+export const IpcAudioProviderModelSchema = z.object({
+  id: z.string(),
+  modelId: z.string(),
+  displayName: z.string().optional(),
+  capabilities: AudioModelCapsOverrideSchema.optional(),
+  defaults: z.record(z.string(), z.unknown()).optional(),
+});
+
 export const IpcModelCatalogSchema = z.object({
   version: z.literal(2),
   models: z.object({
     image: z.record(z.string(), ImageModelDefSchema),
     video: z.record(z.string(), VideoModelDefSchema),
+    audio: z.record(z.string(), AudioModelDefSchema),
   }),
   providers: z.record(
     z.string(),
@@ -42,6 +53,7 @@ export const IpcModelCatalogSchema = z.object({
       displayName: z.string().optional(),
       image: z.array(IpcImageProviderModelSchema).optional(),
       video: z.array(IpcVideoProviderModelSchema).optional(),
+      audio: z.array(IpcAudioProviderModelSchema).optional(),
     }),
   ),
   comments: z.string().optional(),

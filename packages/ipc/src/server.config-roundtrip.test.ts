@@ -72,13 +72,14 @@ function makeTransport(
 function prefsPayloadFromConfig(p: ProviderPreferences): ProviderPreferencesPayload {
   return {
     openai: p.openai ?? {},
-    "azure": p["azure"] ?? {},
+    azure: p["azure"] ?? {},
     google: p.google ?? {},
     "flux-bfl": p["flux-bfl"] ?? {},
     byteplus: p.byteplus ?? {},
     volcengine: p.volcengine ?? {},
     xai: p.xai ?? {},
     minimax: p.minimax ?? {},
+    elevenlabs: p.elevenlabs ?? {},
     customOpenAI: p.customOpenAI ?? {},
   };
 }
@@ -86,14 +87,14 @@ function prefsPayloadFromConfig(p: ProviderPreferences): ProviderPreferencesPayl
 function prefsConfigFromPayload(payload: ProviderPreferencesPayload): ProviderPreferences {
   return {
     openai: payload.openai,
-    "azure": payload["azure"],
+    azure: payload["azure"],
     google: payload.google,
     "flux-bfl": payload["flux-bfl"],
     byteplus: payload.byteplus,
     volcengine: payload.volcengine,
     xai: payload.xai,
     minimax: payload.minimax,
-    elevenlabs: {},
+    elevenlabs: payload.elevenlabs,
     customOpenAI: payload.customOpenAI,
   };
 }
@@ -114,6 +115,7 @@ function maskSecrets(s: ProviderSecrets): MaskedSecrets {
   if (s.volcengine) out.volcengine = { apiKey: maskValue(s.volcengine.apiKey) };
   if (s.xai) out.xai = { apiKey: maskValue(s.xai.apiKey) };
   if (s.minimax) out.minimax = { apiKey: maskValue(s.minimax.apiKey) };
+  if (s.elevenlabs) out.elevenlabs = { apiKey: maskValue(s.elevenlabs.apiKey) };
   return out;
 }
 
@@ -129,6 +131,7 @@ async function applySecretsWrite(store: SecretsStore, input: SecretsWrite): Prom
   if (input.volcengine?.apiKey) patch.volcengine = { apiKey: input.volcengine.apiKey };
   if (input.xai?.apiKey) patch.xai = { apiKey: input.xai.apiKey };
   if (input.minimax?.apiKey) patch.minimax = { apiKey: input.minimax.apiKey };
+  if (input.elevenlabs?.apiKey) patch.elevenlabs = { apiKey: input.elevenlabs.apiKey };
   await store.saveSecrets(patch);
 }
 
@@ -233,6 +236,12 @@ describe("providers.config.set + providers.config.get round-trip", () => {
     expect(reloaded.minimax).toEqual({});
   });
 
+  it("elevenlabs: empty slot round-trips", async () => {
+    const client = buildClient();
+    const reloaded = await client["providers.config.get"]();
+    expect(reloaded.elevenlabs).toEqual({});
+  });
+
   it("regression: full multi-provider save reloads exactly", async () => {
     // Reproduces the original bug: the renderer ships the FULL prefs payload
     // on every Save click. If `prefsConfigFromPayload` (or a side-channel)
@@ -265,7 +274,7 @@ describe("providers.secrets.set + providers.secrets.get round-trip", () => {
   it("azure: persists apiKey only (endpoint moved to providers.config)", async () => {
     const client = buildClient();
     const patch: SecretsWrite = {
-      "azure": { apiKey: "azure-key-123456" },
+      azure: { apiKey: "azure-key-123456" },
     };
     await client["providers.secrets.set"](patch);
     const raw = await secretsStore.loadSecrets();
@@ -295,9 +304,9 @@ describe("providers.secrets.set + providers.secrets.get round-trip", () => {
   it("azure apiKey can be re-saved without resending the endpoint", async () => {
     // Pre-stored apiKey is overwritten cleanly on re-save; endpoint lives in
     // providers.config now and is unaffected by secrets writes.
-    await secretsStore.saveSecrets({ "azure": { apiKey: "old-key" } });
+    await secretsStore.saveSecrets({ azure: { apiKey: "old-key" } });
     const client = buildClient();
-    await client["providers.secrets.set"]({ "azure": { apiKey: "new-key-shiny" } });
+    await client["providers.secrets.set"]({ azure: { apiKey: "new-key-shiny" } });
     const raw = await secretsStore.loadSecrets();
     expect(raw["azure"]?.apiKey).toBe("new-key-shiny");
   });

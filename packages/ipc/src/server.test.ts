@@ -174,7 +174,7 @@ describe("registerIpcHandlers", () => {
     server.emit("config.changed", { configJson: "{}" });
     expect(live).toEqual([["config.changed", { configJson: "{}" }]]);
     // A second emit should not re-attempt the destroyed target.
-    server.emit("config.changed", { configJson: "{\"x\":1}" });
+    server.emit("config.changed", { configJson: '{"x":1}' });
     expect(live).toHaveLength(2);
   });
 
@@ -856,6 +856,7 @@ describe("registerIpcHandlers", () => {
               },
             },
             video: {},
+            audio: {},
           },
           providers: {
             openai: { image: [{ id: "gpt-image-2", modelId: "gpt-image-2" }] },
@@ -888,6 +889,7 @@ describe("registerIpcHandlers", () => {
             },
           },
           video: {},
+          audio: {},
         },
         providers: {
           "custom-openai": {
