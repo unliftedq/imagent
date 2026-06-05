@@ -21,7 +21,8 @@ import { CLI_VERSION } from "../version.js";
  */
 export async function runDoctor(): Promise<void> {
   const runtime = await loadCliRuntime();
-  const { resolver, catalog, config, secrets, imageRegistry, videoRegistry, audioRegistry } = runtime;
+  const { resolver, catalog, config, secrets, imageRegistry, videoRegistry, audioRegistry } =
+    runtime;
 
   const dbPath = resolver.dbFile();
   const db = openDatabase(dbPath);
@@ -58,9 +59,7 @@ export async function runDoctor(): Promise<void> {
     const videoProvider = videoRegistry.get(providerId);
     const audioProvider = audioRegistry.get(providerId);
     const isConfigured = Boolean(imageProvider || videoProvider || audioProvider);
-    const status = isConfigured
-      ? chalk.green("configured")
-      : chalk.yellow("missing credentials");
+    const status = isConfigured ? chalk.green("configured") : chalk.yellow("missing credentials");
 
     process.stdout.write(`${chalk.bold(providerId)} ${chalk.dim(`(${display})`)}  ${status}\n`);
 
@@ -76,7 +75,7 @@ export async function runDoctor(): Promise<void> {
       process.stdout.write(`  ${chalk.dim(hint)}\n`);
       if (!isConfigured) {
         process.stdout.write(
-          `  ${chalk.dim("→ run `imagent config set " + secretHintFor(providerId) + "` to enable")}\n`,
+          `  ${chalk.dim(`→ run \`imagent config set ${secretHintFor(providerId)}\` to enable`)}\n`,
         );
       }
       continue;
@@ -102,7 +101,7 @@ export async function runDoctor(): Promise<void> {
 
     if (!isConfigured) {
       process.stdout.write(
-        `  ${chalk.dim("→ run `imagent config set " + secretHintFor(providerId) + "` to enable")}\n`,
+        `  ${chalk.dim(`→ run \`imagent config set ${secretHintFor(providerId)}\` to enable`)}\n`,
       );
     }
   }
