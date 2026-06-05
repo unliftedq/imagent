@@ -59,3 +59,16 @@ export const VideoGenerationResultSchema = z.object({
   output: VideoOutputSchema,
 });
 export type VideoGenerationResult = z.infer<typeof VideoGenerationResultSchema>;
+
+export const AudioOutputSchema = z.object({
+  bytes: z.instanceof(Uint8Array),
+  mimeType: z.string(),
+  durationMs: z.number().int().optional(),
+  raw: z.record(z.string(), z.unknown()).optional(),
+});
+export type AudioOutput = z.infer<typeof AudioOutputSchema>;
+
+export const AudioGenerationResultSchema = z.object({
+  output: AudioOutputSchema,
+});
+export type AudioGenerationResult = z.infer<typeof AudioGenerationResultSchema>;
