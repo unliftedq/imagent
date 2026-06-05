@@ -51,10 +51,18 @@ export function migrate(db: DatabaseType, migrations: readonly Migration[]): voi
   const current = (db.pragma("user_version", { simple: true }) as number) ?? 0;
   const pending = migrations.filter((m) => m.version > current).sort((a, b) => a.version - b.version);
   for (const m of pending) {
-    db.transaction(() => {
-      db.exec(m.sql);
-      db.pragma(`user_version = ${m.version}`);
-    })();
+    const needsWritableSchema = /\bwritable_schema\b/i.test(m.sql);
+    // better-sqlite3's defensive mode blocks sqlite_master updates even when
+    // PRAGMA writable_schema is enabled; allow only migrations that request it.
+    if (needsWritableSchema) db.unsafeMode(true);
+    try {
+      db.transaction(() => {
+        db.exec(m.sql);
+        db.pragma(`user_version = ${m.version}`);
+      })();
+    } finally {
+      if (needsWritableSchema) db.unsafeMode(false);
+    }
   }
 }
 
@@ -79,11 +87,13 @@ function loadBuiltinMigrations(): readonly Migration[] {
   const seaInit = readSeaAsset("001_init.sql");
   const seaFts = readSeaAsset("002_fts.sql");
   const seaJiebaFts = readSeaAsset("003_jieba_fts.sql");
-  if (seaInit && seaFts && seaJiebaFts) {
+  const seaAudio = readSeaAsset("004_audio.sql");
+  if (seaInit && seaFts && seaJiebaFts && seaAudio) {
     return [
       { version: 1, name: "001_init", sql: seaInit },
       { version: 2, name: "002_fts", sql: seaFts },
       { version: 3, name: "003_jieba_fts", sql: seaJiebaFts },
+      { version: 4, name: "004_audio", sql: seaAudio },
     ];
   }
 
@@ -116,10 +126,12 @@ function loadBuiltinMigrations(): readonly Migration[] {
   const init = readFileSync(path.join(dir, "001_init.sql"), "utf8");
   const fts = readFileSync(path.join(dir, "002_fts.sql"), "utf8");
   const jiebaFts = readFileSync(path.join(dir, "003_jieba_fts.sql"), "utf8");
+  const audio = readFileSync(path.join(dir, "004_audio.sql"), "utf8");
   return [
     { version: 1, name: "001_init", sql: init },
     { version: 2, name: "002_fts", sql: fts },
     { version: 3, name: "003_jieba_fts", sql: jiebaFts },
+    { version: 4, name: "004_audio", sql: audio },
   ];
 }
 
