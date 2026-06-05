@@ -804,9 +804,64 @@
           "outputFormat": "mp3_44100_128"
         }
       },
-      "minimax-speech-2.8": {
-        "id": "minimax-speech-2.8",
-        "displayName": "MiniMax Speech 2.8",
+      "minimax-speech-2.8-hd": {
+        "id": "minimax-speech-2.8-hd",
+        "displayName": "MiniMax Speech 2.8 HD",
+        "capabilities": {
+          "supportsVoiceDiscovery": false,
+          "outputFormats": ["mp3", "wav", "pcm"],
+          "speedRange": {
+            "min": 0.5,
+            "max": 2
+          },
+          "voices": [
+            {
+              "id": "English_expressive_narrator",
+              "name": "Expressive Narrator (EN)"
+            },
+            {
+              "id": "male-qn-qingse",
+              "name": "Qingse (M)"
+            },
+            {
+              "id": "female-shaonv",
+              "name": "Shaonv (F)"
+            },
+            {
+              "id": "presenter_male",
+              "name": "Presenter (M)"
+            },
+            {
+              "id": "presenter_female",
+              "name": "Presenter (F)"
+            }
+          ],
+          "extraKnobs": {
+            "emotion": {
+              "type": "enum",
+              "values": ["happy", "sad", "angry", "fearful", "disgusted", "surprised", "neutral"]
+            },
+            "vol": {
+              "type": "number",
+              "min": 0,
+              "max": 10
+            },
+            "pitch": {
+              "type": "number",
+              "min": -12,
+              "max": 12
+            }
+          }
+        },
+        "defaults": {
+          "outputFormat": "mp3",
+          "voice": "presenter_female",
+          "speed": 1
+        }
+      },
+      "minimax-speech-2.8-turbo": {
+        "id": "minimax-speech-2.8-turbo",
+        "displayName": "MiniMax Speech 2.8 Turbo",
         "capabilities": {
           "supportsVoiceDiscovery": false,
           "outputFormats": ["mp3", "wav", "pcm"],
@@ -1062,12 +1117,12 @@
       "audio": [
         {
           "id": "speech-2.8-hd",
-          "modelId": "minimax-speech-2.8",
+          "modelId": "minimax-speech-2.8-hd",
           "displayName": "MiniMax Speech 2.8 HD"
         },
         {
           "id": "speech-2.8-turbo",
-          "modelId": "minimax-speech-2.8",
+          "modelId": "minimax-speech-2.8-turbo",
           "displayName": "MiniMax Speech 2.8 Turbo"
         }
       ]

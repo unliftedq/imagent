@@ -9,7 +9,10 @@ describe("audio config", () => {
 
   it("accepts minimax.groupId and audio offerings in prefs", () => {
     const p = ProviderPreferencesSchema.parse({
-      minimax: { groupId: "g123", audio: [{ id: "speech-2.8-hd", modelId: "minimax-speech-2.8" }] },
+      minimax: {
+        groupId: "g123",
+        audio: [{ id: "speech-2.8-hd", modelId: "minimax-speech-2.8-hd" }],
+      },
       elevenlabs: { audio: [{ id: "rachel", modelId: "eleven_multilingual_v2" }] },
     });
     expect(p.minimax.groupId).toBe("g123");

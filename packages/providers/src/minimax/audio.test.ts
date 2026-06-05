@@ -7,7 +7,7 @@ const models = new Map<string, AudioModelDef>([
     "speech-2.8-hd",
     {
       id: "speech-2.8-hd",
-      baseModelId: "minimax-speech-2.8",
+      baseModelId: "minimax-speech-2.8-hd",
       capabilities: {
         supportsVoiceDiscovery: false,
         outputFormats: ["mp3"],
