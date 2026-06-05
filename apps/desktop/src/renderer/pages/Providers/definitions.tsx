@@ -8,6 +8,7 @@ import type {
 import azureUrl from "../../assets/logos/azure.svg?url";
 import bflUrl from "../../assets/logos/bfl.svg?url";
 import bytedanceUrl from "../../assets/logos/bytedance.svg?url";
+import elevenlabsUrl from "../../assets/logos/elevenlabs.svg?url";
 import googleUrl from "../../assets/logos/google.svg?url";
 import minimaxUrl from "../../assets/logos/minimax.svg?url";
 import openaiUrl from "../../assets/logos/openai.svg?url";
@@ -33,6 +34,10 @@ export interface BuiltInProvider {
    */
   defaultEndpoint?: string;
   mappingLabel?: string;
+  groupIdField?: {
+    label: MessageKey;
+    helperText: MessageKey;
+  };
 }
 
 export interface MappingRowState {
@@ -47,6 +52,7 @@ export interface ModalState {
   displayName: string;
   endpoint: string;
   baseUrl: string;
+  groupId: string;
   apiKey: string;
   mappings: MappingRowState[];
 }
@@ -99,8 +105,7 @@ export const BUILT_IN_PROVIDERS: readonly BuiltInProvider[] = [
   {
     id: "volcengine",
     name: "Volcengine",
-    description:
-      "通过火山方舟 Ark 调用 doubao-前缀的 Seedream / Seedance 模型。",
+    description: "通过火山方舟 Ark 调用 doubao-前缀的 Seedream / Seedance 模型。",
     iconSrc: volcengineUrl,
     iconAlt: "Volcengine",
     endpointLabel: "Endpoint",
@@ -120,6 +125,17 @@ export const BUILT_IN_PROVIDERS: readonly BuiltInProvider[] = [
     description: "MiniMax image (image-01) and Hailuo video generation APIs.",
     iconSrc: minimaxUrl,
     iconAlt: "MiniMax",
+    groupIdField: {
+      label: "providers.minimax.groupId.label",
+      helperText: "providers.minimax.groupId.helper",
+    },
+  },
+  {
+    id: "elevenlabs",
+    name: "ElevenLabs",
+    description: "ElevenLabs text-to-speech APIs.",
+    iconSrc: elevenlabsUrl,
+    iconAlt: "ElevenLabs",
   },
 ] as const;
 
@@ -136,6 +152,7 @@ export function emptyModalState(): ModalState {
     displayName: "",
     endpoint: "",
     baseUrl: "",
+    groupId: "",
     apiKey: "",
     mappings: [],
   };
@@ -160,6 +177,7 @@ export function formFromProvider(
     displayName,
     endpoint: routing?.endpoint ?? fallbackEndpoint,
     baseUrl: routing?.baseUrl ?? "",
+    groupId: routing?.groupId ?? "",
     apiKey: "",
     mappings: id === "azure" ? mappingsForBuiltIn(prefs, catalog, id) : [],
   };
@@ -177,6 +195,7 @@ export function formFromCustom(
       displayName: "",
       endpoint: "",
       baseUrl: "",
+      groupId: "",
       apiKey: "",
       mappings: [mappingRow("", firstImageModelId(catalog))],
     };
@@ -187,6 +206,7 @@ export function formFromCustom(
     displayName: routing?.displayName ?? catalog?.providers[id]?.displayName ?? id,
     endpoint: "",
     baseUrl: routing?.baseUrl ?? "",
+    groupId: routing?.groupId ?? "",
     apiKey: "",
     mappings: mappingsForCustom(prefs, catalog, id),
   };
@@ -280,10 +300,7 @@ export function validateModal(
   if (activeModal.id === "azure" && !form.endpoint.trim()) {
     return t("providers.validation.azureEndpointRequired");
   }
-  if (
-    (activeModal.id === "byteplus" || activeModal.id === "volcengine") &&
-    !form.endpoint.trim()
-  ) {
+  if ((activeModal.id === "byteplus" || activeModal.id === "volcengine") && !form.endpoint.trim()) {
     return t("providers.validation.arkEndpointRequired");
   }
 
@@ -318,6 +335,8 @@ export function providerDisplayName(id: string, t: (key: MessageKey) => string):
       return t("providers.def.xai.name");
     case "minimax":
       return t("providers.def.minimax.name");
+    case "elevenlabs":
+      return t("providers.elevenlabs.name");
     default:
       return id;
   }
@@ -342,6 +361,8 @@ export function providerDescription(id: string, t: (key: MessageKey) => string):
       return t("providers.def.xai.description");
     case "minimax":
       return t("providers.def.minimax.description");
+    case "elevenlabs":
+      return t("providers.elevenlabs.description");
     default:
       return "";
   }
@@ -374,6 +395,9 @@ export function buildSecretsPatch(activeModal: ActiveModal, form: ModalState): S
       break;
     case "minimax":
       patch.minimax = { apiKey };
+      break;
+    case "elevenlabs":
+      patch.elevenlabs = { apiKey };
       break;
     case "azure":
       patch.azure = { apiKey };
@@ -429,6 +453,7 @@ export function prefsWithMappings(
       ...existing,
       ...(endpoint ? { endpoint } : {}),
       ...(baseUrl ? { baseUrl } : {}),
+      ...(providerId === "minimax" ? { groupId: form.groupId.trim() || undefined } : {}),
       ...(activeModal.id === "azure" ? (image.length > 0 ? { image } : { image: [] }) : {}),
     };
     (next as unknown as Record<string, ProviderRoutingPayload>)[providerId] = merged;
@@ -468,6 +493,8 @@ export function maskForModal(
       return secrets.xai?.apiKey ?? null;
     case "minimax":
       return secrets.minimax?.apiKey ?? null;
+    case "elevenlabs":
+      return secrets.elevenlabs?.apiKey ?? null;
     default:
       return null;
   }

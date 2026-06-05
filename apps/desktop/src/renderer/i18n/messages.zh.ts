@@ -58,7 +58,11 @@ export const zh: Dict = {
   "common.clear": "清除",
   "common.image": "图片",
   "common.video": "视频",
+  "common.audio": "音频",
   "common.imagePlusVideo": "图片 + 视频",
+  "common.imagePlusAudio": "图片 + 音频",
+  "common.videoPlusAudio": "视频 + 音频",
+  "common.imagePlusVideoPlusAudio": "图片 + 视频 + 音频",
   "common.other": "其他",
 
   // Toast variants
@@ -156,6 +160,8 @@ export const zh: Dict = {
   "providers.apiKey.stored": "已存储：{masked}。留空则保留现有密钥。",
   "providers.apiKey.helperCustom": "对于在上游注入认证的端点，此项可留空。",
   "providers.apiKey.helperRequired": "测试此服务商前需先填写 API 密钥。",
+  "providers.minimax.groupId.label": "Group ID",
+  "providers.minimax.groupId.helper": "MiniMax TTS 必填。",
   "providers.showKey": "显示密钥",
   "providers.hideKey": "隐藏密钥",
   "providers.modelMappings": "模型映射",
@@ -202,11 +208,14 @@ export const zh: Dict = {
   "providers.def.xai.description": "Grok 图像与视频生成 API。",
   "providers.def.minimax.name": "MiniMax",
   "providers.def.minimax.description": "MiniMax 图像（image-01）与海螺视频生成 API。",
+  "providers.elevenlabs.name": "ElevenLabs",
+  "providers.elevenlabs.description": "ElevenLabs 文本转语音 API。",
 
   // Gallery
   "gallery.library": "资料库",
   "gallery.boards": "看板",
   "gallery.all": "全部",
+  "gallery.filter.audio": "音频",
   "gallery.favorites": "收藏",
   "gallery.newBoard": "新建看板",
   "gallery.boardName.placeholder": "看板名称",

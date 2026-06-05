@@ -47,7 +47,11 @@ export const en = {
   "common.clear": "Clear",
   "common.image": "Image",
   "common.video": "Video",
+  "common.audio": "Audio",
   "common.imagePlusVideo": "Image + Video",
+  "common.imagePlusAudio": "Image + Audio",
+  "common.videoPlusAudio": "Video + Audio",
+  "common.imagePlusVideoPlusAudio": "Image + Video + Audio",
   "common.other": "Other",
 
   // Toast variants
@@ -151,6 +155,8 @@ export const en = {
   "providers.apiKey.stored": "Stored: {masked}. Leave empty to keep it.",
   "providers.apiKey.helperCustom": "Optional for endpoints that inject authentication upstream.",
   "providers.apiKey.helperRequired": "Required before this provider can be tested.",
+  "providers.minimax.groupId.label": "Group ID",
+  "providers.minimax.groupId.helper": "Required for MiniMax TTS.",
   "providers.showKey": "Show key",
   "providers.hideKey": "Hide key",
   "providers.modelMappings": "Model mappings",
@@ -200,11 +206,14 @@ export const en = {
   "providers.def.xai.description": "Grok image and video generation APIs.",
   "providers.def.minimax.name": "MiniMax",
   "providers.def.minimax.description": "MiniMax image (image-01) and Hailuo video generation APIs.",
+  "providers.elevenlabs.name": "ElevenLabs",
+  "providers.elevenlabs.description": "ElevenLabs text-to-speech APIs.",
 
   // Gallery
   "gallery.library": "Library",
   "gallery.boards": "Boards",
   "gallery.all": "All",
+  "gallery.filter.audio": "Audio",
   "gallery.favorites": "Favorites",
   "gallery.newBoard": "New board",
   "gallery.boardName.placeholder": "Board name",

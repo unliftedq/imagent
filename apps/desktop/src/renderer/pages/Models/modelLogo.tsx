@@ -1,5 +1,6 @@
 import bflUrl from "../../assets/logos/bfl.svg?url";
 import bytedanceUrl from "../../assets/logos/bytedance.svg?url";
+import elevenlabsUrl from "../../assets/logos/elevenlabs.svg?url";
 import googleUrl from "../../assets/logos/google.svg?url";
 import hailuoUrl from "../../assets/logos/hailuo.svg?url";
 import microsoftUrl from "../../assets/logos/microsoft.svg?url";
@@ -45,7 +46,12 @@ export function pickModelLogo(modelId: string): ModelLogo | undefined {
   if (modelId.startsWith("flux-")) {
     return { src: bflUrl, alt: "Black Forest Labs" };
   }
-  if (modelId.startsWith("doubao-") || modelId.startsWith("seedream-") || modelId.startsWith("seedance-") || modelId.startsWith("dreamina-")) {
+  if (
+    modelId.startsWith("doubao-") ||
+    modelId.startsWith("seedream-") ||
+    modelId.startsWith("seedance-") ||
+    modelId.startsWith("dreamina-")
+  ) {
     return { src: bytedanceUrl, alt: "ByteDance" };
   }
   if (modelId.startsWith("grok-")) {
@@ -56,6 +62,9 @@ export function pickModelLogo(modelId: string): ModelLogo | undefined {
   }
   if (modelId.startsWith("minimax-") || modelId.startsWith("MiniMax-")) {
     return { src: minimaxUrl, alt: "MiniMax" };
+  }
+  if (modelId.startsWith("eleven_") || modelId.toLowerCase().includes("elevenlabs")) {
+    return { src: elevenlabsUrl, alt: "ElevenLabs" };
   }
   return undefined;
 }

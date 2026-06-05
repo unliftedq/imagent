@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="ElevenLabs">
+  <rect width="64" height="64" rx="16" fill="#111111"/>
+  <path d="M17 40V24M26 44V20M38 44V20M47 40V24" stroke="#ffffff" stroke-width="6" stroke-linecap="round"/>
+</svg>
