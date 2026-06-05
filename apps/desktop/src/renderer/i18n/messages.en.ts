@@ -234,7 +234,7 @@ export const en = {
   "gallery.empty.board.body": "Drag any gallery item onto this board from the All view.",
   "gallery.empty.all.title": "Your gallery is quiet",
   "gallery.empty.all.body":
-    "Generated images and videos will collect here. Open Studio to create the first one — every item is searchable and remixable later.",
+    "Generated images, videos, and audio will collect here. Open Studio to create the first one — every item is searchable and remixable later.",
   "gallery.empty.showAll": "Show all items",
   "gallery.empty.openStudio": "Open Studio",
   "gallery.toast.addedToBoard": "Added to board",

@@ -26,6 +26,7 @@ body:
         - Image generation
         - Image editing / inpainting
         - Video generation
+        - Audio generation / text-to-speech
         - Other
     validations:
       required: true

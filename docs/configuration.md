@@ -15,7 +15,7 @@ By default, imagent stores all local data in a dedicated local workspace directo
 | `catalog.json` | User-editable canonical model catalog (capabilities + bundled provider offerings). |
 | `studio.db` | Local SQLite database for assets, gallery, boards, jobs, and metadata. |
 | `assets/` | Copied asset reference files and thumbnails. |
-| `gallery/` | Generated image and video outputs, organized by date. |
+| `gallery/` | Generated image, video, and audio outputs, organized by date. |
 | `logs/` | Application and job logs. |
 | `cache/provider-responses/` | Provider response cache area. |
 | `cache/video-temp/` | Temporary video processing area. |

@@ -24,7 +24,7 @@
 | **多个入口，共用一个素材库** | 桌面应用、CLI 和 Agent 集成使用同一套图库、看板、收藏与可复用素材。 |
 | **多 Provider 生成** | 可同时配置 OpenAI、Azure OpenAI、Google Imagen/Gemini、Flux/BFL、BytePlus / 火山引擎 Seedream/Seedance、xAI Grok、MiniMax TTS 和 ElevenLabs TTS。 |
 | **以素材驱动创作** | 角色、物体、背景、风格和参考图可以长期复用，帮助系列项目保持视觉一致性。 |
-| **为 Agent 自动化准备** | 内置 Skill 让兼容的 Agent 直接调用 `imagent` CLI，而不是临时接入零散的图像或视频工具。 |
+| **为 Agent 自动化准备** | 内置 Skill 让兼容的 Agent 直接调用 `imagent` CLI，而不是临时接入零散的图像、视频或音频工具。 |
 
 ## 快速开始
 
@@ -51,6 +51,7 @@ imagent doctor
 ```bash
 imagent image generate "minimal product photo of a ceramic mug"
 imagent video generate "a slow dolly shot through a rainy alley"
+imagent audio generate "Welcome to imagent, your local creative workspace."
 ```
 
 如果需要更完整的安装步骤、Provider 配置、桌面应用说明或故障排查，请查看文档站点：
@@ -70,7 +71,7 @@ Claude Code、Codex、OpenClaw、Hermes 或其他兼容 Agent 都可以使用同
 ## 典型工作流
 
 - 为个人创作搭建本地 AI 视觉生成流程。
-- 对比不同图像与视频生成 Provider 的输出效果。
+- 对比不同图像、视频与音频生成 Provider 的输出效果。
 - 长期维护可复用的角色、风格和参考图素材。
 - 用终端自动化批量生成，再通过桌面应用审阅、整理和收藏结果。
 - 让编程 Agent 通过同一套可审计的 CLI 流程生成创意资产。
