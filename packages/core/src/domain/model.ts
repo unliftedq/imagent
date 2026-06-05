@@ -138,3 +138,64 @@ export const VideoProviderModelSchema = z.object({
   defaults: z.record(z.string(), z.unknown()).optional(),
 });
 export type VideoProviderModel = z.infer<typeof VideoProviderModelSchema>;
+
+// ---- Audio ----------------------------------------------------------------
+
+export const VoiceInfoSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  /** Optional preview audio URL surfaced by the voice-list API. */
+  previewUrl: z.string().optional(),
+  /** Free-form provider labels (gender, accent, use case, ...). */
+  labels: z.record(z.string(), z.string()).optional(),
+});
+export type VoiceInfo = z.infer<typeof VoiceInfoSchema>;
+
+/** Declares an extra per-model knob (e.g. ElevenLabs stability). */
+export const AudioKnobSchema = z.object({
+  /** number ⇒ numeric range; enum ⇒ one of `values`. */
+  type: z.enum(["number", "enum"]),
+  min: z.number().optional(),
+  max: z.number().optional(),
+  values: z.array(z.string()).optional(),
+});
+export type AudioKnob = z.infer<typeof AudioKnobSchema>;
+
+export const AudioModelCapsSchema = z.object({
+  /** Static fallback voices when the provider has no list API. */
+  voices: z.array(VoiceInfoSchema).optional(),
+  /** Provider exposes a live voice-list endpoint. */
+  supportsVoiceDiscovery: z.boolean().default(false),
+  outputFormats: z.array(z.string()).optional(),
+  speedRange: z.object({ min: z.number(), max: z.number() }).optional(),
+  /** Extra knobs keyed by request `raw` key (e.g. stability, emotion). */
+  extraKnobs: z.record(z.string(), AudioKnobSchema).optional(),
+});
+export type AudioModelCaps = z.infer<typeof AudioModelCapsSchema>;
+
+export const AudioModelCapsOverrideSchema = z.object({
+  voices: z.array(VoiceInfoSchema).optional(),
+  supportsVoiceDiscovery: z.boolean().optional(),
+  outputFormats: z.array(z.string()).optional(),
+  speedRange: z.object({ min: z.number(), max: z.number() }).optional(),
+  extraKnobs: z.record(z.string(), AudioKnobSchema).optional(),
+});
+export type AudioModelCapsOverride = z.infer<typeof AudioModelCapsOverrideSchema>;
+
+export const AudioModelDefSchema = z.object({
+  id: z.string(),
+  baseModelId: z.string().optional(),
+  displayName: z.string().optional(),
+  capabilities: AudioModelCapsSchema.optional(),
+  defaults: z.record(z.string(), z.unknown()).optional(),
+});
+export type AudioModelDef = z.infer<typeof AudioModelDefSchema>;
+
+export const AudioProviderModelSchema = z.object({
+  id: z.string(),
+  modelId: z.string(),
+  displayName: z.string().optional(),
+  capabilities: AudioModelCapsOverrideSchema.optional(),
+  defaults: z.record(z.string(), z.unknown()).optional(),
+});
+export type AudioProviderModel = z.infer<typeof AudioProviderModelSchema>;

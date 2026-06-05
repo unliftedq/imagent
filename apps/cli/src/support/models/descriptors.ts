@@ -1,4 +1,4 @@
-import type { ImageModelDef, VideoModelDef } from "@imagent/core";
+import type { AudioModelDef, ImageModelDef, VideoModelDef } from "@imagent/core";
 
 import type { OptionDescriptor } from "./shared.js";
 
@@ -63,11 +63,49 @@ export function supportedVideoOptionDescriptors(model: VideoModelDef): OptionDes
   return out;
 }
 
+export function supportedAudioOptionDescriptors(model: AudioModelDef): OptionDescriptor[] {
+  const caps = model.capabilities;
+  if (!caps) {
+    return [
+      { key: "voice", note: "provider will validate" },
+      { key: "speed", note: "positive number; provider will validate" },
+      { key: "outputFormat" },
+    ];
+  }
+  const out: OptionDescriptor[] = [];
+  if (caps.supportsVoiceDiscovery) {
+    out.push({ key: "voice", note: "voice id from `imagent audio voices` (discovery)" });
+  } else if (caps.voices && caps.voices.length > 0) {
+    out.push({ key: "voice", allowed: caps.voices.map((v) => v.id) });
+  }
+  if (caps.speedRange) {
+    out.push({ key: "speed", note: `number from ${caps.speedRange.min} to ${caps.speedRange.max}` });
+  }
+  if (caps.outputFormats && caps.outputFormats.length > 0) {
+    out.push({ key: "outputFormat", allowed: [...caps.outputFormats] });
+  }
+  for (const [key, knob] of Object.entries(caps.extraKnobs ?? {})) {
+    out.push({
+      key,
+      allowed: knob.type === "enum" ? knob.values : undefined,
+      note:
+        knob.type === "number"
+          ? `number${knob.min !== undefined || knob.max !== undefined ? ` ${knob.min ?? "…"}..${knob.max ?? "…"}` : ""}`
+          : "provider-specific option",
+    });
+  }
+  return out;
+}
+
+type ModelMatch =
+  | { kind: "image"; def: ImageModelDef }
+  | { kind: "video"; def: VideoModelDef }
+  | { kind: "audio"; def: AudioModelDef };
+
 export function formatReferenceSummary(
-  match:
-    | { kind: "image"; def: ImageModelDef }
-    | { kind: "video"; def: VideoModelDef },
+  match: ModelMatch,
 ): string | undefined {
+  if (match.kind === "audio") return undefined;
   const caps = match.def.capabilities;
   if (!caps) return undefined;
   const lines: string[] = [];
@@ -92,9 +130,7 @@ export function formatReferenceSummary(
 }
 
 export function formatCapabilityFlags(
-  match:
-    | { kind: "image"; def: ImageModelDef }
-    | { kind: "video"; def: VideoModelDef },
+  match: ModelMatch,
 ): string | undefined {
   const caps = match.def.capabilities;
   if (!caps) return undefined;
@@ -108,9 +144,7 @@ export function formatCapabilityFlags(
 
 export function buildExamples(
   providerId: string,
-  match:
-    | { kind: "image"; def: ImageModelDef }
-    | { kind: "video"; def: VideoModelDef },
+  match: ModelMatch,
 ): string[] {
   const examples: string[] = [];
   if (match.kind === "image") {
@@ -122,7 +156,7 @@ export function buildExamples(
     examples.push(
       `imagent image generate "your prompt" --provider ${providerId} --model ${match.def.id}${opts.length ? ` ${opts.join(" ")}` : ""} --out ./outputs`,
     );
-  } else {
+  } else if (match.kind === "video") {
     const caps = match.def.capabilities;
     const opts: string[] = [];
     if (caps?.durationsSec?.[0]) opts.push(`--option durationSec=${caps.durationsSec[0]}`);
@@ -130,6 +164,14 @@ export function buildExamples(
     if (caps?.aspectRatios?.[0]) opts.push(`--option aspectRatio=${caps.aspectRatios[0]}`);
     examples.push(
       `imagent video generate "your prompt" --provider ${providerId} --model ${match.def.id}${opts.length ? ` ${opts.join(" ")}` : ""} --wait --out ./outputs`,
+    );
+  } else {
+    const caps = match.def.capabilities;
+    const opts: string[] = [];
+    if (caps?.voices?.[0]) opts.push(`--option voice=${caps.voices[0].id}`);
+    if (caps?.outputFormats?.[0]) opts.push(`--option outputFormat=${caps.outputFormats[0]}`);
+    examples.push(
+      `imagent audio generate "your text" --provider ${providerId} --model ${match.def.id}${opts.length ? ` ${opts.join(" ")}` : ""} --out ./outputs`,
     );
   }
   return examples;

@@ -7,8 +7,8 @@ import type { ModelsOptions, OptionsCommandArgs } from "../support/models/shared
 export function registerModelsCommand(program: Command): void {
   program
     .command("models")
-    .description("List every provider/model available in the catalog (image + video)")
-    .option("--kind <kind>", "Filter by kind: 'image' or 'video'")
+    .description("List every provider/model available in the catalog (image + video + audio)")
+    .option("--kind <kind>", "Filter by kind: 'image', 'video', or 'audio'")
     .option("--provider <id>", "Filter to a single provider id")
     .option("--configured", "Only show providers with credentials in secrets.json", false)
     .option("--json", "Emit machine-readable JSON instead of the human-friendly table", false)
@@ -26,11 +26,17 @@ export function registerOptionsCommand(program: Command): void {
   program
     .command("options")
     .description(
-      "Show the request options/capabilities for a specific provider+model (use before `imagent image` / `imagent video`)",
+      "Show the request options/capabilities for a specific provider+model (use before `imagent image` / `imagent video` / `imagent audio`)",
     )
-    .requiredOption("--provider <id>", "Provider id (e.g. openai, azure, google, flux-bfl, byteplus, volcengine, xai, minimax)")
+    .requiredOption(
+      "--provider <id>",
+      "Provider id (e.g. openai, azure, google, flux-bfl, byteplus, volcengine, xai, minimax, elevenlabs)",
+    )
     .requiredOption("--model <id>", "Model/offering id as it appears under that provider")
-    .option("--kind <kind>", "Disambiguate when the same id exists for both kinds: 'image' or 'video'")
+    .option(
+      "--kind <kind>",
+      "Disambiguate when the same id exists for multiple kinds: 'image', 'video', or 'audio'",
+    )
     .option("--json", "Emit machine-readable JSON instead of the human-friendly view", false)
     .action(async (options: OptionsCommandArgs) => {
       try {

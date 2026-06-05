@@ -85,7 +85,7 @@ export function StudioGalleryRail({
     let cancelled = false;
 
     const refreshGalleryItems = async (): Promise<void> => {
-      const result = await api["gallery.query"](STUDIO_GALLERY_QUERY);
+      const result = await api["gallery.query"]({ ...STUDIO_GALLERY_QUERY, kind: mode });
       if (!cancelled) {
         setGalleryItems(result.items);
       }
@@ -102,7 +102,7 @@ export function StudioGalleryRail({
       cancelled = true;
       offGalleryChanged();
     };
-  }, [refreshAssets]);
+  }, [mode, refreshAssets]);
 
   const filteredGallery = useMemo(() => {
     const ofMode = galleryItems.filter((item) => item.kind === mode);
@@ -283,19 +283,22 @@ function GalleryThumb({
       ? item.thumbPath
         ? resolveGalleryUrl(item.thumbPath)
         : ""
-      : resolveGalleryUrl(item.relPath);
+      : item.kind === "image"
+        ? resolveGalleryUrl(item.relPath)
+        : "";
 
   return (
     <div
-      draggable
-      onDragStart={(event) =>
+      draggable={item.kind !== "audio"}
+      onDragStart={(event) => {
+        if (item.kind === "audio") return;
         setDragData(event, {
           source: "gallery",
           id: item.id,
           kind: item.kind,
           relPath: item.relPath,
-        })
-      }
+        });
+      }}
       title={item.prompt}
       className="group relative aspect-square w-full overflow-hidden rounded-(--radius-sm) border border-(--border) bg-(--surface-sunken) transition-colors duration-(--motion-fast) hover:border-(--border-strong) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring)"
     >
@@ -321,28 +324,38 @@ function GalleryThumb({
           />
         ) : (
           <span className="flex h-full w-full items-center justify-center text-(--text-muted)">
-            <Icons.FilmReel weight="duotone" className="size-8" />
+            {item.kind === "audio" ? (
+              <Icons.Waveform weight="duotone" className="size-8" />
+            ) : (
+              <Icons.FilmReel weight="duotone" className="size-8" />
+            )}
           </span>
         )}
       </button>
-      <button
-        type="button"
-        aria-label={t("gallery.preview.saveAsAsset")}
-        title={t("gallery.preview.saveAsAsset")}
-        onClick={() => onSaveAsAsset(item)}
-        className={
-          "absolute left-1 top-1 inline-flex size-6 items-center justify-center " +
-          "rounded-(--radius-sm) border border-white/20 bg-black/55 text-white opacity-0 " +
-          "backdrop-blur transition-opacity duration-(--motion-fast) hover:bg-black/70 " +
-          "focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring) " +
-          "group-hover:opacity-100"
-        }
-      >
-        <Icons.StackPlus weight="bold" className="size-3.5" />
-      </button>
+      {item.kind !== "audio" ? (
+        <button
+          type="button"
+          aria-label={t("gallery.preview.saveAsAsset")}
+          title={t("gallery.preview.saveAsAsset")}
+          onClick={() => onSaveAsAsset(item)}
+          className={
+            "absolute left-1 top-1 inline-flex size-6 items-center justify-center " +
+            "rounded-(--radius-sm) border border-white/20 bg-black/55 text-white opacity-0 " +
+            "backdrop-blur transition-opacity duration-(--motion-fast) hover:bg-black/70 " +
+            "focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring) " +
+            "group-hover:opacity-100"
+          }
+        >
+          <Icons.StackPlus weight="bold" className="size-3.5" />
+        </button>
+      ) : null}
       {item.kind === "video" ? (
         <Badge className="bottom-1 left-1">
           <Icons.Play weight="fill" className="size-2.5" />
+        </Badge>
+      ) : item.kind === "audio" ? (
+        <Badge className="bottom-1 left-1">
+          <Icons.Waveform weight="bold" className="size-2.5" />
         </Badge>
       ) : null}
       {item.favorited ? (

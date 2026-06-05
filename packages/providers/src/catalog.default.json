@@ -16,16 +16,8 @@
             "3840x2160",
             "2160x3840"
           ],
-          "qualities": [
-            "low",
-            "medium",
-            "high"
-          ],
-          "outputFormats": [
-            "png",
-            "jpeg",
-            "webp"
-          ],
+          "qualities": ["low", "medium", "high"],
+          "outputFormats": ["png", "jpeg", "webp"],
           "maxReferences": 16,
           "maxOutputs": 10,
           "supportsStyleRef": true,
@@ -50,21 +42,9 @@
         "id": "gpt-image-1.5",
         "displayName": "GPT Image 1.5",
         "capabilities": {
-          "sizes": [
-            "1024x1024",
-            "1024x1536",
-            "1536x1024"
-          ],
-          "qualities": [
-            "low",
-            "medium",
-            "high"
-          ],
-          "outputFormats": [
-            "png",
-            "jpeg",
-            "webp"
-          ],
+          "sizes": ["1024x1024", "1024x1536", "1536x1024"],
+          "qualities": ["low", "medium", "high"],
+          "outputFormats": ["png", "jpeg", "webp"],
           "maxReferences": 16,
           "maxOutputs": 10,
           "supportsStyleRef": true,
@@ -81,21 +61,9 @@
         "id": "gpt-image-1-mini",
         "displayName": "GPT Image 1 Mini",
         "capabilities": {
-          "sizes": [
-            "1024x1024",
-            "1024x1536",
-            "1536x1024"
-          ],
-          "qualities": [
-            "low",
-            "medium",
-            "high"
-          ],
-          "outputFormats": [
-            "png",
-            "jpeg",
-            "webp"
-          ],
+          "sizes": ["1024x1024", "1024x1536", "1536x1024"],
+          "qualities": ["low", "medium", "high"],
+          "outputFormats": ["png", "jpeg", "webp"],
           "maxReferences": 16,
           "maxOutputs": 10,
           "supportsStyleRef": true,
@@ -127,9 +95,7 @@
           "minHeight": 768,
           "maxHeight": 1365,
           "maxPixels": 1048576,
-          "outputFormats": [
-            "png"
-          ],
+          "outputFormats": ["png"],
           "maxReferences": 0,
           "maxOutputs": 1,
           "supportsStyleRef": false
@@ -159,9 +125,7 @@
           "minHeight": 768,
           "maxHeight": 1365,
           "maxPixels": 1048576,
-          "outputFormats": [
-            "png"
-          ],
+          "outputFormats": ["png"],
           "maxReferences": 0,
           "maxOutputs": 1,
           "supportsStyleRef": false
@@ -176,20 +140,14 @@
         "id": "MAI-Image-2.5",
         "displayName": "MAI Image 2.5 (preview)",
         "capabilities": {
-          "sizes": [
-            "1024x1024",
-            "1024x768",
-            "768x1024"
-          ],
+          "sizes": ["1024x1024", "1024x768", "768x1024"],
           "supportsArbitrarySize": true,
           "minWidth": 768,
           "maxWidth": 1024,
           "minHeight": 768,
           "maxHeight": 1024,
           "maxPixels": 1048576,
-          "outputFormats": [
-            "png"
-          ],
+          "outputFormats": ["png"],
           "maxReferences": 1,
           "maxOutputs": 1,
           "supportsStyleRef": false
@@ -204,20 +162,14 @@
         "id": "MAI-Image-2.5-Flash",
         "displayName": "MAI Image 2.5 Flash (preview)",
         "capabilities": {
-          "sizes": [
-            "1024x1024",
-            "1024x768",
-            "768x1024"
-          ],
+          "sizes": ["1024x1024", "1024x768", "768x1024"],
           "supportsArbitrarySize": true,
           "minWidth": 768,
           "maxWidth": 1024,
           "minHeight": 768,
           "maxHeight": 1024,
           "maxPixels": 1048576,
-          "outputFormats": [
-            "png"
-          ],
+          "outputFormats": ["png"],
           "maxReferences": 1,
           "maxOutputs": 1,
           "supportsStyleRef": false
@@ -232,18 +184,7 @@
         "id": "gemini-2.5-flash-image",
         "displayName": "Nano Banana (Gemini 2.5 Flash Image)",
         "capabilities": {
-          "aspectRatios": [
-            "1:1",
-            "2:3",
-            "3:2",
-            "3:4",
-            "4:3",
-            "4:5",
-            "5:4",
-            "9:16",
-            "16:9",
-            "21:9"
-          ],
+          "aspectRatios": ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"],
           "maxReferences": 3,
           "maxOutputs": 1,
           "supportsStyleRef": true
@@ -273,12 +214,7 @@
             "16:9",
             "21:9"
           ],
-          "qualities": [
-            "512",
-            "1K",
-            "2K",
-            "4K"
-          ],
+          "qualities": ["512", "1K", "2K", "4K"],
           "maxReferences": 14,
           "maxOutputs": 1,
           "supportsStyleRef": true
@@ -293,23 +229,8 @@
         "id": "gemini-3-pro-image-preview",
         "displayName": "Nano Banana Pro (preview)",
         "capabilities": {
-          "aspectRatios": [
-            "1:1",
-            "2:3",
-            "3:2",
-            "3:4",
-            "4:3",
-            "4:5",
-            "5:4",
-            "9:16",
-            "16:9",
-            "21:9"
-          ],
-          "qualities": [
-            "1K",
-            "2K",
-            "4K"
-          ],
+          "aspectRatios": ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"],
+          "qualities": ["1K", "2K", "4K"],
           "maxReferences": 14,
           "maxOutputs": 1,
           "supportsStyleRef": true
@@ -485,10 +406,7 @@
             "9:20",
             "auto"
           ],
-          "qualities": [
-            "1k",
-            "2k"
-          ],
+          "qualities": ["1k", "2k"],
           "maxReferences": 5,
           "maxOutputs": 10,
           "supportsStyleRef": true
@@ -530,11 +448,7 @@
           "maxReferenceSizeMb": 30,
           "maxOutputs": 15,
           "supportsStyleRef": true,
-          "qualities": [
-            "2k",
-            "3k",
-            "4k"
-          ]
+          "qualities": ["2k", "3k", "4k"]
         },
         "defaults": {
           "quality": "2k",
@@ -573,10 +487,7 @@
           "maxReferenceSizeMb": 30,
           "maxOutputs": 15,
           "supportsStyleRef": true,
-          "qualities": [
-            "2k",
-            "4k"
-          ]
+          "qualities": ["2k", "4k"]
         },
         "defaults": {
           "quality": "2k",
@@ -615,11 +526,7 @@
           "maxReferenceSizeMb": 30,
           "maxOutputs": 15,
           "supportsStyleRef": true,
-          "qualities": [
-            "1k",
-            "2k",
-            "4k"
-          ]
+          "qualities": ["1k", "2k", "4k"]
         },
         "defaults": {
           "quality": "2k",
@@ -631,16 +538,7 @@
         "id": "minimax-image-01",
         "displayName": "MiniMax Image 01",
         "capabilities": {
-          "aspectRatios": [
-            "1:1",
-            "16:9",
-            "4:3",
-            "3:2",
-            "2:3",
-            "3:4",
-            "9:16",
-            "21:9"
-          ],
+          "aspectRatios": ["1:1", "16:9", "4:3", "3:2", "2:3", "3:4", "9:16", "21:9"],
           "supportsArbitrarySize": true,
           "minWidth": 512,
           "maxWidth": 2048,
@@ -663,23 +561,13 @@
         "id": "veo-3.0-generate-001",
         "displayName": "Veo 3",
         "capabilities": {
-          "durationsSec": [
-            8
-          ],
-          "fpsOptions": [
-            24
-          ],
-          "resolutions": [
-            "720p",
-            "1080p"
-          ],
+          "durationsSec": [8],
+          "fpsOptions": [24],
+          "resolutions": ["720p", "1080p"],
           "supportsFirstFrame": false,
           "supportsLastFrame": false,
           "supportsRefImages": false,
-          "aspectRatios": [
-            "16:9",
-            "9:16"
-          ]
+          "aspectRatios": ["16:9", "9:16"]
         },
         "defaults": {
           "durationSec": 8,
@@ -693,23 +581,13 @@
         "id": "veo-3.0-fast-generate-001",
         "displayName": "Veo 3 Fast",
         "capabilities": {
-          "durationsSec": [
-            8
-          ],
-          "fpsOptions": [
-            24
-          ],
-          "resolutions": [
-            "720p",
-            "1080p"
-          ],
+          "durationsSec": [8],
+          "fpsOptions": [24],
+          "resolutions": ["720p", "1080p"],
           "supportsFirstFrame": false,
           "supportsLastFrame": false,
           "supportsRefImages": false,
-          "aspectRatios": [
-            "16:9",
-            "9:16"
-          ]
+          "aspectRatios": ["16:9", "9:16"]
         },
         "defaults": {
           "durationSec": 8,
@@ -723,40 +601,13 @@
         "id": "grok-imagine-video",
         "displayName": "Grok Imagine Video",
         "capabilities": {
-          "durationsSec": [
-            1,
-            2,
-            3,
-            4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            10,
-            11,
-            12,
-            13,
-            14,
-            15
-          ],
+          "durationsSec": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
           "maxDurationSec": 15,
-          "resolutions": [
-            "480p",
-            "720p"
-          ],
+          "resolutions": ["480p", "720p"],
           "supportsFirstFrame": false,
           "supportsLastFrame": false,
           "supportsRefImages": false,
-          "aspectRatios": [
-            "1:1",
-            "16:9",
-            "9:16",
-            "4:3",
-            "3:4",
-            "3:2",
-            "2:3"
-          ]
+          "aspectRatios": ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"]
         },
         "defaults": {
           "durationSec": 8,
@@ -769,39 +620,14 @@
         "id": "dreamina-seedance-2-0-260128",
         "displayName": "Dreamina Seedance 2.0",
         "capabilities": {
-          "durationsSec": [
-            4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            10,
-            11,
-            12,
-            13,
-            14,
-            15
-          ],
+          "durationsSec": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
           "maxDurationSec": 15,
-          "fpsOptions": [
-            24
-          ],
-          "resolutions": [
-            "480p",
-            "720p"
-          ],
+          "fpsOptions": [24],
+          "resolutions": ["480p", "720p"],
           "supportsFirstFrame": true,
           "supportsLastFrame": true,
           "supportsRefImages": true,
-          "aspectRatios": [
-            "16:9",
-            "9:16",
-            "1:1",
-            "4:3",
-            "3:4",
-            "21:9"
-          ],
+          "aspectRatios": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"],
           "maxReferenceSizeMb": 30,
           "maxReferences": 9
         },
@@ -815,39 +641,14 @@
         "id": "dreamina-seedance-2-0-fast-260128",
         "displayName": "Dreamina Seedance 2.0 Fast",
         "capabilities": {
-          "durationsSec": [
-            4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            10,
-            11,
-            12,
-            13,
-            14,
-            15
-          ],
+          "durationsSec": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
           "maxDurationSec": 15,
-          "fpsOptions": [
-            24
-          ],
-          "resolutions": [
-            "480p",
-            "720p"
-          ],
+          "fpsOptions": [24],
+          "resolutions": ["480p", "720p"],
           "supportsFirstFrame": true,
           "supportsLastFrame": true,
           "supportsRefImages": true,
-          "aspectRatios": [
-            "16:9",
-            "9:16",
-            "1:1",
-            "4:3",
-            "3:4",
-            "21:9"
-          ],
+          "aspectRatios": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"],
           "maxReferenceSizeMb": 30,
           "maxReferences": 9
         },
@@ -861,37 +662,14 @@
         "id": "seedance-1-5-pro-251215",
         "displayName": "Seedance 1.5 Pro",
         "capabilities": {
-          "durationsSec": [
-            4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            10,
-            11,
-            12
-          ],
+          "durationsSec": [4, 5, 6, 7, 8, 9, 10, 11, 12],
           "maxDurationSec": 12,
-          "fpsOptions": [
-            24
-          ],
-          "resolutions": [
-            "480p",
-            "720p",
-            "1080p"
-          ],
+          "fpsOptions": [24],
+          "resolutions": ["480p", "720p", "1080p"],
           "supportsFirstFrame": true,
           "supportsLastFrame": true,
           "supportsRefImages": false,
-          "aspectRatios": [
-            "16:9",
-            "9:16",
-            "1:1",
-            "4:3",
-            "3:4",
-            "21:9"
-          ],
+          "aspectRatios": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"],
           "maxReferenceSizeMb": 30
         },
         "defaults": {
@@ -904,15 +682,9 @@
         "id": "MiniMax-Hailuo-2.3",
         "displayName": "MiniMax Hailuo 2.3",
         "capabilities": {
-          "durationsSec": [
-            6,
-            10
-          ],
+          "durationsSec": [6, 10],
           "maxDurationSec": 10,
-          "resolutions": [
-            "768P",
-            "1080P"
-          ],
+          "resolutions": ["768P", "1080P"],
           "supportsFirstFrame": true,
           "supportsLastFrame": false,
           "supportsRefImages": false
@@ -920,6 +692,226 @@
         "defaults": {
           "durationSec": 6,
           "resolution": "1080P"
+        }
+      }
+    },
+    "audio": {
+      "eleven_multilingual_v2": {
+        "id": "eleven_multilingual_v2",
+        "displayName": "ElevenLabs Multilingual v2",
+        "capabilities": {
+          "supportsVoiceDiscovery": true,
+          "outputFormats": [
+            "mp3_44100_128",
+            "mp3_44100_192",
+            "mp3_22050_32",
+            "pcm_16000",
+            "pcm_24000",
+            "ulaw_8000"
+          ],
+          "speedRange": {
+            "min": 0.7,
+            "max": 1.2
+          },
+          "extraKnobs": {
+            "stability": {
+              "type": "number",
+              "min": 0,
+              "max": 1
+            },
+            "similarity_boost": {
+              "type": "number",
+              "min": 0,
+              "max": 1
+            },
+            "style": {
+              "type": "number",
+              "min": 0,
+              "max": 1
+            }
+          }
+        },
+        "defaults": {
+          "outputFormat": "mp3_44100_128"
+        }
+      },
+      "eleven_v3": {
+        "id": "eleven_v3",
+        "displayName": "ElevenLabs v3 (alpha)",
+        "capabilities": {
+          "supportsVoiceDiscovery": true,
+          "outputFormats": [
+            "mp3_44100_128",
+            "mp3_44100_192",
+            "mp3_22050_32",
+            "pcm_16000",
+            "pcm_24000",
+            "ulaw_8000"
+          ],
+          "extraKnobs": {
+            "stability": {
+              "type": "number",
+              "min": 0,
+              "max": 1
+            },
+            "similarity_boost": {
+              "type": "number",
+              "min": 0,
+              "max": 1
+            }
+          }
+        },
+        "defaults": {
+          "outputFormat": "mp3_44100_128"
+        }
+      },
+      "eleven_flash_v2_5": {
+        "id": "eleven_flash_v2_5",
+        "displayName": "ElevenLabs Flash v2.5",
+        "capabilities": {
+          "supportsVoiceDiscovery": true,
+          "outputFormats": [
+            "mp3_44100_128",
+            "mp3_44100_192",
+            "mp3_22050_32",
+            "pcm_16000",
+            "pcm_24000",
+            "ulaw_8000"
+          ],
+          "speedRange": {
+            "min": 0.7,
+            "max": 1.2
+          },
+          "extraKnobs": {
+            "stability": {
+              "type": "number",
+              "min": 0,
+              "max": 1
+            },
+            "similarity_boost": {
+              "type": "number",
+              "min": 0,
+              "max": 1
+            },
+            "style": {
+              "type": "number",
+              "min": 0,
+              "max": 1
+            }
+          }
+        },
+        "defaults": {
+          "outputFormat": "mp3_44100_128"
+        }
+      },
+      "minimax-speech-2.8-hd": {
+        "id": "minimax-speech-2.8-hd",
+        "displayName": "MiniMax Speech 2.8 HD",
+        "capabilities": {
+          "supportsVoiceDiscovery": true,
+          "outputFormats": ["mp3", "wav", "pcm"],
+          "speedRange": {
+            "min": 0.5,
+            "max": 2
+          },
+          "voices": [
+            {
+              "id": "English_expressive_narrator",
+              "name": "Expressive Narrator (EN)"
+            },
+            {
+              "id": "male-qn-qingse",
+              "name": "Qingse (M)"
+            },
+            {
+              "id": "female-shaonv",
+              "name": "Shaonv (F)"
+            },
+            {
+              "id": "presenter_male",
+              "name": "Presenter (M)"
+            },
+            {
+              "id": "presenter_female",
+              "name": "Presenter (F)"
+            }
+          ],
+          "extraKnobs": {
+            "emotion": {
+              "type": "enum",
+              "values": ["happy", "sad", "angry", "fearful", "disgusted", "surprised", "neutral"]
+            },
+            "vol": {
+              "type": "number",
+              "min": 0,
+              "max": 10
+            },
+            "pitch": {
+              "type": "number",
+              "min": -12,
+              "max": 12
+            }
+          }
+        },
+        "defaults": {
+          "outputFormat": "mp3",
+          "voice": "presenter_female",
+          "speed": 1
+        }
+      },
+      "minimax-speech-2.8-turbo": {
+        "id": "minimax-speech-2.8-turbo",
+        "displayName": "MiniMax Speech 2.8 Turbo",
+        "capabilities": {
+          "supportsVoiceDiscovery": true,
+          "outputFormats": ["mp3", "wav", "pcm"],
+          "speedRange": {
+            "min": 0.5,
+            "max": 2
+          },
+          "voices": [
+            {
+              "id": "English_expressive_narrator",
+              "name": "Expressive Narrator (EN)"
+            },
+            {
+              "id": "male-qn-qingse",
+              "name": "Qingse (M)"
+            },
+            {
+              "id": "female-shaonv",
+              "name": "Shaonv (F)"
+            },
+            {
+              "id": "presenter_male",
+              "name": "Presenter (M)"
+            },
+            {
+              "id": "presenter_female",
+              "name": "Presenter (F)"
+            }
+          ],
+          "extraKnobs": {
+            "emotion": {
+              "type": "enum",
+              "values": ["happy", "sad", "angry", "fearful", "disgusted", "surprised", "neutral"]
+            },
+            "vol": {
+              "type": "number",
+              "min": 0,
+              "max": 10
+            },
+            "pitch": {
+              "type": "number",
+              "min": -12,
+              "max": 12
+            }
+          }
+        },
+        "defaults": {
+          "outputFormat": "mp3",
+          "voice": "presenter_female",
+          "speed": 1
         }
       }
     }
@@ -1091,6 +1083,23 @@
         }
       ]
     },
+    "elevenlabs": {
+      "displayName": "ElevenLabs",
+      "audio": [
+        {
+          "id": "eleven_multilingual_v2",
+          "modelId": "eleven_multilingual_v2"
+        },
+        {
+          "id": "eleven_v3",
+          "modelId": "eleven_v3"
+        },
+        {
+          "id": "eleven_flash_v2_5",
+          "modelId": "eleven_flash_v2_5"
+        }
+      ]
+    },
     "minimax": {
       "displayName": "MiniMax",
       "image": [
@@ -1103,6 +1112,18 @@
         {
           "id": "MiniMax-Hailuo-2.3",
           "modelId": "MiniMax-Hailuo-2.3"
+        }
+      ],
+      "audio": [
+        {
+          "id": "speech-2.8-hd",
+          "modelId": "minimax-speech-2.8-hd",
+          "displayName": "MiniMax Speech 2.8 HD"
+        },
+        {
+          "id": "speech-2.8-turbo",
+          "modelId": "minimax-speech-2.8-turbo",
+          "displayName": "MiniMax Speech 2.8 Turbo"
         }
       ]
     }

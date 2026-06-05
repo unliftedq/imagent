@@ -4,6 +4,7 @@ import { useT } from "../../i18n/index.js";
 import type { StudioMode } from "../../state/useUIStore.js";
 import { useUIStore } from "../../state/useUIStore.js";
 import { CanvasArea } from "./canvas.js";
+import { AudioRail } from "./audioRail.js";
 import { StudioModeSwitch } from "./composer.js";
 import { readStudioReferenceDragData, StudioGalleryRail } from "./galleryRail.js";
 import { ImageRail } from "./imageRail.js";
@@ -22,8 +23,8 @@ export function StudioPage() {
   const [galleryCollapsed, setGalleryCollapsed] = useState(false);
   const t = useT();
 
-  const draft = studioMode === "image" ? imageDraft : videoDraft;
-  const setDraft = studioMode === "image" ? setImageDraft : setVideoDraft;
+  const draft = studioMode === "video" ? videoDraft : imageDraft;
+  const setDraft = studioMode === "video" ? setVideoDraft : setImageDraft;
 
   const onDragOver = (event: DragEvent<HTMLElement>): void => {
     if (!Array.from(event.dataTransfer.types).includes("application/x-imagent-studio-reference")) {
@@ -34,6 +35,7 @@ export function StudioPage() {
   };
 
   const onDrop = (event: DragEvent<HTMLElement>): void => {
+    if (studioMode === "audio") return;
     const data = readStudioReferenceDragData(event.dataTransfer);
     if (!data) return;
     event.preventDefault();
@@ -110,7 +112,9 @@ export function StudioPage() {
 
 function StudioComposerDock({ mode }: { mode: StudioMode }) {
   return (
-    <div className="shrink-0 bg-(--bg)">{mode === "image" ? <ImageRail /> : <VideoRail />}</div>
+    <div className="shrink-0 bg-(--bg)">
+      {mode === "image" ? <ImageRail /> : mode === "video" ? <VideoRail /> : <AudioRail />}
+    </div>
   );
 }
 

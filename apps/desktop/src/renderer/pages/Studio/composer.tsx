@@ -14,7 +14,7 @@ export function StudioModeSwitch({
   const t = useT();
   return (
     <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-center bg-(--bg)/95 backdrop-blur">
-      <div className="grid grid-cols-2 gap-1 rounded-(--radius-lg) border border-(--border) bg-(--surface) p-1">
+      <div className="grid grid-cols-3 gap-1 rounded-(--radius-lg) border border-(--border) bg-(--surface) p-1">
         <ModeSwitchButton
           active={mode === "image"}
           icon={<Icons.Image weight="duotone" className="size-4" />}
@@ -28,6 +28,13 @@ export function StudioModeSwitch({
           onClick={() => onModeChange("video")}
         >
           {t("studio.modeVideo")}
+        </ModeSwitchButton>
+        <ModeSwitchButton
+          active={mode === "audio"}
+          icon={<Icons.Waveform weight="duotone" className="size-4" />}
+          onClick={() => onModeChange("audio")}
+        >
+          {t("studio.mode.audio")}
         </ModeSwitchButton>
       </div>
     </header>
@@ -106,7 +113,11 @@ export function ChatComposerShell({
   };
 
   const actionLabel =
-    mode === "video" ? t("studio.composer.submit") : t("studio.composer.generate");
+    mode === "video"
+      ? t("studio.composer.submit")
+      : mode === "audio"
+        ? t("studio.audio.generate")
+        : t("studio.composer.generate");
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-5">

@@ -4,6 +4,7 @@ import path from "node:path";
 import {
   type ConfigStore,
   DEFAULT_CONFIG,
+  type DefaultModelPreference,
   type ProviderPreferences,
   type ProviderSecrets,
   type SecretsStore,
@@ -12,6 +13,7 @@ import type {
   Asset,
   AssetFile,
   AssetKind,
+  AudioRequest,
   Board,
   GalleryItem,
   ImageRequest,
@@ -46,9 +48,11 @@ import {
 } from "@imagent/persistence";
 import {
   configuredProviderCount as _unused,
+  effectiveAudioOfferings,
   effectiveImageOfferings,
   effectiveProviderDisplayName,
   effectiveVideoOfferings,
+  type AudioRegistry,
   type ImageRegistry,
   type ModelCatalog,
   saveCatalog,
@@ -435,6 +439,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
         secrets,
         runtime.imageRegistry,
         runtime.videoRegistry,
+        runtime.audioRegistry,
         runtime.catalog,
       );
     },
@@ -472,6 +477,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       if (input.volcengine?.apiKey) patch.volcengine = { apiKey: input.volcengine.apiKey };
       if (input.xai?.apiKey) patch.xai = { apiKey: input.xai.apiKey };
       if (input.minimax?.apiKey) patch.minimax = { apiKey: input.minimax.apiKey };
+      if (input.elevenlabs?.apiKey) patch.elevenlabs = { apiKey: input.elevenlabs.apiKey };
       if (input.customOpenAI) {
         const currentSecrets = await secretsStore.loadSecrets();
         const nextCustom = { ...(currentSecrets.customOpenAI ?? {}) };
@@ -488,7 +494,10 @@ export function setupIpc(deps: IpcDeps): IpcServer {
     },
 
     "providers.test": async ({ id }) => {
-      const provider = runtime.imageRegistry.get(id) ?? runtime.videoRegistry.get(id);
+      const provider =
+        runtime.imageRegistry.get(id) ??
+        runtime.videoRegistry.get(id) ??
+        runtime.audioRegistry.get(id);
       if (!provider) {
         return { ok: false, reason: `provider '${id}' is not configured` };
       }
@@ -668,6 +677,47 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       return { jobId };
     },
 
+    "audio.submit": async (request) => {
+      try {
+        const jobId = await runtime.jobRunner.start({
+          kind: "audio",
+          request,
+          ...(request.parentId ? { parentId: request.parentId } : {}),
+          ...(request.boardId ? { boardId: request.boardId } : {}),
+        });
+        // Audio runs asynchronously like video: broadcast gallery.changed on
+        // success so the Studio canvas + gallery pick up the new clip without
+        // a manual refresh.
+        const onCompleted = (j: Job): void => {
+          if (j.id !== jobId) return;
+          cleanup();
+          if (j.state === "succeeded" && j.resultItemId) {
+            try {
+              const item = galleryRepo.get(j.resultItemId);
+              if (item) {
+                server.emit("gallery.changed", { id: item.id, op: "created", item });
+              }
+            } catch (err) {
+              logger.warn("gallery.changed (audio) emit failed", { err: String(err) });
+            }
+          }
+        };
+        const onFailed = (j: Job): void => {
+          if (j.id === jobId) cleanup();
+        };
+        const cleanup = (): void => {
+          runtime.jobRunner.off("job.completed", onCompleted);
+          runtime.jobRunner.off("job.failed", onFailed);
+        };
+        runtime.jobRunner.on("job.completed", onCompleted);
+        runtime.jobRunner.on("job.failed", onFailed);
+        return { jobId };
+      } catch (err) {
+        logger.error("audio.submit failed", { err: String(err) });
+        throw err;
+      }
+    },
+
     "gallery.query": async (query) => {
       return galleryRepo.query(query);
     },
@@ -717,6 +767,22 @@ export function setupIpc(deps: IpcDeps): IpcServer {
           assetIds: [],
         };
         return { kind: "video" as const, request: req };
+      }
+      if (parent.kind === "audio") {
+        const req: AudioRequest = {
+          prompt: parent.prompt,
+          providerId: parent.providerId,
+          model: parent.model,
+          ...(typeof params.voice === "string" ? { voice: params.voice } : {}),
+          ...(typeof params.speed === "number" ? { speed: params.speed } : {}),
+          ...(typeof params.outputFormat === "string" ? { outputFormat: params.outputFormat } : {}),
+          ...(params.raw && typeof params.raw === "object" && !Array.isArray(params.raw)
+            ? { raw: params.raw as Record<string, unknown> }
+            : {}),
+          assetIds: [],
+          parentId: parent.id,
+        };
+        return { kind: "audio" as const, request: req };
       }
       const req: ImageRequest = {
         prompt: parent.prompt,
@@ -861,6 +927,33 @@ export function setupIpc(deps: IpcDeps): IpcServer {
         runtime.videoRegistry,
       );
       return { providerId, defaultModel, models };
+    },
+
+    "audio.models": async ({ providerId }) => {
+      const config = await configStore.loadConfig();
+      const provider = runtime.audioRegistry.get(providerId);
+      const models = provider ? [...provider.models.values()] : [];
+      const defaultModel = readDefaultAudioModel(
+        config.app.defaultAudioModel,
+        providerId,
+        runtime.audioRegistry,
+      );
+      return { providerId, defaultModel, models };
+    },
+
+    "audio.voices": async ({ providerId, modelId }) => {
+      const provider = runtime.audioRegistry.get(providerId);
+      if (!provider) return { voices: [] };
+      const model = modelId ? provider.models.get(modelId) : provider.models.values().next().value;
+      const fallback = model?.capabilities?.voices ?? [];
+      if (provider.listVoices && model?.capabilities?.supportsVoiceDiscovery) {
+        try {
+          return { voices: await provider.listVoices() };
+        } catch (err) {
+          logger.warn("audio.voices discovery failed", { providerId, err: String(err) });
+        }
+      }
+      return { voices: fallback };
     },
 
     "models.list": async () => {
@@ -1334,6 +1427,23 @@ function readDefaultVideoModel(
   return typeof first === "string" ? first : null;
 }
 
+function readDefaultAudioModel(
+  defaultAudioModel: DefaultModelPreference | null,
+  providerId: string,
+  audioRegistry: AudioRegistry,
+): string | null {
+  const provider = audioRegistry.get(providerId);
+  if (!provider) return null;
+  if (
+    defaultAudioModel?.providerId === providerId &&
+    provider.models.has(defaultAudioModel.modelId)
+  ) {
+    return defaultAudioModel.modelId;
+  }
+  const first = provider.models.keys().next().value;
+  return typeof first === "string" ? first : null;
+}
+
 type ProviderId = string;
 
 const WELL_KNOWN_PROVIDER_IDS = [
@@ -1345,6 +1455,7 @@ const WELL_KNOWN_PROVIDER_IDS = [
   "volcengine",
   "xai",
   "minimax",
+  "elevenlabs",
 ] as const;
 
 const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
@@ -1356,6 +1467,7 @@ const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   volcengine: "Volcengine",
   xai: "xAI",
   minimax: "MiniMax",
+  elevenlabs: "ElevenLabs",
 };
 
 function providerSummaryList(
@@ -1363,12 +1475,13 @@ function providerSummaryList(
   secrets: ProviderSecrets,
   imageRegistry: ImageRegistry,
   videoRegistry: VideoRegistry,
+  audioRegistry: AudioRegistry,
   catalog: ModelCatalog,
 ): Array<{
   id: ProviderId;
   displayName: string;
   configured: boolean;
-  kinds: ("image" | "video")[];
+  kinds: ("image" | "video" | "audio")[];
   defaultModel: string | null;
   modelIds: string[];
 }> {
@@ -1383,15 +1496,23 @@ function providerSummaryList(
     const p = videoRegistry.get(id);
     return p ? [...p.models.keys()] : [];
   };
+  const audioIds = (id: string): string[] => {
+    const p = audioRegistry.get(id);
+    return p ? [...p.models.keys()] : [];
+  };
   const firstImage = (id: string): string | null => {
     const ids = imageIds(id);
+    return ids[0] ?? null;
+  };
+  const firstAudio = (id: string): string | null => {
+    const ids = audioIds(id);
     return ids[0] ?? null;
   };
   const wellKnown: Array<{
     id: ProviderId;
     displayName: string;
     configured: boolean;
-    kinds: ("image" | "video")[];
+    kinds: ("image" | "video" | "audio")[];
     defaultModel: string | null;
     modelIds: string[];
   }> = [
@@ -1459,10 +1580,18 @@ function providerSummaryList(
       id: "minimax",
       displayName: "MiniMax",
       configured: !!secrets.minimax,
-      // MiniMax spans both kinds: image-01 image + Hailuo video.
-      kinds: ["image", "video"],
+      // MiniMax TTS is available only when GroupId lets the audio registry build.
+      kinds: ["image", "video", ...(audioIds("minimax").length > 0 ? (["audio"] as const) : [])],
       defaultModel: firstImage("minimax"),
-      modelIds: [...imageIds("minimax"), ...videoIds("minimax")],
+      modelIds: [...imageIds("minimax"), ...videoIds("minimax"), ...audioIds("minimax")],
+    },
+    {
+      id: "elevenlabs",
+      displayName: "ElevenLabs",
+      configured: !!secrets.elevenlabs,
+      kinds: ["audio"],
+      defaultModel: firstAudio("elevenlabs"),
+      modelIds: audioIds("elevenlabs"),
     },
   ];
   // Custom OpenAI-compatible providers: routing lives in config; catalog may
@@ -1478,7 +1607,7 @@ function providerSummaryList(
     id,
     displayName: effectiveProviderDisplayName(catalog, prefs, id),
     configured: !!prefs.customOpenAI?.[id]?.baseUrl,
-    kinds: ["image"] as ("image" | "video")[],
+    kinds: ["image"] as ("image" | "video" | "audio")[],
     defaultModel: firstImage(id),
     modelIds: imageIds(id),
   }));
@@ -1517,8 +1646,18 @@ function buildUnifiedModelList(
       configured: boolean;
     }>;
   }>;
+  audio: Array<{
+    id: string;
+    displayName: string | null;
+    providers: Array<{
+      providerId: ProviderId;
+      modelId: string;
+      displayName: string;
+      configured: boolean;
+    }>;
+  }>;
 } {
-  const isProviderConfigured = (id: ProviderId): boolean => {
+  const isProviderConfigured = (id: ProviderId, kind: "image" | "video" | "audio"): boolean => {
     if (id === "azure") {
       return !!(secrets["azure"]?.apiKey && prefs["azure"]?.endpoint);
     }
@@ -1528,13 +1667,16 @@ function buildUnifiedModelList(
     if (id === "volcengine") {
       return !!(secrets.volcengine?.apiKey && prefs.volcengine?.endpoint);
     }
+    if (id === "minimax" && kind === "audio") {
+      return !!(secrets.minimax?.apiKey && prefs.minimax?.groupId);
+    }
     const custom = prefs.customOpenAI?.[id];
     if (custom) return !!custom.baseUrl;
     const b = (secrets as Record<string, { apiKey?: string } | undefined>)[id];
     return !!b?.apiKey;
   };
   const groupKind = <T extends { id: string; displayName?: string }>(
-    kind: "image" | "video",
+    kind: "image" | "video" | "audio",
     canonicalModels: Record<string, T>,
   ): Array<{
     id: string;
@@ -1579,7 +1721,9 @@ function buildUnifiedModelList(
       const offerings =
         kind === "image"
           ? effectiveImageOfferings(catalog, prefs, providerId)
-          : effectiveVideoOfferings(catalog, prefs, providerId);
+          : kind === "video"
+            ? effectiveVideoOfferings(catalog, prefs, providerId)
+            : effectiveAudioOfferings(catalog, prefs, providerId);
       for (const offering of offerings) {
         const model = canonicalModels[offering.modelId];
         if (!model) continue;
@@ -1591,7 +1735,7 @@ function buildUnifiedModelList(
             effectiveProviderDisplayName(catalog, prefs, providerId) ??
             PROVIDER_DISPLAY_NAMES[providerId] ??
             providerId,
-          configured: isProviderConfigured(providerId),
+          configured: isProviderConfigured(providerId, kind),
         };
         if (existing) {
           existing.providers.push(providerEntry);
@@ -1613,6 +1757,7 @@ function buildUnifiedModelList(
   return {
     image: groupKind("image", catalog.models.image),
     video: groupKind("video", catalog.models.video),
+    audio: groupKind("audio", catalog.models.audio),
   };
 }
 
@@ -1632,6 +1777,7 @@ function maskSecrets(s: ProviderSecrets): {
   volcengine?: { apiKey: string | null };
   xai?: { apiKey: string | null };
   minimax?: { apiKey: string | null };
+  elevenlabs?: { apiKey: string | null };
   customOpenAI?: Record<string, { apiKey: string | null }>;
 } {
   const out: Record<string, unknown> = {};
@@ -1643,6 +1789,7 @@ function maskSecrets(s: ProviderSecrets): {
   if (s.volcengine) out.volcengine = { apiKey: maskValue(s.volcengine.apiKey) };
   if (s.xai) out.xai = { apiKey: maskValue(s.xai.apiKey) };
   if (s.minimax) out.minimax = { apiKey: maskValue(s.minimax.apiKey) };
+  if (s.elevenlabs) out.elevenlabs = { apiKey: maskValue(s.elevenlabs.apiKey) };
   if (s.customOpenAI) {
     out.customOpenAI = Object.fromEntries(
       Object.entries(s.customOpenAI).map(([id, block]) => [
@@ -1669,6 +1816,7 @@ function prefsPayloadFromConfig(p: ProviderPreferences): ProviderPreferencesPayl
     volcengine: p.volcengine ?? {},
     xai: p.xai ?? {},
     minimax: p.minimax ?? {},
+    elevenlabs: p.elevenlabs ?? {},
     customOpenAI: p.customOpenAI ?? {},
   };
 }
@@ -1683,6 +1831,7 @@ function prefsConfigFromPayload(payload: ProviderPreferencesPayload): ProviderPr
     volcengine: payload.volcengine,
     xai: payload.xai,
     minimax: payload.minimax,
+    elevenlabs: payload.elevenlabs,
     customOpenAI: payload.customOpenAI,
   };
 }

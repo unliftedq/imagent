@@ -43,6 +43,7 @@ export {
   Paperclip,
   Pencil,
   Play,
+  Pause,
   Plug,
   Plus,
   SealCheck,
@@ -61,9 +62,10 @@ export {
   UploadSimple,
   UserCircle,
   VideoCamera,
+  Waveform,
   WarningCircle,
   X,
   XCircle,
   XLogo,
-  Sparkle
+  Sparkle,
 } from "@phosphor-icons/react";

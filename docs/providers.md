@@ -1,21 +1,22 @@
 ---
-description: Connect OpenAI, Azure OpenAI, Google, Flux, BytePlus, 火山引擎, xAI, and MiniMax models.
+description: Connect OpenAI, Azure OpenAI, Google, Flux, BytePlus, 火山引擎, xAI, MiniMax, and ElevenLabs models.
 ---
 
 # Providers
 
-imagent supports eight built-in provider IDs:
+imagent supports nine built-in provider IDs:
 
-| Provider ID | Display name | Images | Videos | Required secret fields |
-| --- | --- | --- | --- | --- |
-| `openai` | OpenAI | Yes | No | `apiKey` |
-| `azure` | Azure Foundry | Yes | No | `endpoint`, `apiKey` |
-| `google` | Google AI Studio | Yes | Yes | `apiKey` |
-| `flux-bfl` | Black Forest Labs | Yes | No | `apiKey` |
-| `byteplus` | BytePlus ModelArk (international) | Yes | Yes | `endpoint`, `apiKey` |
-| `volcengine` | 火山引擎 (Volcano Ark, mainland China) | Yes | Yes | `endpoint`, `apiKey` |
-| `xai` | xAI | Yes | Yes | `apiKey` |
-| `minimax` | MiniMax | Yes | Yes | `apiKey` |
+| Provider ID | Display name | Images | Videos | Audio | Required secret fields |
+| --- | --- | --- | --- | --- | --- |
+| `openai` | OpenAI | Yes | No | No | `apiKey` |
+| `azure` | Azure Foundry | Yes | No | No | `endpoint`, `apiKey` |
+| `google` | Google AI Studio | Yes | Yes | No | `apiKey` |
+| `flux-bfl` | Black Forest Labs | Yes | No | No | `apiKey` |
+| `byteplus` | BytePlus ModelArk (international) | Yes | Yes | No | `endpoint`, `apiKey` |
+| `volcengine` | 火山引擎 (Volcano Ark, mainland China) | Yes | Yes | No | `endpoint`, `apiKey` |
+| `xai` | xAI | Yes | Yes | No | `apiKey` |
+| `minimax` | MiniMax | Yes | Yes | Yes | `apiKey` |
+| `elevenlabs` | ElevenLabs | No | No | Yes | `apiKey` |
 
 Providers without configured secrets are skipped at runtime. `imagent doctor` reports how many built-in providers are configured.
 
@@ -323,12 +324,18 @@ imagent video generate "a dramatic hero shot with drifting fog" \
 
 ### MiniMax (`minimax`)
 
-MiniMax supports image generation (`image-01`, canonical catalog model `minimax-image-01`) and Hailuo video generation (`MiniMax-Hailuo-2.3`) through the MiniMax API.
+MiniMax supports image generation (`image-01`, canonical catalog model `minimax-image-01`), Hailuo video generation (`MiniMax-Hailuo-2.3`), and text-to-speech audio (`speech-2.8-hd` and `speech-2.8-turbo`, canonical catalog models `minimax-speech-2.8-hd` and `minimax-speech-2.8-turbo`) through the MiniMax API.
 
 CLI setup:
 
 ```bash
 imagent config set minimax.apiKey <minimax-key>
+```
+
+MiniMax TTS also requires your account GroupId:
+
+```bash
+imagent config set minimax.groupId <minimax-group-id>
 ```
 
 Environment variable:
@@ -360,6 +367,42 @@ imagent video generate "a paper boat drifting down a rain-soaked street" \
   --model MiniMax-Hailuo-2.3 \
   --option duration=6 \
   --option resolution=1080P
+```
+
+Audio example:
+
+```bash
+imagent audio generate "Welcome to imagent" \
+  --provider minimax \
+  --model speech-2.8-hd \
+  --option voice=presenter_female \
+  --option speed=1
+```
+
+### ElevenLabs (`elevenlabs`)
+
+ElevenLabs supports text-to-speech audio generation and voice discovery.
+
+CLI setup:
+
+```bash
+imagent config set elevenlabs.apiKey <elevenlabs-key>
+```
+
+Environment variable:
+
+```bash
+ELEVENLABS_API_KEY=<elevenlabs-key> imagent audio voices --provider elevenlabs
+```
+
+Example:
+
+```bash
+imagent audio generate "A concise voiceover line" \
+  --provider elevenlabs \
+  --model eleven_multilingual_v2 \
+  --option voice=<voice-id> \
+  --option format=mp3_44100_128
 ```
 
 ### Custom OpenAI-compatible image providers

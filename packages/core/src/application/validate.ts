@@ -1,6 +1,6 @@
 import { ProviderRequestError } from "../domain/errors.js";
-import type { ImageModelDef, VideoModelDef } from "../domain/model.js";
-import type { ImageRequest, VideoRequest } from "../domain/request.js";
+import type { AudioModelDef, ImageModelDef, VideoModelDef } from "../domain/model.js";
+import type { AudioRequest, ImageRequest, VideoRequest } from "../domain/request.js";
 
 /**
  * Validate an image request against a resolved model's capability surface.
@@ -293,5 +293,58 @@ export function applyVideoDefaults(req: VideoRequest, model: VideoModelDef): Vid
     fps: req.fps ?? d.fps,
     resolution: req.resolution ?? d.resolution,
     aspectRatio: req.aspectRatio ?? d.aspectRatio,
+  };
+}
+
+export function validateAudioRequestAgainstModel(
+  vendorId: string,
+  req: AudioRequest,
+  model: AudioModelDef,
+): void {
+  const caps = model.capabilities;
+  if (!caps) return;
+
+  if (
+    req.outputFormat !== undefined &&
+    caps.outputFormats &&
+    caps.outputFormats.length > 0 &&
+    !caps.outputFormats.includes(req.outputFormat)
+  ) {
+    throw new ProviderRequestError(
+      `model ${model.id} does not support outputFormat '${req.outputFormat}'. ` +
+        `Supported: ${caps.outputFormats.join(", ")}`,
+      { vendorId },
+    );
+  }
+
+  if (req.speed !== undefined && caps.speedRange) {
+    const { min, max } = caps.speedRange;
+    if (req.speed < min || req.speed > max) {
+      throw new ProviderRequestError(
+        `model ${model.id} requires speed in [${min}, ${max}] (got ${req.speed})`,
+        { vendorId },
+      );
+    }
+  }
+
+  if (req.voice !== undefined && caps.voices && caps.voices.length > 0) {
+    // Static voice lists are validated; discovery-backed models accept any id.
+    if (!caps.supportsVoiceDiscovery && !caps.voices.some((v) => v.id === req.voice)) {
+      throw new ProviderRequestError(
+        `model ${model.id} does not offer voice '${req.voice}'. ` +
+          `Known voices: ${caps.voices.map((v) => v.id).join(", ")}`,
+        { vendorId },
+      );
+    }
+  }
+}
+
+export function applyAudioDefaults(req: AudioRequest, model: AudioModelDef): AudioRequest {
+  const d = (model.defaults ?? {}) as { voice?: string; outputFormat?: string; speed?: number };
+  return {
+    ...req,
+    voice: req.voice ?? d.voice,
+    outputFormat: req.outputFormat ?? d.outputFormat,
+    speed: req.speed ?? d.speed,
   };
 }

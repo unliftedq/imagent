@@ -1,6 +1,7 @@
-import { Heart, Play } from "@phosphor-icons/react";
+import { Heart, Play, Waveform } from "@phosphor-icons/react";
 
 import { cn } from "../lib/cn.js";
+import { formatVideoDuration } from "./GalleryItemCard.shared.js";
 import type { GalleryItemCardProps } from "./GalleryItemCard.types.js";
 
 /**
@@ -13,6 +14,7 @@ export function RailVariant({
   kind,
   src,
   caption,
+  durationMs,
   favorited,
   selected,
   onSelect,
@@ -37,7 +39,16 @@ export function RailVariant({
         className,
       )}
     >
-      {hasSrc ? (
+      {kind === "audio" ? (
+        <span className="flex h-full w-full flex-col items-center justify-center gap-2 bg-(--surface) p-2 text-(--text-muted)">
+          <Waveform weight="duotone" className="size-7" />
+          {typeof durationMs === "number" && durationMs > 0 ? (
+            <span className="rounded-(--radius-pill) bg-black/55 px-1.5 py-0.5 text-(length:--text-caption) text-white [font-variant-numeric:tabular-nums]">
+              {formatVideoDuration(durationMs)}
+            </span>
+          ) : null}
+        </span>
+      ) : hasSrc ? (
         <img
           src={src}
           alt=""
@@ -48,7 +59,7 @@ export function RailVariant({
       ) : (
         <span aria-hidden="true" className="block h-full w-full" />
       )}
-      {kind === "video" ? (
+      {kind === "video" || kind === "audio" ? (
         <span
           aria-hidden="true"
           className={

@@ -4,7 +4,7 @@
 
 <p align="center">English · <a href="./README.zh-CN.md">简体中文</a></p>
 
-**Imagent** means **Imagine agent**: a local-first image and video generation workspace for individual creators, automation-heavy workflows, and AI agents.
+**Imagent** means **Imagine agent**: a local-first image, video, and audio generation workspace for individual creators, automation-heavy workflows, and AI agents.
 
 It ships as a desktop application, a command-line tool, and an installable agent skill. All surfaces share the same local workspace, provider configuration, asset library, generated outputs, and result history.
 
@@ -22,7 +22,7 @@ It ships as a desktop application, a command-line tool, and an installable agent
 | --- | --- |
 | **Local-first workspace** | Data lives under `~/.imagent/`, including SQLite state, configuration, assets, and generated outputs. No remote account or backend is required. |
 | **One library across interfaces** | The desktop app, CLI, and agent integrations work against the same gallery, boards, favorites, and reusable assets. |
-| **Multi-provider generation** | OpenAI, Azure OpenAI, Google Imagen/Gemini, Flux/BFL, BytePlus / 火山引擎 Seedream/Seedance, and xAI Grok can be configured side by side. |
+| **Multi-provider generation** | OpenAI, Azure OpenAI, Google Imagen/Gemini, Flux/BFL, BytePlus / 火山引擎 Seedream/Seedance, xAI Grok, MiniMax TTS, and ElevenLabs TTS can be configured side by side. |
 | **Asset-driven creation** | Reusable characters, objects, backgrounds, styles, and references help keep ongoing projects visually consistent. |
 | **Agent-ready automation** | The bundled skill lets compatible agents call the `imagent` CLI instead of using a one-off image or video tool. |
 

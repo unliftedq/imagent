@@ -2,8 +2,9 @@ import { EventEmitter } from "node:events";
 import { isAbortError, ProviderAbortError, ProviderError } from "../domain/errors.js";
 import type { GalleryItem } from "../domain/gallery.js";
 import type { Job, JobId, JobState } from "../domain/job.js";
-import type { GenerationIntent, ImageRequest, VideoRequest } from "../domain/request.js";
+import type { AudioRequest, GenerationIntent, ImageRequest, VideoRequest } from "../domain/request.js";
 import type { VideoJobHandle, VideoJobState } from "../domain/result.js";
+import type { AudioProvider } from "../ports/audio-provider.js";
 import type { ImageProvider } from "../ports/image-provider.js";
 import type { VideoProvider } from "../ports/video-provider.js";
 import { type Logger, NoopLogger } from "./logger.js";
@@ -68,6 +69,7 @@ export interface ThumbnailServicePort {
 
 export type ImageRegistry = ReadonlyMap<string, ImageProvider>;
 export type VideoRegistry = ReadonlyMap<string, VideoProvider>;
+export type AudioRegistry = ReadonlyMap<string, AudioProvider>;
 
 export interface JobRunnerDeps {
   jobs: JobRepositoryPort;
@@ -77,6 +79,7 @@ export interface JobRunnerDeps {
   files: FilesServicePort;
   imageRegistry: ImageRegistry;
   videoRegistry: VideoRegistry;
+  audioRegistry: AudioRegistry;
   /** File writer — defaults to `node:fs/promises` writeFile + mkdir. Tests can inject. */
   writeFile?: (filePath: string, bytes: Uint8Array) => Promise<void>;
   ensureDir?: (dir: string) => Promise<void>;
@@ -161,6 +164,7 @@ export class JobRunner extends EventEmitter {
       files: deps.files,
       imageRegistry: deps.imageRegistry,
       videoRegistry: deps.videoRegistry,
+      audioRegistry: deps.audioRegistry,
       logger: deps.logger ?? NoopLogger,
       idFactory: deps.idFactory ?? defaultIdFactory,
       now: deps.now ?? Date.now,
@@ -178,6 +182,9 @@ export class JobRunner extends EventEmitter {
     if (intent.boardId) overrides.boardId = intent.boardId;
     if (intent.kind === "image") {
       return this.startImage(intent.request, overrides);
+    }
+    if (intent.kind === "audio") {
+      return this.startAudio(intent.request, overrides);
     }
     return this.startVideo(intent.request, overrides);
   }
@@ -226,7 +233,7 @@ export class JobRunner extends EventEmitter {
   async resumeRunningJobs(): Promise<void> {
     const stale = this.deps.jobs.listByStates(["queued", "running"]);
     for (const job of stale) {
-      if (job.kind === "image") {
+      if (job.kind === "image" || job.kind === "audio") {
         const updated = this.deps.jobs.updateState(job.id, {
           state: "failed",
           errorMessage: "process restarted before completion",
@@ -408,6 +415,130 @@ export class JobRunner extends EventEmitter {
       const aborted = isAbortError(err) || err instanceof ProviderAbortError;
       if (!aborted) {
         this.deps.logger.error("image generation failed", {
+          jobId: job.id,
+          providerId: job.providerId,
+          model: req.model,
+          err,
+        });
+      }
+      const updated = this.updateFailedState(job.id, aborted, err);
+      this.emit("job.failed", updated);
+    }
+  }
+
+  // ----- audio path -----------------------------------------------------
+
+  private async startAudio(req: AudioRequest, overrides: IntentOverrides = {}): Promise<JobId> {
+    const provider = this.deps.audioRegistry.get(req.providerId);
+    if (!provider) {
+      throw new ProviderError(`audio provider '${req.providerId}' is not configured`, {
+        vendorId: req.providerId,
+      });
+    }
+    const id = this.deps.idFactory();
+    const now = this.deps.now();
+    const job = this.deps.jobs.create({
+      id,
+      kind: "audio",
+      state: "running",
+      providerId: req.providerId,
+      providerJobId: null,
+      requestJson: JSON.stringify(req),
+      progress: 0,
+      errorMessage: null,
+      resultItemId: null,
+      createdAt: now,
+      updatedAt: now,
+      finishedAt: null,
+    });
+    const abort = new AbortController();
+    this.running.set(id, { abort, pollIndex: 0 });
+    if (overrides.parentId || overrides.boardId) {
+      this.intentOverrides.set(id, overrides);
+    }
+    this.emit("job.progress", { id, progress: 0, state: job.state });
+    this.audioGenerationLoop(job, req, provider, abort.signal).catch((err) => {
+      this.deps.logger.error("audio job loop crashed", { id, err: String(err) });
+    });
+    return id;
+  }
+
+  private async audioGenerationLoop(
+    job: Job,
+    req: AudioRequest,
+    provider: AudioProvider,
+    signal: AbortSignal,
+  ): Promise<void> {
+    try {
+      const result = await provider.generate(req, signal);
+      this.throwIfPersistedCancelled(job.id, req.providerId);
+      const out = result.output;
+
+      const overrides = this.intentOverrides.get(job.id) ?? {};
+      const now = this.deps.now();
+      const date = new Date(now);
+      const dir = this.deps.files.galleryDir(date);
+      await this.deps.ensureDir(dir);
+
+      const ext = mimeToExt(out.mimeType);
+      const itemId = this.deps.idFactory();
+      const absPath = this.deps.files.galleryItemFile(itemId, ext, date);
+      await this.deps.writeFile(absPath, out.bytes);
+      const relPath = relativeToData(absPath, this.deps.files.dataDir);
+      const item = this.deps.gallery.create({
+        id: itemId,
+        kind: "audio",
+        parentId: overrides.parentId ?? null,
+        prompt: req.prompt,
+        providerId: req.providerId,
+        model: req.model,
+        paramsJson: JSON.stringify({
+          voice: req.voice,
+          speed: req.speed,
+          outputFormat: req.outputFormat,
+          raw: { ...(req.raw ?? {}), ...(out.raw ?? {}) },
+        }),
+        relPath,
+        thumbPath: null,
+        durationMs: out.durationMs ?? null,
+        width: null,
+        height: null,
+        bytes: out.bytes.byteLength,
+        jobId: job.id,
+        favorited: false,
+        createdAt: now,
+      });
+
+      if (overrides.boardId && this.deps.boards) {
+        try {
+          if (!this.deps.boards.hasItem(overrides.boardId, item.id)) {
+            this.deps.boards.appendItem(overrides.boardId, item.id);
+          }
+        } catch (err) {
+          this.deps.logger.warn("appendItem failed", {
+            id: job.id,
+            boardId: overrides.boardId,
+            err: String(err),
+          });
+        }
+      }
+      this.intentOverrides.delete(job.id);
+      this.throwIfPersistedCancelled(job.id, req.providerId);
+
+      const updated = this.deps.jobs.updateState(job.id, {
+        state: "succeeded",
+        progress: 1,
+        resultItemId: item.id,
+        finishedAt: now,
+      });
+      this.running.delete(job.id);
+      this.emit("job.completed", updated);
+    } catch (err) {
+      this.running.delete(job.id);
+      this.intentOverrides.delete(job.id);
+      const aborted = isAbortError(err) || err instanceof ProviderAbortError;
+      if (!aborted) {
+        this.deps.logger.error("audio generation failed", {
           jobId: job.id,
           providerId: job.providerId,
           model: req.model,
@@ -838,6 +969,20 @@ function mimeToExt(mime: string): string {
       return "mp4";
     case "video/webm":
       return "webm";
+    case "audio/mpeg":
+    case "audio/mp3":
+      return "mp3";
+    case "audio/wav":
+    case "audio/x-wav":
+      return "wav";
+    case "audio/ogg":
+    case "audio/opus":
+      return "ogg";
+    case "audio/aac":
+      return "aac";
+    case "audio/pcm":
+    case "audio/L16":
+      return "pcm";
     default: {
       const idx = mime.indexOf("/");
       return idx >= 0

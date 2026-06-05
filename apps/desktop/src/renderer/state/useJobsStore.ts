@@ -206,11 +206,22 @@ export const useJobsStore = create<JobsState>((set, get) => ({
     // references/assetIds. We resubmit it as-is — no `assetSlots` so the
     // handler won't double-apply slot resolution.
     if (job.kind === "image") {
-      const { jobId } = await api["image.submit"](parsed as Parameters<typeof api["image.submit"]>[0]);
+      const { jobId } = await api["image.submit"](
+        parsed as Parameters<(typeof api)["image.submit"]>[0],
+      );
       get().trackStudioJob({ id: jobId, kind: "image", prompt, submittedAt: Date.now() });
       return jobId;
     }
-    const { jobId } = await api["video.submit"](parsed as Parameters<typeof api["video.submit"]>[0]);
+    if (job.kind === "audio") {
+      const { jobId } = await api["audio.submit"](
+        parsed as Parameters<(typeof api)["audio.submit"]>[0],
+      );
+      get().trackStudioJob({ id: jobId, kind: "audio", prompt, submittedAt: Date.now() });
+      return jobId;
+    }
+    const { jobId } = await api["video.submit"](
+      parsed as Parameters<(typeof api)["video.submit"]>[0],
+    );
     get().trackStudioJob({ id: jobId, kind: "video", prompt, submittedAt: Date.now() });
     return jobId;
   },

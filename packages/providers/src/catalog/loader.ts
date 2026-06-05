@@ -138,6 +138,9 @@ function mergeCatalogs(base: ModelCatalog, overlay: ModelCatalogOverlay): ModelC
   for (const [id, model] of Object.entries(overlay.models?.video ?? {})) {
     merged.models.video[id] = mergeRecord(merged.models.video[id], model);
   }
+  for (const [id, model] of Object.entries(overlay.models?.audio ?? {})) {
+    merged.models.audio[id] = mergeRecord(merged.models.audio[id], model);
+  }
 
   for (const [providerId, providerOverlay] of Object.entries(overlay.providers ?? {})) {
     const current = merged.providers[providerId] ?? {};
@@ -152,6 +155,10 @@ function mergeCatalogs(base: ModelCatalog, overlay: ModelCatalogOverlay): ModelC
         providerOverlay.video === undefined
           ? current.video
           : mergeOfferings(current.video, providerOverlay.video),
+      audio:
+        providerOverlay.audio === undefined
+          ? current.audio
+          : mergeOfferings(current.audio, providerOverlay.audio),
       modelOverrides:
         providerOverlay.modelOverrides === undefined
           ? current.modelOverrides

@@ -1,10 +1,12 @@
 ---
-description: Default image and video model capabilities.
+description: Default image, video, and audio model capabilities.
 ---
 
 # Model capabilities
 
 This page summarizes the bundled default model catalog in `packages/providers/src/catalog.default.json`. Limits are included only when provider documentation or the bundled catalog confirms them.
+
+Use `imagent models --kind audio` to list available TTS offerings, and `imagent options --provider <id> --model <id> --kind audio` to inspect exact `--option key=value` settings.
 
 ## Reference-image fields
 
@@ -157,6 +159,37 @@ This page summarizes the bundled default model catalog in `packages/providers/sr
 - **Resolution / aspect ratio:** `480p`, `720p`, `1080p`; `16:9`, `9:16`, `1:1`, `4:3`, `3:4`, `21:9`.
 - **Reference-image support:** First and last frame are supported; multimodal reference images are not supported. Input images must be under 30 MB.
 - **Other capabilities:** Default duration is 5 seconds; default resolution is `720p`.
+
+## Audio models
+
+### ElevenLabs: `eleven_multilingual_v2`
+
+- **Provider-facing id:** `eleven_multilingual_v2`.
+- **Voice support:** Dynamic voice discovery is supported; run `imagent audio voices --provider elevenlabs`.
+- **Output controls:** `outputFormat`: `mp3_44100_128`, `mp3_44100_192`, `mp3_22050_32`, `pcm_16000`, `pcm_24000`, `ulaw_8000`; default `mp3_44100_128`. `speed` ranges from 0.7 to 1.2.
+- **Extra controls:** `stability`, `similarity_boost`, and `style` from 0 to 1.
+
+### ElevenLabs: `eleven_v3`
+
+- **Provider-facing id:** `eleven_v3` (ElevenLabs' most expressive model; currently in alpha).
+- **Voice support:** Dynamic voice discovery is supported; run `imagent audio voices --provider elevenlabs`.
+- **Output controls:** `outputFormat`: `mp3_44100_128`, `mp3_44100_192`, `mp3_22050_32`, `pcm_16000`, `pcm_24000`, `ulaw_8000`; default `mp3_44100_128`. Note: `eleven_v3` does not support a `speed` control.
+- **Extra controls:** `stability` and `similarity_boost` from 0 to 1.
+
+### ElevenLabs: `eleven_flash_v2_5`
+
+- **Provider-facing id:** `eleven_flash_v2_5`.
+- **Voice support:** Dynamic voice discovery is supported; run `imagent audio voices --provider elevenlabs`.
+- **Output controls:** `outputFormat`: `mp3_44100_128`, `mp3_44100_192`, `mp3_22050_32`, `pcm_16000`, `pcm_24000`, `ulaw_8000`; default `mp3_44100_128`. `speed` ranges from 0.7 to 1.2.
+- **Extra controls:** `stability`, `similarity_boost`, and `style` from 0 to 1.
+
+### MiniMax: `speech-2.8-hd` and `speech-2.8-turbo`
+
+- **Provider-facing ids:** Offering ids `speech-2.8-hd` (ultra-realistic quality) and `speech-2.8-turbo` (low latency); mapping to canonical catalog models `minimax-speech-2.8-hd` and `minimax-speech-2.8-turbo`. Each supports 40 languages and 7 emotions.
+- **Voice support:** Dynamic voice discovery is supported via MiniMax's `get_voice` API; run `imagent audio voices --provider minimax --model speech-2.8-hd` to list system, cloned, and generated voices on your account. Static fallback voices include `English_expressive_narrator`, `male-qn-qingse`, `female-shaonv`, `presenter_male`, and `presenter_female`.
+- **Output controls:** `outputFormat`: `mp3`, `wav`, `pcm`; default `mp3`. `speed` ranges from 0.5 to 2; default 1.
+- **Extra controls:** `emotion`, `vol` from 0 to 10, and `pitch` from -12 to 12.
+- **Note:** MiniMax TTS requires a Group ID — `imagent config set minimax.groupId <GroupId>`.
 
 ## Official documentation links reviewed
 

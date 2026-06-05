@@ -1,12 +1,5 @@
 import type { ProviderSummary } from "@imagent/ipc";
-import {
-  Button,
-  Icons,
-  Input,
-  type ProviderTestStatus,
-  Select,
-  Tooltip,
-} from "@imagent/ui";
+import { Button, Icons, Input, type ProviderTestStatus, Select, Tooltip } from "@imagent/ui";
 import { useState } from "react";
 import { type MessageKey, useT } from "../../i18n/index.js";
 import {
@@ -52,8 +45,8 @@ export function ProviderListRow({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-(length:--text-title-sm) font-semibold text-(--text)">{name}</h2>
-          {summary && summary.kinds.length > 1 ? (
-            <KindsBadge text={t("common.imagePlusVideo")} />
+          {summary && (summary.kinds.length > 1 || summary.kinds.includes("audio")) ? (
+            <KindsBadge text={providerKindsLabel(summary.kinds, t)} />
           ) : null}
           {configured ? <ConnectedPill /> : null}
         </div>
@@ -83,6 +76,19 @@ export function ProviderListRow({
       </div>
     </div>
   );
+}
+
+function providerKindsLabel(kinds: ProviderSummary["kinds"], t: ReturnType<typeof useT>): string {
+  const hasImage = kinds.includes("image");
+  const hasVideo = kinds.includes("video");
+  const hasAudio = kinds.includes("audio");
+  if (hasImage && hasVideo && hasAudio) return t("common.imagePlusVideoPlusAudio");
+  if (hasImage && hasVideo) return t("common.imagePlusVideo");
+  if (hasImage && hasAudio) return t("common.imagePlusAudio");
+  if (hasVideo && hasAudio) return t("common.videoPlusAudio");
+  if (hasAudio) return t("common.audio");
+  if (hasVideo) return t("common.video");
+  return t("common.image");
 }
 
 /**
@@ -118,6 +124,7 @@ export function ProviderConfigPanel({
   const isCustom = activeModal.kind === "custom";
   const canEditProviderId = activeModal.kind === "custom" && activeModal.id === null;
   const usesEndpoint = builtIn?.endpointLabel !== undefined;
+  const groupIdField = builtIn?.groupIdField;
   const usesMappings = activeModal.id === "azure" || isCustom;
   const isDeploymentMapping = builtIn?.mappingLabel === "Deployment";
   const description = isCustom
@@ -169,6 +176,16 @@ export function ProviderConfigPanel({
                 value={form.endpoint}
                 placeholder={builtIn?.endpointPlaceholder}
                 onChange={(e) => setForm((s) => ({ ...s, endpoint: e.target.value.trim() }))}
+              />
+            </Field>
+          ) : null}
+
+          {groupIdField ? (
+            <Field label={t(groupIdField.label)} helperText={t(groupIdField.helperText)}>
+              <Input
+                value={form.groupId}
+                placeholder="Group ID"
+                onChange={(e) => setForm((s) => ({ ...s, groupId: e.target.value.trim() }))}
               />
             </Field>
           ) : null}

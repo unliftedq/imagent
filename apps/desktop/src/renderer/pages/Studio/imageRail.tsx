@@ -52,7 +52,7 @@ export function ImageRail() {
   const { favoriteKeys, toggleFavorite } = useModelFavorites();
 
   const configuredProviders = useMemo(
-    () => summaries.filter((summary) => summary.configured),
+    () => summaries.filter((summary) => summary.configured && summary.kinds.includes("image")),
     [summaries],
   );
 

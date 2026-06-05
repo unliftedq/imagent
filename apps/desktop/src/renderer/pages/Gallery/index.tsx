@@ -10,7 +10,13 @@ import { useUIStore } from "../../state/useUIStore.js";
 import { CreateAssetDialog } from "../Assets/CreateAssetDialog.js";
 import { resolveGalleryUrl } from "../Studio";
 import { BoardRow, LightboxPreview } from "./components.js";
-import { BOARD_ALL, BOARD_FAVORITES } from "./constants.js";
+import {
+  BOARD_ALL,
+  BOARD_FAVORITES,
+  FILTER_AUDIO,
+  FILTER_IMAGE,
+  FILTER_VIDEO,
+} from "./constants.js";
 import { MasonryGrid } from "./MasonryGrid.js";
 
 export function GalleryPage() {
@@ -63,6 +69,12 @@ export function GalleryPage() {
       setQuery({ kind: undefined, boardId: undefined, favoritedOnly: undefined });
     } else if (activeFilter === BOARD_FAVORITES) {
       setQuery({ kind: undefined, boardId: undefined, favoritedOnly: true });
+    } else if (activeFilter === FILTER_IMAGE) {
+      setQuery({ kind: "image", boardId: undefined, favoritedOnly: undefined });
+    } else if (activeFilter === FILTER_VIDEO) {
+      setQuery({ kind: "video", boardId: undefined, favoritedOnly: undefined });
+    } else if (activeFilter === FILTER_AUDIO) {
+      setQuery({ kind: "audio", boardId: undefined, favoritedOnly: undefined });
     } else {
       setQuery({ kind: undefined, boardId: activeFilter, favoritedOnly: undefined });
     }
@@ -152,6 +164,24 @@ export function GalleryPage() {
         });
         return;
       }
+      if (result.kind === "audio") {
+        applyRemix({
+          kind: "audio",
+          parentId: id,
+          request: {
+            prompt: result.request.prompt,
+            providerId: result.request.providerId,
+            model: result.request.model,
+            ...(typeof result.request.voice === "string" ? { voice: result.request.voice } : {}),
+            ...(typeof result.request.speed === "number" ? { speed: result.request.speed } : {}),
+            ...(typeof result.request.outputFormat === "string"
+              ? { outputFormat: result.request.outputFormat }
+              : {}),
+            ...(result.request.raw ? { raw: result.request.raw } : {}),
+          },
+        });
+        return;
+      }
       applyRemix({
         kind: "image",
         parentId: id,
@@ -193,6 +223,14 @@ export function GalleryPage() {
   };
 
   const openSaveAsAssetDialog = (item: GalleryItem): void => {
+    if (item.kind === "audio") {
+      pushToast({
+        title: t("gallery.toast.audioAssetUnsupported"),
+        description: t("gallery.toast.audioAssetUnsupportedDesc"),
+        variant: "warning",
+      });
+      return;
+    }
     if (item.kind === "video" && !item.thumbPath) {
       pushToast({
         title: t("gallery.toast.thumbnailUnavailable"),
@@ -249,6 +287,27 @@ export function GalleryPage() {
             active={activeFilter === BOARD_FAVORITES}
             acceptsDrop={false}
             onClick={() => setActiveFilter(BOARD_FAVORITES)}
+          />
+          <BoardSidebarItem
+            id={FILTER_IMAGE}
+            label={t("gallery.filter.image")}
+            active={activeFilter === FILTER_IMAGE}
+            acceptsDrop={false}
+            onClick={() => setActiveFilter(FILTER_IMAGE)}
+          />
+          <BoardSidebarItem
+            id={FILTER_VIDEO}
+            label={t("gallery.filter.video")}
+            active={activeFilter === FILTER_VIDEO}
+            acceptsDrop={false}
+            onClick={() => setActiveFilter(FILTER_VIDEO)}
+          />
+          <BoardSidebarItem
+            id={FILTER_AUDIO}
+            label={t("gallery.filter.audio")}
+            active={activeFilter === FILTER_AUDIO}
+            acceptsDrop={false}
+            onClick={() => setActiveFilter(FILTER_AUDIO)}
           />
           <div className="my-2 h-px bg-(--border-faint)" />
           <div className="px-2 pb-1 text-(length:--text-caption-uppercase) font-semibold uppercase tracking-[1.5px] text-(--text-muted)">
@@ -398,7 +457,7 @@ export function GalleryPage() {
                     }}
                     onOpen={() => setPreviewId(it.id)}
                     onRemix={() => void handleRemix(it.id)}
-                    onSaveAsAsset={() => openSaveAsAssetDialog(it)}
+                    onSaveAsAsset={it.kind === "audio" ? undefined : () => openSaveAsAssetDialog(it)}
                     onToggleFavorite={() => void toggleFav(it.id)}
                     onAddToBoard={(boardId) => void addItem(boardId, it.id)}
                     onOpenFileLocation={() => {

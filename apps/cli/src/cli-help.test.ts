@@ -43,6 +43,7 @@ describe("CLI --help", () => {
     for (const cmd of [
       "image",
       "video",
+      "audio",
       "gallery",
       "asset",
       "models",
@@ -65,6 +66,7 @@ describe("CLI --help", () => {
     const expected = [
       "image",
       "video",
+      "audio",
       "gallery",
       "asset",
       "models",
@@ -96,6 +98,9 @@ describe("CLI --help", () => {
     expect(match).not.toBeNull();
     const descriptionBlock = match?.[0] ?? "";
     expect(descriptionBlock.length).toBeGreaterThan(0);
+    expect(descriptionBlock).toContain("image, video, and audio generation CLI");
+    expect(descriptionBlock).toContain("models [--kind image|video|audio]");
+    expect(descriptionBlock).toContain("image|video|audio generate");
     expect(descriptionBlock).not.toMatch(/\n\s*\n/);
   });
 
@@ -103,6 +108,9 @@ describe("CLI --help", () => {
     const r = runCli(["config", "--help"]);
     expect(r.status, `stderr:\n${r.stderr}`).toBe(0);
     expect(r.stdout).toMatch(/reset[^\n]*<target>/);
+    expect(r.stdout).toContain("audio.defaultModel");
+    expect(r.stdout).toContain("elevenlabs");
+    expect(r.stdout).toContain("minimax.groupId");
   });
 
   it("config reset --help mentions catalog and secrets", () => {
@@ -120,6 +128,9 @@ describe("CLI --help", () => {
     ["image", "generate", "--help"],
     ["video", "--help"],
     ["video", "generate", "--help"],
+    ["audio", "--help"],
+    ["audio", "generate", "--help"],
+    ["audio", "voices", "--help"],
     ["video", "task", "--help"],
     ["video", "task", "ls", "--help"],
     ["video", "task", "get", "--help"],
@@ -138,7 +149,7 @@ describe("CLI --help", () => {
     });
   }
 
-  it("image/video help exposes dynamic key=value options instead of stale model flags", () => {
+  it("image/video/audio help exposes dynamic key=value options instead of stale model flags", () => {
     const image = runCli(["image", "generate", "--help"]);
     expect(image.status, `stderr:\n${image.stderr}`).toBe(0);
     expect(image.stdout).toContain("--option <key=value>");
@@ -155,6 +166,14 @@ describe("CLI --help", () => {
     expect(video.stdout).toContain("--wait");
     expect(video.stdout).not.toContain("--duration");
     expect(video.stdout).not.toContain("--resolution");
+
+    const audio = runCli(["audio", "generate", "--help"]);
+    expect(audio.status, `stderr:\n${audio.stderr}`).toBe(0);
+    expect(audio.stdout).toContain("--option <key=value>");
+    expect(audio.stdout).toContain("--out <dir>");
+    expect(audio.stdout).toMatch(/voice, speed,\s+outputFormat/);
+    expect(audio.stdout).not.toContain("--voice");
+    expect(audio.stdout).not.toContain("--speed");
   });
 
   it("video generate rejects --out without --wait", () => {

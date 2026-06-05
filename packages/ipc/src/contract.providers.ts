@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-import { IpcImageProviderModelSchema, IpcVideoProviderModelSchema } from "./contract.catalog.js";
+import {
+  IpcAudioProviderModelSchema,
+  IpcImageProviderModelSchema,
+  IpcVideoProviderModelSchema,
+} from "./contract.catalog.js";
 
 export const ProviderIdSchema = z.string().regex(/^[a-z0-9][a-z0-9_-]*$/);
 export type ProviderId = z.infer<typeof ProviderIdSchema>;
@@ -11,7 +15,7 @@ export type ProviderId = z.infer<typeof ProviderIdSchema>;
  * Seedance share Ark credentials under one provider id (architecture.md §4
  * vendor=provider).
  */
-export const ProviderKindSchema = z.enum(["image", "video"]);
+export const ProviderKindSchema = z.enum(["image", "video", "audio"]);
 export type ProviderKind = z.infer<typeof ProviderKindSchema>;
 
 export const ProviderSummarySchema = z.object({
@@ -52,8 +56,10 @@ export const IpcProviderRoutingSchema = z.object({
   displayName: z.string().optional(),
   endpoint: z.string().optional(),
   baseUrl: z.string().optional(),
+  groupId: z.string().optional(),
   image: z.array(IpcImageProviderModelSchema).optional(),
   video: z.array(IpcVideoProviderModelSchema).optional(),
+  audio: z.array(IpcAudioProviderModelSchema).optional(),
 });
 export type ProviderRoutingPayload = z.infer<typeof IpcProviderRoutingSchema>;
 
@@ -66,6 +72,7 @@ export const ProviderPreferencesPayloadSchema = z.object({
   volcengine: IpcProviderRoutingSchema,
   xai: IpcProviderRoutingSchema,
   minimax: IpcProviderRoutingSchema,
+  elevenlabs: IpcProviderRoutingSchema,
   customOpenAI: z.record(ProviderIdSchema, IpcProviderRoutingSchema),
 });
 export type ProviderPreferencesPayload = z.infer<typeof ProviderPreferencesPayloadSchema>;
@@ -86,6 +93,7 @@ export const MaskedSecretsSchema = z.object({
   volcengine: MaskedKey.optional(),
   xai: MaskedKey.optional(),
   minimax: MaskedKey.optional(),
+  elevenlabs: MaskedKey.optional(),
   customOpenAI: z.record(ProviderIdSchema, MaskedKey).optional(),
 });
 export type MaskedSecrets = z.infer<typeof MaskedSecretsSchema>;
@@ -104,6 +112,7 @@ export const SecretsWriteSchema = z.object({
   volcengine: WriteKey.optional(),
   xai: WriteKey.optional(),
   minimax: WriteKey.optional(),
+  elevenlabs: WriteKey.optional(),
   customOpenAI: z.record(ProviderIdSchema, z.object({ apiKey: z.string().min(1) })).optional(),
 });
 export type SecretsWrite = z.infer<typeof SecretsWriteSchema>;

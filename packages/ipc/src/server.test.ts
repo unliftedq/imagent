@@ -174,7 +174,7 @@ describe("registerIpcHandlers", () => {
     server.emit("config.changed", { configJson: "{}" });
     expect(live).toEqual([["config.changed", { configJson: "{}" }]]);
     // A second emit should not re-attempt the destroyed target.
-    server.emit("config.changed", { configJson: "{\"x\":1}" });
+    server.emit("config.changed", { configJson: '{"x":1}' });
     expect(live).toHaveLength(2);
   });
 
@@ -351,6 +351,31 @@ describe("registerIpcHandlers", () => {
       expect(reply.ok).toBe(true);
       expect(reply.value.kind).toBe("video");
       expect(reply.value.request.durationSec).toBe(5);
+    });
+
+    it("gallery.remix: audio parent returns an AudioRequest envelope", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      registerIpcHandlers(ipcMain, {
+        "gallery.remix": async () => ({
+          kind: "audio" as const,
+          request: {
+            prompt: "narrate this",
+            providerId: "elevenlabs",
+            model: "eleven_multilingual_v2",
+            voice: "voice-1",
+            speed: 1,
+            outputFormat: "mp3_44100_128",
+            assetIds: [],
+          },
+        }),
+      });
+      const reply = (await invoke("gallery.remix", { itemId: "a1" })) as {
+        ok: true;
+        value: { kind: string; request: { voice?: string } };
+      };
+      expect(reply.ok).toBe(true);
+      expect(reply.value.kind).toBe("audio");
+      expect(reply.value.request.voice).toBe("voice-1");
     });
 
     it("video.submit: returns { jobId } and accepts assetSlots + parentId", async () => {
@@ -692,6 +717,115 @@ describe("registerIpcHandlers", () => {
     });
   });
 
+  describe("Phase 8 routes — Audio", () => {
+    it("audio.submit: returns { jobId } and accepts parentId", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      let seenParentId: string | undefined;
+      registerIpcHandlers(ipcMain, {
+        "audio.submit": async (req) => {
+          seenParentId = req.parentId;
+          return { jobId: "audio-job-1" };
+        },
+      });
+      const reply = (await invoke("audio.submit", {
+        prompt: "Narrate this",
+        providerId: "elevenlabs",
+        model: "eleven_multilingual_v2",
+        voice: "voice-1",
+        speed: 1,
+        parentId: "parent-audio",
+      })) as { ok: true; value: { jobId: string } };
+      expect(reply.ok).toBe(true);
+      expect(reply.value.jobId).toBe("audio-job-1");
+      expect(seenParentId).toBe("parent-audio");
+    });
+
+    it("audio.models: returns provider defaults and audio model definitions", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      registerIpcHandlers(ipcMain, {
+        "audio.models": async ({ providerId }) => ({
+          providerId,
+          defaultModel: "eleven_multilingual_v2",
+          models: [
+            {
+              id: "eleven_multilingual_v2",
+              displayName: "Eleven Multilingual v2",
+              capabilities: {
+                supportsVoiceDiscovery: true,
+                outputFormats: ["mp3_44100_128"],
+              },
+            },
+          ],
+        }),
+      });
+      const reply = (await invoke("audio.models", { providerId: "elevenlabs" })) as {
+        ok: true;
+        value: { providerId: string; defaultModel: string | null; models: Array<{ id: string }> };
+      };
+      expect(reply.ok).toBe(true);
+      expect(reply.value.providerId).toBe("elevenlabs");
+      expect(reply.value.defaultModel).toBe("eleven_multilingual_v2");
+      expect(reply.value.models[0]?.id).toBe("eleven_multilingual_v2");
+    });
+
+    it("audio.voices: returns voice discovery results for a provider and optional model", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      let seenModelId: string | undefined;
+      registerIpcHandlers(ipcMain, {
+        "audio.voices": async ({ modelId }) => {
+          seenModelId = modelId;
+          return {
+            voices: [
+              {
+                id: "voice-1",
+                name: "Narrator",
+                previewUrl: "https://example.test/voice.mp3",
+                labels: { accent: "neutral" },
+              },
+            ],
+          };
+        },
+      });
+      const reply = (await invoke("audio.voices", {
+        providerId: "elevenlabs",
+        modelId: "eleven_multilingual_v2",
+      })) as { ok: true; value: { voices: Array<{ id: string; name: string }> } };
+      expect(reply.ok).toBe(true);
+      expect(seenModelId).toBe("eleven_multilingual_v2");
+      expect(reply.value.voices[0]).toMatchObject({ id: "voice-1", name: "Narrator" });
+    });
+
+    it("models.list: preserves audio rows alongside image and video rows", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      registerIpcHandlers(ipcMain, {
+        "models.list": async () => ({
+          image: [],
+          video: [],
+          audio: [
+            {
+              id: "eleven_multilingual_v2",
+              displayName: "Eleven Multilingual v2",
+              providers: [
+                {
+                  providerId: "elevenlabs",
+                  modelId: "eleven_multilingual_v2",
+                  displayName: "Eleven Multilingual v2",
+                  configured: true,
+                },
+              ],
+            },
+          ],
+        }),
+      });
+      const reply = (await invoke("models.list", undefined)) as {
+        ok: true;
+        value: { audio?: Array<{ id: string }> };
+      };
+      expect(reply.ok).toBe(true);
+      expect(reply.value.audio?.[0]?.id).toBe("eleven_multilingual_v2");
+    });
+  });
+
   it("subscribes to events through the client", async () => {
     const { ipcMain } = makeFakeIpc();
     const subscribers = new Map<string, Array<(p: unknown) => void>>();
@@ -747,6 +881,7 @@ describe("registerIpcHandlers", () => {
               },
             },
             video: {},
+            audio: {},
           },
           providers: {
             openai: { image: [{ id: "gpt-image-2", modelId: "gpt-image-2" }] },
@@ -779,6 +914,7 @@ describe("registerIpcHandlers", () => {
             },
           },
           video: {},
+          audio: {},
         },
         providers: {
           "custom-openai": {
