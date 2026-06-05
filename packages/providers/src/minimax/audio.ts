@@ -6,6 +6,7 @@ import {
   ProviderRequestError,
   ProviderResponseError,
   type ProviderTestResult,
+  type VoiceInfo,
 } from "@imagent/core";
 import { BaseAudioProvider } from "../common/index.js";
 import { createHttpClient, type HttpClient } from "../http/index.js";
@@ -18,6 +19,7 @@ import {
 } from "./shared.js";
 
 const T2A_PATH = "/t2a_v2";
+const GET_VOICE_PATH = "/get_voice";
 
 export interface MiniMaxAudioProviderOptions {
   apiKey: string;
@@ -31,6 +33,19 @@ export interface MiniMaxAudioProviderOptions {
 
 interface MiniMaxT2AResponse {
   data?: { audio?: string | null } | null;
+  base_resp?: MiniMaxBaseResp | null;
+}
+
+interface MiniMaxVoiceEntry {
+  voice_id?: string | null;
+  voice_name?: string | null;
+  description?: string[] | null;
+}
+
+interface MiniMaxGetVoiceResponse {
+  system_voice?: MiniMaxVoiceEntry[] | null;
+  voice_cloning?: MiniMaxVoiceEntry[] | null;
+  voice_generation?: MiniMaxVoiceEntry[] | null;
   base_resp?: MiniMaxBaseResp | null;
 }
 
@@ -99,6 +114,40 @@ export class MiniMaxAudioProvider extends BaseAudioProvider {
     }
     const bytes = new Uint8Array(Buffer.from(hex, "hex"));
     return { output: { bytes, mimeType: mimeForFormat(format), raw: { outputFormat: format } } };
+  }
+
+  /**
+   * Live voice discovery via MiniMax `POST /v1/get_voice` with
+   * `voice_type: "all"` — returns system voices plus any quick-cloned and
+   * text-to-voice voices on the account. System voices carry a `voice_name`;
+   * cloned/generated voices expose only the `voice_id`.
+   */
+  override async listVoices(signal?: AbortSignal): Promise<VoiceInfo[]> {
+    const opts: { signal?: AbortSignal } = {};
+    if (signal) opts.signal = signal;
+    const res = await this.http.post<MiniMaxGetVoiceResponse>(
+      `${GET_VOICE_PATH}?GroupId=${encodeURIComponent(this.groupId)}`,
+      { voice_type: "all" },
+      opts,
+    );
+    assertMiniMaxOk(res.base_resp, this.id);
+    const entries = [
+      ...(res.system_voice ?? []),
+      ...(res.voice_cloning ?? []),
+      ...(res.voice_generation ?? []),
+    ];
+    const voices: VoiceInfo[] = [];
+    for (const entry of entries) {
+      const id = entry.voice_id;
+      if (typeof id !== "string" || id.length === 0) continue;
+      const voice: VoiceInfo = { id, name: entry.voice_name || id };
+      const description = entry.description?.filter((d) => typeof d === "string" && d.length > 0);
+      if (description && description.length > 0) {
+        voice.labels = { description: description.join(" ") };
+      }
+      voices.push(voice);
+    }
+    return voices;
   }
 
   protected async doTest(signal?: AbortSignal): Promise<ProviderTestResult> {

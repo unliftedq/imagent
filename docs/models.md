@@ -186,7 +186,7 @@ Use `imagent models --kind audio` to list available TTS offerings, and `imagent 
 ### MiniMax: `speech-2.8-hd` and `speech-2.8-turbo`
 
 - **Provider-facing ids:** Offering ids `speech-2.8-hd` (ultra-realistic quality) and `speech-2.8-turbo` (low latency); mapping to canonical catalog models `minimax-speech-2.8-hd` and `minimax-speech-2.8-turbo`. Each supports 40 languages and 7 emotions.
-- **Voice support:** Static catalog voices include `English_expressive_narrator`, `male-qn-qingse`, `female-shaonv`, `presenter_male`, and `presenter_female`.
+- **Voice support:** Dynamic voice discovery is supported via MiniMax's `get_voice` API; run `imagent audio voices --provider minimax --model speech-2.8-hd` to list system, cloned, and generated voices on your account. Static fallback voices include `English_expressive_narrator`, `male-qn-qingse`, `female-shaonv`, `presenter_male`, and `presenter_female`.
 - **Output controls:** `outputFormat`: `mp3`, `wav`, `pcm`; default `mp3`. `speed` ranges from 0.5 to 2; default 1.
 - **Extra controls:** `emotion`, `vol` from 0 to 10, and `pitch` from -12 to 12.
 - **Note:** MiniMax TTS requires a Group ID — `imagent config set minimax.groupId <GroupId>`.

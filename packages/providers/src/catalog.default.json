@@ -808,7 +808,7 @@
         "id": "minimax-speech-2.8-hd",
         "displayName": "MiniMax Speech 2.8 HD",
         "capabilities": {
-          "supportsVoiceDiscovery": false,
+          "supportsVoiceDiscovery": true,
           "outputFormats": ["mp3", "wav", "pcm"],
           "speedRange": {
             "min": 0.5,
@@ -863,7 +863,7 @@
         "id": "minimax-speech-2.8-turbo",
         "displayName": "MiniMax Speech 2.8 Turbo",
         "capabilities": {
-          "supportsVoiceDiscovery": false,
+          "supportsVoiceDiscovery": true,
           "outputFormats": ["mp3", "wav", "pcm"],
           "speedRange": {
             "min": 0.5,
