@@ -1,4 +1,6 @@
 import type {
+  AudioCapabilities,
+  AudioModelDef,
   ImageCapabilities,
   ImageModelDef,
   VideoCapabilities,
@@ -90,4 +92,18 @@ export function aggregateVideoCapabilities(
     supportsLastFrame,
     supportsRefImages,
   };
+}
+
+export function aggregateAudioCapabilities(
+  models: ReadonlyMap<string, AudioModelDef>,
+): AudioCapabilities {
+  const outputFormats = new Set<string>();
+  let supportsVoiceDiscovery = false;
+  for (const m of models.values()) {
+    const c = m.capabilities;
+    if (!c) continue;
+    for (const f of c.outputFormats ?? []) outputFormats.add(f);
+    supportsVoiceDiscovery ||= c.supportsVoiceDiscovery === true;
+  }
+  return { outputFormats: [...outputFormats], supportsVoiceDiscovery };
 }
