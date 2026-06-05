@@ -220,7 +220,7 @@ Pass audio options with repeatable `--option key=value` flags or the `-o` alias:
 ```bash
 imagent audio generate "Calm product voiceover" \
   --provider minimax \
-  --model speech-02-hd \
+  --model speech-2.8-hd \
   -o voice=presenter_female \
   -o speed=1 \
   -o format=mp3 \
@@ -238,7 +238,7 @@ Discover voices for a provider:
 
 ```bash
 imagent audio voices --provider elevenlabs
-imagent audio voices --provider minimax --model speech-02-hd
+imagent audio voices --provider minimax --model speech-2.8-hd
 ```
 
 ### Asset management

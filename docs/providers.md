@@ -324,7 +324,7 @@ imagent video generate "a dramatic hero shot with drifting fog" \
 
 ### MiniMax (`minimax`)
 
-MiniMax supports image generation (`image-01`, canonical catalog model `minimax-image-01`), Hailuo video generation (`MiniMax-Hailuo-2.3`), and text-to-speech audio (`speech-02-hd`, canonical catalog model `minimax-speech-02`) through the MiniMax API.
+MiniMax supports image generation (`image-01`, canonical catalog model `minimax-image-01`), Hailuo video generation (`MiniMax-Hailuo-2.3`), and text-to-speech audio (`speech-2.8-hd` and `speech-2.8-turbo`, canonical catalog model `minimax-speech-2.8`) through the MiniMax API.
 
 CLI setup:
 
@@ -374,7 +374,7 @@ Audio example:
 ```bash
 imagent audio generate "Welcome to imagent" \
   --provider minimax \
-  --model speech-02-hd \
+  --model speech-2.8-hd \
   --option voice=presenter_female \
   --option speed=1
 ```

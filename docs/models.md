@@ -183,12 +183,13 @@ Use `imagent models --kind audio` to list available TTS offerings, and `imagent 
 - **Output controls:** `outputFormat`: `mp3_44100_128`, `mp3_44100_192`, `mp3_22050_32`, `pcm_16000`, `pcm_24000`, `ulaw_8000`; default `mp3_44100_128`. `speed` ranges from 0.7 to 1.2.
 - **Extra controls:** `stability`, `similarity_boost`, and `style` from 0 to 1.
 
-### MiniMax: `speech-02-hd`
+### MiniMax: `speech-2.8-hd` and `speech-2.8-turbo`
 
-- **Provider-facing id:** Offering id `speech-02-hd`; canonical catalog model `minimax-speech-02`.
-- **Voice support:** Static catalog voices include `male-qn-qingse`, `female-shaonv`, `presenter_male`, and `presenter_female`.
+- **Provider-facing ids:** Offering ids `speech-2.8-hd` (ultra-realistic quality) and `speech-2.8-turbo` (low latency); both map to canonical catalog model `minimax-speech-2.8`. Each supports 40 languages and 7 emotions.
+- **Voice support:** Static catalog voices include `English_expressive_narrator`, `male-qn-qingse`, `female-shaonv`, `presenter_male`, and `presenter_female`.
 - **Output controls:** `outputFormat`: `mp3`, `wav`, `pcm`; default `mp3`. `speed` ranges from 0.5 to 2; default 1.
 - **Extra controls:** `emotion`, `vol` from 0 to 10, and `pitch` from -12 to 12.
+- **Note:** MiniMax TTS requires a Group ID — `imagent config set minimax.groupId <GroupId>`.
 
 ## Official documentation links reviewed
 

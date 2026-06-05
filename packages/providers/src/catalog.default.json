@@ -804,9 +804,9 @@
           "outputFormat": "mp3_44100_128"
         }
       },
-      "minimax-speech-02": {
-        "id": "minimax-speech-02",
-        "displayName": "MiniMax Speech 02",
+      "minimax-speech-2.8": {
+        "id": "minimax-speech-2.8",
+        "displayName": "MiniMax Speech 2.8",
         "capabilities": {
           "supportsVoiceDiscovery": false,
           "outputFormats": ["mp3", "wav", "pcm"],
@@ -815,6 +815,10 @@
             "max": 2
           },
           "voices": [
+            {
+              "id": "English_expressive_narrator",
+              "name": "Expressive Narrator (EN)"
+            },
             {
               "id": "male-qn-qingse",
               "name": "Qingse (M)"
@@ -1057,8 +1061,14 @@
       ],
       "audio": [
         {
-          "id": "speech-02-hd",
-          "modelId": "minimax-speech-02"
+          "id": "speech-2.8-hd",
+          "modelId": "minimax-speech-2.8",
+          "displayName": "MiniMax Speech 2.8 HD"
+        },
+        {
+          "id": "speech-2.8-turbo",
+          "modelId": "minimax-speech-2.8",
+          "displayName": "MiniMax Speech 2.8 Turbo"
         }
       ]
     }

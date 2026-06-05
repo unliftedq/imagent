@@ -4,10 +4,10 @@ import { MiniMaxAudioProvider } from "./audio.js";
 
 const models = new Map<string, AudioModelDef>([
   [
-    "speech-02-hd",
+    "speech-2.8-hd",
     {
-      id: "speech-02-hd",
-      baseModelId: "minimax-speech-02",
+      id: "speech-2.8-hd",
+      baseModelId: "minimax-speech-2.8",
       capabilities: {
         supportsVoiceDiscovery: false,
         outputFormats: ["mp3"],
@@ -43,7 +43,7 @@ describe("MiniMaxAudioProvider", () => {
     const res = await provider.generate({
       prompt: "hi",
       providerId: "minimax",
-      model: "speech-02-hd",
+      model: "speech-2.8-hd",
       voice: "presenter_female",
       assetIds: [],
     });
@@ -52,5 +52,8 @@ describe("MiniMaxAudioProvider", () => {
       .calls[0]?.[0] as string;
     expect(url).toContain("/t2a_v2");
     expect(url).toContain("GroupId=g1");
+    const init = (fetchMock as unknown as { mock: { calls: unknown[][] } }).mock
+      .calls[0]?.[1] as RequestInit;
+    expect((JSON.parse(init.body as string) as { model: string }).model).toBe("speech-2.8-hd");
   });
 });
