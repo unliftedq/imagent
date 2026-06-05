@@ -641,11 +641,14 @@ function LightboxAction({
 
 function LineageTile({ item }: { item: GalleryItem }) {
   const isVideo = item.kind === "video";
-  const src = isVideo
-    ? item.thumbPath
-      ? resolveGalleryUrl(item.thumbPath)
-      : ""
-    : resolveGalleryUrl(item.relPath);
+  const isAudio = item.kind === "audio";
+  const src = isAudio
+    ? ""
+    : isVideo
+      ? item.thumbPath
+        ? resolveGalleryUrl(item.thumbPath)
+        : ""
+      : resolveGalleryUrl(item.relPath);
   return (
     <div
       title={item.prompt}
@@ -655,7 +658,11 @@ function LineageTile({ item }: { item: GalleryItem }) {
         <img src={src} alt={item.prompt} className="block h-full w-full object-cover" />
       ) : (
         <div className="flex h-full w-full items-center justify-center bg-(--surface) text-(--text-muted)">
-          <Icons.FilmReel weight="duotone" className="size-5" />
+          {isAudio ? (
+            <Icons.Waveform weight="duotone" className="size-5" />
+          ) : (
+            <Icons.FilmReel weight="duotone" className="size-5" />
+          )}
         </div>
       )}
       {isVideo ? (
