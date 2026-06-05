@@ -2,6 +2,7 @@
 import { Command } from "commander";
 
 import { registerAssetCommands } from "./commands/asset.js";
+import { registerAudioCommand } from "./commands/audio.js";
 import { registerConfigCommand } from "./commands/config.js";
 import { runDoctor } from "./commands/doctor.js";
 import { registerGalleryCommands } from "./commands/gallery.js";
@@ -31,6 +32,7 @@ async function main(): Promise<void> {
   // Generation commands.
   registerImageCommand(program);
   registerVideoCommand(program);
+  registerAudioCommand(program);
 
   // Gallery and asset management.
   registerGalleryCommands(program);
