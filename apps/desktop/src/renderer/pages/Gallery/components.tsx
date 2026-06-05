@@ -355,7 +355,33 @@ export function LightboxPreview({
                     if (e.target === e.currentTarget) onClose();
                   }}
                 >
-                  {data.item.kind === "video" ? (
+                  {data.item.kind === "audio" ? (
+                    <div className="w-full max-w-[720px] rounded-(--radius-lg) border border-white/10 bg-black/45 p-6 text-white shadow-[0_24px_64px_-16px_rgba(0,0,0,0.65)] backdrop-blur-xl">
+                      <div className="mb-4 inline-flex size-12 items-center justify-center rounded-(--radius-md) bg-white/10 text-white/85">
+                        <Icons.Waveform weight="duotone" className="size-7" />
+                      </div>
+                      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                      <audio
+                        controls
+                        autoPlay
+                        preload="metadata"
+                        src={resolveGalleryUrl(data.item.relPath)}
+                        className="w-full"
+                      />
+                      <div className="mt-5 text-(length:--text-caption-uppercase) font-semibold uppercase tracking-[1.5px] text-white/55">
+                        {t("gallery.preview.prompt")}
+                      </div>
+                      <p className="mt-1.5 whitespace-pre-wrap text-(length:--text-body-sm) leading-5">
+                        {data.item.prompt}
+                      </p>
+                      <div className="mt-4 text-(length:--text-caption-uppercase) font-semibold uppercase tracking-[1.5px] text-white/55">
+                        {t("gallery.preview.params")}
+                      </div>
+                      <p className="mt-1.5 break-all font-(family-name:--font-mono) text-(length:--text-caption) text-white/70">
+                        {data.item.paramsJson}
+                      </p>
+                    </div>
+                  ) : data.item.kind === "video" ? (
                     // eslint-disable-next-line jsx-a11y/media-has-caption
                     <video
                       src={resolveGalleryUrl(data.item.relPath)}
