@@ -1,6 +1,7 @@
 import { countFtsTables, openDatabase } from "@imagent/persistence";
 import {
   configuredProviderCount,
+  effectiveAudioOfferings,
   effectiveImageOfferings,
   effectiveProviderDisplayName,
   effectiveVideoOfferings,
@@ -20,7 +21,7 @@ import { CLI_VERSION } from "../version.js";
  */
 export async function runDoctor(): Promise<void> {
   const runtime = await loadCliRuntime();
-  const { resolver, catalog, config, secrets, imageRegistry, videoRegistry } = runtime;
+  const { resolver, catalog, config, secrets, imageRegistry, videoRegistry, audioRegistry } = runtime;
 
   const dbPath = resolver.dbFile();
   const db = openDatabase(dbPath);
@@ -55,7 +56,8 @@ export async function runDoctor(): Promise<void> {
     const display = effectiveProviderDisplayName(catalog, config.providers, providerId);
     const imageProvider = imageRegistry.get(providerId);
     const videoProvider = videoRegistry.get(providerId);
-    const isConfigured = Boolean(imageProvider || videoProvider);
+    const audioProvider = audioRegistry.get(providerId);
+    const isConfigured = Boolean(imageProvider || videoProvider || audioProvider);
     const status = isConfigured
       ? chalk.green("configured")
       : chalk.yellow("missing credentials");
@@ -64,8 +66,9 @@ export async function runDoctor(): Promise<void> {
 
     const imageOfferings = effectiveImageOfferings(catalog, config.providers, providerId);
     const videoOfferings = effectiveVideoOfferings(catalog, config.providers, providerId);
+    const audioOfferings = effectiveAudioOfferings(catalog, config.providers, providerId);
 
-    if (imageOfferings.length === 0 && videoOfferings.length === 0) {
+    if (imageOfferings.length === 0 && videoOfferings.length === 0 && audioOfferings.length === 0) {
       const hint =
         providerId === "azure"
           ? `(no deployments — run \`imagent config provider add azure <deployment-id> --model <canonical>\`)`
@@ -86,6 +89,15 @@ export async function runDoctor(): Promise<void> {
     if (videoOfferings.length > 0) {
       const ids = videoOfferings.map((m) => m.id).join(", ");
       process.stdout.write(`  ${chalk.magenta("video:")} ${ids}\n`);
+    }
+    if (audioOfferings.length > 0) {
+      const ids = audioOfferings.map((m) => m.id).join(", ");
+      process.stdout.write(`  ${chalk.blue("audio:")} ${ids}\n`);
+      if (providerId === "minimax" && secrets.minimax && !config.providers.minimax?.groupId) {
+        process.stdout.write(
+          `  ${chalk.dim("audio unavailable: set minimax.groupId to enable MiniMax TTS")}\n`,
+        );
+      }
     }
 
     if (!isConfigured) {

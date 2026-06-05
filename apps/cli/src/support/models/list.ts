@@ -1,12 +1,15 @@
 import {
+  effectiveAudioOfferings,
   effectiveImageOfferings,
   effectiveProviderDisplayName,
   effectiveVideoOfferings,
+  resolveAudioProviderModel,
 } from "@imagent/providers";
 import chalk from "chalk";
 
 import { loadCliRuntime } from "../runtime.js";
 import type { ModelsOptions } from "./shared.js";
+import type { ModelKind } from "./shared.js";
 import { isProviderConfigured, normalizeKind } from "./shared.js";
 
 export async function runModels(options: ModelsOptions): Promise<void> {
@@ -17,11 +20,13 @@ export async function runModels(options: ModelsOptions): Promise<void> {
   const rows: Array<{
     providerId: string;
     providerDisplay: string;
-    kind: "image" | "video";
+    kind: ModelKind;
     modelId: string;
     baseModelId?: string;
     displayName?: string;
     configured: boolean;
+    voices?: string[];
+    outputFormats?: string[];
   }> = [];
 
   const providerIds = new Set<string>([
@@ -31,8 +36,13 @@ export async function runModels(options: ModelsOptions): Promise<void> {
 
   for (const providerId of providerIds) {
     if (filterProvider && providerId !== filterProvider) continue;
-    const configured = isProviderConfigured(providerId, runtime.imageRegistry, runtime.videoRegistry);
-    if (options.configured && !configured) continue;
+    const anyConfigured = isProviderConfigured(
+      providerId,
+      runtime.imageRegistry,
+      runtime.videoRegistry,
+      runtime.audioRegistry,
+    );
+    if (options.configured && !anyConfigured) continue;
 
     const providerDisplay = effectiveProviderDisplayName(
       runtime.catalog,
@@ -41,6 +51,7 @@ export async function runModels(options: ModelsOptions): Promise<void> {
     );
     const includeImage = !kind || kind === "image";
     const includeVideo = !kind || kind === "video";
+    const includeAudio = !kind || kind === "audio";
 
     if (includeImage) {
       for (const offering of effectiveImageOfferings(
@@ -49,6 +60,8 @@ export async function runModels(options: ModelsOptions): Promise<void> {
         providerId,
       )) {
         const base = runtime.catalog.models.image[offering.modelId];
+        const configured = runtime.imageRegistry.has(providerId);
+        if (options.configured && !configured) continue;
         rows.push({
           providerId,
           providerDisplay,
@@ -67,6 +80,8 @@ export async function runModels(options: ModelsOptions): Promise<void> {
         providerId,
       )) {
         const base = runtime.catalog.models.video[offering.modelId];
+        const configured = runtime.videoRegistry.has(providerId);
+        if (options.configured && !configured) continue;
         rows.push({
           providerId,
           providerDisplay,
@@ -75,6 +90,31 @@ export async function runModels(options: ModelsOptions): Promise<void> {
           baseModelId: offering.modelId !== offering.id ? offering.modelId : undefined,
           displayName: offering.displayName ?? base?.displayName,
           configured,
+        });
+      }
+    }
+    if (includeAudio) {
+      for (const offering of effectiveAudioOfferings(
+        runtime.catalog,
+        runtime.config.providers,
+        providerId,
+      )) {
+        const provider = runtime.audioRegistry.get(providerId);
+        const configured = runtime.audioRegistry.has(providerId);
+        if (options.configured && !configured) continue;
+        const resolved =
+          provider?.models.get(offering.id) ??
+          resolveAudioProviderModel(runtime.catalog, providerId, offering);
+        rows.push({
+          providerId,
+          providerDisplay,
+          kind: "audio",
+          modelId: offering.id,
+          baseModelId: offering.modelId !== offering.id ? offering.modelId : undefined,
+          displayName: offering.displayName ?? resolved.displayName,
+          configured,
+          voices: resolved.capabilities?.voices?.map((v) => v.id),
+          outputFormats: resolved.capabilities?.outputFormats,
         });
       }
     }
@@ -116,6 +156,7 @@ export async function runModels(options: ModelsOptions): Promise<void> {
 
     const imageRows = list.filter((r) => r.kind === "image");
     const videoRows = list.filter((r) => r.kind === "video");
+    const audioRows = list.filter((r) => r.kind === "audio");
     if (imageRows.length > 0) {
       process.stdout.write(`  ${chalk.cyan("image:")}\n`);
       for (const r of imageRows) process.stdout.write(`    ${formatModelLine(r)}\n`);
@@ -123,6 +164,10 @@ export async function runModels(options: ModelsOptions): Promise<void> {
     if (videoRows.length > 0) {
       process.stdout.write(`  ${chalk.magenta("video:")}\n`);
       for (const r of videoRows) process.stdout.write(`    ${formatModelLine(r)}\n`);
+    }
+    if (audioRows.length > 0) {
+      process.stdout.write(`  ${chalk.blue("audio:")}\n`);
+      for (const r of audioRows) process.stdout.write(`    ${formatModelLine(r)}\n`);
     }
   }
   process.stdout.write(
@@ -134,11 +179,15 @@ function formatModelLine(row: {
   modelId: string;
   baseModelId?: string;
   displayName?: string;
+  voices?: string[];
+  outputFormats?: string[];
 }): string {
   const parts = [chalk.bold(row.modelId)];
   if (row.displayName && row.displayName !== row.modelId) {
     parts.push(chalk.dim(`— ${row.displayName}`));
   }
   if (row.baseModelId) parts.push(chalk.dim(`[base=${row.baseModelId}]`));
+  if (row.voices?.length) parts.push(chalk.dim(`[voices=${row.voices.join(",")}]`));
+  if (row.outputFormats?.length) parts.push(chalk.dim(`[formats=${row.outputFormats.join(",")}]`));
   return parts.join(" ");
 }
