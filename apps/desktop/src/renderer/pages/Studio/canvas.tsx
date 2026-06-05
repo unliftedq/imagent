@@ -217,7 +217,7 @@ function StudioJobsRail({
       await cancelJob(id);
       pushToast({
         title: t("studio.generationCancelled", {
-          mode: mode === "video" ? t("common.video") : t("common.image"),
+          mode: studioModeLabel(mode, t),
         }),
         variant: "info",
       });
@@ -238,7 +238,7 @@ function StudioJobsRail({
       await retryJob(id);
       pushToast({
         title: t("studio.generationResubmitted", {
-          mode: mode === "video" ? t("common.video") : t("common.image"),
+          mode: studioModeLabel(mode, t),
         }),
         variant: "success",
       });
@@ -578,7 +578,9 @@ function JobResultsStrip({
             ? item.thumbPath
               ? resolveGalleryUrl(item.thumbPath)
               : ""
-            : resolveGalleryUrl(item.relPath);
+            : item.kind === "image"
+              ? resolveGalleryUrl(item.relPath)
+              : "";
         const focused = item.id === activeItemId;
         return (
           <button
@@ -606,7 +608,11 @@ function JobResultsStrip({
               />
             ) : (
               <span className="flex size-full items-center justify-center bg-(--surface-sunken) text-(--text-muted)">
-                <Icons.ImageSquare weight="duotone" className="size-5" />
+                {item.kind === "audio" ? (
+                  <Icons.Waveform weight="duotone" className="size-5" />
+                ) : (
+                  <Icons.ImageSquare weight="duotone" className="size-5" />
+                )}
               </span>
             )}
             {item.kind === "video" ? (
@@ -713,7 +719,9 @@ function CanvasFilmstrip({
             ? item.thumbPath
               ? resolveGalleryUrl(item.thumbPath)
               : ""
-            : resolveGalleryUrl(item.relPath);
+            : item.kind === "image"
+              ? resolveGalleryUrl(item.relPath)
+              : "";
         return (
           <button
             key={item.id}
@@ -740,7 +748,11 @@ function CanvasFilmstrip({
               />
             ) : (
               <span className="flex size-full items-center justify-center bg-(--surface-sunken) text-(--text-muted)">
-                <Icons.ImageSquare weight="duotone" className="size-5" />
+                {item.kind === "audio" ? (
+                  <Icons.Waveform weight="duotone" className="size-5" />
+                ) : (
+                  <Icons.ImageSquare weight="duotone" className="size-5" />
+                )}
               </span>
             )}
             <span className="pointer-events-none absolute top-0.5 left-0.5 inline-flex min-w-[14px] items-center justify-center rounded-(--radius-pill) bg-black/55 px-1 text-[9px] font-medium text-white tabular-nums">
@@ -773,7 +785,7 @@ function CancelGenerationControl({ mode, jobId }: { mode: StudioMode; jobId: str
       setOpen(false);
       pushToast({
         title: t("studio.generationCancelled", {
-          mode: mode === "video" ? t("common.video") : t("common.image"),
+          mode: studioModeLabel(mode, t),
         }),
         variant: "info",
       });
@@ -788,7 +800,7 @@ function CancelGenerationControl({ mode, jobId }: { mode: StudioMode; jobId: str
     }
   };
 
-  const modeLower = (mode === "video" ? t("common.video") : t("common.image")).toLowerCase();
+  const modeLower = studioModeLabel(mode, t).toLowerCase();
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
@@ -829,7 +841,32 @@ function CancelGenerationControl({ mode, jobId }: { mode: StudioMode; jobId: str
 }
 
 function CanvasMedia({ item, className = "" }: { item: GalleryItem; className?: string }) {
+  const t = useT();
   const url = resolveGalleryUrl(item.relPath);
+
+  if (item.kind === "audio") {
+    return (
+      <div
+        className={
+          "flex w-full max-w-2xl flex-col gap-4 rounded-(--radius-lg) border border-(--border) " +
+          `bg-(--surface-raised) p-5 shadow-[0_16px_48px_-30px_rgba(0,0,0,0.45)] ${className}`
+        }
+      >
+        <div className="flex items-start gap-3">
+          <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-(--radius-md) bg-(--accent-soft) text-(--accent)">
+            <Icons.Waveform weight="duotone" className="size-5" aria-hidden="true" />
+          </span>
+          <p className="min-w-0 text-[14px] leading-6 text-(--text)">
+            {item.prompt || (
+              <span className="italic text-(--text-muted)">{t("studio.noPrompt")}</span>
+            )}
+          </p>
+        </div>
+        {/* biome-ignore lint/a11y/useMediaCaption: Generated speech has no caption track. */}
+        <audio key={item.id} src={url} controls preload="metadata" className="w-full" />
+      </div>
+    );
+  }
 
   if (item.kind === "video") {
     return (
@@ -867,16 +904,31 @@ function CanvasMedia({ item, className = "" }: { item: GalleryItem; className?: 
 
 function EmptyCanvas({ mode }: { mode: StudioMode }) {
   const t = useT();
-  const Icon = mode === "video" ? Icons.FilmReel : Icons.Image;
+  const Icon = mode === "video" ? Icons.FilmReel : mode === "audio" ? Icons.Waveform : Icons.Image;
 
   return (
     <div className="flex flex-col items-center gap-2 text-center">
       <Icon weight="duotone" className="size-10 text-(--text-faint)" aria-hidden="true" />
       <p className="text-[12px] text-(--text-muted)">
-        {t("studio.emptyCanvasHint", {
-          mode: (mode === "video" ? t("common.video") : t("common.image")).toLowerCase(),
-        })}
+        {mode === "audio"
+          ? t("studio.audio.emptyCanvasHint")
+          : t("studio.emptyCanvasHint", {
+              mode: studioModeLabel(mode, t).toLowerCase(),
+            })}
       </p>
     </div>
   );
+}
+
+type TFn = ReturnType<typeof useT>;
+
+function studioModeLabel(mode: StudioMode, t: TFn): string {
+  switch (mode) {
+    case "video":
+      return t("common.video");
+    case "audio":
+      return t("studio.mode.audio");
+    case "image":
+      return t("common.image");
+  }
 }

@@ -317,6 +317,7 @@ export const en = {
   "studio.audio.noProvider": "No audio provider connected",
   "studio.audio.noProviderDesc":
     "Connect ElevenLabs, MiniMax, or another TTS provider to generate speech.",
+  "studio.audio.emptyCanvasHint": "Generate speech to preview it here.",
   "studio.addReference": "Add reference",
   "studio.referenceAlreadyAdded": "Reference already added",
   "studio.referenceFailed": "Reference failed",

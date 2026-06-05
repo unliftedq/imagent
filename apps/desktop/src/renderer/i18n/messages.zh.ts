@@ -315,6 +315,7 @@ export const zh: Dict = {
   "studio.audio.couldNotLoadModels": "无法加载音频模型",
   "studio.audio.noProvider": "未连接音频服务商",
   "studio.audio.noProviderDesc": "连接 ElevenLabs、MiniMax 或其他 TTS 服务商后即可生成语音。",
+  "studio.audio.emptyCanvasHint": "生成语音后可在这里预览。",
   "studio.addReference": "添加参考图",
   "studio.referenceAlreadyAdded": "参考图已添加",
   "studio.referenceFailed": "参考图添加失败",
