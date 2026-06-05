@@ -972,6 +972,17 @@ function mimeToExt(mime: string): string {
     case "audio/mpeg":
     case "audio/mp3":
       return "mp3";
+    case "audio/wav":
+    case "audio/x-wav":
+      return "wav";
+    case "audio/ogg":
+    case "audio/opus":
+      return "ogg";
+    case "audio/aac":
+      return "aac";
+    case "audio/pcm":
+    case "audio/L16":
+      return "pcm";
     default: {
       const idx = mime.indexOf("/");
       return idx >= 0

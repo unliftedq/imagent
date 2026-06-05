@@ -63,4 +63,46 @@ describe("JobRunner audio", () => {
     expect(created[0]?.durationMs).toBe(900);
     expect(deps.writeFile).toHaveBeenCalledWith("/data/gallery/id-1.mp3", new Uint8Array([1, 2]));
   });
+
+  it("maps audio/wav to .wav", async () => {
+    const provider: AudioProvider = {
+      id: "elevenlabs",
+      displayName: "ElevenLabs",
+      capabilities: { outputFormats: ["wav_44100"], supportsVoiceDiscovery: true },
+      models: new Map(),
+      async generate() {
+        return { output: { bytes: new Uint8Array([9]), mimeType: "audio/wav" } };
+      },
+    };
+    const { deps } = makeDeps(provider);
+    const runner = new JobRunner(deps as never);
+    const done = new Promise((res) => runner.once("job.completed", res));
+    await runner.start({
+      kind: "audio",
+      request: { prompt: "hi", providerId: "elevenlabs", model: "tts", assetIds: [] },
+    });
+    await done;
+    expect(deps.writeFile).toHaveBeenCalledWith("/data/gallery/id-1.wav", new Uint8Array([9]));
+  });
+
+  it("maps audio/x-wav to .wav", async () => {
+    const provider: AudioProvider = {
+      id: "elevenlabs",
+      displayName: "ElevenLabs",
+      capabilities: { outputFormats: ["wav_44100"], supportsVoiceDiscovery: true },
+      models: new Map(),
+      async generate() {
+        return { output: { bytes: new Uint8Array([9]), mimeType: "audio/x-wav" } };
+      },
+    };
+    const { deps } = makeDeps(provider);
+    const runner = new JobRunner(deps as never);
+    const done = new Promise((res) => runner.once("job.completed", res));
+    await runner.start({
+      kind: "audio",
+      request: { prompt: "hi", providerId: "elevenlabs", model: "tts", assetIds: [] },
+    });
+    await done;
+    expect(deps.writeFile).toHaveBeenCalledWith("/data/gallery/id-1.wav", new Uint8Array([9]));
+  });
 });
