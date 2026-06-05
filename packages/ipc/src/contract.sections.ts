@@ -436,6 +436,7 @@ export const galleryContract = {
     output: z.discriminatedUnion("kind", [
       z.object({ kind: z.literal("image"), request: ImageRequestSchema }),
       z.object({ kind: z.literal("video"), request: VideoRequestSchema }),
+      z.object({ kind: z.literal("audio"), request: AudioRequestSchema }),
     ]),
   },
   "gallery.toggleFavorite": {

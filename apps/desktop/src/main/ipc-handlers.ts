@@ -13,6 +13,7 @@ import type {
   Asset,
   AssetFile,
   AssetKind,
+  AudioRequest,
   Board,
   GalleryItem,
   ImageRequest,
@@ -740,6 +741,22 @@ export function setupIpc(deps: IpcDeps): IpcServer {
           assetIds: [],
         };
         return { kind: "video" as const, request: req };
+      }
+      if (parent.kind === "audio") {
+        const req: AudioRequest = {
+          prompt: parent.prompt,
+          providerId: parent.providerId,
+          model: parent.model,
+          ...(typeof params.voice === "string" ? { voice: params.voice } : {}),
+          ...(typeof params.speed === "number" ? { speed: params.speed } : {}),
+          ...(typeof params.outputFormat === "string" ? { outputFormat: params.outputFormat } : {}),
+          ...(params.raw && typeof params.raw === "object" && !Array.isArray(params.raw)
+            ? { raw: params.raw as Record<string, unknown> }
+            : {}),
+          assetIds: [],
+          parentId: parent.id,
+        };
+        return { kind: "audio" as const, request: req };
       }
       const req: ImageRequest = {
         prompt: parent.prompt,

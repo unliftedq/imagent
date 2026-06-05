@@ -353,6 +353,31 @@ describe("registerIpcHandlers", () => {
       expect(reply.value.request.durationSec).toBe(5);
     });
 
+    it("gallery.remix: audio parent returns an AudioRequest envelope", async () => {
+      const { ipcMain, invoke } = makeFakeIpc();
+      registerIpcHandlers(ipcMain, {
+        "gallery.remix": async () => ({
+          kind: "audio" as const,
+          request: {
+            prompt: "narrate this",
+            providerId: "elevenlabs",
+            model: "eleven_multilingual_v2",
+            voice: "voice-1",
+            speed: 1,
+            outputFormat: "mp3_44100_128",
+            assetIds: [],
+          },
+        }),
+      });
+      const reply = (await invoke("gallery.remix", { itemId: "a1" })) as {
+        ok: true;
+        value: { kind: string; request: { voice?: string } };
+      };
+      expect(reply.ok).toBe(true);
+      expect(reply.value.kind).toBe("audio");
+      expect(reply.value.request.voice).toBe("voice-1");
+    });
+
     it("video.submit: returns { jobId } and accepts assetSlots + parentId", async () => {
       const { ipcMain, invoke } = makeFakeIpc();
       const captured: Array<Record<string, unknown>> = [];

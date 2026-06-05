@@ -243,6 +243,9 @@ export const zh: Dict = {
   "gallery.toast.remixFailed": "二次创作失败",
   "gallery.toast.thumbnailUnavailable": "缩略图不可用",
   "gallery.toast.thumbnailUnavailableDesc": "该视频需要先生成缩略图，才能保存为素材。",
+  "gallery.toast.audioAssetUnsupported": "暂不支持音频素材",
+  "gallery.toast.audioAssetUnsupportedDesc":
+    "音频图库项目可二次创作或加入看板，但当前参考素材仍以图片为主。",
   "gallery.toast.assetSaved": "素材已保存",
   "gallery.toast.assetSavedDesc": "{name} 已添加至素材库。",
   "gallery.toast.deleteFailed": "删除失败",

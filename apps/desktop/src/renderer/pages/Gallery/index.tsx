@@ -164,6 +164,24 @@ export function GalleryPage() {
         });
         return;
       }
+      if (result.kind === "audio") {
+        applyRemix({
+          kind: "audio",
+          parentId: id,
+          request: {
+            prompt: result.request.prompt,
+            providerId: result.request.providerId,
+            model: result.request.model,
+            ...(typeof result.request.voice === "string" ? { voice: result.request.voice } : {}),
+            ...(typeof result.request.speed === "number" ? { speed: result.request.speed } : {}),
+            ...(typeof result.request.outputFormat === "string"
+              ? { outputFormat: result.request.outputFormat }
+              : {}),
+            ...(result.request.raw ? { raw: result.request.raw } : {}),
+          },
+        });
+        return;
+      }
       applyRemix({
         kind: "image",
         parentId: id,
@@ -205,6 +223,14 @@ export function GalleryPage() {
   };
 
   const openSaveAsAssetDialog = (item: GalleryItem): void => {
+    if (item.kind === "audio") {
+      pushToast({
+        title: t("gallery.toast.audioAssetUnsupported"),
+        description: t("gallery.toast.audioAssetUnsupportedDesc"),
+        variant: "warning",
+      });
+      return;
+    }
     if (item.kind === "video" && !item.thumbPath) {
       pushToast({
         title: t("gallery.toast.thumbnailUnavailable"),
@@ -431,7 +457,7 @@ export function GalleryPage() {
                     }}
                     onOpen={() => setPreviewId(it.id)}
                     onRemix={() => void handleRemix(it.id)}
-                    onSaveAsAsset={() => openSaveAsAssetDialog(it)}
+                    onSaveAsAsset={it.kind === "audio" ? undefined : () => openSaveAsAssetDialog(it)}
                     onToggleFavorite={() => void toggleFav(it.id)}
                     onAddToBoard={(boardId) => void addItem(boardId, it.id)}
                     onOpenFileLocation={() => {

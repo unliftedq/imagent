@@ -107,6 +107,7 @@ export interface AudioDraft {
   outputFormat: string | null;
   /** Per-model extra knob values (stability, emotion, vol, pitch, ...). */
   extras: Record<string, string | number>;
+  parentId?: string;
 }
 
 export interface StudioDraft {
@@ -265,6 +266,7 @@ function loadAudioDraftFromStorage(): AudioDraft {
       speed: typeof parsed.speed === "number" ? parsed.speed : null,
       outputFormat: typeof parsed.outputFormat === "string" ? parsed.outputFormat : null,
       extras: normalizeAudioExtras(parsed.extras),
+      ...(typeof parsed.parentId === "string" ? { parentId: parsed.parentId } : {}),
     };
   } catch {
     return DEFAULT_AUDIO_DRAFT;
@@ -406,7 +408,21 @@ export interface RemixPayloadVideo {
   parentId: string;
 }
 
-export type RemixPayload = RemixPayloadImage | RemixPayloadVideo;
+export interface RemixPayloadAudio {
+  kind: "audio";
+  request: {
+    prompt: string;
+    providerId: string;
+    model: string;
+    voice?: string;
+    speed?: number;
+    outputFormat?: string;
+    raw?: Record<string, unknown>;
+  };
+  parentId: string;
+}
+
+export type RemixPayload = RemixPayloadImage | RemixPayloadVideo | RemixPayloadAudio;
 
 interface UIState {
   route: Route;
@@ -560,6 +576,27 @@ export const useUIStore = create<UIState>((set, get) => ({
       }));
       scheduleVideoDraftFlush(next);
       persistMode("video");
+      persistRoute("studio");
+    } else if (payload.kind === "audio") {
+      const r = payload.request;
+      const next: AudioDraft = {
+        ...get().studioDraft.audio,
+        text: r.prompt,
+        providerId: r.providerId,
+        model: r.model,
+        voice: r.voice ?? null,
+        speed: r.speed ?? null,
+        outputFormat: r.outputFormat ?? null,
+        extras: normalizeAudioExtras(r.raw),
+        parentId: payload.parentId,
+      };
+      set((s) => ({
+        studioDraft: { ...s.studioDraft, audio: next },
+        studioMode: "audio",
+        route: "studio",
+      }));
+      scheduleAudioDraftFlush(next);
+      persistMode("audio");
       persistRoute("studio");
     } else {
       const r = payload.request;

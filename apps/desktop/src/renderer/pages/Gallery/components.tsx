@@ -439,11 +439,13 @@ export function LightboxPreview({
                     }
                     onClick={() => void toggleFav(data.item.id)}
                   />
-                  <LightboxAction
-                    icon={<Icons.StackPlus weight="bold" className="size-4" />}
-                    label={t("gallery.preview.saveAsAsset")}
-                    onClick={() => onSaveAsAsset(data.item)}
-                  />
+                  {data.item.kind === "audio" ? null : (
+                    <LightboxAction
+                      icon={<Icons.StackPlus weight="bold" className="size-4" />}
+                      label={t("gallery.preview.saveAsAsset")}
+                      onClick={() => onSaveAsAsset(data.item)}
+                    />
+                  )}
                   <LightboxAction
                     icon={
                       copied ? (

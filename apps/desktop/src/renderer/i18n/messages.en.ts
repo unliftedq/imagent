@@ -244,6 +244,9 @@ export const en = {
   "gallery.toast.thumbnailUnavailable": "Thumbnail unavailable",
   "gallery.toast.thumbnailUnavailableDesc":
     "This video item needs a thumbnail before it can become an asset.",
+  "gallery.toast.audioAssetUnsupported": "Audio assets are not supported yet",
+  "gallery.toast.audioAssetUnsupportedDesc":
+    "Audio gallery items can be remixed or added to boards, but reference assets are image-based today.",
   "gallery.toast.assetSaved": "Asset saved",
   "gallery.toast.assetSavedDesc": "{name} is available in Assets.",
   "gallery.toast.deleteFailed": "Delete failed",

@@ -203,6 +203,7 @@ export function AudioRail() {
       ...(typeof draft.speed === "number" ? { speed: draft.speed } : {}),
       ...(draft.outputFormat ? { outputFormat: draft.outputFormat } : {}),
       ...(Object.keys(draft.extras).length ? { raw: draft.extras } : {}),
+      ...(draft.parentId ? { parentId: draft.parentId } : {}),
       assetIds: [],
     };
 
@@ -215,7 +216,7 @@ export function AudioRail() {
         prompt: request.prompt,
         submittedAt: Date.now(),
       });
-      setDraft({ text: "" });
+      setDraft({ text: "", parentId: undefined });
     } catch (err) {
       const message =
         err instanceof IpcClientError ? `${err.message}` : ((err as Error)?.message ?? String(err));
