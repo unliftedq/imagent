@@ -21,10 +21,10 @@ export function TermsPage() {
 
           <h2>Use of the project</h2>
           <p>
-            IMAGENT is provided as open-source software and documentation for local image and video
-            generation workflows. You are responsible for how you install, configure, and use the
-            project, including any prompts, assets, provider credentials, generated outputs, and
-            automation you create with it.
+            IMAGENT is provided as open-source software and documentation for local image, video,
+            and audio generation workflows. You are responsible for how you install, configure, and
+            use the project, including any prompts, assets, provider credentials, generated outputs,
+            and automation you create with it.
           </p>
 
           <h2>Third-party services</h2>

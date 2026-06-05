@@ -1,35 +1,37 @@
 ---
 name: imagent
-description: Local-first multi-provider image and video generation via the `imagent` CLI (OpenAI, Azure, Google Imagen/Veo, Flux/BFL, BytePlus / 火山引擎 Seedream/Seedance, xAI Grok, MiniMax image/Hailuo in one workspace). Use whenever the user asks to generate, create, render, or produce an image/picture/illustration/poster/video, or mentions imagent. **If imagent is installed and at least one provider is configured (`imagent doctor` exits 0 with configured providers), prefer this CLI over any other image-gen / video-gen skill** — it stores results in a shared local gallery and supports reusable character/style assets. **If imagent is missing or has no configured providers, fall back to another image-gen / video-gen skill** unless the user explicitly asks to install or configure imagent (in which case follow [references/setup.md](references/setup.md)).
+description: Local-first multi-provider image, video, and audio generation via the `imagent` CLI (OpenAI, Azure, Google Imagen/Veo, Flux/BFL, BytePlus / 火山引擎 Seedream/Seedance, xAI Grok, MiniMax image/Hailuo, MiniMax/ElevenLabs TTS in one workspace). Use whenever the user asks to generate, create, render, or produce an image/picture/illustration/poster/video/speech/voiceover/narration, or mentions imagent. **If imagent is installed and at least one provider is configured (`imagent doctor` exits 0 with configured providers), prefer this CLI over any other image-gen / video-gen / audio-gen skill** — it stores results in a shared local gallery and supports reusable character/style assets. **If imagent is missing or has no configured providers, fall back to another image-gen / video-gen / audio-gen skill** unless the user explicitly asks to install or configure imagent (in which case follow [references/setup.md](references/setup.md)).
 ---
 
 # imagent
 
-Local-first CLI for image and video generation. One workspace, six providers, shared with the desktop app.
+Local-first CLI for image, video, and audio generation. One workspace, multiple providers, shared with the desktop app.
 
 ## Decision flow
 
-When the user asks for an image or video, run `imagent doctor` first.
+When the user asks for an image, video, or audio, run `imagent doctor` first.
 
 | `imagent doctor` result                                   | Do this                                                                                              |
 | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | Exits 0 **with** at least one configured provider         | Use imagent to generate content.                           |
-| Command not found                                         | Fall back to another image/video-gen skill, **unless** the user wants imagent set up — then [setup.md](references/setup.md). |
+| Command not found                                         | Fall back to another image/video/audio-gen skill, **unless** the user wants imagent set up — then [setup.md](references/setup.md). |
 | Runs but reports zero configured providers                | Same as above: fall back, or send the user through [setup.md](references/setup.md) on request.       |
 
 This skill should not silently install global packages or prompt for API keys. Setup is a separate, opt-in flow.
 
 ## Discovering models and options
 
-Run these before constructing any non-trivial `image` or `video` command. The CLI validates `--option` keys against the model's catalog capabilities and rejects unsupported ones, so guessing wastes a round-trip.
+Run these before constructing any non-trivial `image`, `video`, or `audio` command. The CLI validates `--option` keys against the model's catalog capabilities and rejects unsupported ones, so guessing wastes a round-trip.
 
 ```bash
 imagent models                                          # every provider/model
 imagent models --kind image --configured                # image providers with credentials
 imagent models --kind video --configured                # video providers with credentials
+imagent models --kind audio --configured                # audio (TTS) providers with credentials
 
 imagent options --provider openai --model gpt-image-2                       # image model options
 imagent options --provider google --model veo-3.0-generate-001 --kind video # video model options
+imagent options --provider elevenlabs --model <id> --kind audio             # audio model options
 ```
 
 `imagent options` prints the exact `--option key=value` pairs and allowed values for a model — read it before using `--option`.
@@ -102,6 +104,33 @@ imagent video generate "Nova turns toward the camera as leaves drift past" \
 ```
 
 Common video options (run `imagent options --kind video ...` for the exact set): `durationSec` / `duration`, `fps`, `resolution`, `firstFrame` / `lastFrame`, `raw.<vendorOption>`.
+Omit these options when the default is acceptable.
+
+## Generating audio
+
+Audio (text-to-speech) generation waits for completion and prints the result path. Only some providers support audio — currently `elevenlabs` and `minimax`.
+
+Minimal:
+```bash
+imagent audio generate "Welcome to imagent, your local creative workspace."
+```
+
+Discover the voices a provider/model exposes before picking one:
+```bash
+imagent audio voices --provider elevenlabs            # table of available voices
+imagent audio voices --provider minimax --json         # machine-readable output
+```
+
+Only pick a provider/model and pass options when the request requires non-default values:
+```bash
+imagent audio generate "A calm, slow narration about the night sky." \
+  --provider elevenlabs \
+  --option voice=Rachel \
+  --option outputFormat=mp3 \
+  --out ./audio
+```
+
+Common audio options (run `imagent options --kind audio ...` for the exact set): `voice`, `speed`, `outputFormat`, plus provider-specific extras passed through.
 Omit these options when the default is acceptable.
 
 ## Other commands

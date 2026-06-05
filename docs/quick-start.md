@@ -1,5 +1,5 @@
 ---
-description: Create the local workspace, configure a provider, and run the first image or video job.
+description: Create the local workspace, configure a provider, and run the first image, video, or audio job.
 ---
 
 # Quick Start
@@ -58,6 +58,16 @@ imagent video generate "a slow camera move through a neon city" \
 
 By default the command exits after the provider accepts the job and prints the job id. Add `--wait` to poll until completion and download the video inline. To track a submitted job later, use `imagent video task get --id <jobId>` or `imagent video download <jobId>`.
 
-### 5. Use the desktop app
+### 5. Generate audio
+
+```bash
+imagent audio generate "Welcome to imagent" \
+  --provider elevenlabs \
+  --option voice=Rachel
+```
+
+Audio (text-to-speech) generation waits for completion and prints the result path. Use `imagent audio voices --provider <id>` to discover available voices.
+
+### 6. Use the desktop app
 
 Open the desktop app, configure providers in **Providers**, choose defaults in **Settings**, create assets in **Assets**, generate in **Studio**, and curate results in **Gallery**. The desktop app and CLI read and write the same local workspace.

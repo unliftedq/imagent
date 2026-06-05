@@ -234,7 +234,7 @@ export const zh: Dict = {
   "gallery.empty.board.body": "在「全部」视图中，将任意图库项目拖拽至此看板。",
   "gallery.empty.all.title": "图库还是空的",
   "gallery.empty.all.body":
-    "生成的图片和视频都会在这里汇聚。打开 Studio 开始创作第一件作品——每一项都支持搜索和二次创作。",
+    "生成的图片、视频和音频都会在这里汇聚。打开 Studio 开始创作第一件作品——每一项都支持搜索和二次创作。",
   "gallery.empty.showAll": "显示全部",
   "gallery.empty.openStudio": "打开 Studio",
   "gallery.toast.addedToBoard": "已加入看板",
