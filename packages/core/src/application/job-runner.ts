@@ -179,7 +179,10 @@ export class JobRunner extends EventEmitter {
     if (intent.kind === "image") {
       return this.startImage(intent.request, overrides);
     }
-    return this.startVideo(intent.request, overrides);
+    if (intent.kind === "video") {
+      return this.startVideo(intent.request, overrides);
+    }
+    throw new Error(`Unsupported media kind: ${intent.kind}`);
   }
 
   async cancel(id: JobId): Promise<void> {
