@@ -685,6 +685,32 @@ export function setupIpc(deps: IpcDeps): IpcServer {
           ...(request.parentId ? { parentId: request.parentId } : {}),
           ...(request.boardId ? { boardId: request.boardId } : {}),
         });
+        // Audio runs asynchronously like video: broadcast gallery.changed on
+        // success so the Studio canvas + gallery pick up the new clip without
+        // a manual refresh.
+        const onCompleted = (j: Job): void => {
+          if (j.id !== jobId) return;
+          cleanup();
+          if (j.state === "succeeded" && j.resultItemId) {
+            try {
+              const item = galleryRepo.get(j.resultItemId);
+              if (item) {
+                server.emit("gallery.changed", { id: item.id, op: "created", item });
+              }
+            } catch (err) {
+              logger.warn("gallery.changed (audio) emit failed", { err: String(err) });
+            }
+          }
+        };
+        const onFailed = (j: Job): void => {
+          if (j.id === jobId) cleanup();
+        };
+        const cleanup = (): void => {
+          runtime.jobRunner.off("job.completed", onCompleted);
+          runtime.jobRunner.off("job.failed", onFailed);
+        };
+        runtime.jobRunner.on("job.completed", onCompleted);
+        runtime.jobRunner.on("job.failed", onFailed);
         return { jobId };
       } catch (err) {
         logger.error("audio.submit failed", { err: String(err) });
