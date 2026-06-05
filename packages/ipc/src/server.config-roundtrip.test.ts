@@ -67,6 +67,8 @@ function makeTransport(
 }
 
 // ----- payload bridge (mirrors apps/desktop/src/main/ipc-handlers.ts) -------
+// Audio provider config slots that are not yet renderer-editable are preserved
+// as defaults so this IPC package remains type-compatible with @imagent/config.
 function prefsPayloadFromConfig(p: ProviderPreferences): ProviderPreferencesPayload {
   return {
     openai: p.openai ?? {},
@@ -91,6 +93,7 @@ function prefsConfigFromPayload(payload: ProviderPreferencesPayload): ProviderPr
     volcengine: payload.volcengine,
     xai: payload.xai,
     minimax: payload.minimax,
+    elevenlabs: {},
     customOpenAI: payload.customOpenAI,
   };
 }

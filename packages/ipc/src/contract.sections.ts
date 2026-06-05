@@ -1,5 +1,7 @@
 import {
   AssetSchema,
+  AudioModelDefSchema,
+  AudioRequestSchema,
   BoardSchema,
   GalleryItemSchema,
   GalleryQuerySchema,
@@ -9,6 +11,7 @@ import {
   JobsQuerySchema,
   VideoModelDefSchema,
   VideoRequestSchema,
+  VoiceInfoSchema,
 } from "@imagent/core";
 import { z } from "zod";
 
@@ -155,6 +158,14 @@ export const generationContract = {
     }),
     output: z.object({ jobId: z.string() }),
   },
+  /**
+   * Submit a TTS job. Like image.submit it returns `{ jobId }` immediately;
+   * the renderer subscribes to job.* push events for completion.
+   */
+  "audio.submit": {
+    input: AudioRequestSchema.extend({ parentId: z.string().optional() }),
+    output: z.object({ jobId: z.string() }),
+  },
 } as const;
 
 export const modelsContract = {
@@ -178,6 +189,20 @@ export const modelsContract = {
       defaultModel: z.string().nullable(),
       models: z.array(VideoModelDefSchema),
     }),
+  },
+
+  "audio.models": {
+    input: z.object({ providerId: ProviderIdSchema }),
+    output: z.object({
+      providerId: ProviderIdSchema,
+      defaultModel: z.string().nullable(),
+      models: z.array(AudioModelDefSchema),
+    }),
+  },
+
+  "audio.voices": {
+    input: z.object({ providerId: ProviderIdSchema, modelId: z.string().optional() }),
+    output: z.object({ voices: z.array(VoiceInfoSchema) }),
   },
 
   /**
@@ -205,6 +230,20 @@ export const modelsContract = {
         }),
       ),
       video: z.array(
+        z.object({
+          id: z.string(),
+          displayName: z.string().nullable(),
+          providers: z.array(
+            z.object({
+              providerId: ProviderIdSchema,
+              modelId: z.string(),
+              displayName: z.string(),
+              configured: z.boolean(),
+            }),
+          ),
+        }),
+      ),
+      audio: z.array(
         z.object({
           id: z.string(),
           displayName: z.string().nullable(),
