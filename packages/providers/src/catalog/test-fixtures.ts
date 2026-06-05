@@ -351,6 +351,7 @@ export function buildTestCatalog(): ModelCatalog {
         ...XAI_VIDEO_MODELS,
         ...MINIMAX_VIDEO_MODELS,
       },
+      audio: {},
     },
     providers: {
       openai: {

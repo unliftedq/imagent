@@ -14,6 +14,7 @@ function emptyPrefs(): ProviderPreferences {
     volcengine: {},
     xai: {},
     minimax: {},
+    elevenlabs: {},
     customOpenAI: {},
   };
 }

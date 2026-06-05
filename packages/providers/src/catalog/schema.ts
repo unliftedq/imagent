@@ -1,4 +1,8 @@
 import {
+  AudioModelCapsOverrideSchema,
+  AudioModelDefSchema,
+  type AudioProviderModel,
+  AudioProviderModelSchema,
   ImageModelCapsOverrideSchema,
   ImageModelDefSchema,
   type ImageProviderModel,
@@ -18,12 +22,14 @@ import { z } from "zod";
  * the offering itself, so offerings can still override further.
  *
  * A single keyspace covers both image and video models — they live in
- * separate maps on the catalog and any given canonical id is one or the
- * other, never both. The merged caps schema admits fields from either kind;
+ * separate maps on the catalog and any given canonical id is one media kind,
+ * never multiple. The merged caps schema admits fields from any kind;
  * irrelevant fields are simply stripped when the final `ImageModelDef` /
- * `VideoModelDef` is parsed.
+ * `VideoModelDef` / `AudioModelDef` is parsed.
  */
-const ModelCapsOverrideSchema = ImageModelCapsOverrideSchema.merge(VideoModelCapsOverrideSchema);
+const ModelCapsOverrideSchema = ImageModelCapsOverrideSchema.merge(VideoModelCapsOverrideSchema).merge(
+  AudioModelCapsOverrideSchema,
+);
 
 const ProviderModelOverrideSchema = z.object({
   capabilities: ModelCapsOverrideSchema.optional(),
@@ -38,6 +44,8 @@ export type ProviderModelOverride = z.infer<typeof ProviderModelOverrideSchema>;
  * `config.providers.<id>` overlays use the same shape.
  */
 export {
+  type AudioProviderModel,
+  AudioProviderModelSchema,
   type ImageProviderModel,
   ImageProviderModelSchema,
   type VideoProviderModel,
@@ -48,9 +56,10 @@ export const ProviderCatalogSchema = z.object({
   displayName: z.string().optional(),
   image: z.array(ImageProviderModelSchema).optional(),
   video: z.array(VideoProviderModelSchema).optional(),
+  audio: z.array(AudioProviderModelSchema).optional(),
   /**
    * Provider-specific overrides keyed by canonical model id (matches a key
-   * in `models.image` or `models.video`). Applied during offering resolution
+   * in `models.image`, `models.video`, or `models.audio`). Applied during offering resolution
    * between the canonical caps and any offering-level override; intended for
    * the bundled catalog to encode vendor quirks (e.g. Azure caps gpt-image
    * `n=1`).
@@ -62,8 +71,8 @@ export type ProviderCatalog = z.infer<typeof ProviderCatalogSchema>;
 /**
  * JSON catalog schema. v2 separates model identity from provider routing:
  *
- * - `models.image/video` describe canonical models and their capabilities.
- * - `providers.<providerId>.image/video` describe **canonical** provider-facing
+ * - `models.image/video/audio` describe canonical models and their capabilities.
+ * - `providers.<providerId>.image/video/audio` describe **canonical** provider-facing
  *   offerings (the bundled defaults: OpenAI's gpt-image-2, Google's Veo, …).
  *
  * Per-user routing — Azure deployment names, custom OpenAI-compatible model
@@ -78,6 +87,7 @@ export const ModelCatalogSchema = z
     models: z.object({
       image: z.record(z.string(), ImageModelDefSchema),
       video: z.record(z.string(), VideoModelDefSchema),
+      audio: z.record(z.string(), AudioModelDefSchema).default({}),
     }),
     providers: z.record(z.string(), ProviderCatalogSchema),
     comments: z.string().optional(),
@@ -101,6 +111,15 @@ export const ModelCatalogSchema = z
         });
       }
     }
+    for (const [id, model] of Object.entries(catalog.models.audio)) {
+      if (model.id !== id) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["models", "audio", id, "id"],
+          message: `audio model key '${id}' must match model.id '${model.id}'`,
+        });
+      }
+    }
     for (const [providerId, provider] of Object.entries(catalog.providers)) {
       for (const offering of provider.image ?? []) {
         if (!catalog.models.image[offering.modelId]) {
@@ -117,6 +136,15 @@ export const ModelCatalogSchema = z
             code: "custom",
             path: ["providers", providerId, "video", offering.id, "modelId"],
             message: `video offering '${offering.id}' references unknown model '${offering.modelId}'`,
+          });
+        }
+      }
+      for (const offering of provider.audio ?? []) {
+        if (!catalog.models.audio[offering.modelId]) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["providers", providerId, "audio", offering.id, "modelId"],
+            message: `audio offering '${offering.id}' references unknown model '${offering.modelId}'`,
           });
         }
       }
@@ -137,6 +165,12 @@ const VideoModelDefOverlaySchema = VideoModelDefSchema.omit({ capabilities: true
     capabilities: VideoModelCapsOverrideSchema.optional(),
   });
 
+const AudioModelDefOverlaySchema = AudioModelDefSchema.omit({ capabilities: true })
+  .partial()
+  .extend({
+    capabilities: AudioModelCapsOverrideSchema.optional(),
+  });
+
 export const ModelCatalogOverlaySchema = z
   .object({
     version: z.literal(2).optional(),
@@ -144,6 +178,7 @@ export const ModelCatalogOverlaySchema = z
       .object({
         image: z.record(z.string(), ImageModelDefOverlaySchema).optional(),
         video: z.record(z.string(), VideoModelDefOverlaySchema).optional(),
+        audio: z.record(z.string(), AudioModelDefOverlaySchema).optional(),
       })
       .strict()
       .optional(),
