@@ -12,6 +12,7 @@ export const VENDOR_KEYS = [
   "volcengine",
   "xai",
   "minimax",
+  "elevenlabs",
 ] as const;
 export type VendorId = (typeof VENDOR_KEYS)[number];
 
@@ -30,13 +31,18 @@ export const ALLOWED_FIELDS: Record<VendorId, Record<string, FieldDef>> = {
   byteplus: { apiKey: { store: "secrets" }, endpoint: { store: "config" } },
   volcengine: { apiKey: { store: "secrets" }, endpoint: { store: "config" } },
   xai: { apiKey: { store: "secrets" }, baseUrl: { store: "config" } },
-  minimax: { apiKey: { store: "secrets" }, baseUrl: { store: "config" } },
+  minimax: { apiKey: { store: "secrets" }, baseUrl: { store: "config" }, groupId: { store: "config" } },
+  elevenlabs: { apiKey: { store: "secrets" }, baseUrl: { store: "config" } },
 };
 
-type DefaultModelConfigKey = "image.defaultModel" | "video.defaultModel";
-const DEFAULT_MODEL_KEYS: Record<DefaultModelConfigKey, "defaultImageModel" | "defaultVideoModel"> = {
+type DefaultModelConfigKey = "image.defaultModel" | "video.defaultModel" | "audio.defaultModel";
+const DEFAULT_MODEL_KEYS: Record<
+  DefaultModelConfigKey,
+  "defaultImageModel" | "defaultVideoModel" | "defaultAudioModel"
+> = {
   "image.defaultModel": "defaultImageModel",
   "video.defaultModel": "defaultVideoModel",
+  "audio.defaultModel": "defaultAudioModel",
 };
 
 export function isVendorKey(s: string): s is VendorId {
@@ -49,9 +55,10 @@ export function isResetTarget(s: string): s is ResetTarget {
 
 export function defaultModelFieldFor(
   dottedKey: string,
-): "defaultImageModel" | "defaultVideoModel" | null {
+): "defaultImageModel" | "defaultVideoModel" | "defaultAudioModel" | null {
   if (dottedKey === "app.defaultImageModel") return "defaultImageModel";
   if (dottedKey === "app.defaultVideoModel") return "defaultVideoModel";
+  if (dottedKey === "app.defaultAudioModel") return "defaultAudioModel";
   return DEFAULT_MODEL_KEYS[dottedKey as DefaultModelConfigKey] ?? null;
 }
 

@@ -21,6 +21,7 @@ const BUILT_IN_ROUTING_IDS = new Set<string>([
   "volcengine",
   "xai",
   "minimax",
+  "elevenlabs",
 ]);
 
 export async function runProviderAdd(

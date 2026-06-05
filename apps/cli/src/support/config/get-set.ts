@@ -110,12 +110,18 @@ export async function runGet(dottedKey: string | undefined): Promise<void> {
 }
 
 function validateConfiguredDefaultModel(
-  field: "defaultImageModel" | "defaultVideoModel",
+  field: "defaultImageModel" | "defaultVideoModel" | "defaultAudioModel",
   value: DefaultModelPreference,
   runtime: Awaited<ReturnType<typeof loadCliRuntime>>,
 ): boolean {
-  const kind = field === "defaultImageModel" ? "image" : "video";
-  const registry = kind === "image" ? runtime.imageRegistry : runtime.videoRegistry;
+  const kind =
+    field === "defaultImageModel" ? "image" : field === "defaultVideoModel" ? "video" : "audio";
+  const registry =
+    kind === "image"
+      ? runtime.imageRegistry
+      : kind === "video"
+        ? runtime.videoRegistry
+        : runtime.audioRegistry;
   const provider = registry.get(value.providerId);
   if (!provider) {
     process.stderr.write(
@@ -135,10 +141,12 @@ function validateConfiguredDefaultModel(
 function defaultModelConfigView(app: {
   defaultImageModel: DefaultModelPreference | null;
   defaultVideoModel: DefaultModelPreference | null;
+  defaultAudioModel: DefaultModelPreference | null;
 }): Record<string, string> {
   const out: Record<string, string> = {};
   if (app.defaultImageModel) out.defaultImageModel = formatDefaultModelValue(app.defaultImageModel);
   if (app.defaultVideoModel) out.defaultVideoModel = formatDefaultModelValue(app.defaultVideoModel);
+  if (app.defaultAudioModel) out.defaultAudioModel = formatDefaultModelValue(app.defaultAudioModel);
   return out;
 }
 
