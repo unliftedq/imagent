@@ -1,4 +1,4 @@
-import type { ImageModelDef, VideoModelDef } from "@imagent/core";
+import type { AudioModelDef, ImageModelDef, VideoModelDef } from "@imagent/core";
 import type { ProviderId } from "@imagent/ipc";
 import type { StudioMode } from "../../state/useUIStore.js";
 
@@ -15,5 +15,8 @@ export interface UnifiedModelOption {
   providerName: string;
   modelId: string;
   displayName: string;
-  capabilities?: ImageModelDef["capabilities"] | VideoModelDef["capabilities"];
+  capabilities?:
+    | ImageModelDef["capabilities"]
+    | VideoModelDef["capabilities"]
+    | AudioModelDef["capabilities"];
 }

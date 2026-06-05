@@ -199,8 +199,7 @@ export const en = {
   "providers.def.xai.name": "xAI",
   "providers.def.xai.description": "Grok image and video generation APIs.",
   "providers.def.minimax.name": "MiniMax",
-  "providers.def.minimax.description":
-    "MiniMax image (image-01) and Hailuo video generation APIs.",
+  "providers.def.minimax.description": "MiniMax image (image-01) and Hailuo video generation APIs.",
 
   // Gallery
   "gallery.library": "Library",
@@ -305,6 +304,19 @@ export const en = {
   "studio.composer.stopGeneration": "Stop generation",
   "studio.composer.generationInProgress": "Generation in progress",
   "studio.composer.videoSubmitFailed": "Video submit failed",
+  "studio.audio.placeholder": "Enter the text you want to turn into speech",
+  "studio.audio.generate": "Generate audio",
+  "studio.audio.config": "Audio configuration",
+  "studio.audio.voice": "Voice",
+  "studio.audio.speed": "Speed",
+  "studio.audio.outputFormat": "Output format",
+  "studio.audio.extraKnobs": "Extra controls",
+  "studio.audio.missingFields": "Enter text and choose an audio model first.",
+  "studio.audio.submitFailed": "Audio submit failed",
+  "studio.audio.couldNotLoadModels": "Could not load audio models",
+  "studio.audio.noProvider": "No audio provider connected",
+  "studio.audio.noProviderDesc":
+    "Connect ElevenLabs, MiniMax, or another TTS provider to generate speech.",
   "studio.addReference": "Add reference",
   "studio.referenceAlreadyAdded": "Reference already added",
   "studio.referenceFailed": "Reference failed",

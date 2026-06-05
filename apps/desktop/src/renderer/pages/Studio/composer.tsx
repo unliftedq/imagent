@@ -113,7 +113,11 @@ export function ChatComposerShell({
   };
 
   const actionLabel =
-    mode === "video" ? t("studio.composer.submit") : t("studio.composer.generate");
+    mode === "video"
+      ? t("studio.composer.submit")
+      : mode === "audio"
+        ? t("studio.audio.generate")
+        : t("studio.composer.generate");
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-5">
