@@ -136,10 +136,10 @@ export async function runProviderList(
   }
 }
 
-function normalizeRoutingKind(kind: string | undefined): "image" | "video" {
+function normalizeRoutingKind(kind: string | undefined): "image" | "video" | "audio" {
   const k = (kind ?? "image").toLowerCase();
-  if (k !== "image" && k !== "video") {
-    throw new Error(`--kind must be 'image' or 'video' (got '${kind}')`);
+  if (k !== "image" && k !== "video" && k !== "audio") {
+    throw new Error(`--kind must be 'image', 'video', or 'audio' (got '${kind}')`);
   }
   return k;
 }
@@ -176,7 +176,8 @@ function writeRoutingBlock(
 function hasRouting(block: Record<string, unknown>): boolean {
   const image = (block.image as unknown[] | undefined)?.length ?? 0;
   const video = (block.video as unknown[] | undefined)?.length ?? 0;
-  return image > 0 || video > 0 || typeof block.displayName === "string";
+  const audio = (block.audio as unknown[] | undefined)?.length ?? 0;
+  return image > 0 || video > 0 || audio > 0 || typeof block.displayName === "string";
 }
 
 function formatRouting(providerId: string, block: Record<string, unknown>): void {
@@ -184,7 +185,7 @@ function formatRouting(providerId: string, block: Record<string, unknown>): void
   if (typeof block.displayName === "string") {
     process.stdout.write(`  ${chalk.dim("displayName:")} ${block.displayName}\n`);
   }
-  for (const kind of ["image", "video"] as const) {
+  for (const kind of ["image", "video", "audio"] as const) {
     const list =
       (block[kind] as Array<{ id: string; modelId: string; displayName?: string }> | undefined) ??
       [];

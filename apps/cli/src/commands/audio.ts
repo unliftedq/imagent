@@ -150,6 +150,9 @@ async function runAudioVoices(options: AudioVoicesOptions): Promise<void> {
   if (!provider) throw new Error(`audio provider '${providerId}' is not configured`);
   const modelId = options.model ?? provider.models.keys().next().value;
   const model = modelId ? provider.models.get(modelId) : undefined;
+  if (options.model && !model) {
+    throw new Error(`unknown model '${options.model}' for provider '${providerId}'`);
+  }
 
   let voices = model?.capabilities?.voices ?? [];
   if (provider.listVoices && model?.capabilities?.supportsVoiceDiscovery) {

@@ -102,7 +102,7 @@ export function registerConfigCommand(program: Command): void {
       "--model <canonical-id>",
       "Canonical model id (see `imagent models --json`); the offering inherits its capabilities/defaults",
     )
-    .option("--kind <kind>", "image | video (default: image)", "image")
+    .option("--kind <kind>", "image | video | audio (default: image)", "image")
     .option("--display-name <name>", "Optional friendly name shown in `imagent models`")
     .option(
       "--display-name-provider <name>",
@@ -120,7 +120,7 @@ export function registerConfigCommand(program: Command): void {
   provider
     .command("rm <provider> <id>")
     .description("Remove an offering from the provider's routing list.")
-    .option("--kind <kind>", "image | video (default: image)", "image")
+    .option("--kind <kind>", "image | video | audio (default: image)", "image")
     .action(async (providerId: string, offeringId: string, options: { kind?: string }) => {
       try {
         await runProviderRm(providerId, offeringId, options);
