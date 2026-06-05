@@ -35,6 +35,14 @@ describe("ElevenLabsAudioProvider", () => {
     const url = (fetchMock as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]?.[0] as string;
     expect(url).toContain("/v1/text-to-speech/rachel");
     expect(url).toContain("output_format=mp3_44100_128");
+    const init = (fetchMock as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]?.[1] as RequestInit;
+    const headers = new Headers(init.headers);
+    expect(headers.get("xi-api-key")).toBe("k");
+    expect(headers.get("content-type")).toBe("application/json");
+    expect(JSON.parse(init.body as string)).toEqual({
+      text: "hello",
+      model_id: "eleven_multilingual_v2",
+    });
   });
 
   it("lists voices from /v1/voices", async () => {

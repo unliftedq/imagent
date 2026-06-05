@@ -68,7 +68,11 @@ export class ElevenLabsAudioProvider extends BaseAudioProvider {
       model_id: model.baseModelId ?? model.id,
       ...(voiceSettings ? { voice_settings: voiceSettings } : {}),
     };
-    const init: RequestInit = { method: "POST", body: JSON.stringify(body) };
+    const init: RequestInit = {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    };
     const opts: { signal?: AbortSignal } = {};
     if (signal) opts.signal = signal;
     const res = await this.http.raw(path, init, opts);
