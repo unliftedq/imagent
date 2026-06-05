@@ -52,6 +52,26 @@ export const VideoRequestSchema = z.object({
 });
 export type VideoRequest = z.infer<typeof VideoRequestSchema>;
 
+export const AudioRequestSchema = z.object({
+  /** The text to synthesize. */
+  prompt: z.string().min(1),
+  providerId: z.string(),
+  model: z.string(),
+  /** Provider voice id (e.g. ElevenLabs voice_id, MiniMax voice_id). */
+  voice: z.string().optional(),
+  /** Playback/synthesis speed multiplier. */
+  speed: z.number().positive().optional(),
+  /** Output audio format token (e.g. mp3_44100_128, mp3, wav). */
+  outputFormat: z.string().optional(),
+  /** Asset ids to record on the resulting gallery_item (usually empty for TTS). */
+  assetIds: z.array(z.string()).default([]),
+  boardId: z.string().optional(),
+  parentId: z.string().optional(),
+  /** Per-model extra knobs passthrough (stability, emotion, vol, pitch, ...). */
+  raw: z.record(z.string(), z.unknown()).optional(),
+});
+export type AudioRequest = z.infer<typeof AudioRequestSchema>;
+
 export const GenerationIntentSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("image"),
@@ -64,6 +84,12 @@ export const GenerationIntentSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("video"),
     request: VideoRequestSchema,
+    parentId: z.string().optional(),
+    boardId: z.string().optional(),
+  }),
+  z.object({
+    kind: z.literal("audio"),
+    request: AudioRequestSchema,
     parentId: z.string().optional(),
     boardId: z.string().optional(),
   }),
