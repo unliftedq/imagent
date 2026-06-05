@@ -9,8 +9,10 @@ import {
   videoThumbnailService,
 } from "@imagent/persistence";
 import {
+  createAudioRegistry,
   createImageRegistry,
   createVideoRegistry,
+  type AudioRegistry,
   type ImageRegistry,
   loadCatalog,
   type ModelCatalog,
@@ -24,6 +26,7 @@ import {
 export interface RuntimeServices {
   imageRegistry: ImageRegistry;
   videoRegistry: VideoRegistry;
+  audioRegistry: AudioRegistry;
   jobRunner: JobRunner;
   /** Current resolved catalog snapshot. Refreshed on `refresh()`. */
   catalog: ModelCatalog;
@@ -74,6 +77,7 @@ export async function bootstrapRuntime(deps: BootstrapDeps): Promise<RuntimeServ
   // refresh can replace entries without re-instantiating the runner.
   const imageRegistry = new Map() as Map<string, never>;
   const videoRegistry = new Map() as Map<string, never>;
+  const audioRegistry = new Map() as Map<string, never>;
 
   // Load the JSON model catalog once. On `refresh()` we re-read the optional
   // user overlay from disk so hand-edits take effect on the next IPC tick.
@@ -87,6 +91,7 @@ export async function bootstrapRuntime(deps: BootstrapDeps): Promise<RuntimeServ
     const secrets = await secretsStore.loadSecrets();
     const nextImage = createImageRegistry(secrets, config.providers, catalog);
     const nextVideo = createVideoRegistry(secrets, config.providers, catalog);
+    const nextAudio = createAudioRegistry(secrets, config.providers, catalog);
     imageRegistry.clear();
     for (const [k, v] of nextImage) {
       (imageRegistry as Map<string, unknown>).set(k, v);
@@ -94,6 +99,10 @@ export async function bootstrapRuntime(deps: BootstrapDeps): Promise<RuntimeServ
     videoRegistry.clear();
     for (const [k, v] of nextVideo) {
       (videoRegistry as Map<string, unknown>).set(k, v);
+    }
+    audioRegistry.clear();
+    for (const [k, v] of nextAudio) {
+      (audioRegistry as Map<string, unknown>).set(k, v);
     }
   };
   await repopulate();
@@ -105,6 +114,7 @@ export async function bootstrapRuntime(deps: BootstrapDeps): Promise<RuntimeServ
     files: filesPort,
     imageRegistry: imageRegistry as unknown as ImageRegistry,
     videoRegistry: videoRegistry as unknown as VideoRegistry,
+    audioRegistry: audioRegistry as unknown as AudioRegistry,
     thumbnailService: videoThumbnailService,
     logger,
   });
@@ -124,6 +134,7 @@ export async function bootstrapRuntime(deps: BootstrapDeps): Promise<RuntimeServ
   return {
     imageRegistry: imageRegistry as unknown as ImageRegistry,
     videoRegistry: videoRegistry as unknown as VideoRegistry,
+    audioRegistry: audioRegistry as unknown as AudioRegistry,
     jobRunner: runner,
     // Read-through getter so callers see the latest catalog after refresh().
     get catalog() {
@@ -135,6 +146,7 @@ export async function bootstrapRuntime(deps: BootstrapDeps): Promise<RuntimeServ
       logger.info("[runtime] registries refreshed", {
         image: [...imageRegistry.keys()],
         video: [...videoRegistry.keys()],
+        audio: [...audioRegistry.keys()],
       });
     },
     resumeRunningJobs: deferredResume,
