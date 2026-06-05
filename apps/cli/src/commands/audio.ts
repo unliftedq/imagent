@@ -13,7 +13,12 @@ import type { Command } from "commander";
 import { installCancelOnInterrupt } from "../support/job-control.js";
 import { buildRunner, loadCliRuntime } from "../support/runtime.js";
 import { createSpinner } from "../support/spinner.js";
-import { coerceScalar, collect, parseKeyValueOptions } from "../support/util.js";
+import {
+  coerceScalar,
+  collect,
+  parseKeyValueOptions,
+  parsePositiveNumberOption,
+} from "../support/util.js";
 
 interface AudioGenerateOptions {
   provider?: string;
@@ -171,7 +176,7 @@ async function runAudioVoices(options: AudioVoicesOptions): Promise<void> {
   }
 }
 
-function resolveAudioSelection(
+export function resolveAudioSelection(
   runtime: Awaited<ReturnType<typeof loadCliRuntime>>,
   providerOverride: string | undefined,
   modelOverride: string | undefined,
@@ -188,6 +193,7 @@ function resolveAudioSelection(
     for (const [pid, provider] of registry) {
       if (provider.models.has(modelOverride)) return { providerId: pid, model: modelOverride };
     }
+    throw new Error(`unknown audio model '${modelOverride}' for configured audio providers`);
   }
   if (def && registry.get(def.providerId)?.models.has(def.modelId)) {
     return { providerId: def.providerId, model: def.modelId };
@@ -201,7 +207,10 @@ function resolveAudioSelection(
   throw new Error("no audio providers configured. Run `imagent config set elevenlabs.apiKey ...` first.");
 }
 
-function parseAudioOptions(values: readonly string[], model: AudioModelDef): Partial<AudioRequest> {
+export function parseAudioOptions(
+  values: readonly string[],
+  model: AudioModelDef,
+): Partial<AudioRequest> {
   const pairs = parseKeyValueOptions(values);
   const out: Partial<AudioRequest> = {};
   const raw: Record<string, unknown> = {};
@@ -212,7 +221,7 @@ function parseAudioOptions(values: readonly string[], model: AudioModelDef): Par
         out.voice = value;
         break;
       case "speed":
-        out.speed = Number(value);
+        out.speed = parsePositiveNumberOption("audio", key, value);
         break;
       case "outputFormat":
       case "format":
