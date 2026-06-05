@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { ImageProviderModelSchema, VideoProviderModelSchema } from "@imagent/core";
+import {
+  AudioProviderModelSchema,
+  ImageProviderModelSchema,
+  VideoProviderModelSchema,
+} from "@imagent/core";
 
 /**
  * Rename the legacy `bytedance` provider key onto its replacement
@@ -51,6 +55,7 @@ export const ProviderSecretsSchema = z.preprocess(
     volcengine: z.object({ apiKey: z.string() }).optional(),
     xai: z.object({ apiKey: z.string() }).optional(),
     minimax: z.object({ apiKey: z.string() }).optional(),
+    elevenlabs: z.object({ apiKey: z.string() }).optional(),
     customOpenAI: z
       .record(
         z.string().regex(/^[a-z0-9][a-z0-9_-]*$/),
@@ -86,8 +91,11 @@ export const ProviderRoutingSchema = z.object({
   displayName: z.string().optional(),
   endpoint: z.string().optional(),
   baseUrl: z.string().optional(),
+  /** MiniMax T2A v2 GroupId — required only for MiniMax audio generation. */
+  groupId: z.string().optional(),
   image: z.array(ImageProviderModelSchema).optional(),
   video: z.array(VideoProviderModelSchema).optional(),
+  audio: z.array(AudioProviderModelSchema).optional(),
 });
 export type ProviderRouting = z.infer<typeof ProviderRoutingSchema>;
 
@@ -110,6 +118,7 @@ export const ProviderPreferencesSchema = z.preprocess(
     volcengine: ProviderRoutingSchema.default({}),
     xai: ProviderRoutingSchema.default({}),
     minimax: ProviderRoutingSchema.default({}),
+    elevenlabs: ProviderRoutingSchema.default({}),
     customOpenAI: z
       .record(z.string().regex(/^[a-z0-9][a-z0-9_-]*$/), ProviderRoutingSchema)
       .default({}),
@@ -133,6 +142,7 @@ export const AppPreferencesSchema = z.object({
   locale: z.enum(["system", "en", "zh"]).default("system"),
   defaultImageModel: DefaultModelPreferenceSchema.nullable().default(null),
   defaultVideoModel: DefaultModelPreferenceSchema.nullable().default(null),
+  defaultAudioModel: DefaultModelPreferenceSchema.nullable().default(null),
   defaultOutputDir: z.string().nullable().default(null),
   generationConcurrency: z.number().int().min(1).max(8).default(2),
   keepPromptHistory: z.boolean().default(true),
@@ -164,6 +174,7 @@ export const DEFAULT_CONFIG: ConfigFile = {
     volcengine: {},
     xai: {},
     minimax: {},
+    elevenlabs: {},
     customOpenAI: {},
   },
 };
