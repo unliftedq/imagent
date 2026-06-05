@@ -22,9 +22,10 @@ interface ModelRow {
 interface ModelList {
   image: ModelRow[];
   video: ModelRow[];
+  audio: ModelRow[];
 }
 
-type Tab = "image" | "video";
+type Tab = "image" | "video" | "audio";
 
 /**
  * Models settings section. Catalogue of known models, grouped by kind,
@@ -55,12 +56,14 @@ export function ModelsSection() {
 
   const rows = useMemo(() => {
     if (!list) return [];
-    return tab === "image" ? list.image : list.video;
+    if (tab === "image") return list.image;
+    if (tab === "video") return list.video;
+    return list.audio;
   }, [list, tab]);
 
   const totals = useMemo(() => {
-    if (!list) return { image: 0, video: 0 };
-    return { image: list.image.length, video: list.video.length };
+    if (!list) return { image: 0, video: 0, audio: 0 };
+    return { image: list.image.length, video: list.video.length, audio: list.audio.length };
   }, [list]);
 
   return (
@@ -72,6 +75,9 @@ export function ModelsSection() {
         <TabButton active={tab === "video"} onClick={() => setTab("video")}>
           {t("common.video")} · {totals.video}
         </TabButton>
+        <TabButton active={tab === "audio"} onClick={() => setTab("audio")}>
+          {t("common.audio")} · {totals.audio}
+        </TabButton>
       </div>
 
       {!list ? (
@@ -80,7 +86,11 @@ export function ModelsSection() {
         <div className="rounded-(--radius-md) border border-dashed border-(--border) p-8 text-center">
           <Icons.Brain weight="duotone" className="mx-auto size-8 text-(--text-muted)" />
           <p className="mt-2 text-(length:--text-body-sm) text-(--text-muted)">
-            {tab === "image" ? t("models.noImageModels") : t("models.noVideoModels")}
+            {tab === "image"
+              ? t("models.noImageModels")
+              : tab === "video"
+                ? t("models.noVideoModels")
+                : t("models.noAudioModels")}
           </p>
         </div>
       ) : (

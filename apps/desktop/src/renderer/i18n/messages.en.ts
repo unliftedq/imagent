@@ -533,6 +533,7 @@ export const en = {
     "Catalog of every model the studio knows about, grouped by id. Green badges mark providers whose auth is saved; gray badges mark providers where the same model would work once you configure them.",
   "models.noImageModels": "No image models in the catalog.",
   "models.noVideoModels": "No video models in the catalog.",
+  "models.noAudioModels": "No audio models in the catalog.",
   "models.configureProvider": "Configure provider",
   "models.addProviderMapping": "Add provider mapping",
   "models.failedToLoad": "Failed to load models",

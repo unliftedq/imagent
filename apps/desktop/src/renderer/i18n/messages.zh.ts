@@ -520,6 +520,7 @@ export const zh: Dict = {
     "目录中所有已知模型，按 ID 分组。绿色标签表示已配置认证的服务商，灰色标签表示配置后即可使用的服务商。",
   "models.noImageModels": "目录中没有图片模型。",
   "models.noVideoModels": "目录中没有视频模型。",
+  "models.noAudioModels": "目录中没有音频模型。",
   "models.configureProvider": "配置服务商",
   "models.addProviderMapping": "添加服务商映射",
   "models.failedToLoad": "模型加载失败",
