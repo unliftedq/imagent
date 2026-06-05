@@ -4,7 +4,7 @@
 
 <p align="center"><a href="./README.md">English</a> · 简体中文</p>
 
-**Imagent** 取自 **Imagine agent**：它是一个本地优先的图像与视频生成工作台，面向独立创作者、高度自动化的创作流程，以及需要稳定调用生成能力的 AI Agent。
+**Imagent** 取自 **Imagine agent**：它是一个本地优先的图像、视频与音频生成工作台，面向独立创作者、高度自动化的创作流程，以及需要稳定调用生成能力的 AI Agent。
 
 它同时提供桌面应用、命令行工具和可安装的 Agent Skill。不同入口共享同一个本地工作区：Provider 配置、素材库、生成结果、项目资产与历史记录都保存在一起，方便在桌面整理、在终端自动化，或交给 Agent 调用。
 
@@ -22,7 +22,7 @@
 | --- | --- |
 | **本地优先的工作区** | SQLite 状态、配置、素材和生成结果默认保存在 `~/.imagent/`，不依赖远程账号或后端服务。 |
 | **多个入口，共用一个素材库** | 桌面应用、CLI 和 Agent 集成使用同一套图库、看板、收藏与可复用素材。 |
-| **多 Provider 生成** | 可同时配置 OpenAI、Azure OpenAI、Google Imagen/Gemini、Flux/BFL、BytePlus / 火山引擎 Seedream/Seedance，以及 xAI Grok。 |
+| **多 Provider 生成** | 可同时配置 OpenAI、Azure OpenAI、Google Imagen/Gemini、Flux/BFL、BytePlus / 火山引擎 Seedream/Seedance、xAI Grok、MiniMax TTS 和 ElevenLabs TTS。 |
 | **以素材驱动创作** | 角色、物体、背景、风格和参考图可以长期复用，帮助系列项目保持视觉一致性。 |
 | **为 Agent 自动化准备** | 内置 Skill 让兼容的 Agent 直接调用 `imagent` CLI，而不是临时接入零散的图像或视频工具。 |
 
