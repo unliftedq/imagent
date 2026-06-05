@@ -18,12 +18,12 @@ async function main(): Promise<void> {
     .name("imagent")
     .description(
       [
-        "imagent — local-first image and video generation CLI.",
+        "imagent — local-first image, video, and audio generation CLI.",
         "Suggested workflow for agents:",
         "  1. `imagent doctor`                                 — see which providers are configured and what models they expose.",
-        "  2. `imagent models [--kind image|video]`            — full provider/model inventory across the catalog.",
+        "  2. `imagent models [--kind image|video|audio]`      — full provider/model inventory across the catalog.",
         "  3. `imagent options --provider <id> --model <id>`   — exact request options/defaults/limits for the chosen model.",
-        "  4. `imagent image|video generate <prompt> --provider <id> --model <id> --option key=value [--out <dir>]`",
+        "  4. `imagent image|video|audio generate <prompt> --provider <id> --model <id> --option key=value [--out <dir>]`",
         "All assets, jobs, and gallery items live under ~/.imagent (override with `imagent config path`).",
       ].join("\n"),
     )
@@ -38,7 +38,7 @@ async function main(): Promise<void> {
   registerGalleryCommands(program);
   registerAssetCommands(program);
 
-  // Discovery commands (use these first to learn what to pass to image/video).
+  // Discovery commands (use these first to learn what to pass to image/video/audio).
   registerModelsCommand(program);
   registerOptionsCommand(program);
 

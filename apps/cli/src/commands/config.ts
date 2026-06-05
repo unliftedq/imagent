@@ -21,8 +21,8 @@ export function registerConfigCommand(program: Command): void {
     .description(
       [
         "Inspect and edit local provider credentials in ~/.imagent/secrets.json (and the preferences file at ~/.imagent/config.json).",
-        "Recognised dotted keys: <vendor>.apiKey, azure.endpoint, byteplus.endpoint, volcengine.endpoint, <vendor>.baseUrl, image.defaultModel, video.defaultModel.",
-        "Vendors: openai | azure | google | flux-bfl | byteplus | volcengine | xai | minimax.",
+        "Recognised dotted keys: <vendor>.apiKey, azure.endpoint, byteplus.endpoint, volcengine.endpoint, minimax.groupId, <vendor>.baseUrl, image.defaultModel, video.defaultModel, audio.defaultModel.",
+        "Vendors: openai | azure | google | flux-bfl | byteplus | volcengine | xai | minimax | elevenlabs.",
         "Use `imagent models` and `imagent options` to inspect the model catalog instead of reading catalog.json by hand.",
       ].join("\n"),
     );
@@ -30,7 +30,7 @@ export function registerConfigCommand(program: Command): void {
   config
     .command("set <key> <value>")
     .description(
-      "Set config. Examples: `imagent config set openai.apiKey sk-...`, `imagent config set image.defaultModel openai:gpt-image-2`, `imagent config set azure.endpoint https://...`.",
+      "Set config. Examples: `imagent config set openai.apiKey sk-...`, `imagent config set image.defaultModel openai:gpt-image-2`, `imagent config set audio.defaultModel elevenlabs:eleven_multilingual_v2`, `imagent config set azure.endpoint https://...`.",
     )
     .action(async (key: string, value: string) => {
       try {
