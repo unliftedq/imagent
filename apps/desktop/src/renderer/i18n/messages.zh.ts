@@ -215,6 +215,8 @@ export const zh: Dict = {
   "gallery.library": "资料库",
   "gallery.boards": "看板",
   "gallery.all": "全部",
+  "gallery.filter.image": "图片",
+  "gallery.filter.video": "视频",
   "gallery.filter.audio": "音频",
   "gallery.favorites": "收藏",
   "gallery.newBoard": "新建看板",

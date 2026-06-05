@@ -213,6 +213,8 @@ export const en = {
   "gallery.library": "Library",
   "gallery.boards": "Boards",
   "gallery.all": "All",
+  "gallery.filter.image": "Image",
+  "gallery.filter.video": "Video",
   "gallery.filter.audio": "Audio",
   "gallery.favorites": "Favorites",
   "gallery.newBoard": "New board",
