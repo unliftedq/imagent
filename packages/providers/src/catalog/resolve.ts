@@ -1,7 +1,10 @@
 import type { ProviderPreferences, ProviderRouting } from "@imagent/config";
 import {
+  AudioModelDefSchema,
   ImageModelDefSchema,
   VideoModelDefSchema,
+  type AudioModelDef,
+  type AudioProviderModel,
   type ImageModelDef,
   type ImageProviderModel,
   type VideoModelDef,
@@ -33,6 +36,16 @@ export function effectiveVideoOfferings(
 ): VideoProviderModel[] {
   const catalogList = catalog.providers[providerId]?.video ?? [];
   const configList = readRouting(prefs, providerId)?.video ?? [];
+  return mergeOfferings(catalogList, configList);
+}
+
+export function effectiveAudioOfferings(
+  catalog: ModelCatalog,
+  prefs: ProviderPreferences | undefined,
+  providerId: string,
+): AudioProviderModel[] {
+  const catalogList = catalog.providers[providerId]?.audio ?? [];
+  const configList = readRouting(prefs, providerId)?.audio ?? [];
   return mergeOfferings(catalogList, configList);
 }
 
@@ -73,6 +86,16 @@ export function resolveVideoProviderModels(
 ): VideoModelDef[] {
   return effectiveVideoOfferings(catalog, prefs, providerId).map((offering) =>
     resolveVideoProviderModel(catalog, providerId, offering),
+  );
+}
+
+export function resolveAudioProviderModels(
+  catalog: ModelCatalog,
+  providerId: string,
+  prefs?: ProviderPreferences,
+): AudioModelDef[] {
+  return effectiveAudioOfferings(catalog, prefs, providerId).map((offering) =>
+    resolveAudioProviderModel(catalog, providerId, offering),
   );
 }
 
@@ -128,6 +151,35 @@ export function resolveVideoProviderModel(
     },
     defaults: {
       ...(base.defaults ?? {}),
+      ...(providerOverride?.defaults ?? {}),
+      ...(offering.defaults ?? {}),
+    },
+  });
+}
+
+export function resolveAudioProviderModel(
+  catalog: ModelCatalog,
+  providerId: string,
+  offering: AudioProviderModel,
+): AudioModelDef {
+  const baseModel = catalog.models.audio[offering.modelId];
+  if (!baseModel) {
+    throw new Error(
+      `Provider '${providerId}' audio model '${offering.id}' references unknown canonical model '${offering.modelId}'`,
+    );
+  }
+  const providerOverride = catalog.providers[providerId]?.modelOverrides?.[offering.modelId];
+  return AudioModelDefSchema.parse({
+    id: offering.id,
+    baseModelId: offering.modelId,
+    displayName: providerDisplayName(offering, baseModel),
+    capabilities: {
+      ...(baseModel.capabilities ?? {}),
+      ...(providerOverride?.capabilities ?? {}),
+      ...(offering.capabilities ?? {}),
+    },
+    defaults: {
+      ...(baseModel.defaults ?? {}),
       ...(providerOverride?.defaults ?? {}),
       ...(offering.defaults ?? {}),
     },
