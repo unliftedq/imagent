@@ -38,6 +38,22 @@ describe("validateAudioRequestAgainstModel", () => {
       ),
     ).not.toThrow();
   });
+
+  it("rejects an unknown voice for a static (non-discovery) voice list", () => {
+    expect(() =>
+      validateAudioRequestAgainstModel("p", { ...base, voice: "not-a-voice" }, model),
+    ).toThrow(/voice/);
+  });
+
+  it("accepts any voice when the model supports voice discovery", () => {
+    const discoveryModel = {
+      ...model,
+      capabilities: { ...model.capabilities, supportsVoiceDiscovery: true },
+    };
+    expect(() =>
+      validateAudioRequestAgainstModel("p", { ...base, voice: "any-id" }, discoveryModel),
+    ).not.toThrow();
+  });
 });
 
 describe("applyAudioDefaults", () => {
