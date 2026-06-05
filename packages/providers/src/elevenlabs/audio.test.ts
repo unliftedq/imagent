@@ -32,10 +32,12 @@ describe("ElevenLabsAudioProvider", () => {
     });
     expect(res.output.mimeType).toBe("audio/mpeg");
     expect(res.output.bytes).toEqual(new Uint8Array([1, 2, 3]));
-    const url = (fetchMock as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]?.[0] as string;
+    const url = (fetchMock as unknown as { mock: { calls: unknown[][] } }).mock
+      .calls[0]?.[0] as string;
     expect(url).toContain("/v1/text-to-speech/rachel");
     expect(url).toContain("output_format=mp3_44100_128");
-    const init = (fetchMock as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]?.[1] as RequestInit;
+    const init = (fetchMock as unknown as { mock: { calls: unknown[][] } }).mock
+      .calls[0]?.[1] as RequestInit;
     const headers = new Headers(init.headers);
     expect(headers.get("xi-api-key")).toBe("k");
     expect(headers.get("content-type")).toBe("application/json");

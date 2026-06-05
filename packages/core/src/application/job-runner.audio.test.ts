@@ -46,7 +46,9 @@ describe("JobRunner audio", () => {
       capabilities: { outputFormats: ["mp3_44100_128"], supportsVoiceDiscovery: true },
       models: new Map(),
       async generate() {
-        return { output: { bytes: new Uint8Array([1, 2]), mimeType: "audio/mpeg", durationMs: 900 } };
+        return {
+          output: { bytes: new Uint8Array([1, 2]), mimeType: "audio/mpeg", durationMs: 900 },
+        };
       },
     };
     const { created, deps } = makeDeps(provider);

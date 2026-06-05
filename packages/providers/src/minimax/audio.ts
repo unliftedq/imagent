@@ -12,8 +12,8 @@ import { createHttpClient, type HttpClient } from "../http/index.js";
 import {
   assertMiniMaxOk,
   DEFAULT_MINIMAX_BASE_URL,
-  type MiniMaxBaseResp,
   MINIMAX_AUTH_ERROR_CODES,
+  type MiniMaxBaseResp,
   probeMiniMaxAuth,
 } from "./shared.js";
 

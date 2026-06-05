@@ -1,12 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import type {
-  AudioModelDef,
-  AudioRequest,
-  GenerationIntent,
-  Job,
-} from "@imagent/core";
+import type { AudioModelDef, AudioRequest, GenerationIntent, Job } from "@imagent/core";
 import chalk from "chalk";
 import type { Command } from "commander";
 
@@ -212,7 +207,9 @@ export function resolveAudioSelection(
     const model = modelOverride ?? provider.models.keys().next().value;
     if (model) return { providerId: pid, model };
   }
-  throw new Error("no audio providers configured. Run `imagent config set elevenlabs.apiKey ...` first.");
+  throw new Error(
+    "no audio providers configured. Run `imagent config set elevenlabs.apiKey ...` first.",
+  );
 }
 
 export function parseAudioOptions(

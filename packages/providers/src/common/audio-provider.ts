@@ -1,15 +1,15 @@
 import {
-  applyAudioDefaults,
   type AudioCapabilities,
   type AudioGenerationResult,
   type AudioModelDef,
   type AudioProvider,
   type AudioRequest,
+  applyAudioDefaults,
   type Logger,
   ProviderRequestError,
   type ProviderTestResult,
-  validateAudioRequestAgainstModel,
   type VoiceInfo,
+  validateAudioRequestAgainstModel,
 } from "@imagent/core";
 import { aggregateAudioCapabilities } from "./capabilities.js";
 

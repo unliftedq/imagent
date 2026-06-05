@@ -1,6 +1,6 @@
 import { useDraggable } from "@dnd-kit/core";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { DotsThree, Heart, Pause, Play, Waveform } from "@phosphor-icons/react";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useRef, useState } from "react";
 
 import { cn } from "../lib/cn.js";
@@ -110,7 +110,11 @@ export function AudioVariant({
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring)"
               }
             >
-              {playing ? <Pause weight="fill" className="size-4" /> : <Play weight="fill" className="size-4" />}
+              {playing ? (
+                <Pause weight="fill" className="size-4" />
+              ) : (
+                <Play weight="fill" className="size-4" />
+              )}
             </button>
             <div className="h-1 flex-1 rounded-(--radius-pill) bg-(--border)" aria-hidden="true" />
           </div>

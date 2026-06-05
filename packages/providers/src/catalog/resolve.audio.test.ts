@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { ModelCatalogSchema } from "./schema.js";
 import { resolveAudioProviderModels } from "./resolve.js";
+import { ModelCatalogSchema } from "./schema.js";
 
 const catalog = ModelCatalogSchema.parse({
   version: 2,
@@ -16,7 +16,9 @@ const catalog = ModelCatalogSchema.parse({
     },
   },
   providers: {
-    elevenlabs: { audio: [{ id: "rachel", modelId: "eleven_multilingual_v2", defaults: { voice: "rachel" } }] },
+    elevenlabs: {
+      audio: [{ id: "rachel", modelId: "eleven_multilingual_v2", defaults: { voice: "rachel" } }],
+    },
   },
 });
 

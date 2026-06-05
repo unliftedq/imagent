@@ -112,7 +112,9 @@ export class ElevenLabsAudioProvider extends BaseAudioProvider {
   }
 }
 
-function pickVoiceSettings(raw: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+function pickVoiceSettings(
+  raw: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined {
   if (!raw) return undefined;
   const keys = ["stability", "similarity_boost", "style", "use_speaker_boost"] as const;
   const out: Record<string, unknown> = {};

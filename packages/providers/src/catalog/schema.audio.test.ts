@@ -14,7 +14,10 @@ const base = {
     },
   },
   providers: {
-    elevenlabs: { displayName: "ElevenLabs", audio: [{ id: "rachel", modelId: "eleven_multilingual_v2" }] },
+    elevenlabs: {
+      displayName: "ElevenLabs",
+      audio: [{ id: "rachel", modelId: "eleven_multilingual_v2" }],
+    },
   },
 };
 
@@ -25,7 +28,11 @@ describe("catalog audio schema", () => {
   });
 
   it("defaults models.audio to {} when omitted", () => {
-    const parsed = ModelCatalogSchema.parse({ version: 2, models: { image: {}, video: {} }, providers: {} });
+    const parsed = ModelCatalogSchema.parse({
+      version: 2,
+      models: { image: {}, video: {} },
+      providers: {},
+    });
     expect(parsed.models.audio).toEqual({});
   });
 

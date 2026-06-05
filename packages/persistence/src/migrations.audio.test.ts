@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import type { Database as DatabaseType } from "better-sqlite3";
+import { describe, expect, it } from "vitest";
 import { currentVersion, openDatabase } from "./db.js";
 
 function insertGalleryItem(db: DatabaseType, id: string, kind: string): void {

@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  DEFAULT_CONFIG,
-  ProviderPreferencesSchema,
-  ProviderSecretsSchema,
-} from "./schema.js";
+import { DEFAULT_CONFIG, ProviderPreferencesSchema, ProviderSecretsSchema } from "./schema.js";
 
 describe("audio config", () => {
   it("parses an elevenlabs secret", () => {

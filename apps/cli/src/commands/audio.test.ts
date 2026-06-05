@@ -20,11 +20,11 @@ describe("audio command helpers", () => {
   it("does not fall back to the default model when an explicit model is unknown", () => {
     const runtime = {
       config: { app: { defaultAudioModel: { providerId: "elevenlabs", modelId: "tts" } } },
-      audioRegistry: new Map([
-        ["elevenlabs", { models: new Map([["tts", model]]) }],
-      ]),
+      audioRegistry: new Map([["elevenlabs", { models: new Map([["tts", model]]) }]]),
     } as unknown as Parameters<typeof resolveAudioSelection>[0];
 
-    expect(() => resolveAudioSelection(runtime, undefined, "typo-model")).toThrow(/unknown audio model/i);
+    expect(() => resolveAudioSelection(runtime, undefined, "typo-model")).toThrow(
+      /unknown audio model/i,
+    );
   });
 });

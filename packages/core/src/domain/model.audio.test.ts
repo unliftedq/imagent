@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  AudioModelCapsSchema,
   AudioModelCapsOverrideSchema,
+  AudioModelCapsSchema,
   AudioModelDefSchema,
   AudioProviderModelSchema,
 } from "./model.js";
