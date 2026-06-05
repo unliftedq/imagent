@@ -47,6 +47,29 @@ describe("ElevenLabsAudioProvider", () => {
     });
   });
 
+  it("forwards speed and voice_settings knobs into voice_settings", async () => {
+    const fetchMock = mockFetch(new Uint8Array([1]), {
+      headers: { "content-type": "audio/mpeg" },
+    });
+    const provider = new ElevenLabsAudioProvider({ apiKey: "k", models, fetch: fetchMock });
+    await provider.generate({
+      prompt: "hi",
+      providerId: "elevenlabs",
+      model: "eleven_multilingual_v2",
+      voice: "rachel",
+      speed: 1.1,
+      raw: { stability: 0.4 },
+      assetIds: [],
+    });
+    const init = (fetchMock as unknown as { mock: { calls: unknown[][] } }).mock
+      .calls[0]?.[1] as RequestInit;
+    expect(JSON.parse(init.body as string)).toEqual({
+      text: "hi",
+      model_id: "eleven_multilingual_v2",
+      voice_settings: { stability: 0.4, speed: 1.1 },
+    });
+  });
+
   it("lists voices from /v1/voices", async () => {
     const fetchMock = mockFetch(
       JSON.stringify({ voices: [{ voice_id: "rachel", name: "Rachel", preview_url: "u" }] }),

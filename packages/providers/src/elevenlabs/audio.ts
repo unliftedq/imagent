@@ -62,7 +62,7 @@ export class ElevenLabsAudioProvider extends BaseAudioProvider {
     }
     const format = merged.outputFormat ?? "mp3_44100_128";
     const path = `/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=${encodeURIComponent(format)}`;
-    const voiceSettings = pickVoiceSettings(merged.raw);
+    const voiceSettings = buildVoiceSettings(merged);
     const body: Record<string, unknown> = {
       text: merged.prompt,
       model_id: model.baseModelId ?? model.id,
@@ -112,13 +112,16 @@ export class ElevenLabsAudioProvider extends BaseAudioProvider {
   }
 }
 
-function pickVoiceSettings(
-  raw: Record<string, unknown> | undefined,
-): Record<string, unknown> | undefined {
-  if (!raw) return undefined;
-  const keys = ["stability", "similarity_boost", "style", "use_speaker_boost"] as const;
+function buildVoiceSettings(merged: AudioRequest): Record<string, unknown> | undefined {
   const out: Record<string, unknown> = {};
-  for (const k of keys) if (raw[k] !== undefined) out[k] = raw[k];
+  const raw = merged.raw;
+  if (raw) {
+    const keys = ["stability", "similarity_boost", "style", "use_speaker_boost"] as const;
+    for (const k of keys) if (raw[k] !== undefined) out[k] = raw[k];
+  }
+  // ElevenLabs exposes playback speed via voice_settings.speed (0.7–1.2). The
+  // request carries it as the top-level `speed`, so forward it here.
+  if (typeof merged.speed === "number") out.speed = merged.speed;
   return Object.keys(out).length > 0 ? out : undefined;
 }
 

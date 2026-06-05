@@ -166,14 +166,22 @@ Use `imagent models --kind audio` to list available TTS offerings, and `imagent 
 
 - **Provider-facing id:** `eleven_multilingual_v2`.
 - **Voice support:** Dynamic voice discovery is supported; run `imagent audio voices --provider elevenlabs`.
-- **Output controls:** `outputFormat`: `mp3_44100_128`, `mp3_44100_192`, `mp3_22050_32`, `pcm_16000`, `pcm_24000`, `ulaw_8000`; default `mp3_44100_128`.
+- **Output controls:** `outputFormat`: `mp3_44100_128`, `mp3_44100_192`, `mp3_22050_32`, `pcm_16000`, `pcm_24000`, `ulaw_8000`; default `mp3_44100_128`. `speed` ranges from 0.7 to 1.2.
 - **Extra controls:** `stability`, `similarity_boost`, and `style` from 0 to 1.
+
+### ElevenLabs: `eleven_v3`
+
+- **Provider-facing id:** `eleven_v3` (ElevenLabs' most expressive model; currently in alpha).
+- **Voice support:** Dynamic voice discovery is supported; run `imagent audio voices --provider elevenlabs`.
+- **Output controls:** `outputFormat`: `mp3_44100_128`, `mp3_44100_192`, `mp3_22050_32`, `pcm_16000`, `pcm_24000`, `ulaw_8000`; default `mp3_44100_128`. Note: `eleven_v3` does not support a `speed` control.
+- **Extra controls:** `stability` and `similarity_boost` from 0 to 1.
 
 ### ElevenLabs: `eleven_flash_v2_5`
 
 - **Provider-facing id:** `eleven_flash_v2_5`.
 - **Voice support:** Dynamic voice discovery is supported; run `imagent audio voices --provider elevenlabs`.
-- **Output controls:** `outputFormat`: `mp3_44100_128`, `mp3_22050_32`, `pcm_16000`, `pcm_24000`; default `mp3_44100_128`.
+- **Output controls:** `outputFormat`: `mp3_44100_128`, `mp3_44100_192`, `mp3_22050_32`, `pcm_16000`, `pcm_24000`, `ulaw_8000`; default `mp3_44100_128`. `speed` ranges from 0.7 to 1.2.
+- **Extra controls:** `stability`, `similarity_boost`, and `style` from 0 to 1.
 
 ### MiniMax: `speech-02-hd`
 
