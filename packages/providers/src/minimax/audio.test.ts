@@ -36,7 +36,7 @@ describe("MiniMaxAudioProvider", () => {
       assetIds: [],
     });
     expect(res.output.bytes).toEqual(new Uint8Array([1, 2, 3]));
-    const url = (fetchMock as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][0] as string;
+    const url = (fetchMock as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]?.[0] as string;
     expect(url).toContain("/t2a_v2");
     expect(url).toContain("GroupId=g1");
   });

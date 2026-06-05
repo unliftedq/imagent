@@ -19,6 +19,8 @@ export * from "./bytedance/image.js";
 export * from "./bytedance/video.js";
 export * from "./xai/image.js";
 export * from "./xai/video.js";
+export * from "./elevenlabs/audio.js";
+export * from "./minimax/audio.js";
 export * from "./minimax/image.js";
 export * from "./minimax/video.js";
 

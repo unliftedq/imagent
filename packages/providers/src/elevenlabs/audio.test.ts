@@ -13,7 +13,7 @@ const models = new Map<string, AudioModelDef>([
   ],
 ]);
 
-function mockFetch(body: BodyInit, init?: ResponseInit): typeof fetch {
+function mockFetch(body: string | Uint8Array, init?: ResponseInit): typeof fetch {
   return vi.fn(async () => new Response(body, { status: 200, ...init })) as unknown as typeof fetch;
 }
 
@@ -32,7 +32,7 @@ describe("ElevenLabsAudioProvider", () => {
     });
     expect(res.output.mimeType).toBe("audio/mpeg");
     expect(res.output.bytes).toEqual(new Uint8Array([1, 2, 3]));
-    const url = (fetchMock as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][0] as string;
+    const url = (fetchMock as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]?.[0] as string;
     expect(url).toContain("/v1/text-to-speech/rachel");
     expect(url).toContain("output_format=mp3_44100_128");
   });

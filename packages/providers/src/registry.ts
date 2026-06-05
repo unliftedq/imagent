@@ -1,17 +1,22 @@
 import type { ProviderPreferences, ProviderSecrets } from "@imagent/config";
-import type { ImageProvider, VideoModelDef, VideoProvider } from "@imagent/core";
+import type { AudioProvider, ImageProvider, VideoModelDef, VideoProvider } from "@imagent/core";
 import { AzureImageProvider } from "./azure/image.js";
 import { ByteDanceImageProvider } from "./bytedance/image.js";
 import { ByteDanceVideoProvider } from "./bytedance/video.js";
 import {
+  effectiveAudioOfferings,
   effectiveProviderDisplayName,
+  resolveAudioProviderModel,
+  resolveAudioProviderModels,
   resolveImageProviderModels,
   resolveVideoProviderModels,
 } from "./catalog/resolve.js";
+import { ElevenLabsAudioProvider } from "./elevenlabs/audio.js";
 import type { ModelCatalog } from "./catalog/schema.js";
 import { FluxImageProvider } from "./flux/image.js";
 import { GoogleImageProvider } from "./google/image.js";
 import { GoogleVideoProvider } from "./google/video.js";
+import { MiniMaxAudioProvider } from "./minimax/audio.js";
 import { MiniMaxImageProvider } from "./minimax/image.js";
 import { MiniMaxVideoProvider } from "./minimax/video.js";
 import { OpenAIImageProvider } from "./openai/image.js";
@@ -20,6 +25,7 @@ import { XaiVideoProvider } from "./xai/video.js";
 
 export type ImageRegistry = ReadonlyMap<string, ImageProvider>;
 export type VideoRegistry = ReadonlyMap<string, VideoProvider>;
+export type AudioRegistry = ReadonlyMap<string, AudioProvider>;
 
 const BUILT_IN_PROVIDER_IDS = [
   "openai",
@@ -30,6 +36,7 @@ const BUILT_IN_PROVIDER_IDS = [
   "volcengine",
   "xai",
   "minimax",
+  "elevenlabs",
 ] as const;
 
 /**
@@ -244,7 +251,44 @@ export function createVideoRegistry(
 }
 
 /**
- * Distinct vendor count for `imagent doctor`'s "Providers: X / 6 configured"
+ * Audio (TTS) registry. ElevenLabs needs only an apiKey; MiniMax audio also
+ * needs a GroupId (prefs.minimax.groupId) for the T2A v2 endpoint, so it is
+ * skipped until that is configured.
+ */
+export function createAudioRegistry(
+  secrets: ProviderSecrets,
+  prefs: ProviderPreferences,
+  catalog: ModelCatalog,
+): AudioRegistry {
+  const out = new Map<string, AudioProvider>();
+
+  if (secrets.elevenlabs) {
+    const opts: ConstructorParameters<typeof ElevenLabsAudioProvider>[0] = {
+      apiKey: secrets.elevenlabs.apiKey,
+      models: mapFromList(resolveAudioProviderModels(catalog, "elevenlabs", prefs)),
+    };
+    const baseUrl = prefs.elevenlabs?.baseUrl;
+    if (baseUrl) opts.baseUrl = baseUrl;
+    out.set("elevenlabs", new ElevenLabsAudioProvider(opts));
+  }
+
+  const minimaxGroupId = prefs.minimax?.groupId;
+  if (secrets.minimax && minimaxGroupId) {
+    const opts: ConstructorParameters<typeof MiniMaxAudioProvider>[0] = {
+      apiKey: secrets.minimax.apiKey,
+      groupId: minimaxGroupId,
+      models: mapFromList(resolveAudioProviderModels(catalog, "minimax", prefs)),
+    };
+    const baseUrl = prefs.minimax?.baseUrl;
+    if (baseUrl) opts.baseUrl = baseUrl;
+    out.set("minimax", new MiniMaxAudioProvider(opts));
+  }
+
+  return out;
+}
+
+/**
+ * Distinct vendor count for `imagent doctor`'s provider summary
  * line. A vendor is "configured" when it has both the credentials it needs
  * (apiKey from secrets) and any required routing (endpoint URL from prefs,
  * for vendors that demand one). Custom OpenAI-compatible providers count
@@ -263,6 +307,7 @@ export function configuredProviderCount(
   if (secrets.volcengine?.apiKey && prefs?.volcengine?.endpoint) n += 1;
   if (secrets.xai) n += 1;
   if (secrets.minimax) n += 1;
+  if (secrets.elevenlabs) n += 1;
   for (const routing of Object.values(prefs?.customOpenAI ?? {})) {
     if (routing.baseUrl) n += 1;
   }
@@ -286,9 +331,12 @@ export {
   saveCatalog,
 } from "./catalog/loader.js";
 export {
+  effectiveAudioOfferings,
   effectiveImageOfferings,
   effectiveProviderDisplayName,
   effectiveVideoOfferings,
+  resolveAudioProviderModel,
+  resolveAudioProviderModels,
   resolveImageProviderModel,
   resolveImageProviderModels,
   resolveVideoProviderModel,

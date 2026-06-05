@@ -81,7 +81,7 @@ export class ElevenLabsAudioProvider extends BaseAudioProvider {
     return { output: { bytes, mimeType, raw: { outputFormat: format } } };
   }
 
-  async listVoices(signal?: AbortSignal): Promise<VoiceInfo[]> {
+  override async listVoices(signal?: AbortSignal): Promise<VoiceInfo[]> {
     const opts: { signal?: AbortSignal } = {};
     if (signal) opts.signal = signal;
     const res = await this.http.get<ElevenVoicesResponse>("/v1/voices", opts);
