@@ -291,6 +291,7 @@ export const en = {
   "studio.collapseLibrary": "Collapse library",
   "studio.modeImage": "Image",
   "studio.modeVideo": "Video",
+  "studio.mode.audio": "Audio",
   "studio.imageConfig": "Image configuration",
   "studio.videoConfig": "Video configuration",
   "studio.composer.imagePlaceholder": "Describe the image you want to generate",

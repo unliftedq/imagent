@@ -289,6 +289,7 @@ export const zh: Dict = {
   "studio.collapseLibrary": "收起素材库",
   "studio.modeImage": "图片",
   "studio.modeVideo": "视频",
+  "studio.mode.audio": "音频",
   "studio.imageConfig": "图片配置",
   "studio.videoConfig": "视频配置",
   "studio.composer.imagePlaceholder": "描述你想生成的图片",

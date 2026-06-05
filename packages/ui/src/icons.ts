@@ -61,6 +61,7 @@ export {
   UploadSimple,
   UserCircle,
   VideoCamera,
+  Waveform,
   WarningCircle,
   X,
   XCircle,
