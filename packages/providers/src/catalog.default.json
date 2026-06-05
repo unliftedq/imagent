@@ -922,6 +922,122 @@
           "resolution": "1080P"
         }
       }
+    },
+    "audio": {
+      "eleven_multilingual_v2": {
+        "id": "eleven_multilingual_v2",
+        "displayName": "ElevenLabs Multilingual v2",
+        "capabilities": {
+          "supportsVoiceDiscovery": true,
+          "outputFormats": [
+            "mp3_44100_128",
+            "mp3_44100_192",
+            "mp3_22050_32",
+            "pcm_16000",
+            "pcm_24000",
+            "ulaw_8000"
+          ],
+          "extraKnobs": {
+            "stability": {
+              "type": "number",
+              "min": 0,
+              "max": 1
+            },
+            "similarity_boost": {
+              "type": "number",
+              "min": 0,
+              "max": 1
+            },
+            "style": {
+              "type": "number",
+              "min": 0,
+              "max": 1
+            }
+          }
+        },
+        "defaults": {
+          "outputFormat": "mp3_44100_128"
+        }
+      },
+      "eleven_flash_v2_5": {
+        "id": "eleven_flash_v2_5",
+        "displayName": "ElevenLabs Flash v2.5",
+        "capabilities": {
+          "supportsVoiceDiscovery": true,
+          "outputFormats": [
+            "mp3_44100_128",
+            "mp3_22050_32",
+            "pcm_16000",
+            "pcm_24000"
+          ]
+        },
+        "defaults": {
+          "outputFormat": "mp3_44100_128"
+        }
+      },
+      "minimax-speech-02": {
+        "id": "minimax-speech-02",
+        "displayName": "MiniMax Speech 02",
+        "capabilities": {
+          "supportsVoiceDiscovery": false,
+          "outputFormats": [
+            "mp3",
+            "wav",
+            "pcm"
+          ],
+          "speedRange": {
+            "min": 0.5,
+            "max": 2
+          },
+          "voices": [
+            {
+              "id": "male-qn-qingse",
+              "name": "Qingse (M)"
+            },
+            {
+              "id": "female-shaonv",
+              "name": "Shaonv (F)"
+            },
+            {
+              "id": "presenter_male",
+              "name": "Presenter (M)"
+            },
+            {
+              "id": "presenter_female",
+              "name": "Presenter (F)"
+            }
+          ],
+          "extraKnobs": {
+            "emotion": {
+              "type": "enum",
+              "values": [
+                "happy",
+                "sad",
+                "angry",
+                "fearful",
+                "disgusted",
+                "surprised",
+                "neutral"
+              ]
+            },
+            "vol": {
+              "type": "number",
+              "min": 0,
+              "max": 10
+            },
+            "pitch": {
+              "type": "number",
+              "min": -12,
+              "max": 12
+            }
+          }
+        },
+        "defaults": {
+          "outputFormat": "mp3",
+          "voice": "presenter_female",
+          "speed": 1
+        }
+      }
     }
   },
   "providers": {
@@ -1091,6 +1207,19 @@
         }
       ]
     },
+    "elevenlabs": {
+      "displayName": "ElevenLabs",
+      "audio": [
+        {
+          "id": "eleven_multilingual_v2",
+          "modelId": "eleven_multilingual_v2"
+        },
+        {
+          "id": "eleven_flash_v2_5",
+          "modelId": "eleven_flash_v2_5"
+        }
+      ]
+    },
     "minimax": {
       "displayName": "MiniMax",
       "image": [
@@ -1103,6 +1232,12 @@
         {
           "id": "MiniMax-Hailuo-2.3",
           "modelId": "MiniMax-Hailuo-2.3"
+        }
+      ],
+      "audio": [
+        {
+          "id": "speech-02-hd",
+          "modelId": "minimax-speech-02"
         }
       ]
     }
