@@ -88,7 +88,14 @@ export function CanvasArea({ mode }: { mode: StudioMode }) {
     selectedJob?.resultItemId && selectedJob.kind === mode
       ? (items.find((item) => item.id === selectedJob.resultItemId) ?? null)
       : null;
-  const display = pinned ?? selectedResult;
+  const latestAudioResult = useMemo(() => {
+    if (mode !== "audio") return null;
+    return (
+      items.filter((item) => item.kind === "audio").sort((a, b) => b.createdAt - a.createdAt)[0] ??
+      null
+    );
+  }, [items, mode]);
+  const display = pinned ?? selectedResult ?? latestAudioResult;
   const generating = selectedJob ? isActiveJobState(selectedJob.state) : false;
 
   // Siblings = every gallery item produced by the same job as `display`.
