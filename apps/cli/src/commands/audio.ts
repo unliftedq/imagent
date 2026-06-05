@@ -135,8 +135,13 @@ async function runAudioGenerate(text: string, options: AudioGenerateOptions): Pr
       : path.join(runtime.resolver.dataDir, item.relPath);
     process.stdout.write(`${chalk.green("ok:")} ${abs}\n`);
     if (options.out) {
-      const copied = await copyResultToDir(abs, options.out);
-      process.stdout.write(`${chalk.green("copied to:")} ${copied}\n`);
+      try {
+        const copied = await copyResultToDir(abs, options.out);
+        process.stdout.write(`${chalk.green("copied to:")} ${copied}\n`);
+      } catch (err) {
+        process.stderr.write(`${chalk.yellow("warn:")} ${(err as Error).message}\n`);
+        process.exitCode = 1;
+      }
     }
   } finally {
     db.close();
@@ -249,7 +254,22 @@ export function parseAudioOptions(
 async function copyResultToDir(sourcePath: string, outDir: string): Promise<string> {
   const targetDir = path.resolve(outDir);
   const targetPath = path.join(targetDir, path.basename(sourcePath));
-  await fs.mkdir(targetDir, { recursive: true });
-  await fs.copyFile(sourcePath, targetPath);
-  return targetPath;
+  try {
+    await fs.mkdir(targetDir, { recursive: true });
+    await fs.copyFile(sourcePath, targetPath);
+    return targetPath;
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    const hint =
+      code === "ENOENT"
+        ? "output directory path is invalid or inaccessible"
+        : code === "EACCES" || code === "EPERM"
+          ? "permission denied"
+          : code === "ENOSPC"
+            ? "not enough disk space"
+            : (err as Error).message;
+    throw new Error(
+      `generation succeeded, but --out copy from '${sourcePath}' to '${targetPath}' failed: ${hint}`,
+    );
+  }
 }
