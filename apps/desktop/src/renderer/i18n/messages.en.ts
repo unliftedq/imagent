@@ -322,6 +322,8 @@ export const en = {
   "studio.audio.generate": "Generate audio",
   "studio.audio.config": "Audio configuration",
   "studio.audio.voice": "Voice",
+  "studio.audio.voicePreview": "Preview voice",
+  "studio.audio.voiceStop": "Stop preview",
   "studio.audio.speed": "Speed",
   "studio.audio.outputFormat": "Output format",
   "studio.audio.extraKnobs": "Extra controls",

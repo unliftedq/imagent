@@ -8,14 +8,14 @@ import type {
 import type { ProviderId } from "@imagent/ipc";
 import { IpcClientError } from "@imagent/ipc";
 import { Button, Icons, Input, Popover, Select } from "@imagent/ui";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../../i18n/index.js";
 import { api } from "../../lib/api.js";
 import { useConfigStore } from "../../state/useConfigStore.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
 import { useJobsStore } from "../../state/useJobsStore.js";
 import { type AudioDraft, useUIStore } from "../../state/useUIStore.js";
-import { ChatComposerShell, ToolbarSelectTrigger } from "./composer.js";
+import { ChatComposerShell } from "./composer.js";
 import { ConfigSection, ConfigurationPopoverButton } from "./configurationPanel.js";
 import {
   createUnifiedModelOptions,
@@ -24,6 +24,33 @@ import {
 } from "./modelPicker.js";
 
 type ExtraValue = string | number;
+
+/**
+ * Session-scoped cache of discovered voices keyed by `providerId::modelId`.
+ * Voice lists rarely change within a session, so we fetch once and reuse —
+ * switching models/providers back and forth doesn't re-hit the provider API.
+ * Only successful (resolved) results are cached; failures fall back to static
+ * catalog voices and remain retryable.
+ */
+const voiceCache = new Map<string, VoiceInfo[]>();
+const voiceInflight = new Map<string, Promise<VoiceInfo[]>>();
+
+function voiceCacheKey(providerId: string, modelId: string | null): string {
+  return `${providerId}::${modelId ?? ""}`;
+}
+
+/** Secondary line for a voice row: prefer an explicit description label, else join remaining labels. */
+function voiceDescription(voice: VoiceInfo): string | undefined {
+  const labels = voice.labels;
+  if (!labels) return undefined;
+  if (labels.description && labels.description.trim().length > 0) return labels.description;
+  const parts = Object.entries(labels)
+    .filter(
+      ([key, value]) => key !== "description" && typeof value === "string" && value.length > 0,
+    )
+    .map(([, value]) => value);
+  return parts.length > 0 ? parts.join(" · ") : undefined;
+}
 
 export function AudioRail() {
   const draft = useUIStore((state) => state.studioDraft.audio);
@@ -130,15 +157,32 @@ export function AudioRail() {
       setVoices(staticVoices);
       return;
     }
+    const providerId = draft.providerId as ProviderId;
+    const key = voiceCacheKey(providerId, draft.model);
+
+    const cached = voiceCache.get(key);
+    if (cached) {
+      setVoices(cached.length > 0 ? cached : staticVoices);
+      return;
+    }
+
     let cancelled = false;
-    void api["audio.voices"]({
-      providerId: draft.providerId as ProviderId,
-      ...(draft.model ? { modelId: draft.model } : {}),
-    })
-      .then((response) => {
-        if (!cancelled) setVoices(response.voices.length > 0 ? response.voices : staticVoices);
+    let request = voiceInflight.get(key);
+    if (!request) {
+      request = api["audio.voices"]({
+        providerId,
+        ...(draft.model ? { modelId: draft.model } : {}),
+      }).then((response) => response.voices);
+      voiceInflight.set(key, request);
+    }
+    request
+      .then((list) => {
+        voiceCache.set(key, list);
+        voiceInflight.delete(key);
+        if (!cancelled) setVoices(list.length > 0 ? list : staticVoices);
       })
       .catch(() => {
+        voiceInflight.delete(key);
         if (!cancelled) setVoices(staticVoices);
       });
     return () => {
@@ -289,22 +333,130 @@ function AudioVoiceSelect({
   onChange: (voice: string | null) => void;
 }) {
   const t = useT();
+  const [open, setOpen] = useState(false);
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const stopPreview = (): void => {
+    const el = audioRef.current;
+    if (el) {
+      el.pause();
+      el.currentTime = 0;
+    }
+    setPlayingId(null);
+  };
+
+  // Stop any preview when the picker closes.
+  useEffect(() => {
+    if (!open) stopPreview();
+  }, [open]);
+
+  // Stop + release the audio element on unmount.
+  useEffect(() => {
+    return () => {
+      const el = audioRef.current;
+      if (el) el.pause();
+      audioRef.current = null;
+    };
+  }, []);
+
   if (voices.length === 0) return null;
+
+  const selected = voices.find((voice) => voice.id === value) ?? voices[0];
+
+  const togglePreview = (voice: VoiceInfo): void => {
+    if (!voice.previewUrl) return;
+    if (playingId === voice.id) {
+      stopPreview();
+      return;
+    }
+    let el = audioRef.current;
+    if (!el) {
+      el = new Audio();
+      el.onended = () => setPlayingId(null);
+      audioRef.current = el;
+    }
+    el.src = voice.previewUrl;
+    el.currentTime = 0;
+    void el
+      .play()
+      .then(() => setPlayingId(voice.id))
+      .catch(() => setPlayingId(null));
+  };
+
   return (
-    <Select.Root value={value ?? voices[0]?.id ?? ""} onValueChange={(next) => onChange(next)}>
-      <ToolbarSelectTrigger
-        ariaLabel={t("studio.audio.voice")}
-        icon={<Icons.UserCircle weight="duotone" className="size-3.5" />}
-        className="h-8 max-w-[180px] rounded-(--radius-pill) bg-(--bg) px-3 py-0 text-[12px]"
-      />
-      <Select.Content>
-        {voices.map((voice) => (
-          <Select.Item key={voice.id} value={voice.id}>
-            {voice.name || voice.id}
-          </Select.Item>
-        ))}
-      </Select.Content>
-    </Select.Root>
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          aria-label={t("studio.audio.voice")}
+          className={
+            "inline-flex h-8 max-w-[180px] items-center gap-1.5 rounded-(--radius-pill) " +
+            "bg-(--bg) px-3 text-[12px] text-(--text) hover:bg-(--surface)"
+          }
+        >
+          <Icons.UserCircle weight="duotone" className="size-3.5 shrink-0 text-(--text-muted)" />
+          <span className="truncate">{selected?.name}</span>
+          <Icons.CaretDown weight="bold" className="size-3 shrink-0 text-(--text-muted)" />
+        </button>
+      </Popover.Trigger>
+      <Popover.Content align="start" className="w-[280px] p-1">
+        <div className="flex max-h-[320px] flex-col overflow-y-auto">
+          {voices.map((voice) => {
+            const active = voice.id === value;
+            const description = voiceDescription(voice);
+            const playing = playingId === voice.id;
+            return (
+              <div
+                key={voice.id}
+                className={
+                  "flex items-center gap-1.5 rounded-(--radius-sm) pr-1 " +
+                  (active ? "bg-(--accent-soft)/40" : "hover:bg-(--surface)")
+                }
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange(voice.id);
+                    setOpen(false);
+                  }}
+                  className="flex min-w-0 flex-1 flex-col items-start gap-0.5 px-2 py-1.5 text-left"
+                >
+                  <span className="w-full truncate text-[12px] text-(--text)">{voice.name}</span>
+                  {description ? (
+                    <span className="w-full truncate text-[11px] text-(--text-muted)">
+                      {description}
+                    </span>
+                  ) : null}
+                </button>
+                {voice.previewUrl ? (
+                  <button
+                    type="button"
+                    aria-label={
+                      playing ? t("studio.audio.voiceStop") : t("studio.audio.voicePreview")
+                    }
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      togglePreview(voice);
+                    }}
+                    className="flex size-6 shrink-0 items-center justify-center rounded-(--radius-sm) text-(--text-muted) hover:bg-(--bg) hover:text-(--text)"
+                  >
+                    {playing ? (
+                      <Icons.Pause weight="fill" className="size-3.5" />
+                    ) : (
+                      <Icons.Play weight="fill" className="size-3.5" />
+                    )}
+                  </button>
+                ) : null}
+                {active ? (
+                  <Icons.Check weight="bold" className="size-3.5 shrink-0 text-(--accent)" />
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      </Popover.Content>
+    </Popover.Root>
   );
 }
 

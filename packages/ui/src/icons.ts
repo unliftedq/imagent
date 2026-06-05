@@ -43,6 +43,7 @@ export {
   Paperclip,
   Pencil,
   Play,
+  Pause,
   Plug,
   Plus,
   SealCheck,
@@ -66,5 +67,5 @@ export {
   X,
   XCircle,
   XLogo,
-  Sparkle
+  Sparkle,
 } from "@phosphor-icons/react";

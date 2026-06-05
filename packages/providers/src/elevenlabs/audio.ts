@@ -93,7 +93,7 @@ export class ElevenLabsAudioProvider extends BaseAudioProvider {
       .filter((v): v is { voice_id: string; name?: string } => typeof v.voice_id === "string")
       .map((v) => ({
         id: v.voice_id,
-        name: v.name ?? v.voice_id,
+        name: v.name || v.voice_id,
         ...(typeof (v as { preview_url?: string }).preview_url === "string"
           ? { previewUrl: (v as { preview_url?: string }).preview_url }
           : {}),

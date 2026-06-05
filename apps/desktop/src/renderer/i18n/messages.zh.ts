@@ -321,6 +321,8 @@ export const zh: Dict = {
   "studio.audio.generate": "生成音频",
   "studio.audio.config": "音频配置",
   "studio.audio.voice": "声音",
+  "studio.audio.voicePreview": "试听声音",
+  "studio.audio.voiceStop": "停止试听",
   "studio.audio.speed": "语速",
   "studio.audio.outputFormat": "输出格式",
   "studio.audio.extraKnobs": "额外控制",
