@@ -173,7 +173,10 @@ export function buildExamples(providerId: string, match: ModelMatch): string[] {
     const caps = match.def.capabilities;
     const opts: string[] = [];
     if (caps?.voices?.[0]) opts.push(`--option voice=${caps.voices[0].id}`);
-    if (caps?.outputFormats?.[0]) opts.push(`--option outputFormat=${caps.outputFormats[0]}`);
+    if (caps?.outputFormats?.[0]) {
+      const first = caps.outputFormats[0];
+      opts.push(`--option outputFormat=${combineAudioFormat(first.codec, first.qualities[0])}`);
+    }
     examples.push(
       `imagent speech synthesize "your text" --provider ${providerId} --model ${match.def.id}${opts.length ? ` ${opts.join(" ")}` : ""} --out ./outputs`,
     );

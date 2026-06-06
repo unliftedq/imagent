@@ -23,7 +23,7 @@ async function main(): Promise<void> {
         "  1. `imagent doctor`                                 — see which providers are configured and what models they expose.",
         "  2. `imagent models [--kind image|video|audio]`      — full provider/model inventory across the catalog.",
         "  3. `imagent options --provider <id> --model <id>`   — exact request options/defaults/limits for the chosen model.",
-        "  4. `imagent image|video generate <prompt>` / `imagent speech synthesize <text>` --provider <id> --model <id> --option key=value [--out <dir>]`",
+        "  4. `imagent image|video generate <prompt> --provider <id> --model <id> --option key=value [--out <dir>]` / `imagent speech synthesize <text> --provider <id> --model <id> --option key=value [--out <dir>]`",
         "All assets, jobs, and gallery items live under ~/.imagent (override with `imagent config path`).",
       ].join("\n"),
     )
