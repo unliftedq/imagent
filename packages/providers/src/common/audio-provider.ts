@@ -35,12 +35,12 @@ export abstract class BaseAudioProvider implements AudioProvider {
     if (options.logger) this.logger = options.logger;
   }
 
-  async generate(req: AudioRequest, signal?: AbortSignal): Promise<AudioGenerationResult> {
+  async synthesize(req: AudioRequest, signal?: AbortSignal): Promise<AudioGenerationResult> {
     const model = this.models.get(req.model);
     if (!model) throw this.unknownModelError(req.model);
     const merged = applyAudioDefaults(req, model);
     validateAudioRequestAgainstModel(this.id, merged, model);
-    return this.doGenerate(merged, model, signal);
+    return this.doSynthesize(merged, model, signal);
   }
 
   async test(signal?: AbortSignal): Promise<ProviderTestResult> {
@@ -61,7 +61,7 @@ export abstract class BaseAudioProvider implements AudioProvider {
     });
   }
 
-  protected abstract doGenerate(
+  protected abstract doSynthesize(
     merged: AudioRequest,
     model: AudioModelDef,
     signal?: AbortSignal,

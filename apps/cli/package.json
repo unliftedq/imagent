@@ -49,6 +49,7 @@
   },
   "dependencies": {
     "@ai-sdk/xai": "catalog:",
+    "@elevenlabs/elevenlabs-js": "catalog:",
     "@google/genai": "catalog:",
     "@node-rs/jieba": "catalog:",
     "ai": "catalog:",

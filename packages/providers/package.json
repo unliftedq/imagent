@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@ai-sdk/xai": "catalog:",
+    "@elevenlabs/elevenlabs-js": "catalog:",
     "@google/genai": "catalog:",
     "@imagent/config": "workspace:*",
     "@imagent/core": "workspace:*",

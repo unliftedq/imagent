@@ -51,7 +51,7 @@ imagent doctor
 ```bash
 imagent image generate "minimal product photo of a ceramic mug"
 imagent video generate "a slow dolly shot through a rainy alley"
-imagent audio generate "Welcome to imagent, your local creative workspace."
+imagent speech synthesize "Welcome to imagent, your local creative workspace."
 ```
 
 如果需要更完整的安装步骤、Provider 配置、桌面应用说明或故障排查，请查看文档站点：

@@ -112,18 +112,18 @@ Audio (text-to-speech) generation waits for completion and prints the result pat
 
 Minimal:
 ```bash
-imagent audio generate "Welcome to imagent, your local creative workspace."
+imagent speech synthesize "Welcome to imagent, your local creative workspace."
 ```
 
 Discover the voices a provider/model exposes before picking one:
 ```bash
-imagent audio voices --provider elevenlabs            # table of available voices
-imagent audio voices --provider minimax --json         # machine-readable output
+imagent speech voices --provider elevenlabs            # list of available voices
+imagent speech voices --provider minimax --json         # machine-readable output
 ```
 
 Only pick a provider/model and pass options when the request requires non-default values:
 ```bash
-imagent audio generate "A calm, slow narration about the night sky." \
+imagent speech synthesize "A calm, slow narration about the night sky." \
   --provider elevenlabs \
   --option voice=Rachel \
   --option outputFormat=mp3 \

@@ -304,17 +304,26 @@ export function validateAudioRequestAgainstModel(
   const caps = model.capabilities;
   if (!caps) return;
 
-  if (
-    req.outputFormat !== undefined &&
-    caps.outputFormats &&
-    caps.outputFormats.length > 0 &&
-    !caps.outputFormats.includes(req.outputFormat)
-  ) {
-    throw new ProviderRequestError(
-      `model ${model.id} does not support outputFormat '${req.outputFormat}'. ` +
-        `Supported: ${caps.outputFormats.join(", ")}`,
-      { vendorId },
-    );
+  if (req.codec !== undefined && caps.outputFormats && caps.outputFormats.length > 0) {
+    const fmt = caps.outputFormats.find((f) => f.codec === req.codec);
+    if (!fmt) {
+      throw new ProviderRequestError(
+        `model ${model.id} does not support codec '${req.codec}'. ` +
+          `Supported: ${caps.outputFormats.map((f) => f.codec).join(", ")}`,
+        { vendorId },
+      );
+    }
+    if (
+      req.formatQuality !== undefined &&
+      fmt.qualities.length > 0 &&
+      !fmt.qualities.includes(req.formatQuality)
+    ) {
+      throw new ProviderRequestError(
+        `model ${model.id} codec '${req.codec}' does not support quality '${req.formatQuality}'. ` +
+          `Supported: ${fmt.qualities.join(", ")}`,
+        { vendorId },
+      );
+    }
   }
 
   if (req.speed !== undefined && caps.speedRange) {
@@ -340,11 +349,37 @@ export function validateAudioRequestAgainstModel(
 }
 
 export function applyAudioDefaults(req: AudioRequest, model: AudioModelDef): AudioRequest {
-  const d = (model.defaults ?? {}) as { voice?: string; outputFormat?: string; speed?: number };
+  const d = (model.defaults ?? {}) as {
+    voice?: string;
+    codec?: string;
+    formatQuality?: string;
+    speed?: number;
+  };
   return {
     ...req,
     voice: req.voice ?? d.voice,
-    outputFormat: req.outputFormat ?? d.outputFormat,
+    codec: req.codec ?? d.codec,
+    formatQuality: req.formatQuality ?? d.formatQuality,
     speed: req.speed ?? d.speed,
   };
+}
+
+/**
+ * Combine an audio codec with an optional sample-rate/bitrate qualifier into
+ * the single format token providers send to their backend (e.g.
+ * `mp3` + `44100_128` → `mp3_44100_128`; `mp3` + undefined → `mp3`).
+ */
+export function combineAudioFormat(codec: string, quality?: string | null): string {
+  return quality ? `${codec}_${quality}` : codec;
+}
+
+/**
+ * Split a combined format token back into its codec and quality parts on the
+ * first underscore (e.g. `mp3_44100_128` → `{ codec: "mp3", formatQuality:
+ * "44100_128" }`; `mp3` → `{ codec: "mp3" }`).
+ */
+export function splitAudioFormat(format: string): { codec: string; formatQuality?: string } {
+  const i = format.indexOf("_");
+  if (i === -1) return { codec: format };
+  return { codec: format.slice(0, i), formatQuality: format.slice(i + 1) };
 }

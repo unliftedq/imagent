@@ -6,13 +6,16 @@ describe("AudioProvider port", () => {
     const provider: AudioProvider = {
       id: "stub",
       displayName: "Stub",
-      capabilities: { outputFormats: ["mp3"], supportsVoiceDiscovery: false },
+      capabilities: {
+        outputFormats: [{ codec: "mp3", qualities: [] }],
+        supportsVoiceDiscovery: false,
+      },
       models: new Map(),
-      async generate() {
+      async synthesize() {
         return { output: { bytes: new Uint8Array([1]), mimeType: "audio/mpeg" } };
       },
     };
-    const res = await provider.generate({
+    const res = await provider.synthesize({
       prompt: "hi",
       providerId: "stub",
       model: "m",

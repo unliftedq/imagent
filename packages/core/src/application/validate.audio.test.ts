@@ -7,20 +7,29 @@ const model: AudioModelDef = {
   id: "tts",
   capabilities: {
     supportsVoiceDiscovery: false,
-    outputFormats: ["mp3_44100_128", "wav_44100"],
+    outputFormats: [
+      { codec: "mp3", qualities: ["44100_128"] },
+      { codec: "wav", qualities: ["44100"] },
+    ],
     speedRange: { min: 0.5, max: 2 },
-    voices: [{ id: "rachel", name: "Rachel" }],
+    voices: [{ id: "rachel", name: "Rachel", description: "", previewUrl: null }],
   },
-  defaults: { voice: "rachel", outputFormat: "mp3_44100_128", speed: 1 },
+  defaults: { voice: "rachel", codec: "mp3", formatQuality: "44100_128", speed: 1 },
 };
 
 const base: AudioRequest = { prompt: "hi", providerId: "p", model: "tts", assetIds: [] };
 
 describe("validateAudioRequestAgainstModel", () => {
-  it("rejects unsupported outputFormat", () => {
+  it("rejects unsupported codec", () => {
     expect(() =>
-      validateAudioRequestAgainstModel("p", { ...base, outputFormat: "flac" }, model),
-    ).toThrow(/outputFormat/);
+      validateAudioRequestAgainstModel("p", { ...base, codec: "flac" }, model),
+    ).toThrow(/codec/);
+  });
+
+  it("rejects an unsupported quality for a codec", () => {
+    expect(() =>
+      validateAudioRequestAgainstModel("p", { ...base, codec: "mp3", formatQuality: "99999" }, model),
+    ).toThrow(/quality/);
   });
 
   it("rejects out-of-range speed", () => {
@@ -33,7 +42,7 @@ describe("validateAudioRequestAgainstModel", () => {
     expect(() =>
       validateAudioRequestAgainstModel(
         "p",
-        { ...base, outputFormat: "wav_44100", speed: 1.2 },
+        { ...base, codec: "wav", formatQuality: "44100", speed: 1.2 },
         model,
       ),
     ).not.toThrow();
@@ -60,7 +69,8 @@ describe("applyAudioDefaults", () => {
   it("fills missing voice/format/speed from defaults", () => {
     const merged = applyAudioDefaults(base, model);
     expect(merged.voice).toBe("rachel");
-    expect(merged.outputFormat).toBe("mp3_44100_128");
+    expect(merged.codec).toBe("mp3");
+    expect(merged.formatQuality).toBe("44100_128");
     expect(merged.speed).toBe(1);
   });
 });

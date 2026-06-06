@@ -1,7 +1,8 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import type { AudioModelDef, AudioRequest, GenerationIntent, Job } from "@imagent/core";
+import type { AudioModelDef, AudioRequest, GenerationIntent, Job, VoiceInfo } from "@imagent/core";
+import { splitAudioFormat } from "@imagent/core";
 import chalk from "chalk";
 import type { Command } from "commander";
 
@@ -15,34 +16,34 @@ import {
   parsePositiveNumberOption,
 } from "../support/util.js";
 
-interface AudioGenerateOptions {
+interface SpeechSynthesizeOptions {
   provider?: string;
   model?: string;
   option?: string[];
   out?: string;
 }
 
-interface AudioVoicesOptions {
+interface SpeechVoicesOptions {
   provider?: string;
   model?: string;
   json?: boolean;
 }
 
-export function registerAudioCommand(program: Command): void {
-  const audio = program
-    .command("audio")
-    .summary("Audio (text-to-speech) commands")
+export function registerSpeechCommand(program: Command): void {
+  const speech = program
+    .command("speech")
+    .summary("Speech (text-to-speech) commands")
     .description(
       [
         "Generate speech audio from text.",
-        "Use `imagent audio generate <text>` to synthesize speech.",
-        "Use `imagent audio voices --provider <id>` to discover available voices.",
+        "Use `imagent speech synthesize <text>` to synthesize speech.",
+        "Use `imagent speech voices --provider <id>` to discover available voices.",
         "Run `imagent models --kind audio` to list providers/models and `imagent options --provider <id> --model <id> --kind audio` for the exact `--option key=value` pairs.",
       ].join("\n"),
     );
 
-  audio
-    .command("generate <text>")
+  speech
+    .command("synthesize <text>")
     .summary("Synthesize speech from text")
     .description("Generate speech audio. Waits for completion and prints the result path.")
     .option("--provider <id>", "Provider id (elevenlabs | minimax). See `imagent doctor`.")
@@ -54,27 +55,27 @@ export function registerAudioCommand(program: Command): void {
       [],
     )
     .option("--out <dir>", "Copy the completed audio to this directory after success")
-    .action(async (text: string, options: AudioGenerateOptions) => {
+    .action(async (text: string, options: SpeechSynthesizeOptions) => {
       try {
-        await runAudioGenerate(text, options);
+        await runSpeechSynthesize(text, options);
       } catch (err) {
-        process.stderr.write(`${chalk.red("audio failed:")} ${(err as Error).message}\n`);
+        process.stderr.write(`${chalk.red("speech failed:")} ${(err as Error).message}\n`);
         process.exit(1);
       }
     });
 
-  audio
+  speech
     .command("voices")
-    .summary("List voices for an audio provider/model")
+    .summary("List voices for a speech provider/model")
     .description(
       "List voices from the provider's voice-list API when available, falling back to the model's static catalog voices.",
     )
     .requiredOption("--provider <id>", "Provider id (elevenlabs | minimax)")
     .option("--model <id>", "Model/offering id (defaults to the provider's first audio model)")
-    .option("--json", "Emit JSON instead of a table", false)
-    .action(async (options: AudioVoicesOptions) => {
+    .option("--json", "Emit JSON instead of a human-readable list", false)
+    .action(async (options: SpeechVoicesOptions) => {
       try {
-        await runAudioVoices(options);
+        await runSpeechVoices(options);
       } catch (err) {
         process.stderr.write(`${chalk.red("voices failed:")} ${(err as Error).message}\n`);
         process.exit(1);
@@ -82,18 +83,18 @@ export function registerAudioCommand(program: Command): void {
     });
 }
 
-async function runAudioGenerate(text: string, options: AudioGenerateOptions): Promise<void> {
+async function runSpeechSynthesize(text: string, options: SpeechSynthesizeOptions): Promise<void> {
   const runtime = await loadCliRuntime();
-  const { providerId, model } = resolveAudioSelection(runtime, options.provider, options.model);
+  const { providerId, model } = resolveSpeechSelection(runtime, options.provider, options.model);
   const provider = runtime.audioRegistry.get(providerId);
   if (!provider) {
     throw new Error(
-      `audio provider '${providerId}' is not configured. Run \`imagent config set ${providerId}.apiKey ...\` first.`,
+      `speech provider '${providerId}' is not configured. Run \`imagent config set ${providerId}.apiKey ...\` first.`,
     );
   }
   const resolved = provider.models.get(model);
   if (!resolved) throw new Error(`unknown model '${model}' for provider '${providerId}'`);
-  const requestOptions = parseAudioOptions(options.option ?? [], resolved);
+  const requestOptions = parseSpeechOptions(options.option ?? [], resolved);
 
   const { db, jobs, gallery, runner } = buildRunner(runtime);
   try {
@@ -116,7 +117,7 @@ async function runAudioGenerate(text: string, options: AudioGenerateOptions): Pr
     process.stdout.write(`${chalk.dim("submitting:")} provider=${providerId} model=${model}\n`);
     const id = await runner.start(intent);
     const cleanupCancel = installCancelOnInterrupt(runner, jobs, id);
-    const spinner = createSpinner({ label: `synthesizing audio with ${providerId}/${model}` });
+    const spinner = createSpinner({ label: `synthesizing speech with ${providerId}/${model}` });
     spinner.start();
     const job = await completed.finally(() => {
       spinner.stop();
@@ -143,11 +144,11 @@ async function runAudioGenerate(text: string, options: AudioGenerateOptions): Pr
   }
 }
 
-async function runAudioVoices(options: AudioVoicesOptions): Promise<void> {
+async function runSpeechVoices(options: SpeechVoicesOptions): Promise<void> {
   const runtime = await loadCliRuntime();
   const providerId = options.provider as string;
   const provider = runtime.audioRegistry.get(providerId);
-  if (!provider) throw new Error(`audio provider '${providerId}' is not configured`);
+  if (!provider) throw new Error(`speech provider '${providerId}' is not configured`);
   const modelId = options.model ?? provider.models.keys().next().value;
   const model = modelId ? provider.models.get(modelId) : undefined;
   if (options.model && !model) {
@@ -173,13 +174,36 @@ async function runAudioVoices(options: AudioVoicesOptions): Promise<void> {
     process.stdout.write("no voices available\n");
     return;
   }
-  for (const v of voices) {
-    const label = v.labels ? ` ${chalk.dim(JSON.stringify(v.labels))}` : "";
-    process.stdout.write(`${chalk.cyan(v.id)}  ${v.name}${label}\n`);
-  }
+  renderVoices(voices, providerId, modelId);
 }
 
-export function resolveAudioSelection(
+/** Renders a friendly, multi-line listing for each normalized voice. */
+function renderVoices(voices: readonly VoiceInfo[], providerId: string, modelId?: string): void {
+  const target = modelId ? `${providerId}/${modelId}` : providerId;
+  const noun = voices.length === 1 ? "voice" : "voices";
+  process.stdout.write(`${chalk.bold(`${voices.length} ${noun}`)} ${chalk.dim(`· ${target}`)}\n\n`);
+
+  const field = (label: string, value: string) => `  ${chalk.dim(label.padEnd(8))}${value}\n`;
+
+  voices.forEach((v, index) => {
+    const category = v.category ? chalk.dim(` (${v.category})`) : "";
+    process.stdout.write(`${chalk.bold(v.name)}${category}\n`);
+    process.stdout.write(field("id", chalk.cyan(v.id)));
+    if (v.description) process.stdout.write(field("about", v.description));
+    if (v.labels && Object.keys(v.labels).length > 0) {
+      const tags = Object.entries(v.labels)
+        .map(([key, value]) => `${key}=${value}`)
+        .join("  ");
+      process.stdout.write(field("tags", chalk.dim(tags)));
+    }
+    if (v.previewUrl) process.stdout.write(field("preview", chalk.dim(v.previewUrl)));
+    if (index < voices.length - 1) process.stdout.write("\n");
+  });
+
+  process.stdout.write(`\n${chalk.dim("Use a voice with")} ${chalk.cyan("--option voice=<id>")}\n`);
+}
+
+export function resolveSpeechSelection(
   runtime: Awaited<ReturnType<typeof loadCliRuntime>>,
   providerOverride: string | undefined,
   modelOverride: string | undefined,
@@ -208,11 +232,11 @@ export function resolveAudioSelection(
     if (model) return { providerId: pid, model };
   }
   throw new Error(
-    "no audio providers configured. Run `imagent config set elevenlabs.apiKey ...` first.",
+    "no speech providers configured. Run `imagent config set elevenlabs.apiKey ...` first.",
   );
 }
 
-export function parseAudioOptions(
+export function parseSpeechOptions(
   values: readonly string[],
   model: AudioModelDef,
 ): Partial<AudioRequest> {
@@ -226,18 +250,27 @@ export function parseAudioOptions(
         out.voice = value;
         break;
       case "speed":
-        out.speed = parsePositiveNumberOption("audio", key, value);
+        out.speed = parsePositiveNumberOption("speech", key, value);
+        break;
+      case "codec":
+        out.codec = value;
+        break;
+      case "formatQuality":
+        out.formatQuality = value;
         break;
       case "outputFormat":
-      case "format":
-        out.outputFormat = value;
+      case "format": {
+        const { codec, formatQuality } = splitAudioFormat(value);
+        out.codec = codec;
+        if (formatQuality !== undefined) out.formatQuality = formatQuality;
         break;
+      }
       default:
         if (knobKeys.has(key)) {
           raw[key] = coerceScalar(value);
         } else {
           throw new Error(
-            `unknown audio option '${key}'. Supported: voice, speed, outputFormat${
+            `unknown speech option '${key}'. Supported: voice, speed, outputFormat${
               knobKeys.size ? `, ${[...knobKeys].join(", ")}` : ""
             }`,
           );

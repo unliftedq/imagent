@@ -43,7 +43,7 @@ describe("CLI --help", () => {
     for (const cmd of [
       "image",
       "video",
-      "audio",
+      "speech",
       "gallery",
       "asset",
       "models",
@@ -66,7 +66,7 @@ describe("CLI --help", () => {
     const expected = [
       "image",
       "video",
-      "audio",
+      "speech",
       "gallery",
       "asset",
       "models",
@@ -100,7 +100,8 @@ describe("CLI --help", () => {
     expect(descriptionBlock.length).toBeGreaterThan(0);
     expect(descriptionBlock).toContain("image, video, and audio generation CLI");
     expect(descriptionBlock).toContain("models [--kind image|video|audio]");
-    expect(descriptionBlock).toContain("image|video|audio generate");
+    expect(descriptionBlock).toContain("image|video generate");
+    expect(descriptionBlock).toContain("speech synthesize");
     expect(descriptionBlock).not.toMatch(/\n\s*\n/);
   });
 
@@ -128,9 +129,9 @@ describe("CLI --help", () => {
     ["image", "generate", "--help"],
     ["video", "--help"],
     ["video", "generate", "--help"],
-    ["audio", "--help"],
-    ["audio", "generate", "--help"],
-    ["audio", "voices", "--help"],
+    ["speech", "--help"],
+    ["speech", "synthesize", "--help"],
+    ["speech", "voices", "--help"],
     ["video", "task", "--help"],
     ["video", "task", "ls", "--help"],
     ["video", "task", "get", "--help"],
@@ -167,7 +168,7 @@ describe("CLI --help", () => {
     expect(video.stdout).not.toContain("--duration");
     expect(video.stdout).not.toContain("--resolution");
 
-    const audio = runCli(["audio", "generate", "--help"]);
+    const audio = runCli(["speech", "synthesize", "--help"]);
     expect(audio.status, `stderr:\n${audio.stderr}`).toBe(0);
     expect(audio.stdout).toContain("--option <key=value>");
     expect(audio.stdout).toContain("--out <dir>");

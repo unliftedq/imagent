@@ -372,7 +372,7 @@ imagent video generate "a paper boat drifting down a rain-soaked street" \
 Audio example:
 
 ```bash
-imagent audio generate "Welcome to imagent" \
+imagent speech synthesize "Welcome to imagent" \
   --provider minimax \
   --model speech-2.8-hd \
   --option voice=presenter_female \
@@ -392,13 +392,13 @@ imagent config set elevenlabs.apiKey <elevenlabs-key>
 Environment variable:
 
 ```bash
-ELEVENLABS_API_KEY=<elevenlabs-key> imagent audio voices --provider elevenlabs
+ELEVENLABS_API_KEY=<elevenlabs-key> imagent speech voices --provider elevenlabs
 ```
 
 Example:
 
 ```bash
-imagent audio generate "A concise voiceover line" \
+imagent speech synthesize "A concise voiceover line" \
   --provider elevenlabs \
   --model eleven_multilingual_v2 \
   --option voice=<voice-id> \

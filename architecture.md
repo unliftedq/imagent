@@ -97,8 +97,8 @@ The CLI is the automation surface for the same runtime services. The top-level c
 ```text
 imagent image generate <prompt>
 imagent video generate <prompt>
-imagent audio generate <text>
-imagent audio voices
+imagent speech synthesize <text>
+imagent speech voices
 imagent gallery {ls|show|remix|rm|favorite}
 imagent asset {add|list|show|rm}
 imagent models

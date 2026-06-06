@@ -43,9 +43,12 @@ describe("JobRunner audio", () => {
     const provider: AudioProvider = {
       id: "elevenlabs",
       displayName: "ElevenLabs",
-      capabilities: { outputFormats: ["mp3_44100_128"], supportsVoiceDiscovery: true },
+      capabilities: {
+        outputFormats: [{ codec: "mp3", qualities: ["44100_128"] }],
+        supportsVoiceDiscovery: true,
+      },
       models: new Map(),
-      async generate() {
+      async synthesize() {
         return {
           output: { bytes: new Uint8Array([1, 2]), mimeType: "audio/mpeg", durationMs: 900 },
         };
@@ -70,9 +73,12 @@ describe("JobRunner audio", () => {
     const provider: AudioProvider = {
       id: "elevenlabs",
       displayName: "ElevenLabs",
-      capabilities: { outputFormats: ["wav_44100"], supportsVoiceDiscovery: true },
+      capabilities: {
+        outputFormats: [{ codec: "wav", qualities: ["44100"] }],
+        supportsVoiceDiscovery: true,
+      },
       models: new Map(),
-      async generate() {
+      async synthesize() {
         return { output: { bytes: new Uint8Array([9]), mimeType: "audio/wav" } };
       },
     };
@@ -91,9 +97,12 @@ describe("JobRunner audio", () => {
     const provider: AudioProvider = {
       id: "elevenlabs",
       displayName: "ElevenLabs",
-      capabilities: { outputFormats: ["wav_44100"], supportsVoiceDiscovery: true },
+      capabilities: {
+        outputFormats: [{ codec: "wav", qualities: ["44100"] }],
+        supportsVoiceDiscovery: true,
+      },
       models: new Map(),
-      async generate() {
+      async synthesize() {
         return { output: { bytes: new Uint8Array([9]), mimeType: "audio/x-wav" } };
       },
     };

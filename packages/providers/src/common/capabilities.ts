@@ -97,13 +97,26 @@ export function aggregateVideoCapabilities(
 export function aggregateAudioCapabilities(
   models: ReadonlyMap<string, AudioModelDef>,
 ): AudioCapabilities {
-  const outputFormats = new Set<string>();
+  const qualitiesByCodec = new Map<string, Set<string>>();
+  const codecOrder: string[] = [];
   let supportsVoiceDiscovery = false;
   for (const m of models.values()) {
     const c = m.capabilities;
     if (!c) continue;
-    for (const f of c.outputFormats ?? []) outputFormats.add(f);
+    for (const fmt of c.outputFormats ?? []) {
+      let qualities = qualitiesByCodec.get(fmt.codec);
+      if (!qualities) {
+        qualities = new Set<string>();
+        qualitiesByCodec.set(fmt.codec, qualities);
+        codecOrder.push(fmt.codec);
+      }
+      for (const q of fmt.qualities) qualities.add(q);
+    }
     supportsVoiceDiscovery ||= c.supportsVoiceDiscovery === true;
   }
-  return { outputFormats: [...outputFormats], supportsVoiceDiscovery };
+  const outputFormats = codecOrder.map((codec) => ({
+    codec,
+    qualities: [...(qualitiesByCodec.get(codec) ?? [])],
+  }));
+  return { outputFormats, supportsVoiceDiscovery };
 }

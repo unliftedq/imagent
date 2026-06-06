@@ -9,7 +9,10 @@ const base = {
     audio: {
       eleven_multilingual_v2: {
         id: "eleven_multilingual_v2",
-        capabilities: { supportsVoiceDiscovery: true, outputFormats: ["mp3_44100_128"] },
+        capabilities: {
+          supportsVoiceDiscovery: true,
+          outputFormats: [{ codec: "mp3", qualities: ["44100_128"] }],
+        },
       },
     },
   },

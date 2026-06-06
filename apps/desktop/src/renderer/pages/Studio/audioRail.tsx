@@ -16,7 +16,13 @@ import { useGalleryStore } from "../../state/useGalleryStore.js";
 import { useJobsStore } from "../../state/useJobsStore.js";
 import { type AudioDraft, useUIStore } from "../../state/useUIStore.js";
 import { ChatComposerShell } from "./composer.js";
-import { ConfigSection, ConfigurationPopoverButton } from "./configurationPanel.js";
+import {
+  ConfigSection,
+  ConfigurationPopoverButton,
+  PanelSelectTrigger,
+  RangeSlider,
+  SegmentedControl,
+} from "./configurationPanel.js";
 import {
   createUnifiedModelOptions,
   ProviderModelPicker,
@@ -39,11 +45,11 @@ function voiceCacheKey(providerId: string, modelId: string | null): string {
   return `${providerId}::${modelId ?? ""}`;
 }
 
-/** Secondary line for a voice row: prefer an explicit description label, else join remaining labels. */
+/** Secondary line for a voice row: prefer the normalized description, else join remaining labels. */
 function voiceDescription(voice: VoiceInfo): string | undefined {
+  if (voice.description && voice.description.trim().length > 0) return voice.description;
   const labels = voice.labels;
   if (!labels) return undefined;
-  if (labels.description && labels.description.trim().length > 0) return labels.description;
   const parts = Object.entries(labels)
     .filter(
       ([key, value]) => key !== "description" && typeof value === "string" && value.length > 0,
@@ -214,16 +220,31 @@ export function AudioRail() {
   useEffect(() => {
     const formats = caps?.outputFormats ?? [];
     if (formats.length === 0) {
-      if (draft.outputFormat !== null) setDraft({ outputFormat: null });
+      const patch: Partial<AudioDraft> = {};
+      if (draft.codec !== null) patch.codec = null;
+      if (draft.formatQuality !== null) patch.formatQuality = null;
+      if (Object.keys(patch).length > 0) setDraft(patch);
       return;
     }
-    if (!draft.outputFormat || !formats.includes(draft.outputFormat)) {
-      const fallback = readStringDefault(selectedModel, "outputFormat", formats[0] ?? null);
-      setDraft({
-        outputFormat: fallback && formats.includes(fallback) ? fallback : (formats[0] ?? null),
-      });
+    const codecs = formats.map((format) => format.codec);
+    let nextCodec = draft.codec;
+    if (!nextCodec || !codecs.includes(nextCodec)) {
+      const fallback = readStringDefault(selectedModel, "codec", codecs[0] ?? null);
+      nextCodec = fallback && codecs.includes(fallback) ? fallback : (codecs[0] ?? null);
     }
-  }, [caps?.outputFormats, draft.outputFormat, selectedModel, setDraft]);
+    const qualities = formats.find((format) => format.codec === nextCodec)?.qualities ?? [];
+    let nextQuality = draft.formatQuality;
+    if (qualities.length === 0) {
+      nextQuality = null;
+    } else if (!nextQuality || !qualities.includes(nextQuality)) {
+      const fallback = readStringDefault(selectedModel, "formatQuality", qualities[0] ?? null);
+      nextQuality = fallback && qualities.includes(fallback) ? fallback : (qualities[0] ?? null);
+    }
+    const patch: Partial<AudioDraft> = {};
+    if (nextCodec !== draft.codec) patch.codec = nextCodec;
+    if (nextQuality !== draft.formatQuality) patch.formatQuality = nextQuality;
+    if (Object.keys(patch).length > 0) setDraft(patch);
+  }, [caps?.outputFormats, draft.codec, draft.formatQuality, selectedModel, setDraft]);
 
   useEffect(() => {
     const knobs = caps?.extraKnobs ?? {};
@@ -245,7 +266,8 @@ export function AudioRail() {
       model: draft.model,
       ...(draft.voice ? { voice: draft.voice } : {}),
       ...(typeof draft.speed === "number" ? { speed: draft.speed } : {}),
-      ...(draft.outputFormat ? { outputFormat: draft.outputFormat } : {}),
+      ...(draft.codec ? { codec: draft.codec } : {}),
+      ...(draft.formatQuality ? { formatQuality: draft.formatQuality } : {}),
       ...(Object.keys(draft.extras).length ? { raw: draft.extras } : {}),
       ...(draft.parentId ? { parentId: draft.parentId } : {}),
       assetIds: [],
@@ -475,6 +497,9 @@ function AudioConfigurationPanel({
   const knobs = caps?.extraKnobs ?? {};
   const knobEntries = Object.entries(knobs);
 
+  const codecs = formats.map((format) => format.codec);
+  const qualities = formats.find((format) => format.codec === draft.codec)?.qualities ?? [];
+
   if (!range && formats.length === 0 && knobEntries.length === 0) return null;
 
   return (
@@ -488,23 +513,25 @@ function AudioConfigurationPanel({
             {t("studio.configuration")}
           </h2>
 
-          {formats.length > 0 ? (
-            <ConfigSection title={t("studio.audio.outputFormat")}>
-              <Select.Root
-                value={draft.outputFormat ?? formats[0] ?? ""}
-                onValueChange={(outputFormat) => onChange({ outputFormat })}
-              >
-                <Select.Trigger className="h-9 w-full rounded-(--radius-md) bg-(--bg) px-3 py-0 text-[12px]">
-                  <Select.Value />
-                </Select.Trigger>
-                <Select.Content>
-                  {formats.map((format) => (
-                    <Select.Item key={format} value={format}>
-                      {format}
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select.Root>
+          {codecs.length > 0 ? (
+            <ConfigSection title={t("studio.audio.codec")}>
+              <SegmentedControl
+                ariaLabel={t("studio.audio.codec")}
+                options={codecs}
+                value={draft.codec ?? codecs[0]}
+                onChange={(codec) => onChange({ codec })}
+              />
+            </ConfigSection>
+          ) : null}
+
+          {qualities.length > 0 ? (
+            <ConfigSection title={t("studio.audio.formatQuality")}>
+              <SegmentedControl
+                ariaLabel={t("studio.audio.formatQuality")}
+                options={qualities}
+                value={draft.formatQuality ?? qualities[0]}
+                onChange={(formatQuality) => onChange({ formatQuality })}
+              />
             </ConfigSection>
           ) : null}
 
@@ -562,9 +589,7 @@ function AudioExtraKnob({
           value={typeof value === "string" && values.includes(value) ? value : (values[0] ?? "")}
           onValueChange={onChange}
         >
-          <Select.Trigger className="h-9 w-full rounded-(--radius-md) bg-(--bg) px-3 py-0 text-[12px]">
-            <Select.Value />
-          </Select.Trigger>
+          <PanelSelectTrigger ariaLabel={formatKnobLabel(name)} />
           <Select.Content>
             {values.map((option) => (
               <Select.Item key={option} value={option}>
@@ -582,10 +607,7 @@ function AudioExtraKnob({
   const numeric = typeof value === "number" ? value : min;
   return (
     <label className="flex flex-col gap-2">
-      <span className="flex items-center justify-between gap-3 text-[12px] font-medium text-(--text-muted)">
-        {formatKnobLabel(name)}
-        <span className="tabular-nums text-(--text-faint)">{numeric}</span>
-      </span>
+      <span className="text-[12px] font-medium text-(--text-muted)">{formatKnobLabel(name)}</span>
       <NumberKnobControl value={numeric} min={min} max={max} step={0.01} onChange={onChange} />
     </label>
   );
@@ -611,14 +633,12 @@ function NumberKnobControl({
 
   return (
     <div className="grid grid-cols-[1fr_88px] items-center gap-3">
-      <input
-        type="range"
+      <RangeSlider
         min={min}
         max={max}
         step={step}
         value={value}
         onChange={(event) => commit(event.target.value)}
-        className="w-full accent-(--accent)"
       />
       <Input
         type="number"

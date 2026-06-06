@@ -61,8 +61,13 @@ export const AudioRequestSchema = z.object({
   voice: z.string().optional(),
   /** Playback/synthesis speed multiplier. */
   speed: z.number().positive().optional(),
-  /** Output audio format token (e.g. mp3_44100_128, mp3, wav). */
-  outputFormat: z.string().optional(),
+  /** Output codec / container (e.g. mp3, pcm, ulaw, wav). */
+  codec: z.string().optional(),
+  /**
+   * Sample-rate (+ bitrate) qualifier (e.g. 44100_128, 16000). The provider
+   * combines it with `codec` into the final format token sent to the backend.
+   */
+  formatQuality: z.string().optional(),
   /** Asset ids to record on the resulting gallery_item (usually empty for TTS). */
   assetIds: z.array(z.string()).default([]),
   boardId: z.string().optional(),

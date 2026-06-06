@@ -10,8 +10,11 @@ const catalog = ModelCatalogSchema.parse({
     audio: {
       eleven_multilingual_v2: {
         id: "eleven_multilingual_v2",
-        capabilities: { supportsVoiceDiscovery: true, outputFormats: ["mp3_44100_128"] },
-        defaults: { outputFormat: "mp3_44100_128" },
+        capabilities: {
+          supportsVoiceDiscovery: true,
+          outputFormats: [{ codec: "mp3", qualities: ["44100_128"] }],
+        },
+        defaults: { codec: "mp3", formatQuality: "44100_128" },
       },
     },
   },
@@ -29,6 +32,7 @@ describe("resolveAudioProviderModels", () => {
     expect(models[0]?.id).toBe("rachel");
     expect(models[0]?.capabilities?.supportsVoiceDiscovery).toBe(true);
     expect(models[0]?.defaults?.voice).toBe("rachel");
-    expect(models[0]?.defaults?.outputFormat).toBe("mp3_44100_128");
+    expect(models[0]?.defaults?.codec).toBe("mp3");
+    expect(models[0]?.defaults?.formatQuality).toBe("44100_128");
   });
 });

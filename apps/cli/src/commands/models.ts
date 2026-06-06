@@ -26,7 +26,7 @@ export function registerOptionsCommand(program: Command): void {
   program
     .command("options")
     .description(
-      "Show the request options/capabilities for a specific provider+model (use before `imagent image` / `imagent video` / `imagent audio`)",
+      "Show the request options/capabilities for a specific provider+model (use before `imagent image` / `imagent video` / `imagent speech`)",
     )
     .requiredOption(
       "--provider <id>",

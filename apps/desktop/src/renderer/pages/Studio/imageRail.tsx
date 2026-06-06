@@ -15,6 +15,7 @@ import {
   AspectRatioGrid,
   ConfigSection,
   ConfigurationPopoverButton,
+  RangeSlider,
   SegmentedControl,
   SizePresetGrid,
 } from "./configurationPanel.js";
@@ -715,8 +716,7 @@ function DimensionRow({
       >
         {label}
       </label>
-      <input
-        type="range"
+      <RangeSlider
         min={constraints.min}
         max={constraints.max}
         step={constraints.step}
@@ -726,11 +726,6 @@ function DimensionRow({
           onCommit?.(e.target.value);
         }}
         aria-label={`${label} slider`}
-        className={
-          "h-1 flex-1 cursor-ew-resize appearance-none rounded-full bg-(--surface) " +
-          "accent-(--accent) " +
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--accent)/40"
-        }
       />
       <input
         id={`size-${label.toLowerCase()}-input`}

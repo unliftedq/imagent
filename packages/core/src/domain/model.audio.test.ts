@@ -10,7 +10,7 @@ describe("audio model schemas", () => {
   it("parses full caps with defaults", () => {
     const caps = AudioModelCapsSchema.parse({
       voices: [{ id: "rachel", name: "Rachel" }],
-      outputFormats: ["mp3_44100_128"],
+      outputFormats: [{ codec: "mp3", qualities: ["44100_128"] }],
       speedRange: { min: 0.5, max: 2 },
     });
     expect(caps.supportsVoiceDiscovery).toBe(false);

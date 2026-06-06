@@ -364,7 +364,8 @@ describe("registerIpcHandlers", () => {
             model: "eleven_multilingual_v2",
             voice: "voice-1",
             speed: 1,
-            outputFormat: "mp3_44100_128",
+            codec: "mp3",
+            formatQuality: "44100_128",
             assetIds: [],
           },
         }),
@@ -752,7 +753,7 @@ describe("registerIpcHandlers", () => {
               displayName: "Eleven Multilingual v2",
               capabilities: {
                 supportsVoiceDiscovery: true,
-                outputFormats: ["mp3_44100_128"],
+                outputFormats: [{ codec: "mp3", qualities: ["44100_128"] }],
               },
             },
           ],
@@ -779,6 +780,7 @@ describe("registerIpcHandlers", () => {
               {
                 id: "voice-1",
                 name: "Narrator",
+                description: "A neutral narrator voice",
                 previewUrl: "https://example.test/voice.mp3",
                 labels: { accent: "neutral" },
               },
