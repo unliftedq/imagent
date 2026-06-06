@@ -38,7 +38,7 @@ imagent video generate "a slow camera move through a neon city" --provider volce
 Generate speech audio:
 
 ```bash
-imagent audio generate "Welcome to imagent" --provider elevenlabs
+imagent speech synthesize "Welcome to imagent" --provider elevenlabs
 ```
 
 ## Common commands
@@ -50,8 +50,8 @@ imagent video task ls [--state <state>] [--limit <n>]
 imagent video task get --id <jobId>
 imagent video task cancel --id <jobId>
 imagent video download [jobId] [--out <dir>]
-imagent audio generate "<text>" [--provider <id>] [--model <id>] [--option k=v ...] [--out <dir>]
-imagent audio voices --provider <id> [--model <id>] [--json]
+imagent speech synthesize "<text>" [--provider <id>] [--model <id>] [--option k=v ...] [--out <dir>]
+imagent speech voices --provider <id> [--model <id>] [--json]
 imagent gallery {ls|show|remix|rm|favorite}
 imagent asset {add|list|show|rm}
 imagent models [--kind image|video|audio] [--provider <id>] [--configured]
@@ -97,7 +97,7 @@ imagent models --kind image --configured       # provider × model inventory (fi
 imagent options --provider openai --model gpt-image-2  # model's exact request options + defaults
 ```
 
-`imagent options` is the canonical way to learn which `--option key=value` pairs (e.g. `size`, `quality`, `aspectRatio`, `durationSec`, `voice`) a given model accepts before invoking `imagent image generate`, `imagent video generate`, or `imagent audio generate`.
+`imagent options` is the canonical way to learn which `--option key=value` pairs (e.g. `size`, `quality`, `aspectRatio`, `durationSec`, `voice`) a given model accepts before invoking `imagent image generate`, `imagent video generate`, or `imagent speech synthesize`.
 
 ## Image generation
 
@@ -145,10 +145,10 @@ imagent video task cancel --id <jobId>      # cancel a running job
 imagent video download <jobId> --out ./videos  # wait for completion and download
 ```
 
-## Audio generation
+## Speech generation
 
 ```bash
-imagent audio generate "Welcome to imagent" \
+imagent speech synthesize "Welcome to imagent" \
   --provider elevenlabs \
   --option voice=Rachel \
   --option outputFormat=mp3 \
@@ -158,8 +158,8 @@ imagent audio generate "Welcome to imagent" \
 Audio (text-to-speech) generation waits for completion and prints the result path. List the voices a provider/model exposes before picking one:
 
 ```bash
-imagent audio voices --provider elevenlabs           # table of available voices
-imagent audio voices --provider minimax --json        # machine-readable output
+imagent speech voices --provider elevenlabs           # list of available voices
+imagent speech voices --provider minimax --json        # machine-readable output
 ```
 
 Common options (validated per model — run `imagent options --provider <id> --model <id> --kind audio` for the exact set): `voice`, `speed`, `outputFormat`. Provider-specific extras are passed through.

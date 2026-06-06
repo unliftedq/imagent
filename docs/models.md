@@ -165,28 +165,28 @@ Use `imagent models --kind audio` to list available TTS offerings, and `imagent 
 ### ElevenLabs: `eleven_multilingual_v2`
 
 - **Provider-facing id:** `eleven_multilingual_v2`.
-- **Voice support:** Dynamic voice discovery is supported; run `imagent audio voices --provider elevenlabs`.
+- **Voice support:** Dynamic voice discovery is supported; run `imagent speech voices --provider elevenlabs`.
 - **Output controls:** `outputFormat`: `mp3_44100_128`, `mp3_44100_192`, `mp3_22050_32`, `pcm_16000`, `pcm_24000`, `ulaw_8000`; default `mp3_44100_128`. `speed` ranges from 0.7 to 1.2.
 - **Extra controls:** `stability`, `similarity_boost`, and `style` from 0 to 1.
 
 ### ElevenLabs: `eleven_v3`
 
 - **Provider-facing id:** `eleven_v3` (ElevenLabs' most expressive model; currently in alpha).
-- **Voice support:** Dynamic voice discovery is supported; run `imagent audio voices --provider elevenlabs`.
+- **Voice support:** Dynamic voice discovery is supported; run `imagent speech voices --provider elevenlabs`.
 - **Output controls:** `outputFormat`: `mp3_44100_128`, `mp3_44100_192`, `mp3_22050_32`, `pcm_16000`, `pcm_24000`, `ulaw_8000`; default `mp3_44100_128`. Note: `eleven_v3` does not support a `speed` control.
 - **Extra controls:** `stability` and `similarity_boost` from 0 to 1.
 
 ### ElevenLabs: `eleven_flash_v2_5`
 
 - **Provider-facing id:** `eleven_flash_v2_5`.
-- **Voice support:** Dynamic voice discovery is supported; run `imagent audio voices --provider elevenlabs`.
+- **Voice support:** Dynamic voice discovery is supported; run `imagent speech voices --provider elevenlabs`.
 - **Output controls:** `outputFormat`: `mp3_44100_128`, `mp3_44100_192`, `mp3_22050_32`, `pcm_16000`, `pcm_24000`, `ulaw_8000`; default `mp3_44100_128`. `speed` ranges from 0.7 to 1.2.
 - **Extra controls:** `stability`, `similarity_boost`, and `style` from 0 to 1.
 
 ### MiniMax: `speech-2.8-hd` and `speech-2.8-turbo`
 
 - **Provider-facing ids:** Offering ids `speech-2.8-hd` (ultra-realistic quality) and `speech-2.8-turbo` (low latency); mapping to canonical catalog models `minimax-speech-2.8-hd` and `minimax-speech-2.8-turbo`. Each supports 40 languages and 7 emotions.
-- **Voice support:** Dynamic voice discovery is supported via MiniMax's `get_voice` API; run `imagent audio voices --provider minimax --model speech-2.8-hd` to list system, cloned, and generated voices on your account. Static fallback voices include `English_expressive_narrator`, `male-qn-qingse`, `female-shaonv`, `presenter_male`, and `presenter_female`.
+- **Voice support:** Dynamic voice discovery is supported via MiniMax's `get_voice` API; run `imagent speech voices --provider minimax --model speech-2.8-hd` to list system, cloned, and generated voices on your account. The catalog does not include static fallback voices, so discovery must succeed before the CLI or desktop can show a voice list.
 - **Output controls:** `outputFormat`: `mp3`, `wav`, `pcm`; default `mp3`. `speed` ranges from 0.5 to 2; default 1.
 - **Extra controls:** `emotion`, `vol` from 0 to 10, and `pitch` from -12 to 12.
 - **Note:** MiniMax TTS requires a Group ID — `imagent config set minimax.groupId <GroupId>`.

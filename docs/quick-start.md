@@ -61,12 +61,12 @@ By default the command exits after the provider accepts the job and prints the j
 ### 5. Generate audio
 
 ```bash
-imagent audio generate "Welcome to imagent" \
+imagent speech synthesize "Welcome to imagent" \
   --provider elevenlabs \
   --option voice=Rachel
 ```
 
-Audio (text-to-speech) generation waits for completion and prints the result path. Use `imagent audio voices --provider <id>` to discover available voices.
+Audio (text-to-speech) generation waits for completion and prints the result path. Use `imagent speech voices --provider <id>` to discover available voices.
 
 ### 6. Use the desktop app
 

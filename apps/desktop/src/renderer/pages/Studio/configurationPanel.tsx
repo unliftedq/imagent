@@ -35,6 +35,23 @@ export const ConfigurationPopoverButton = forwardRef<
 
 ConfigurationPopoverButton.displayName = "ConfigurationPopoverButton";
 
+/**
+ * Shared range slider used across the studio configuration panels
+ * (image dimensions, audio speed/knobs). Keeps the track + accent
+ * styling identical everywhere so the controls feel consistent.
+ */
+export const RANGE_SLIDER_CLASS =
+  "h-1 flex-1 cursor-ew-resize appearance-none rounded-full bg-(--surface) " +
+  "accent-(--accent) " +
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--accent)/40";
+
+export function RangeSlider({
+  className,
+  ...props
+}: ComponentPropsWithoutRef<"input">) {
+  return <input type="range" className={cn(RANGE_SLIDER_CLASS, className)} {...props} />;
+}
+
 export function ConfigSection({
   title,
   description,

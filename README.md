@@ -51,7 +51,7 @@ Generate with defaults:
 ```bash
 imagent image generate "minimal product photo of a ceramic mug"
 imagent video generate "a slow dolly shot through a rainy alley"
-imagent audio generate "Welcome to imagent, your local creative workspace."
+imagent speech synthesize "Welcome to imagent, your local creative workspace."
 ```
 
 Need setup details, provider configuration, desktop installation, or troubleshooting? Visit the documentation site:

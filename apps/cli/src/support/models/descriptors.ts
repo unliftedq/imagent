@@ -1,4 +1,5 @@
 import type { AudioModelDef, ImageModelDef, VideoModelDef } from "@imagent/core";
+import { combineAudioFormat } from "@imagent/core";
 
 import type { OptionDescriptor } from "./shared.js";
 
@@ -58,7 +59,8 @@ export function supportedVideoOptionDescriptors(model: VideoModelDef): OptionDes
   if (caps.aspectRatios && caps.aspectRatios.length > 0) {
     out.push({ key: "aspectRatio", allowed: [...caps.aspectRatios] });
   }
-  if (caps.supportsFirstFrame) out.push({ key: "firstFrame", note: "path to a starting-frame image" });
+  if (caps.supportsFirstFrame)
+    out.push({ key: "firstFrame", note: "path to a starting-frame image" });
   if (caps.supportsLastFrame) out.push({ key: "lastFrame", note: "path to an ending-frame image" });
   return out;
 }
@@ -74,15 +76,23 @@ export function supportedAudioOptionDescriptors(model: AudioModelDef): OptionDes
   }
   const out: OptionDescriptor[] = [];
   if (caps.supportsVoiceDiscovery) {
-    out.push({ key: "voice", note: "voice id from `imagent audio voices` (discovery)" });
+    out.push({ key: "voice", note: "voice id from `imagent speech voices` (discovery)" });
   } else if (caps.voices && caps.voices.length > 0) {
     out.push({ key: "voice", allowed: caps.voices.map((v) => v.id) });
   }
   if (caps.speedRange) {
-    out.push({ key: "speed", note: `number from ${caps.speedRange.min} to ${caps.speedRange.max}` });
+    out.push({
+      key: "speed",
+      note: `number from ${caps.speedRange.min} to ${caps.speedRange.max}`,
+    });
   }
   if (caps.outputFormats && caps.outputFormats.length > 0) {
-    out.push({ key: "outputFormat", allowed: [...caps.outputFormats] });
+    const allowed = caps.outputFormats.flatMap((fmt) =>
+      fmt.qualities.length > 0
+        ? fmt.qualities.map((q) => combineAudioFormat(fmt.codec, q))
+        : [fmt.codec],
+    );
+    out.push({ key: "outputFormat", allowed });
   }
   for (const [key, knob] of Object.entries(caps.extraKnobs ?? {})) {
     out.push({
@@ -102,9 +112,7 @@ type ModelMatch =
   | { kind: "video"; def: VideoModelDef }
   | { kind: "audio"; def: AudioModelDef };
 
-export function formatReferenceSummary(
-  match: ModelMatch,
-): string | undefined {
+export function formatReferenceSummary(match: ModelMatch): string | undefined {
   if (match.kind === "audio") return undefined;
   const caps = match.def.capabilities;
   if (!caps) return undefined;
@@ -129,23 +137,19 @@ export function formatReferenceSummary(
   return lines.length > 0 ? `${lines.join("\n")}\n` : undefined;
 }
 
-export function formatCapabilityFlags(
-  match: ModelMatch,
-): string | undefined {
+export function formatCapabilityFlags(match: ModelMatch): string | undefined {
   const caps = match.def.capabilities;
   if (!caps) return undefined;
   const lines: string[] = [];
   if (match.kind === "image") {
     const ic = match.def.capabilities;
-    if (typeof ic?.maxOutputs === "number") lines.push(`  max outputs per request: ${ic.maxOutputs}`);
+    if (typeof ic?.maxOutputs === "number")
+      lines.push(`  max outputs per request: ${ic.maxOutputs}`);
   }
   return lines.length > 0 ? `${lines.join("\n")}\n` : undefined;
 }
 
-export function buildExamples(
-  providerId: string,
-  match: ModelMatch,
-): string[] {
+export function buildExamples(providerId: string, match: ModelMatch): string[] {
   const examples: string[] = [];
   if (match.kind === "image") {
     const caps = match.def.capabilities;
@@ -169,9 +173,12 @@ export function buildExamples(
     const caps = match.def.capabilities;
     const opts: string[] = [];
     if (caps?.voices?.[0]) opts.push(`--option voice=${caps.voices[0].id}`);
-    if (caps?.outputFormats?.[0]) opts.push(`--option outputFormat=${caps.outputFormats[0]}`);
+    if (caps?.outputFormats?.[0]) {
+      const first = caps.outputFormats[0];
+      opts.push(`--option outputFormat=${combineAudioFormat(first.codec, first.qualities[0])}`);
+    }
     examples.push(
-      `imagent audio generate "your text" --provider ${providerId} --model ${match.def.id}${opts.length ? ` ${opts.join(" ")}` : ""} --out ./outputs`,
+      `imagent speech synthesize "your text" --provider ${providerId} --model ${match.def.id}${opts.length ? ` ${opts.join(" ")}` : ""} --out ./outputs`,
     );
   }
   return examples;

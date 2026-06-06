@@ -13,8 +13,8 @@ imagent video task ls [--state <state>] [--limit <n>]
 imagent video task get --id <jobId>
 imagent video task cancel --id <jobId>
 imagent video download [jobId] [--out <dir>]
-imagent audio generate <text> [--provider <id>] [--model <id>] [--option k=v ...] [--out <dir>]
-imagent audio voices --provider <id> [--model <id>] [--json]
+imagent speech synthesize <text> [--provider <id>] [--model <id>] [--option k=v ...] [--out <dir>]
+imagent speech voices --provider <id> [--model <id>] [--json]
 imagent gallery {ls|show|remix|rm|favorite}
 imagent asset {add|list|show|rm}
 imagent models [--kind image|video|audio] [--provider <id>] [--configured] [--json]
@@ -52,7 +52,7 @@ imagent options --provider google --model veo-3.0-generate-001 --kind video --js
 imagent options --provider elevenlabs --model eleven_multilingual_v2 --kind audio
 ```
 
-Use `imagent options` before crafting an `imagent image`, `imagent video`, or `imagent audio` invocation — it lists the exact `--option key=value` pairs and allowed values for that model.
+Use `imagent options` before crafting an `imagent image`, `imagent video`, or `imagent speech` invocation — it lists the exact `--option key=value` pairs and allowed values for that model.
 
 ### Configuration commands
 
@@ -199,18 +199,18 @@ imagent video download <jobId> --out ./videos
 
 Video task commands accept unique ID prefixes of at least 6 characters.
 
-### Audio generation
+### Speech generation
 
 Basic text-to-speech generation:
 
 ```bash
-imagent audio generate "A short narration line"
+imagent speech synthesize "A short narration line"
 ```
 
 Select provider and model:
 
 ```bash
-imagent audio generate "Welcome to imagent" \
+imagent speech synthesize "Welcome to imagent" \
   --provider elevenlabs \
   --model eleven_multilingual_v2
 ```
@@ -218,7 +218,7 @@ imagent audio generate "Welcome to imagent" \
 Pass audio options with repeatable `--option key=value` flags or the `-o` alias:
 
 ```bash
-imagent audio generate "Calm product voiceover" \
+imagent speech synthesize "Calm product voiceover" \
   --provider minimax \
   --model speech-2.8-hd \
   -o voice=presenter_female \
@@ -237,8 +237,8 @@ Common audio options are:
 Discover voices for a provider:
 
 ```bash
-imagent audio voices --provider elevenlabs
-imagent audio voices --provider minimax --model speech-2.8-hd
+imagent speech voices --provider elevenlabs
+imagent speech voices --provider minimax --model speech-2.8-hd
 ```
 
 ### Asset management

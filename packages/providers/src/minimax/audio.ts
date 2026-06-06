@@ -2,6 +2,7 @@ import {
   type AudioGenerationResult,
   type AudioModelDef,
   type AudioRequest,
+  combineAudioFormat,
   type Logger,
   ProviderRequestError,
   ProviderResponseError,
@@ -77,12 +78,12 @@ export class MiniMaxAudioProvider extends BaseAudioProvider {
     });
   }
 
-  protected async doGenerate(
+  protected async doSynthesize(
     merged: AudioRequest,
     model: AudioModelDef,
     signal?: AbortSignal,
   ): Promise<AudioGenerationResult> {
-    const format = merged.outputFormat ?? "mp3";
+    const format = combineAudioFormat(merged.codec ?? "mp3", merged.formatQuality);
     const voiceSetting: Record<string, unknown> = {};
     if (merged.voice) voiceSetting.voice_id = merged.voice;
     if (merged.speed !== undefined) voiceSetting.speed = merged.speed;
@@ -131,21 +132,26 @@ export class MiniMaxAudioProvider extends BaseAudioProvider {
       opts,
     );
     assertMiniMaxOk(res.base_resp, this.id);
-    const entries = [
-      ...(res.system_voice ?? []),
-      ...(res.voice_cloning ?? []),
-      ...(res.voice_generation ?? []),
+    const groups: ReadonlyArray<[readonly MiniMaxVoiceEntry[], string]> = [
+      [res.system_voice ?? [], "system"],
+      [res.voice_cloning ?? [], "cloned"],
+      [res.voice_generation ?? [], "generated"],
     ];
     const voices: VoiceInfo[] = [];
-    for (const entry of entries) {
-      const id = entry.voice_id;
-      if (typeof id !== "string" || id.length === 0) continue;
-      const voice: VoiceInfo = { id, name: entry.voice_name || id };
-      const description = entry.description?.filter((d) => typeof d === "string" && d.length > 0);
-      if (description && description.length > 0) {
-        voice.labels = { description: description.join(" ") };
+    for (const [entries, category] of groups) {
+      for (const entry of entries) {
+        const id = entry.voice_id;
+        if (typeof id !== "string" || id.length === 0) continue;
+        const description =
+          entry.description?.filter((d) => typeof d === "string" && d.length > 0).join(" ") ?? "";
+        voices.push({
+          id,
+          name: entry.voice_name || id,
+          description,
+          previewUrl: null,
+          category,
+        });
       }
-      voices.push(voice);
     }
     return voices;
   }

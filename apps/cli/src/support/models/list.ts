@@ -5,6 +5,7 @@ import {
   effectiveVideoOfferings,
   resolveAudioProviderModel,
 } from "@imagent/providers";
+import { combineAudioFormat } from "@imagent/core";
 import chalk from "chalk";
 
 import { loadCliRuntime } from "../runtime.js";
@@ -114,7 +115,11 @@ export async function runModels(options: ModelsOptions): Promise<void> {
           displayName: offering.displayName ?? resolved.displayName,
           configured,
           voices: resolved.capabilities?.voices?.map((v) => v.id),
-          outputFormats: resolved.capabilities?.outputFormats,
+          outputFormats: resolved.capabilities?.outputFormats?.flatMap((fmt) =>
+            fmt.qualities.length > 0
+              ? fmt.qualities.map((q) => combineAudioFormat(fmt.codec, q))
+              : [fmt.codec],
+          ),
         });
       }
     }

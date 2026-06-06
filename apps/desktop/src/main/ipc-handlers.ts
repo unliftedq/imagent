@@ -27,6 +27,7 @@ import {
   capImageReferences,
   capReferencePaths,
   resolveAssetSlots,
+  splitAudioFormat,
 } from "@imagent/core";
 import type { ProviderPreferencesPayload } from "@imagent/ipc";
 import {
@@ -769,13 +770,22 @@ export function setupIpc(deps: IpcDeps): IpcServer {
         return { kind: "video" as const, request: req };
       }
       if (parent.kind === "audio") {
+        const legacy =
+          typeof params.outputFormat === "string" ? splitAudioFormat(params.outputFormat) : null;
+        const codec =
+          typeof params.codec === "string" ? params.codec : (legacy?.codec ?? undefined);
+        const formatQuality =
+          typeof params.formatQuality === "string"
+            ? params.formatQuality
+            : (legacy?.formatQuality ?? undefined);
         const req: AudioRequest = {
           prompt: parent.prompt,
           providerId: parent.providerId,
           model: parent.model,
           ...(typeof params.voice === "string" ? { voice: params.voice } : {}),
           ...(typeof params.speed === "number" ? { speed: params.speed } : {}),
-          ...(typeof params.outputFormat === "string" ? { outputFormat: params.outputFormat } : {}),
+          ...(codec !== undefined ? { codec } : {}),
+          ...(formatQuality !== undefined ? { formatQuality } : {}),
           ...(params.raw && typeof params.raw === "object" && !Array.isArray(params.raw)
             ? { raw: params.raw as Record<string, unknown> }
             : {}),

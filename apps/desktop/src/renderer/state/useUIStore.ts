@@ -104,7 +104,8 @@ export interface AudioDraft {
   text: string;
   voice: string | null;
   speed: number | null;
-  outputFormat: string | null;
+  codec: string | null;
+  formatQuality: string | null;
   /** Per-model extra knob values (stability, emotion, vol, pitch, ...). */
   extras: Record<string, string | number>;
   parentId?: string;
@@ -147,7 +148,8 @@ const DEFAULT_AUDIO_DRAFT: AudioDraft = {
   text: "",
   voice: null,
   speed: null,
-  outputFormat: null,
+  codec: null,
+  formatQuality: null,
   extras: {},
 };
 
@@ -264,7 +266,8 @@ function loadAudioDraftFromStorage(): AudioDraft {
       text: typeof parsed.text === "string" ? parsed.text : "",
       voice: typeof parsed.voice === "string" ? parsed.voice : null,
       speed: typeof parsed.speed === "number" ? parsed.speed : null,
-      outputFormat: typeof parsed.outputFormat === "string" ? parsed.outputFormat : null,
+      codec: typeof parsed.codec === "string" ? parsed.codec : null,
+      formatQuality: typeof parsed.formatQuality === "string" ? parsed.formatQuality : null,
       extras: normalizeAudioExtras(parsed.extras),
       ...(typeof parsed.parentId === "string" ? { parentId: parsed.parentId } : {}),
     };

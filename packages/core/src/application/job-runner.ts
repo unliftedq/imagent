@@ -2,7 +2,12 @@ import { EventEmitter } from "node:events";
 import { isAbortError, ProviderAbortError, ProviderError } from "../domain/errors.js";
 import type { GalleryItem } from "../domain/gallery.js";
 import type { Job, JobId, JobState } from "../domain/job.js";
-import type { AudioRequest, GenerationIntent, ImageRequest, VideoRequest } from "../domain/request.js";
+import type {
+  AudioRequest,
+  GenerationIntent,
+  ImageRequest,
+  VideoRequest,
+} from "../domain/request.js";
 import type { VideoJobHandle, VideoJobState } from "../domain/result.js";
 import type { AudioProvider } from "../ports/audio-provider.js";
 import type { ImageProvider } from "../ports/image-provider.js";
@@ -470,7 +475,7 @@ export class JobRunner extends EventEmitter {
     signal: AbortSignal,
   ): Promise<void> {
     try {
-      const result = await provider.generate(req, signal);
+      const result = await provider.synthesize(req, signal);
       this.throwIfPersistedCancelled(job.id, req.providerId);
       const out = result.output;
 
@@ -495,7 +500,8 @@ export class JobRunner extends EventEmitter {
         paramsJson: JSON.stringify({
           voice: req.voice,
           speed: req.speed,
-          outputFormat: req.outputFormat,
+          codec: req.codec,
+          formatQuality: req.formatQuality,
           raw: { ...(req.raw ?? {}), ...(out.raw ?? {}) },
         }),
         relPath,

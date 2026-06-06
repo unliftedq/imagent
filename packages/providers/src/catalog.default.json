@@ -702,12 +702,9 @@
         "capabilities": {
           "supportsVoiceDiscovery": true,
           "outputFormats": [
-            "mp3_44100_128",
-            "mp3_44100_192",
-            "mp3_22050_32",
-            "pcm_16000",
-            "pcm_24000",
-            "ulaw_8000"
+            { "codec": "mp3", "qualities": ["44100_128", "44100_192", "22050_32"] },
+            { "codec": "pcm", "qualities": ["16000", "24000"] },
+            { "codec": "ulaw", "qualities": ["8000"] }
           ],
           "speedRange": {
             "min": 0.7,
@@ -732,7 +729,8 @@
           }
         },
         "defaults": {
-          "outputFormat": "mp3_44100_128"
+          "codec": "mp3",
+          "formatQuality": "44100_128"
         }
       },
       "eleven_v3": {
@@ -741,12 +739,9 @@
         "capabilities": {
           "supportsVoiceDiscovery": true,
           "outputFormats": [
-            "mp3_44100_128",
-            "mp3_44100_192",
-            "mp3_22050_32",
-            "pcm_16000",
-            "pcm_24000",
-            "ulaw_8000"
+            { "codec": "mp3", "qualities": ["44100_128", "44100_192", "22050_32"] },
+            { "codec": "pcm", "qualities": ["16000", "24000"] },
+            { "codec": "ulaw", "qualities": ["8000"] }
           ],
           "extraKnobs": {
             "stability": {
@@ -762,7 +757,8 @@
           }
         },
         "defaults": {
-          "outputFormat": "mp3_44100_128"
+          "codec": "mp3",
+          "formatQuality": "44100_128"
         }
       },
       "eleven_flash_v2_5": {
@@ -771,12 +767,9 @@
         "capabilities": {
           "supportsVoiceDiscovery": true,
           "outputFormats": [
-            "mp3_44100_128",
-            "mp3_44100_192",
-            "mp3_22050_32",
-            "pcm_16000",
-            "pcm_24000",
-            "ulaw_8000"
+            { "codec": "mp3", "qualities": ["44100_128", "44100_192", "22050_32"] },
+            { "codec": "pcm", "qualities": ["16000", "24000"] },
+            { "codec": "ulaw", "qualities": ["8000"] }
           ],
           "speedRange": {
             "min": 0.7,
@@ -801,7 +794,8 @@
           }
         },
         "defaults": {
-          "outputFormat": "mp3_44100_128"
+          "codec": "mp3",
+          "formatQuality": "44100_128"
         }
       },
       "minimax-speech-2.8-hd": {
@@ -809,33 +803,16 @@
         "displayName": "MiniMax Speech 2.8 HD",
         "capabilities": {
           "supportsVoiceDiscovery": true,
-          "outputFormats": ["mp3", "wav", "pcm"],
+          "outputFormats": [
+            { "codec": "mp3", "qualities": [] },
+            { "codec": "wav", "qualities": [] },
+            { "codec": "pcm", "qualities": [] }
+          ],
           "speedRange": {
             "min": 0.5,
             "max": 2
           },
-          "voices": [
-            {
-              "id": "English_expressive_narrator",
-              "name": "Expressive Narrator (EN)"
-            },
-            {
-              "id": "male-qn-qingse",
-              "name": "Qingse (M)"
-            },
-            {
-              "id": "female-shaonv",
-              "name": "Shaonv (F)"
-            },
-            {
-              "id": "presenter_male",
-              "name": "Presenter (M)"
-            },
-            {
-              "id": "presenter_female",
-              "name": "Presenter (F)"
-            }
-          ],
+          "voices": [],
           "extraKnobs": {
             "emotion": {
               "type": "enum",
@@ -854,8 +831,7 @@
           }
         },
         "defaults": {
-          "outputFormat": "mp3",
-          "voice": "presenter_female",
+          "codec": "mp3",
           "speed": 1
         }
       },
@@ -864,33 +840,16 @@
         "displayName": "MiniMax Speech 2.8 Turbo",
         "capabilities": {
           "supportsVoiceDiscovery": true,
-          "outputFormats": ["mp3", "wav", "pcm"],
+          "outputFormats": [
+            { "codec": "mp3", "qualities": [] },
+            { "codec": "wav", "qualities": [] },
+            { "codec": "pcm", "qualities": [] }
+          ],
           "speedRange": {
             "min": 0.5,
             "max": 2
           },
-          "voices": [
-            {
-              "id": "English_expressive_narrator",
-              "name": "Expressive Narrator (EN)"
-            },
-            {
-              "id": "male-qn-qingse",
-              "name": "Qingse (M)"
-            },
-            {
-              "id": "female-shaonv",
-              "name": "Shaonv (F)"
-            },
-            {
-              "id": "presenter_male",
-              "name": "Presenter (M)"
-            },
-            {
-              "id": "presenter_female",
-              "name": "Presenter (F)"
-            }
-          ],
+          "voices": [],
           "extraKnobs": {
             "emotion": {
               "type": "enum",
@@ -909,8 +868,7 @@
           }
         },
         "defaults": {
-          "outputFormat": "mp3",
-          "voice": "presenter_female",
+          "codec": "mp3",
           "speed": 1
         }
       }

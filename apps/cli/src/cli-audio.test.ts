@@ -26,9 +26,9 @@ function runCli(args: string[], env: NodeJS.ProcessEnv = {}) {
   }
 }
 
-describe("CLI audio regressions", () => {
-  it("audio voices rejects an explicit unknown model", () => {
-    const r = runCli(["audio", "voices", "--provider", "elevenlabs", "--model", "typo-model"], {
+describe("CLI speech regressions", () => {
+  it("speech voices rejects an explicit unknown model", () => {
+    const r = runCli(["speech", "voices", "--provider", "elevenlabs", "--model", "typo-model"], {
       ELEVENLABS_API_KEY: "dummy",
     });
 

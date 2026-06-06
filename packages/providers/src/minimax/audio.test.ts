@@ -10,10 +10,10 @@ const models = new Map<string, AudioModelDef>([
       baseModelId: "minimax-speech-2.8-hd",
       capabilities: {
         supportsVoiceDiscovery: false,
-        outputFormats: ["mp3"],
-        voices: [{ id: "presenter_female", name: "PF" }],
+        outputFormats: [{ codec: "mp3", qualities: [] }],
+        voices: [{ id: "presenter_female", name: "PF", description: "", previewUrl: null }],
       },
-      defaults: { outputFormat: "mp3", voice: "presenter_female", speed: 1 },
+      defaults: { codec: "mp3", voice: "presenter_female", speed: 1 },
     },
   ],
 ]);
@@ -40,7 +40,7 @@ describe("MiniMaxAudioProvider", () => {
       groupId: "g1",
       fetch: fetchMock,
     });
-    const res = await provider.generate({
+    const res = await provider.synthesize({
       prompt: "hi",
       providerId: "minimax",
       model: "speech-2.8-hd",
@@ -87,10 +87,24 @@ describe("MiniMaxAudioProvider", () => {
       {
         id: "presenter_female",
         name: "Presenter (F)",
-        labels: { description: "A warm presenter voice" },
+        description: "A warm presenter voice",
+        previewUrl: null,
+        category: "system",
       },
-      { id: "my-clone-1", name: "my-clone-1" },
-      { id: "ttv-voice-123", name: "ttv-voice-123" },
+      {
+        id: "my-clone-1",
+        name: "my-clone-1",
+        description: "",
+        previewUrl: null,
+        category: "cloned",
+      },
+      {
+        id: "ttv-voice-123",
+        name: "ttv-voice-123",
+        description: "",
+        previewUrl: null,
+        category: "generated",
+      },
     ]);
     const url = (fetchMock as unknown as { mock: { calls: unknown[][] } }).mock
       .calls[0]?.[0] as string;
