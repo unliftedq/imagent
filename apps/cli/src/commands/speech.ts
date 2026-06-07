@@ -35,7 +35,7 @@ export function registerSpeechCommand(program: Command): void {
     .summary("Speech (text-to-speech) commands")
     .description(
       [
-        "Generate speech speech from text.",
+        "Generate speech from text.",
         "Use `imagent speech synthesize <text>` to synthesize speech.",
         "Use `imagent speech voices --provider <id>` to discover available voices.",
         "Run `imagent models --kind speech` to list providers/models and `imagent options --provider <id> --model <id> --kind speech` for the exact `--option key=value` pairs.",
@@ -45,7 +45,7 @@ export function registerSpeechCommand(program: Command): void {
   speech
     .command("synthesize <text>")
     .summary("Synthesize speech from text")
-    .description("Generate speech speech. Waits for completion and prints the result path.")
+    .description("Synthesize text to speech. Waits for completion and prints the result path.")
     .option("--provider <id>", "Provider id (elevenlabs | minimax). See `imagent doctor`.")
     .option("--model <id>", "Model/offering id (see `imagent models --kind speech --provider <id>`)")
     .option(

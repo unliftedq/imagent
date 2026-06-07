@@ -35,7 +35,7 @@ Generate a video:
 imagent video generate "a slow camera move through a neon city" --provider volcengine
 ```
 
-Generate speech speech:
+Generate speech:
 
 ```bash
 imagent speech synthesize "Welcome to imagent" --provider elevenlabs
