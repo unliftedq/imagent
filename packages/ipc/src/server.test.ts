@@ -353,11 +353,11 @@ describe("registerIpcHandlers", () => {
       expect(reply.value.request.durationSec).toBe(5);
     });
 
-    it("gallery.remix: audio parent returns an AudioRequest envelope", async () => {
+    it("gallery.remix: speech parent returns an SpeechRequest envelope", async () => {
       const { ipcMain, invoke } = makeFakeIpc();
       registerIpcHandlers(ipcMain, {
         "gallery.remix": async () => ({
-          kind: "audio" as const,
+          kind: "speech" as const,
           request: {
             prompt: "narrate this",
             providerId: "elevenlabs",
@@ -375,7 +375,7 @@ describe("registerIpcHandlers", () => {
         value: { kind: string; request: { voice?: string } };
       };
       expect(reply.ok).toBe(true);
-      expect(reply.value.kind).toBe("audio");
+      expect(reply.value.kind).toBe("speech");
       expect(reply.value.request.voice).toBe("voice-1");
     });
 
@@ -718,33 +718,33 @@ describe("registerIpcHandlers", () => {
     });
   });
 
-  describe("Phase 8 routes — Audio", () => {
-    it("audio.submit: returns { jobId } and accepts parentId", async () => {
+  describe("Phase 8 routes — Speech", () => {
+    it("speech.submit: returns { jobId } and accepts parentId", async () => {
       const { ipcMain, invoke } = makeFakeIpc();
       let seenParentId: string | undefined;
       registerIpcHandlers(ipcMain, {
-        "audio.submit": async (req) => {
+        "speech.submit": async (req) => {
           seenParentId = req.parentId;
-          return { jobId: "audio-job-1" };
+          return { jobId: "speech-job-1" };
         },
       });
-      const reply = (await invoke("audio.submit", {
+      const reply = (await invoke("speech.submit", {
         prompt: "Narrate this",
         providerId: "elevenlabs",
         model: "eleven_multilingual_v2",
         voice: "voice-1",
         speed: 1,
-        parentId: "parent-audio",
+        parentId: "parent-speech",
       })) as { ok: true; value: { jobId: string } };
       expect(reply.ok).toBe(true);
-      expect(reply.value.jobId).toBe("audio-job-1");
-      expect(seenParentId).toBe("parent-audio");
+      expect(reply.value.jobId).toBe("speech-job-1");
+      expect(seenParentId).toBe("parent-speech");
     });
 
-    it("audio.models: returns provider defaults and audio model definitions", async () => {
+    it("speech.models: returns provider defaults and speech model definitions", async () => {
       const { ipcMain, invoke } = makeFakeIpc();
       registerIpcHandlers(ipcMain, {
-        "audio.models": async ({ providerId }) => ({
+        "speech.models": async ({ providerId }) => ({
           providerId,
           defaultModel: "eleven_multilingual_v2",
           models: [
@@ -759,7 +759,7 @@ describe("registerIpcHandlers", () => {
           ],
         }),
       });
-      const reply = (await invoke("audio.models", { providerId: "elevenlabs" })) as {
+      const reply = (await invoke("speech.models", { providerId: "elevenlabs" })) as {
         ok: true;
         value: { providerId: string; defaultModel: string | null; models: Array<{ id: string }> };
       };
@@ -769,11 +769,11 @@ describe("registerIpcHandlers", () => {
       expect(reply.value.models[0]?.id).toBe("eleven_multilingual_v2");
     });
 
-    it("audio.voices: returns voice discovery results for a provider and optional model", async () => {
+    it("speech.voices: returns voice discovery results for a provider and optional model", async () => {
       const { ipcMain, invoke } = makeFakeIpc();
       let seenModelId: string | undefined;
       registerIpcHandlers(ipcMain, {
-        "audio.voices": async ({ modelId }) => {
+        "speech.voices": async ({ modelId }) => {
           seenModelId = modelId;
           return {
             voices: [
@@ -788,7 +788,7 @@ describe("registerIpcHandlers", () => {
           };
         },
       });
-      const reply = (await invoke("audio.voices", {
+      const reply = (await invoke("speech.voices", {
         providerId: "elevenlabs",
         modelId: "eleven_multilingual_v2",
       })) as { ok: true; value: { voices: Array<{ id: string; name: string }> } };
@@ -797,13 +797,13 @@ describe("registerIpcHandlers", () => {
       expect(reply.value.voices[0]).toMatchObject({ id: "voice-1", name: "Narrator" });
     });
 
-    it("models.list: preserves audio rows alongside image and video rows", async () => {
+    it("models.list: preserves speech rows alongside image and video rows", async () => {
       const { ipcMain, invoke } = makeFakeIpc();
       registerIpcHandlers(ipcMain, {
         "models.list": async () => ({
           image: [],
           video: [],
-          audio: [
+          speech: [
             {
               id: "eleven_multilingual_v2",
               displayName: "Eleven Multilingual v2",
@@ -821,10 +821,10 @@ describe("registerIpcHandlers", () => {
       });
       const reply = (await invoke("models.list", undefined)) as {
         ok: true;
-        value: { audio?: Array<{ id: string }> };
+        value: { speech?: Array<{ id: string }> };
       };
       expect(reply.ok).toBe(true);
-      expect(reply.value.audio?.[0]?.id).toBe("eleven_multilingual_v2");
+      expect(reply.value.speech?.[0]?.id).toBe("eleven_multilingual_v2");
     });
   });
 
@@ -883,7 +883,7 @@ describe("registerIpcHandlers", () => {
               },
             },
             video: {},
-            audio: {},
+            speech: {},
           },
           providers: {
             openai: { image: [{ id: "gpt-image-2", modelId: "gpt-image-2" }] },
@@ -916,7 +916,7 @@ describe("registerIpcHandlers", () => {
             },
           },
           video: {},
-          audio: {},
+          speech: {},
         },
         providers: {
           "custom-openai": {

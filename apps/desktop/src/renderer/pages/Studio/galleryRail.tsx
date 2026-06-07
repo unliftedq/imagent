@@ -289,9 +289,9 @@ function GalleryThumb({
 
   return (
     <div
-      draggable={item.kind !== "audio"}
+      draggable={item.kind !== "speech"}
       onDragStart={(event) => {
-        if (item.kind === "audio") return;
+        if (item.kind === "speech") return;
         setDragData(event, {
           source: "gallery",
           id: item.id,
@@ -324,7 +324,7 @@ function GalleryThumb({
           />
         ) : (
           <span className="flex h-full w-full items-center justify-center text-(--text-muted)">
-            {item.kind === "audio" ? (
+            {item.kind === "speech" ? (
               <Icons.Waveform weight="duotone" className="size-8" />
             ) : (
               <Icons.FilmReel weight="duotone" className="size-8" />
@@ -332,7 +332,7 @@ function GalleryThumb({
           </span>
         )}
       </button>
-      {item.kind !== "audio" ? (
+      {item.kind !== "speech" ? (
         <button
           type="button"
           aria-label={t("gallery.preview.saveAsAsset")}
@@ -353,7 +353,7 @@ function GalleryThumb({
         <Badge className="bottom-1 left-1">
           <Icons.Play weight="fill" className="size-2.5" />
         </Badge>
-      ) : item.kind === "audio" ? (
+      ) : item.kind === "speech" ? (
         <Badge className="bottom-1 left-1">
           <Icons.Waveform weight="bold" className="size-2.5" />
         </Badge>

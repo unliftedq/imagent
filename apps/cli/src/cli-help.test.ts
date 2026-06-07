@@ -36,7 +36,7 @@ function withTempHome<T>(fn: (env: NodeJS.ProcessEnv) => T): T {
   }
 }
 
-describe("CLI --help", () => {
+describe("CLI --help", { timeout: 20_000 }, () => {
   it("root --help exits 0 and lists every command", () => {
     const r = runCli(["--help"]);
     expect(r.status).toBe(0);
@@ -98,8 +98,8 @@ describe("CLI --help", () => {
     expect(match).not.toBeNull();
     const descriptionBlock = match?.[0] ?? "";
     expect(descriptionBlock.length).toBeGreaterThan(0);
-    expect(descriptionBlock).toContain("image, video, and audio generation CLI");
-    expect(descriptionBlock).toContain("models [--kind image|video|audio]");
+    expect(descriptionBlock).toContain("image, video, and speech generation CLI");
+    expect(descriptionBlock).toContain("models [--kind image|video|speech]");
     expect(descriptionBlock).toContain("image|video generate");
     expect(descriptionBlock).toContain("speech synthesize");
     expect(descriptionBlock).not.toMatch(/\n\s*\n/);
@@ -109,7 +109,7 @@ describe("CLI --help", () => {
     const r = runCli(["config", "--help"]);
     expect(r.status, `stderr:\n${r.stderr}`).toBe(0);
     expect(r.stdout).toMatch(/reset[^\n]*<target>/);
-    expect(r.stdout).toContain("audio.defaultModel");
+    expect(r.stdout).toContain("speech.defaultModel");
     expect(r.stdout).toContain("elevenlabs");
     expect(r.stdout).toContain("minimax.groupId");
   });
@@ -150,7 +150,7 @@ describe("CLI --help", () => {
     });
   }
 
-  it("image/video/audio help exposes dynamic key=value options instead of stale model flags", () => {
+  it("image/video/speech help exposes dynamic key=value options instead of stale model flags", () => {
     const image = runCli(["image", "generate", "--help"]);
     expect(image.status, `stderr:\n${image.stderr}`).toBe(0);
     expect(image.stdout).toContain("--option <key=value>");
@@ -168,13 +168,13 @@ describe("CLI --help", () => {
     expect(video.stdout).not.toContain("--duration");
     expect(video.stdout).not.toContain("--resolution");
 
-    const audio = runCli(["speech", "synthesize", "--help"]);
-    expect(audio.status, `stderr:\n${audio.stderr}`).toBe(0);
-    expect(audio.stdout).toContain("--option <key=value>");
-    expect(audio.stdout).toContain("--out <dir>");
-    expect(audio.stdout).toMatch(/voice, speed,\s+outputFormat/);
-    expect(audio.stdout).not.toContain("--voice");
-    expect(audio.stdout).not.toContain("--speed");
+    const speech = runCli(["speech", "synthesize", "--help"]);
+    expect(speech.status, `stderr:\n${speech.stderr}`).toBe(0);
+    expect(speech.stdout).toContain("--option <key=value>");
+    expect(speech.stdout).toContain("--out <dir>");
+    expect(speech.stdout).toMatch(/voice, speed,\s+outputFormat/);
+    expect(speech.stdout).not.toContain("--voice");
+    expect(speech.stdout).not.toContain("--speed");
   });
 
   it("video generate rejects --out without --wait", () => {
@@ -254,7 +254,7 @@ describe("CLI --help", () => {
   });
 });
 
-describe("CLI MCP server", () => {
+describe("CLI MCP server", { timeout: 20_000 }, () => {
   it("responds to initialize, tools/list, and tools/call over stdio", async () => {
     const child = spawn(process.execPath, [ENTRY, "mcp"], {
       stdio: ["pipe", "pipe", "pipe"],

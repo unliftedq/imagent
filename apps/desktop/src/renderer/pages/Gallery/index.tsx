@@ -74,7 +74,7 @@ export function GalleryPage() {
     } else if (activeFilter === FILTER_VIDEO) {
       setQuery({ kind: "video", boardId: undefined, favoritedOnly: undefined });
     } else if (activeFilter === FILTER_AUDIO) {
-      setQuery({ kind: "audio", boardId: undefined, favoritedOnly: undefined });
+      setQuery({ kind: "speech", boardId: undefined, favoritedOnly: undefined });
     } else {
       setQuery({ kind: undefined, boardId: activeFilter, favoritedOnly: undefined });
     }
@@ -164,9 +164,9 @@ export function GalleryPage() {
         });
         return;
       }
-      if (result.kind === "audio") {
+      if (result.kind === "speech") {
         applyRemix({
-          kind: "audio",
+          kind: "speech",
           parentId: id,
           request: {
             prompt: result.request.prompt,
@@ -223,10 +223,10 @@ export function GalleryPage() {
   };
 
   const openSaveAsAssetDialog = (item: GalleryItem): void => {
-    if (item.kind === "audio") {
+    if (item.kind === "speech") {
       pushToast({
-        title: t("gallery.toast.audioAssetUnsupported"),
-        description: t("gallery.toast.audioAssetUnsupportedDesc"),
+        title: t("gallery.toast.speechAssetUnsupported"),
+        description: t("gallery.toast.speechAssetUnsupportedDesc"),
         variant: "warning",
       });
       return;
@@ -304,7 +304,7 @@ export function GalleryPage() {
           />
           <BoardSidebarItem
             id={FILTER_AUDIO}
-            label={t("gallery.filter.audio")}
+            label={t("gallery.filter.speech")}
             active={activeFilter === FILTER_AUDIO}
             acceptsDrop={false}
             onClick={() => setActiveFilter(FILTER_AUDIO)}
@@ -457,7 +457,7 @@ export function GalleryPage() {
                     }}
                     onOpen={() => setPreviewId(it.id)}
                     onRemix={() => void handleRemix(it.id)}
-                    onSaveAsAsset={it.kind === "audio" ? undefined : () => openSaveAsAssetDialog(it)}
+                    onSaveAsAsset={it.kind === "speech" ? undefined : () => openSaveAsAssetDialog(it)}
                     onToggleFavorite={() => void toggleFav(it.id)}
                     onAddToBoard={(boardId) => void addItem(boardId, it.id)}
                     onOpenFileLocation={() => {

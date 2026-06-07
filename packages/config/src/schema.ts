@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-  AudioProviderModelSchema,
+  SpeechProviderModelSchema,
   ImageProviderModelSchema,
   VideoProviderModelSchema,
 } from "@imagent/core";
@@ -91,11 +91,11 @@ export const ProviderRoutingSchema = z.object({
   displayName: z.string().optional(),
   endpoint: z.string().optional(),
   baseUrl: z.string().optional(),
-  /** MiniMax T2A v2 GroupId — required only for MiniMax audio generation. */
+  /** MiniMax T2A v2 GroupId — required only for MiniMax speech generation. */
   groupId: z.string().optional(),
   image: z.array(ImageProviderModelSchema).optional(),
   video: z.array(VideoProviderModelSchema).optional(),
-  audio: z.array(AudioProviderModelSchema).optional(),
+  speech: z.array(SpeechProviderModelSchema).optional(),
 });
 export type ProviderRouting = z.infer<typeof ProviderRoutingSchema>;
 
@@ -142,7 +142,7 @@ export const AppPreferencesSchema = z.object({
   locale: z.enum(["system", "en", "zh"]).default("system"),
   defaultImageModel: DefaultModelPreferenceSchema.nullable().default(null),
   defaultVideoModel: DefaultModelPreferenceSchema.nullable().default(null),
-  defaultAudioModel: DefaultModelPreferenceSchema.nullable().default(null),
+  defaultSpeechModel: DefaultModelPreferenceSchema.nullable().default(null),
   defaultOutputDir: z.string().nullable().default(null),
   generationConcurrency: z.number().int().min(1).max(8).default(2),
   keepPromptHistory: z.boolean().default(true),

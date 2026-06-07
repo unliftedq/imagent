@@ -7,8 +7,8 @@ import type { ModelsOptions, OptionsCommandArgs } from "../support/models/shared
 export function registerModelsCommand(program: Command): void {
   program
     .command("models")
-    .description("List every provider/model available in the catalog (image + video + audio)")
-    .option("--kind <kind>", "Filter by kind: 'image', 'video', or 'audio'")
+    .description("List every provider/model available in the catalog (image + video + speech)")
+    .option("--kind <kind>", "Filter by kind: 'image', 'video', or 'speech'")
     .option("--provider <id>", "Filter to a single provider id")
     .option("--configured", "Only show providers with credentials in secrets.json", false)
     .option("--json", "Emit machine-readable JSON instead of the human-friendly table", false)
@@ -35,7 +35,7 @@ export function registerOptionsCommand(program: Command): void {
     .requiredOption("--model <id>", "Model/offering id as it appears under that provider")
     .option(
       "--kind <kind>",
-      "Disambiguate when the same id exists for multiple kinds: 'image', 'video', or 'audio'",
+      "Disambiguate when the same id exists for multiple kinds: 'image', 'video', or 'speech'",
     )
     .option("--json", "Emit machine-readable JSON instead of the human-friendly view", false)
     .action(async (options: OptionsCommandArgs) => {

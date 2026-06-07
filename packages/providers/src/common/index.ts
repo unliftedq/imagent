@@ -5,7 +5,7 @@
  */
 export * from "./bytes.js";
 export * from "./capabilities.js";
-export * from "./audio-provider.js";
+export * from "./speech-provider.js";
 export * from "./errors.js";
 export * from "./flux-poll.js";
 export * from "./image-provider.js";

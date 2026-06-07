@@ -1,8 +1,8 @@
 import {
-  AudioModelCapsOverrideSchema,
-  AudioModelDefSchema,
-  type AudioProviderModel,
-  AudioProviderModelSchema,
+  SpeechModelCapsOverrideSchema,
+  SpeechModelDefSchema,
+  type SpeechProviderModel,
+  SpeechProviderModelSchema,
   ImageModelCapsOverrideSchema,
   ImageModelDefSchema,
   type ImageProviderModel,
@@ -25,10 +25,10 @@ import { z } from "zod";
  * separate maps on the catalog and any given canonical id is one media kind,
  * never multiple. The merged caps schema admits fields from any kind;
  * irrelevant fields are simply stripped when the final `ImageModelDef` /
- * `VideoModelDef` / `AudioModelDef` is parsed.
+ * `VideoModelDef` / `SpeechModelDef` is parsed.
  */
 const ModelCapsOverrideSchema = ImageModelCapsOverrideSchema.merge(VideoModelCapsOverrideSchema).merge(
-  AudioModelCapsOverrideSchema,
+  SpeechModelCapsOverrideSchema,
 );
 
 const ProviderModelOverrideSchema = z.object({
@@ -44,8 +44,8 @@ export type ProviderModelOverride = z.infer<typeof ProviderModelOverrideSchema>;
  * `config.providers.<id>` overlays use the same shape.
  */
 export {
-  type AudioProviderModel,
-  AudioProviderModelSchema,
+  type SpeechProviderModel,
+  SpeechProviderModelSchema,
   type ImageProviderModel,
   ImageProviderModelSchema,
   type VideoProviderModel,
@@ -56,10 +56,10 @@ export const ProviderCatalogSchema = z.object({
   displayName: z.string().optional(),
   image: z.array(ImageProviderModelSchema).optional(),
   video: z.array(VideoProviderModelSchema).optional(),
-  audio: z.array(AudioProviderModelSchema).optional(),
+  speech: z.array(SpeechProviderModelSchema).optional(),
   /**
    * Provider-specific overrides keyed by canonical model id (matches a key
-   * in `models.image`, `models.video`, or `models.audio`). Applied during offering resolution
+   * in `models.image`, `models.video`, or `models.speech`). Applied during offering resolution
    * between the canonical caps and any offering-level override; intended for
    * the bundled catalog to encode vendor quirks (e.g. Azure caps gpt-image
    * `n=1`).
@@ -71,8 +71,8 @@ export type ProviderCatalog = z.infer<typeof ProviderCatalogSchema>;
 /**
  * JSON catalog schema. v2 separates model identity from provider routing:
  *
- * - `models.image/video/audio` describe canonical models and their capabilities.
- * - `providers.<providerId>.image/video/audio` describe **canonical** provider-facing
+ * - `models.image/video/speech` describe canonical models and their capabilities.
+ * - `providers.<providerId>.image/video/speech` describe **canonical** provider-facing
  *   offerings (the bundled defaults: OpenAI's gpt-image-2, Google's Veo, …).
  *
  * Per-user routing — Azure deployment names, custom OpenAI-compatible model
@@ -87,7 +87,7 @@ export const ModelCatalogSchema = z
     models: z.object({
       image: z.record(z.string(), ImageModelDefSchema),
       video: z.record(z.string(), VideoModelDefSchema),
-      audio: z.record(z.string(), AudioModelDefSchema).default({}),
+      speech: z.record(z.string(), SpeechModelDefSchema).default({}),
     }),
     providers: z.record(z.string(), ProviderCatalogSchema),
     comments: z.string().optional(),
@@ -111,12 +111,12 @@ export const ModelCatalogSchema = z
         });
       }
     }
-    for (const [id, model] of Object.entries(catalog.models.audio)) {
+    for (const [id, model] of Object.entries(catalog.models.speech)) {
       if (model.id !== id) {
         ctx.addIssue({
           code: "custom",
-          path: ["models", "audio", id, "id"],
-          message: `audio model key '${id}' must match model.id '${model.id}'`,
+          path: ["models", "speech", id, "id"],
+          message: `speech model key '${id}' must match model.id '${model.id}'`,
         });
       }
     }
@@ -139,12 +139,12 @@ export const ModelCatalogSchema = z
           });
         }
       }
-      for (const offering of provider.audio ?? []) {
-        if (!catalog.models.audio[offering.modelId]) {
+      for (const offering of provider.speech ?? []) {
+        if (!catalog.models.speech[offering.modelId]) {
           ctx.addIssue({
             code: "custom",
-            path: ["providers", providerId, "audio", offering.id, "modelId"],
-            message: `audio offering '${offering.id}' references unknown model '${offering.modelId}'`,
+            path: ["providers", providerId, "speech", offering.id, "modelId"],
+            message: `speech offering '${offering.id}' references unknown model '${offering.modelId}'`,
           });
         }
       }
@@ -165,10 +165,10 @@ const VideoModelDefOverlaySchema = VideoModelDefSchema.omit({ capabilities: true
     capabilities: VideoModelCapsOverrideSchema.optional(),
   });
 
-const AudioModelDefOverlaySchema = AudioModelDefSchema.omit({ capabilities: true })
+const SpeechModelDefOverlaySchema = SpeechModelDefSchema.omit({ capabilities: true })
   .partial()
   .extend({
-    capabilities: AudioModelCapsOverrideSchema.optional(),
+    capabilities: SpeechModelCapsOverrideSchema.optional(),
   });
 
 export const ModelCatalogOverlaySchema = z
@@ -178,7 +178,7 @@ export const ModelCatalogOverlaySchema = z
       .object({
         image: z.record(z.string(), ImageModelDefOverlaySchema).optional(),
         video: z.record(z.string(), VideoModelDefOverlaySchema).optional(),
-        audio: z.record(z.string(), AudioModelDefOverlaySchema).optional(),
+        speech: z.record(z.string(), SpeechModelDefOverlaySchema).optional(),
       })
       .strict()
       .optional(),

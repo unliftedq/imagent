@@ -37,7 +37,7 @@ ConfigurationPopoverButton.displayName = "ConfigurationPopoverButton";
 
 /**
  * Shared range slider used across the studio configuration panels
- * (image dimensions, audio speed/knobs). Keeps the track + accent
+ * (image dimensions, speech speed/knobs). Keeps the track + accent
  * styling identical everywhere so the controls feel consistent.
  */
 export const RANGE_SLIDER_CLASS =

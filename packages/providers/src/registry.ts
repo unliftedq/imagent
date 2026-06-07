@@ -1,22 +1,22 @@
 import type { ProviderPreferences, ProviderSecrets } from "@imagent/config";
-import type { AudioProvider, ImageProvider, VideoModelDef, VideoProvider } from "@imagent/core";
+import type { SpeechProvider, ImageProvider, VideoModelDef, VideoProvider } from "@imagent/core";
 import { AzureImageProvider } from "./azure/image.js";
 import { ByteDanceImageProvider } from "./bytedance/image.js";
 import { ByteDanceVideoProvider } from "./bytedance/video.js";
 import {
-  effectiveAudioOfferings,
+  effectiveSpeechOfferings,
   effectiveProviderDisplayName,
-  resolveAudioProviderModel,
-  resolveAudioProviderModels,
+  resolveSpeechProviderModel,
+  resolveSpeechProviderModels,
   resolveImageProviderModels,
   resolveVideoProviderModels,
 } from "./catalog/resolve.js";
-import { ElevenLabsAudioProvider } from "./elevenlabs/audio.js";
+import { ElevenLabsSpeechProvider } from "./elevenlabs/speech.js";
 import type { ModelCatalog } from "./catalog/schema.js";
 import { FluxImageProvider } from "./flux/image.js";
 import { GoogleImageProvider } from "./google/image.js";
 import { GoogleVideoProvider } from "./google/video.js";
-import { MiniMaxAudioProvider } from "./minimax/audio.js";
+import { MiniMaxSpeechProvider } from "./minimax/speech.js";
 import { MiniMaxImageProvider } from "./minimax/image.js";
 import { MiniMaxVideoProvider } from "./minimax/video.js";
 import { OpenAIImageProvider } from "./openai/image.js";
@@ -25,7 +25,7 @@ import { XaiVideoProvider } from "./xai/video.js";
 
 export type ImageRegistry = ReadonlyMap<string, ImageProvider>;
 export type VideoRegistry = ReadonlyMap<string, VideoProvider>;
-export type AudioRegistry = ReadonlyMap<string, AudioProvider>;
+export type SpeechRegistry = ReadonlyMap<string, SpeechProvider>;
 
 const BUILT_IN_PROVIDER_IDS = [
   "openai",
@@ -251,37 +251,37 @@ export function createVideoRegistry(
 }
 
 /**
- * Audio (TTS) registry. ElevenLabs needs only an apiKey; MiniMax audio also
+ * Speech (TTS) registry. ElevenLabs needs only an apiKey; MiniMax speech also
  * needs a GroupId (prefs.minimax.groupId) for the T2A v2 endpoint, so it is
  * skipped until that is configured.
  */
-export function createAudioRegistry(
+export function createSpeechRegistry(
   secrets: ProviderSecrets,
   prefs: ProviderPreferences,
   catalog: ModelCatalog,
-): AudioRegistry {
-  const out = new Map<string, AudioProvider>();
+): SpeechRegistry {
+  const out = new Map<string, SpeechProvider>();
 
   if (secrets.elevenlabs) {
-    const opts: ConstructorParameters<typeof ElevenLabsAudioProvider>[0] = {
+    const opts: ConstructorParameters<typeof ElevenLabsSpeechProvider>[0] = {
       apiKey: secrets.elevenlabs.apiKey,
-      models: mapFromList(resolveAudioProviderModels(catalog, "elevenlabs", prefs)),
+      models: mapFromList(resolveSpeechProviderModels(catalog, "elevenlabs", prefs)),
     };
     const baseUrl = prefs.elevenlabs?.baseUrl;
     if (baseUrl) opts.baseUrl = baseUrl;
-    out.set("elevenlabs", new ElevenLabsAudioProvider(opts));
+    out.set("elevenlabs", new ElevenLabsSpeechProvider(opts));
   }
 
   const minimaxGroupId = prefs.minimax?.groupId;
   if (secrets.minimax && minimaxGroupId) {
-    const opts: ConstructorParameters<typeof MiniMaxAudioProvider>[0] = {
+    const opts: ConstructorParameters<typeof MiniMaxSpeechProvider>[0] = {
       apiKey: secrets.minimax.apiKey,
       groupId: minimaxGroupId,
-      models: mapFromList(resolveAudioProviderModels(catalog, "minimax", prefs)),
+      models: mapFromList(resolveSpeechProviderModels(catalog, "minimax", prefs)),
     };
     const baseUrl = prefs.minimax?.baseUrl;
     if (baseUrl) opts.baseUrl = baseUrl;
-    out.set("minimax", new MiniMaxAudioProvider(opts));
+    out.set("minimax", new MiniMaxSpeechProvider(opts));
   }
 
   return out;
@@ -331,12 +331,12 @@ export {
   saveCatalog,
 } from "./catalog/loader.js";
 export {
-  effectiveAudioOfferings,
+  effectiveSpeechOfferings,
   effectiveImageOfferings,
   effectiveProviderDisplayName,
   effectiveVideoOfferings,
-  resolveAudioProviderModel,
-  resolveAudioProviderModels,
+  resolveSpeechProviderModel,
+  resolveSpeechProviderModels,
   resolveImageProviderModel,
   resolveImageProviderModels,
   resolveVideoProviderModel,

@@ -4,7 +4,7 @@
 
 <p align="center">English · <a href="./README.zh-CN.md">简体中文</a></p>
 
-**Imagent** means **Imagine agent**: a local-first image, video, and audio generation workspace for individual creators, automation-heavy workflows, and AI agents.
+**Imagent** means **Imagine agent**: a local-first image, video, and speech generation workspace for individual creators, automation-heavy workflows, and AI agents.
 
 It ships as a desktop application, a command-line tool, and an installable agent skill. All surfaces share the same local workspace, provider configuration, asset library, generated outputs, and result history.
 
@@ -24,7 +24,7 @@ It ships as a desktop application, a command-line tool, and an installable agent
 | **One library across interfaces** | The desktop app, CLI, and agent integrations work against the same gallery, boards, favorites, and reusable assets. |
 | **Multi-provider generation** | OpenAI, Azure OpenAI, Google Imagen/Gemini, Flux/BFL, BytePlus / 火山引擎 Seedream/Seedance, xAI Grok, MiniMax TTS, and ElevenLabs TTS can be configured side by side. |
 | **Asset-driven creation** | Reusable characters, objects, backgrounds, styles, and references help keep ongoing projects visually consistent. |
-| **Agent-ready automation** | The bundled skill lets compatible agents call the `imagent` CLI instead of using a one-off image, video, or audio tool. |
+| **Agent-ready automation** | The bundled skill lets compatible agents call the `imagent` CLI instead of using a one-off image, video, or speech tool. |
 
 ## Quick start
 
@@ -71,7 +71,7 @@ Use the same install flow for Claude Code, Codex, OpenClaw, Hermes, or other com
 ## Typical workflows
 
 - Build a local AI-assisted visual creation workflow for individual use.
-- Compare image, video, and audio outputs across multiple generation providers.
+- Compare image, video, and speech outputs across multiple generation providers.
 - Maintain reusable characters, styles, and reference-image assets over time.
 - Combine terminal automation with desktop-based review and curation.
 - Let coding agents generate creative assets through the same audited CLI workflow.

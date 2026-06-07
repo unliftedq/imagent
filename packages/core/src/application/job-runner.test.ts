@@ -49,7 +49,7 @@ class InMemoryGallery implements GalleryRepositoryPort {
   }
 }
 
-const emptyAudioRegistry = new Map();
+const emptySpeechRegistry = new Map();
 
 const fakeFiles: FilesServicePort = {
   dataDir: "/tmp/data",
@@ -142,7 +142,7 @@ describe("JobRunner — image path", () => {
       files: fakeFiles,
       imageRegistry: new Map([["fake", fakeImageProvider()]]),
       videoRegistry: new Map(),
-      audioRegistry: emptyAudioRegistry,
+      speechRegistry: emptySpeechRegistry,
       writeFile,
       ensureDir,
       idFactory: () => `id-${++counter}`,
@@ -201,7 +201,7 @@ describe("JobRunner — image path", () => {
       files: fakeFiles,
       imageRegistry: new Map([["fake", provider]]),
       videoRegistry: new Map(),
-      audioRegistry: emptyAudioRegistry,
+      speechRegistry: emptySpeechRegistry,
       writeFile,
       ensureDir,
       idFactory: () => `id-${++counter}`,
@@ -245,7 +245,7 @@ describe("JobRunner — image path", () => {
       files: fakeFiles,
       imageRegistry: new Map([["fake", provider]]),
       videoRegistry: new Map(),
-      audioRegistry: emptyAudioRegistry,
+      speechRegistry: emptySpeechRegistry,
       writeFile: async () => {},
       ensureDir: async () => {},
       idFactory: () => `id-${++counter}`,
@@ -288,7 +288,7 @@ describe("JobRunner — image path", () => {
       files: fakeFiles,
       imageRegistry: new Map([["fake", fakeImageProvider()]]),
       videoRegistry: new Map(),
-      audioRegistry: emptyAudioRegistry,
+      speechRegistry: emptySpeechRegistry,
       writeFile: async () => {},
       ensureDir: async () => {},
       idFactory: () => `id-${++counter}`,
@@ -336,7 +336,7 @@ describe("JobRunner — image path", () => {
       files: fakeFiles,
       imageRegistry: new Map([["fake", provider]]),
       videoRegistry: new Map(),
-      audioRegistry: emptyAudioRegistry,
+      speechRegistry: emptySpeechRegistry,
       writeFile: async () => {},
       ensureDir: async () => {},
     });
@@ -383,7 +383,7 @@ describe("JobRunner — video path", () => {
       files: fakeFiles,
       imageRegistry: new Map(),
       videoRegistry: new Map([["fake-video", fakeVideoProvider(state)]]),
-      audioRegistry: emptyAudioRegistry,
+      speechRegistry: emptySpeechRegistry,
       writeFile: async (p, b) => {
         writes.push({ path: p, bytes: b });
       },
@@ -444,7 +444,7 @@ describe("JobRunner — video path", () => {
       files: fakeFiles,
       imageRegistry: new Map(),
       videoRegistry: new Map([["fake-video", fakeVideoProvider(state)]]),
-      audioRegistry: emptyAudioRegistry,
+      speechRegistry: emptySpeechRegistry,
       writeFile: async () => {},
       ensureDir: async () => {},
       idFactory: () => `id-${++counter}`,
@@ -498,7 +498,7 @@ describe("JobRunner — video path", () => {
       files: fakeFiles,
       imageRegistry: new Map(),
       videoRegistry: new Map([["fake-video", fakeVideoProvider(state)]]),
-      audioRegistry: emptyAudioRegistry,
+      speechRegistry: emptySpeechRegistry,
       writeFile: async () => {},
       ensureDir: async () => {},
       setTimer,
@@ -542,7 +542,7 @@ describe("JobRunner — video path", () => {
       files: fakeFiles,
       imageRegistry: new Map(),
       videoRegistry: new Map([["fake-video", fakeVideoProvider(state)]]),
-      audioRegistry: emptyAudioRegistry,
+      speechRegistry: emptySpeechRegistry,
       writeFile: async () => {},
       ensureDir: async () => {},
       idFactory: () => `id-${++counter}`,
@@ -587,7 +587,7 @@ describe("JobRunner — video path", () => {
       files: fakeFiles,
       imageRegistry: new Map(),
       videoRegistry: new Map([["fake-video", fakeVideoProvider(state)]]),
-      audioRegistry: emptyAudioRegistry,
+      speechRegistry: emptySpeechRegistry,
       writeFile: async () => {
         jobs.updateState("id-1", {
           state: "cancelled",
@@ -633,7 +633,7 @@ describe("JobRunner — video path", () => {
       files: fakeFiles,
       imageRegistry: new Map(),
       videoRegistry: new Map([["fake-video", fakeVideoProvider(state)]]),
-      audioRegistry: emptyAudioRegistry,
+      speechRegistry: emptySpeechRegistry,
       writeFile: async () => {},
       ensureDir: async () => {},
       setTimer,
@@ -694,7 +694,7 @@ describe("JobRunner — resumeRunningJobs", () => {
       videoRegistry: new Map([
         ["fake-video", fakeVideoProvider({ pollResults: [{ state: "succeeded" }] })],
       ]),
-      audioRegistry: emptyAudioRegistry,
+      speechRegistry: emptySpeechRegistry,
       writeFile: async () => {},
       ensureDir: async () => {},
       idFactory: () => `id-${++counter}`,
@@ -735,7 +735,7 @@ describe("JobRunner — resumeRunningJobs", () => {
       files: fakeFiles,
       imageRegistry: new Map(),
       videoRegistry: new Map(),
-      audioRegistry: emptyAudioRegistry,
+      speechRegistry: emptySpeechRegistry,
       writeFile: async () => {},
       ensureDir: async () => {},
     });
@@ -787,7 +787,7 @@ describe("JobRunner — attach", () => {
       videoRegistry: new Map([
         ["fake-video", fakeVideoProvider({ pollResults: [{ state: "succeeded" }] })],
       ]),
-      audioRegistry: emptyAudioRegistry,
+      speechRegistry: emptySpeechRegistry,
       writeFile: async () => {},
       ensureDir: async () => {},
       idFactory: () => `id-${++counter}`,
@@ -826,7 +826,7 @@ describe("JobRunner — attach", () => {
       files: fakeFiles,
       imageRegistry: new Map(),
       videoRegistry: new Map(),
-      audioRegistry: emptyAudioRegistry,
+      speechRegistry: emptySpeechRegistry,
       writeFile: async () => {},
       ensureDir: async () => {},
     });
@@ -859,7 +859,7 @@ describe("JobRunner — attach", () => {
       files: fakeFiles,
       imageRegistry: new Map(),
       videoRegistry: new Map(),
-      audioRegistry: emptyAudioRegistry,
+      speechRegistry: emptySpeechRegistry,
       writeFile: async () => {},
       ensureDir: async () => {},
     });

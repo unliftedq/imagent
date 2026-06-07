@@ -1,0 +1,3 @@
+voices failed: unknown model 'typo-model' for provider 'elevenlabs'
+Command exited with non-zero status 1
+elapsed:1.34

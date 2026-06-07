@@ -136,7 +136,7 @@ export function HomePage() {
           <p className="eyebrow">Imagine agent, kept local</p>
           <h1>The local agent that turns imagination into work.</h1>
           <p className="hero-copy">
-            IMAGENT gives image, video, and audio creation a local operating layer: a visual studio
+            IMAGENT gives image, video, and speech creation a local operating layer: a visual studio
             for human taste, a CLI for agentic work, and one shared memory for every result.
           </p>
           <div className="hero-actions">

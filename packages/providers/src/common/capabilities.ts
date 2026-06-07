@@ -1,6 +1,6 @@
 import type {
-  AudioCapabilities,
-  AudioModelDef,
+  SpeechCapabilities,
+  SpeechModelDef,
   ImageCapabilities,
   ImageModelDef,
   VideoCapabilities,
@@ -94,9 +94,9 @@ export function aggregateVideoCapabilities(
   };
 }
 
-export function aggregateAudioCapabilities(
-  models: ReadonlyMap<string, AudioModelDef>,
-): AudioCapabilities {
+export function aggregateSpeechCapabilities(
+  models: ReadonlyMap<string, SpeechModelDef>,
+): SpeechCapabilities {
   const qualitiesByCodec = new Map<string, Set<string>>();
   const codecOrder: string[] = [];
   let supportsVoiceDiscovery = false;

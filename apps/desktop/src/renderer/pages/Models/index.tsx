@@ -22,10 +22,10 @@ interface ModelRow {
 interface ModelList {
   image: ModelRow[];
   video: ModelRow[];
-  audio: ModelRow[];
+  speech: ModelRow[];
 }
 
-type Tab = "image" | "video" | "audio";
+type Tab = "image" | "video" | "speech";
 
 /**
  * Models settings section. Catalogue of known models, grouped by kind,
@@ -58,12 +58,12 @@ export function ModelsSection() {
     if (!list) return [];
     if (tab === "image") return list.image;
     if (tab === "video") return list.video;
-    return list.audio;
+    return list.speech;
   }, [list, tab]);
 
   const totals = useMemo(() => {
-    if (!list) return { image: 0, video: 0, audio: 0 };
-    return { image: list.image.length, video: list.video.length, audio: list.audio.length };
+    if (!list) return { image: 0, video: 0, speech: 0 };
+    return { image: list.image.length, video: list.video.length, speech: list.speech.length };
   }, [list]);
 
   return (
@@ -75,8 +75,8 @@ export function ModelsSection() {
         <TabButton active={tab === "video"} onClick={() => setTab("video")}>
           {t("common.video")} · {totals.video}
         </TabButton>
-        <TabButton active={tab === "audio"} onClick={() => setTab("audio")}>
-          {t("common.audio")} · {totals.audio}
+        <TabButton active={tab === "speech"} onClick={() => setTab("speech")}>
+          {t("common.speech")} · {totals.speech}
         </TabButton>
       </div>
 
@@ -90,7 +90,7 @@ export function ModelsSection() {
               ? t("models.noImageModels")
               : tab === "video"
                 ? t("models.noVideoModels")
-                : t("models.noAudioModels")}
+                : t("models.noSpeechModels")}
           </p>
         </div>
       ) : (

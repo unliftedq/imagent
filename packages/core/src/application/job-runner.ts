@@ -3,13 +3,13 @@ import { isAbortError, ProviderAbortError, ProviderError } from "../domain/error
 import type { GalleryItem } from "../domain/gallery.js";
 import type { Job, JobId, JobState } from "../domain/job.js";
 import type {
-  AudioRequest,
+  SpeechRequest,
   GenerationIntent,
   ImageRequest,
   VideoRequest,
 } from "../domain/request.js";
 import type { VideoJobHandle, VideoJobState } from "../domain/result.js";
-import type { AudioProvider } from "../ports/audio-provider.js";
+import type { SpeechProvider } from "../ports/speech-provider.js";
 import type { ImageProvider } from "../ports/image-provider.js";
 import type { VideoProvider } from "../ports/video-provider.js";
 import { type Logger, NoopLogger } from "./logger.js";
@@ -74,7 +74,7 @@ export interface ThumbnailServicePort {
 
 export type ImageRegistry = ReadonlyMap<string, ImageProvider>;
 export type VideoRegistry = ReadonlyMap<string, VideoProvider>;
-export type AudioRegistry = ReadonlyMap<string, AudioProvider>;
+export type SpeechRegistry = ReadonlyMap<string, SpeechProvider>;
 
 export interface JobRunnerDeps {
   jobs: JobRepositoryPort;
@@ -84,7 +84,7 @@ export interface JobRunnerDeps {
   files: FilesServicePort;
   imageRegistry: ImageRegistry;
   videoRegistry: VideoRegistry;
-  audioRegistry: AudioRegistry;
+  speechRegistry: SpeechRegistry;
   /** File writer — defaults to `node:fs/promises` writeFile + mkdir. Tests can inject. */
   writeFile?: (filePath: string, bytes: Uint8Array) => Promise<void>;
   ensureDir?: (dir: string) => Promise<void>;
@@ -169,7 +169,7 @@ export class JobRunner extends EventEmitter {
       files: deps.files,
       imageRegistry: deps.imageRegistry,
       videoRegistry: deps.videoRegistry,
-      audioRegistry: deps.audioRegistry,
+      speechRegistry: deps.speechRegistry,
       logger: deps.logger ?? NoopLogger,
       idFactory: deps.idFactory ?? defaultIdFactory,
       now: deps.now ?? Date.now,
@@ -188,7 +188,7 @@ export class JobRunner extends EventEmitter {
     if (intent.kind === "image") {
       return this.startImage(intent.request, overrides);
     }
-    if (intent.kind === "audio") {
+    if (intent.kind === "speech") {
       return this.startAudio(intent.request, overrides);
     }
     return this.startVideo(intent.request, overrides);
@@ -238,7 +238,7 @@ export class JobRunner extends EventEmitter {
   async resumeRunningJobs(): Promise<void> {
     const stale = this.deps.jobs.listByStates(["queued", "running"]);
     for (const job of stale) {
-      if (job.kind === "image" || job.kind === "audio") {
+      if (job.kind === "image" || job.kind === "speech") {
         const updated = this.deps.jobs.updateState(job.id, {
           state: "failed",
           errorMessage: "process restarted before completion",
@@ -431,12 +431,12 @@ export class JobRunner extends EventEmitter {
     }
   }
 
-  // ----- audio path -----------------------------------------------------
+  // ----- speech path -----------------------------------------------------
 
-  private async startAudio(req: AudioRequest, overrides: IntentOverrides = {}): Promise<JobId> {
-    const provider = this.deps.audioRegistry.get(req.providerId);
+  private async startAudio(req: SpeechRequest, overrides: IntentOverrides = {}): Promise<JobId> {
+    const provider = this.deps.speechRegistry.get(req.providerId);
     if (!provider) {
-      throw new ProviderError(`audio provider '${req.providerId}' is not configured`, {
+      throw new ProviderError(`speech provider '${req.providerId}' is not configured`, {
         vendorId: req.providerId,
       });
     }
@@ -444,7 +444,7 @@ export class JobRunner extends EventEmitter {
     const now = this.deps.now();
     const job = this.deps.jobs.create({
       id,
-      kind: "audio",
+      kind: "speech",
       state: "running",
       providerId: req.providerId,
       providerJobId: null,
@@ -462,16 +462,16 @@ export class JobRunner extends EventEmitter {
       this.intentOverrides.set(id, overrides);
     }
     this.emit("job.progress", { id, progress: 0, state: job.state });
-    this.audioGenerationLoop(job, req, provider, abort.signal).catch((err) => {
-      this.deps.logger.error("audio job loop crashed", { id, err: String(err) });
+    this.speechGenerationLoop(job, req, provider, abort.signal).catch((err) => {
+      this.deps.logger.error("speech job loop crashed", { id, err: String(err) });
     });
     return id;
   }
 
-  private async audioGenerationLoop(
+  private async speechGenerationLoop(
     job: Job,
-    req: AudioRequest,
-    provider: AudioProvider,
+    req: SpeechRequest,
+    provider: SpeechProvider,
     signal: AbortSignal,
   ): Promise<void> {
     try {
@@ -492,7 +492,7 @@ export class JobRunner extends EventEmitter {
       const relPath = relativeToData(absPath, this.deps.files.dataDir);
       const item = this.deps.gallery.create({
         id: itemId,
-        kind: "audio",
+        kind: "speech",
         parentId: overrides.parentId ?? null,
         prompt: req.prompt,
         providerId: req.providerId,
@@ -544,7 +544,7 @@ export class JobRunner extends EventEmitter {
       this.intentOverrides.delete(job.id);
       const aborted = isAbortError(err) || err instanceof ProviderAbortError;
       if (!aborted) {
-        this.deps.logger.error("audio generation failed", {
+        this.deps.logger.error("speech generation failed", {
           jobId: job.id,
           providerId: job.providerId,
           model: req.model,

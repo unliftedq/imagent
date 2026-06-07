@@ -1,4 +1,4 @@
-import { AudioVariant } from "./GalleryItemCardAudioVariant.js";
+import { SpeechVariant } from "./GalleryItemCardSpeechVariant.js";
 import { ImageVariant } from "./GalleryItemCardImageVariant.js";
 import { RailVariant } from "./GalleryItemCardRailVariant.js";
 import type { GalleryItemCardProps, GalleryItemCardSize } from "./GalleryItemCard.types.js";
@@ -29,8 +29,8 @@ export function GalleryItemCard(props: GalleryItemCardProps) {
   if (props.kind === "video") {
     return <VideoVariant {...props} />;
   }
-  if (props.kind === "audio") {
-    return <AudioVariant {...props} />;
+  if (props.kind === "speech") {
+    return <SpeechVariant {...props} />;
   }
   return <ImageVariant {...props} />;
 }

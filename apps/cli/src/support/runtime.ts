@@ -11,7 +11,7 @@ import {
   createConsoleLogger,
   type FilesServicePort,
   type GalleryRepositoryPort,
-  type AudioRegistry,
+  type SpeechRegistry,
   type ImageRegistry,
   type JobRepositoryPort,
   JobRunner,
@@ -28,7 +28,7 @@ import {
   type PathResolver,
 } from "@imagent/persistence";
 import {
-  createAudioRegistry,
+  createSpeechRegistry,
   createImageRegistry,
   createVideoRegistry,
   loadCatalog,
@@ -42,7 +42,7 @@ export interface CliRuntime {
   catalog: ModelCatalog;
   imageRegistry: ImageRegistry;
   videoRegistry: VideoRegistry;
-  audioRegistry: AudioRegistry;
+  speechRegistry: SpeechRegistry;
 }
 
 /**
@@ -72,7 +72,7 @@ export async function loadCliRuntime(): Promise<CliRuntime> {
 
   const imageRegistry = createImageRegistry(secrets, effectivePrefs, catalog);
   const videoRegistry = createVideoRegistry(secrets, effectivePrefs, catalog);
-  const audioRegistry = createAudioRegistry(secrets, effectivePrefs, catalog);
+  const speechRegistry = createSpeechRegistry(secrets, effectivePrefs, catalog);
 
   return {
     resolver,
@@ -81,7 +81,7 @@ export async function loadCliRuntime(): Promise<CliRuntime> {
     catalog,
     imageRegistry,
     videoRegistry,
-    audioRegistry,
+    speechRegistry,
   };
 }
 
@@ -112,7 +112,7 @@ export function buildRunner(runtime: CliRuntime, logger?: Logger): RunnerBundle 
     files,
     imageRegistry: runtime.imageRegistry,
     videoRegistry: runtime.videoRegistry,
-    audioRegistry: runtime.audioRegistry,
+    speechRegistry: runtime.speechRegistry,
     logger: logger ?? createConsoleLogger("imagent"),
   });
   return { db, jobs, gallery, files, runner };

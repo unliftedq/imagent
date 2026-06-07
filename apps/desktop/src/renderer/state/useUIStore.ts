@@ -1,4 +1,4 @@
-import type { ImageReference } from "@imagent/core";
+import { splitSpeechFormat, type ImageReference } from "@imagent/core";
 import type { ThemePref } from "@imagent/ui";
 import { create } from "zustand";
 
@@ -31,7 +31,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   "about",
 ] as const;
 
-export type StudioMode = "image" | "video" | "audio";
+export type StudioMode = "image" | "video" | "speech";
 
 export interface ToastEntry {
   id: string;
@@ -98,7 +98,7 @@ export interface VideoDraft {
   assetIds: StudioDraftAssetIds;
 }
 
-export interface AudioDraft {
+export interface SpeechDraft {
   providerId: string | null;
   model: string | null;
   text: string;
@@ -114,13 +114,13 @@ export interface AudioDraft {
 export interface StudioDraft {
   image: ImageDraft;
   video: VideoDraft;
-  audio: AudioDraft;
+  speech: SpeechDraft;
 }
 
 export const STUDIO_MODE_LS_KEY = "imagent.studioMode.v1";
 export const STUDIO_DRAFT_LS_KEY = "imagent.studioDraft.v1";
 export const VIDEO_DRAFT_LS_KEY = "imagent.videoDraft.v1";
-export const AUDIO_DRAFT_LS_KEY = "imagent.audioDraft.v1";
+export const SPEECH_DRAFT_LS_KEY = "imagent.speechDraft.v1";
 export const ROUTE_LS_KEY = "imagent.route.v1";
 
 const DEFAULT_IMAGE_DRAFT: ImageDraft = {
@@ -142,7 +142,7 @@ const DEFAULT_VIDEO_DRAFT: VideoDraft = {
   assetIds: { character: [], object: [], background: [], style: [] },
 };
 
-const DEFAULT_AUDIO_DRAFT: AudioDraft = {
+const DEFAULT_SPEECH_DRAFT: SpeechDraft = {
   providerId: null,
   model: null,
   text: "",
@@ -192,7 +192,7 @@ function normalizeReferenceRoles(input: unknown): StudioReferenceRoles {
   return next;
 }
 
-function normalizeAudioExtras(input: unknown): Record<string, string | number> {
+function normalizeSpeechExtras(input: unknown): Record<string, string | number> {
   if (!input || typeof input !== "object") return {};
   const extras: Record<string, string | number> = {};
   for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
@@ -254,12 +254,12 @@ function loadVideoDraftFromStorage(): VideoDraft {
   }
 }
 
-function loadAudioDraftFromStorage(): AudioDraft {
-  if (typeof window === "undefined") return DEFAULT_AUDIO_DRAFT;
+function loadSpeechDraftFromStorage(): SpeechDraft {
+  if (typeof window === "undefined") return DEFAULT_SPEECH_DRAFT;
   try {
-    const raw = window.localStorage.getItem(AUDIO_DRAFT_LS_KEY);
-    if (!raw) return DEFAULT_AUDIO_DRAFT;
-    const parsed = JSON.parse(raw) as Partial<AudioDraft>;
+    const raw = window.localStorage.getItem(SPEECH_DRAFT_LS_KEY);
+    if (!raw) return DEFAULT_SPEECH_DRAFT;
+    const parsed = JSON.parse(raw) as Partial<SpeechDraft>;
     return {
       providerId: typeof parsed.providerId === "string" ? parsed.providerId : null,
       model: typeof parsed.model === "string" ? parsed.model : null,
@@ -268,11 +268,11 @@ function loadAudioDraftFromStorage(): AudioDraft {
       speed: typeof parsed.speed === "number" ? parsed.speed : null,
       codec: typeof parsed.codec === "string" ? parsed.codec : null,
       formatQuality: typeof parsed.formatQuality === "string" ? parsed.formatQuality : null,
-      extras: normalizeAudioExtras(parsed.extras),
+      extras: normalizeSpeechExtras(parsed.extras),
       ...(typeof parsed.parentId === "string" ? { parentId: parsed.parentId } : {}),
     };
   } catch {
-    return DEFAULT_AUDIO_DRAFT;
+    return DEFAULT_SPEECH_DRAFT;
   }
 }
 
@@ -302,13 +302,13 @@ function scheduleVideoDraftFlush(draft: VideoDraft): void {
   }, 400);
 }
 
-let audioDraftFlushTimer: ReturnType<typeof setTimeout> | null = null;
-function scheduleAudioDraftFlush(draft: AudioDraft): void {
+let speechDraftFlushTimer: ReturnType<typeof setTimeout> | null = null;
+function scheduleSpeechDraftFlush(draft: SpeechDraft): void {
   if (typeof window === "undefined") return;
-  if (audioDraftFlushTimer) clearTimeout(audioDraftFlushTimer);
-  audioDraftFlushTimer = setTimeout(() => {
+  if (speechDraftFlushTimer) clearTimeout(speechDraftFlushTimer);
+  speechDraftFlushTimer = setTimeout(() => {
     try {
-      window.localStorage.setItem(AUDIO_DRAFT_LS_KEY, JSON.stringify(draft));
+      window.localStorage.setItem(SPEECH_DRAFT_LS_KEY, JSON.stringify(draft));
     } catch {
       // ignore
     }
@@ -337,7 +337,7 @@ function loadInitialModeAndRoute(): { route: Route; studioMode: StudioMode } {
   let storedMode: StudioMode = "image";
   try {
     const m = window.localStorage.getItem(STUDIO_MODE_LS_KEY);
-    if (m === "image" || m === "video" || m === "audio") storedMode = m;
+    if (m === "image" || m === "video" || m === "speech") storedMode = m;
   } catch {
     // ignore
   }
@@ -411,21 +411,22 @@ export interface RemixPayloadVideo {
   parentId: string;
 }
 
-export interface RemixPayloadAudio {
-  kind: "audio";
+export interface RemixPayloadSpeech {
+  kind: "speech";
   request: {
     prompt: string;
     providerId: string;
     model: string;
     voice?: string;
     speed?: number;
-    outputFormat?: string;
+    codec?: string;
+    formatQuality?: string;
     raw?: Record<string, unknown>;
   };
   parentId: string;
 }
 
-export type RemixPayload = RemixPayloadImage | RemixPayloadVideo | RemixPayloadAudio;
+export type RemixPayload = RemixPayloadImage | RemixPayloadVideo | RemixPayloadSpeech;
 
 interface UIState {
   route: Route;
@@ -446,13 +447,13 @@ interface UIState {
   dismissToast: (id: string) => void;
   setImageDraft: (patch: Partial<ImageDraft>) => void;
   setVideoDraft: (patch: Partial<VideoDraft>) => void;
-  setAudioDraft: (patch: Partial<AudioDraft>) => void;
+  setSpeechDraft: (patch: Partial<SpeechDraft>) => void;
   /** Convenience used from M5/M6 callsites — proxies to setImageDraft. */
   setStudioDraft: (patch: Partial<ImageDraft>) => void;
   resetDraft: (mode: StudioMode) => void;
   resetStudioDraft: () => void;
   resetVideoDraft: () => void;
-  resetAudioDraft: () => void;
+  resetSpeechDraft: () => void;
   /** Apply a remix payload (from the gallery → "Remix" action) to the right
    * draft and switch to the matching mode. Both kinds land on /studio. */
   applyRemix: (payload: RemixPayload) => void;
@@ -474,7 +475,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   studioDraft: {
     image: loadImageDraftFromStorage(),
     video: loadVideoDraftFromStorage(),
-    audio: loadAudioDraftFromStorage(),
+    speech: loadSpeechDraftFromStorage(),
   },
   preferredInitialRoute: null,
   settingsOpen: false,
@@ -504,10 +505,10 @@ export const useUIStore = create<UIState>((set, get) => ({
     set((s) => ({ studioDraft: { ...s.studioDraft, video: next } }));
     scheduleVideoDraftFlush(next);
   },
-  setAudioDraft: (patch) => {
-    const next: AudioDraft = { ...get().studioDraft.audio, ...patch };
-    set((s) => ({ studioDraft: { ...s.studioDraft, audio: next } }));
-    scheduleAudioDraftFlush(next);
+  setSpeechDraft: (patch) => {
+    const next: SpeechDraft = { ...get().studioDraft.speech, ...patch };
+    set((s) => ({ studioDraft: { ...s.studioDraft, speech: next } }));
+    scheduleSpeechDraftFlush(next);
   },
   setStudioDraft: (patch) => {
     // Back-compat alias used by M5/M6 callsites that still expect the
@@ -529,9 +530,9 @@ export const useUIStore = create<UIState>((set, get) => ({
       scheduleVideoDraftFlush({ ...DEFAULT_VIDEO_DRAFT });
     } else {
       set((s) => ({
-        studioDraft: { ...s.studioDraft, audio: { ...DEFAULT_AUDIO_DRAFT } },
+        studioDraft: { ...s.studioDraft, speech: { ...DEFAULT_SPEECH_DRAFT } },
       }));
-      scheduleAudioDraftFlush({ ...DEFAULT_AUDIO_DRAFT });
+      scheduleSpeechDraftFlush({ ...DEFAULT_SPEECH_DRAFT });
     }
   },
   resetStudioDraft: () => {
@@ -546,11 +547,11 @@ export const useUIStore = create<UIState>((set, get) => ({
     }));
     scheduleVideoDraftFlush({ ...DEFAULT_VIDEO_DRAFT });
   },
-  resetAudioDraft: () => {
+  resetSpeechDraft: () => {
     set((s) => ({
-      studioDraft: { ...s.studioDraft, audio: { ...DEFAULT_AUDIO_DRAFT } },
+      studioDraft: { ...s.studioDraft, speech: { ...DEFAULT_SPEECH_DRAFT } },
     }));
-    scheduleAudioDraftFlush({ ...DEFAULT_AUDIO_DRAFT });
+    scheduleSpeechDraftFlush({ ...DEFAULT_SPEECH_DRAFT });
   },
   applyRemix: (payload) => {
     if (payload.kind === "video") {
@@ -580,26 +581,31 @@ export const useUIStore = create<UIState>((set, get) => ({
       scheduleVideoDraftFlush(next);
       persistMode("video");
       persistRoute("studio");
-    } else if (payload.kind === "audio") {
+    } else if (payload.kind === "speech") {
       const r = payload.request;
-      const next: AudioDraft = {
-        ...get().studioDraft.audio,
+      const legacy =
+        typeof (r as { outputFormat?: unknown }).outputFormat === "string"
+          ? splitSpeechFormat((r as { outputFormat: string }).outputFormat)
+          : null;
+      const next: SpeechDraft = {
+        ...get().studioDraft.speech,
         text: r.prompt,
         providerId: r.providerId,
         model: r.model,
         voice: r.voice ?? null,
         speed: r.speed ?? null,
-        outputFormat: r.outputFormat ?? null,
-        extras: normalizeAudioExtras(r.raw),
+        codec: r.codec ?? legacy?.codec ?? null,
+        formatQuality: r.formatQuality ?? legacy?.formatQuality ?? null,
+        extras: normalizeSpeechExtras(r.raw),
         parentId: payload.parentId,
       };
       set((s) => ({
-        studioDraft: { ...s.studioDraft, audio: next },
-        studioMode: "audio",
+        studioDraft: { ...s.studioDraft, speech: next },
+        studioMode: "speech",
         route: "studio",
       }));
-      scheduleAudioDraftFlush(next);
-      persistMode("audio");
+      scheduleSpeechDraftFlush(next);
+      persistMode("speech");
       persistRoute("studio");
     } else {
       const r = payload.request;

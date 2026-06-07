@@ -59,7 +59,7 @@ class InMemoryBoards implements BoardRepositoryPort {
   }
 }
 
-const emptyAudioRegistry = new Map();
+const emptySpeechRegistry = new Map();
 
 const fakeFiles: FilesServicePort = {
   dataDir: "/tmp/data",
@@ -103,7 +103,7 @@ describe("JobRunner — parentId / boardId pass-through", () => {
       files: fakeFiles,
       imageRegistry: new Map([["fake", fakeImageProvider()]]),
       videoRegistry: new Map(),
-      audioRegistry: emptyAudioRegistry,
+      speechRegistry: emptySpeechRegistry,
       writeFile: async () => {},
       ensureDir: async () => {},
       idFactory: () => `id-${++counter}`,
@@ -144,7 +144,7 @@ describe("JobRunner — parentId / boardId pass-through", () => {
       files: fakeFiles,
       imageRegistry: new Map([["fake", fakeImageProvider()]]),
       videoRegistry: new Map(),
-      audioRegistry: emptyAudioRegistry,
+      speechRegistry: emptySpeechRegistry,
       writeFile: async () => {},
       ensureDir: async () => {},
       idFactory: () => `id-${++counter}`,
@@ -180,7 +180,7 @@ describe("JobRunner — parentId / boardId pass-through", () => {
       files: fakeFiles,
       imageRegistry: new Map([["fake", fakeImageProvider()]]),
       videoRegistry: new Map(),
-      audioRegistry: emptyAudioRegistry,
+      speechRegistry: emptySpeechRegistry,
       writeFile: async () => {},
       ensureDir: async () => {},
       idFactory: () => `id-${++counter}`,

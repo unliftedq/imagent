@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import {
-  IpcAudioProviderModelSchema,
+  IpcSpeechProviderModelSchema,
   IpcImageProviderModelSchema,
   IpcVideoProviderModelSchema,
 } from "./contract.catalog.js";
@@ -15,7 +15,7 @@ export type ProviderId = z.infer<typeof ProviderIdSchema>;
  * Seedance share Ark credentials under one provider id (architecture.md §4
  * vendor=provider).
  */
-export const ProviderKindSchema = z.enum(["image", "video", "audio"]);
+export const ProviderKindSchema = z.enum(["image", "video", "speech"]);
 export type ProviderKind = z.infer<typeof ProviderKindSchema>;
 
 export const ProviderSummarySchema = z.object({
@@ -59,7 +59,7 @@ export const IpcProviderRoutingSchema = z.object({
   groupId: z.string().optional(),
   image: z.array(IpcImageProviderModelSchema).optional(),
   video: z.array(IpcVideoProviderModelSchema).optional(),
-  audio: z.array(IpcAudioProviderModelSchema).optional(),
+  speech: z.array(IpcSpeechProviderModelSchema).optional(),
 });
 export type ProviderRoutingPayload = z.infer<typeof IpcProviderRoutingSchema>;
 

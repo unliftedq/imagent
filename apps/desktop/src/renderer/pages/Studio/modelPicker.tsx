@@ -1,4 +1,4 @@
-import type { AudioModelDef, ImageModelDef, VideoModelDef } from "@imagent/core";
+import type { SpeechModelDef, ImageModelDef, VideoModelDef } from "@imagent/core";
 import type { ProviderId, ProviderSummary } from "@imagent/ipc";
 import { Icons, Popover } from "@imagent/ui";
 import type { ReactNode } from "react";
@@ -200,7 +200,7 @@ export function useModelFavorites(): {
 
 export function createUnifiedModelOptions(
   providers: ProviderSummary[],
-  modelsByProvider: Record<string, Array<ImageModelDef | VideoModelDef | AudioModelDef>>,
+  modelsByProvider: Record<string, Array<ImageModelDef | VideoModelDef | SpeechModelDef>>,
 ): UnifiedModelOption[] {
   return providers.flatMap((provider) =>
     (modelsByProvider[provider.id] ?? []).map((model) => ({
@@ -218,7 +218,7 @@ function modelFavoriteKey(mode: StudioMode, option: UnifiedModelOption): ModelFa
 }
 
 function isModelFavoriteKey(value: unknown): value is ModelFavoriteKey {
-  return typeof value === "string" && /^(image|video|audio):[^:]+:.+$/.test(value);
+  return typeof value === "string" && /^(image|video|speech):[^:]+:.+$/.test(value);
 }
 
 function uniqueProviders(options: UnifiedModelOption[]): Array<{ id: ProviderId; name: string }> {

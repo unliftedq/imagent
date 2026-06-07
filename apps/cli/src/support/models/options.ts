@@ -1,7 +1,7 @@
-import type { AudioModelDef, ImageModelDef, VideoModelDef } from "@imagent/core";
+import type { SpeechModelDef, ImageModelDef, VideoModelDef } from "@imagent/core";
 import chalk from "chalk";
 import {
-  effectiveAudioOfferings,
+  effectiveSpeechOfferings,
   effectiveImageOfferings,
   effectiveVideoOfferings,
 } from "@imagent/providers";
@@ -11,7 +11,7 @@ import {
   buildExamples,
   formatCapabilityFlags,
   formatReferenceSummary,
-  supportedAudioOptionDescriptors,
+  supportedSpeechOptionDescriptors,
   supportedImageOptionDescriptors,
   supportedVideoOptionDescriptors,
 } from "./descriptors.js";
@@ -37,7 +37,7 @@ export async function runOptions(options: OptionsCommandArgs): Promise<void> {
     runtime.config.providers,
     providerId,
   );
-  const audioOfferings = effectiveAudioOfferings(
+  const speechOfferings = effectiveSpeechOfferings(
     runtime.catalog,
     runtime.config.providers,
     providerId,
@@ -58,7 +58,7 @@ export async function runOptions(options: OptionsCommandArgs): Promise<void> {
   type Resolved =
     | { kind: "image"; def: ImageModelDef; baseModelId: string }
     | { kind: "video"; def: VideoModelDef; baseModelId: string }
-    | { kind: "audio"; def: AudioModelDef; baseModelId: string };
+    | { kind: "speech"; def: SpeechModelDef; baseModelId: string };
 
   const matches: Resolved[] = [];
 
@@ -90,17 +90,17 @@ export async function runOptions(options: OptionsCommandArgs): Promise<void> {
       }
     }
   }
-  if (!requestedKind || requestedKind === "audio") {
-    const offering = audioOfferings.find((m) => m.id === modelId);
+  if (!requestedKind || requestedKind === "speech") {
+    const offering = speechOfferings.find((m) => m.id === modelId);
     if (offering) {
-      const provider = runtime.audioRegistry.get(providerId);
+      const provider = runtime.speechRegistry.get(providerId);
       const def = provider?.models.get(modelId);
       if (def) {
-        matches.push({ kind: "audio", def, baseModelId: offering.modelId });
+        matches.push({ kind: "speech", def, baseModelId: offering.modelId });
       } else {
-        const { resolveAudioProviderModel } = await import("@imagent/providers");
-        const resolved = resolveAudioProviderModel(runtime.catalog, providerId, offering);
-        matches.push({ kind: "audio", def: resolved, baseModelId: offering.modelId });
+        const { resolveSpeechProviderModel } = await import("@imagent/providers");
+        const resolved = resolveSpeechProviderModel(runtime.catalog, providerId, offering);
+        matches.push({ kind: "speech", def: resolved, baseModelId: offering.modelId });
       }
     }
   }
@@ -108,16 +108,16 @@ export async function runOptions(options: OptionsCommandArgs): Promise<void> {
   if (matches.length === 0) {
     const imageIds = imageOfferings.map((m) => m.id);
     const videoIds = videoOfferings.map((m) => m.id);
-    const audioIds = audioOfferings.map((m) => m.id);
+    const speechIds = speechOfferings.map((m) => m.id);
     const hint =
-      imageIds.length || videoIds.length || audioIds.length
-        ? `Available models for '${providerId}': image=[${imageIds.join(", ")}] video=[${videoIds.join(", ")}] audio=[${audioIds.join(", ")}]`
+      imageIds.length || videoIds.length || speechIds.length
+        ? `Available models for '${providerId}': image=[${imageIds.join(", ")}] video=[${videoIds.join(", ")}] speech=[${speechIds.join(", ")}]`
         : `Provider '${providerId}' has no offerings. Run \`imagent config provider add ${providerId} <id> --model <canonical>\` to add one.`;
     throw new Error(`unknown model '${modelId}' for provider '${providerId}'. ${hint}`);
   }
   if (matches.length > 1 && !requestedKind) {
     throw new Error(
-      `model '${modelId}' is registered for multiple kinds under '${providerId}'. Pass --kind image, --kind video, or --kind audio to disambiguate.`,
+      `model '${modelId}' is registered for multiple kinds under '${providerId}'. Pass --kind image, --kind video, or --kind speech to disambiguate.`,
     );
   }
 
@@ -127,7 +127,7 @@ export async function runOptions(options: OptionsCommandArgs): Promise<void> {
       ? runtime.imageRegistry.has(providerId)
       : match.kind === "video"
         ? runtime.videoRegistry.has(providerId)
-        : runtime.audioRegistry.has(providerId);
+        : runtime.speechRegistry.has(providerId);
 
   if (options.json) {
     const payload = {
@@ -144,7 +144,7 @@ export async function runOptions(options: OptionsCommandArgs): Promise<void> {
           ? supportedImageOptionDescriptors(match.def)
           : match.kind === "video"
             ? supportedVideoOptionDescriptors(match.def)
-            : supportedAudioOptionDescriptors(match.def),
+            : supportedSpeechOptionDescriptors(match.def),
       examples: buildExamples(providerId, match),
     };
     process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
@@ -169,7 +169,7 @@ export async function runOptions(options: OptionsCommandArgs): Promise<void> {
       ? supportedImageOptionDescriptors(match.def)
       : match.kind === "video"
         ? supportedVideoOptionDescriptors(match.def)
-        : supportedAudioOptionDescriptors(match.def);
+        : supportedSpeechOptionDescriptors(match.def);
   process.stdout.write(`\n${chalk.cyan("request options")} ${chalk.dim("(--option key=value)")}:\n`);
   if (descriptors.length === 0) {
     process.stdout.write(`  ${chalk.dim("(none — pass only the prompt)")}\n`);

@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { MediaKindSchema } from "./media.js";
 
 describe("MediaKindSchema", () => {
-  it("accepts image, video and audio", () => {
+  it("accepts image, video and speech", () => {
     expect(MediaKindSchema.parse("image")).toBe("image");
     expect(MediaKindSchema.parse("video")).toBe("video");
-    expect(MediaKindSchema.parse("audio")).toBe("audio");
+    expect(MediaKindSchema.parse("speech")).toBe("speech");
   });
 
   it("rejects unknown kinds", () => {

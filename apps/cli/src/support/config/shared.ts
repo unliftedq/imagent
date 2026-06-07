@@ -35,14 +35,14 @@ export const ALLOWED_FIELDS: Record<VendorId, Record<string, FieldDef>> = {
   elevenlabs: { apiKey: { store: "secrets" }, baseUrl: { store: "config" } },
 };
 
-type DefaultModelConfigKey = "image.defaultModel" | "video.defaultModel" | "audio.defaultModel";
+type DefaultModelConfigKey = "image.defaultModel" | "video.defaultModel" | "speech.defaultModel";
 const DEFAULT_MODEL_KEYS: Record<
   DefaultModelConfigKey,
-  "defaultImageModel" | "defaultVideoModel" | "defaultAudioModel"
+  "defaultImageModel" | "defaultVideoModel" | "defaultSpeechModel"
 > = {
   "image.defaultModel": "defaultImageModel",
   "video.defaultModel": "defaultVideoModel",
-  "audio.defaultModel": "defaultAudioModel",
+  "speech.defaultModel": "defaultSpeechModel",
 };
 
 export function isVendorKey(s: string): s is VendorId {
@@ -55,10 +55,10 @@ export function isResetTarget(s: string): s is ResetTarget {
 
 export function defaultModelFieldFor(
   dottedKey: string,
-): "defaultImageModel" | "defaultVideoModel" | "defaultAudioModel" | null {
+): "defaultImageModel" | "defaultVideoModel" | "defaultSpeechModel" | null {
   if (dottedKey === "app.defaultImageModel") return "defaultImageModel";
   if (dottedKey === "app.defaultVideoModel") return "defaultVideoModel";
-  if (dottedKey === "app.defaultAudioModel") return "defaultAudioModel";
+  if (dottedKey === "app.defaultSpeechModel") return "defaultSpeechModel";
   return DEFAULT_MODEL_KEYS[dottedKey as DefaultModelConfigKey] ?? null;
 }
 

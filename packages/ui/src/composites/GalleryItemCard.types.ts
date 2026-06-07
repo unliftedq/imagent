@@ -1,4 +1,4 @@
-export type GalleryItemCardKind = "image" | "video" | "audio";
+export type GalleryItemCardKind = "image" | "video" | "speech";
 /**
  * `masonry` — full Gallery page card (preserves aspect ratio, hover caption +
  *   actions, right-click menu).

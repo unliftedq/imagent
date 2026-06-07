@@ -1,6 +1,6 @@
 # imagent — Installation & Configuration
 
-Walk a user through this only when `imagent doctor` reports the CLI is missing or has zero configured providers. If they don't want to set it up, fall back to a different image/video/audio-generation skill instead.
+Walk a user through this only when `imagent doctor` reports the CLI is missing or has zero configured providers. If they don't want to set it up, fall back to a different image/video/speech-generation skill instead.
 
 ## Installation
 

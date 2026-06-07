@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "app": {
+    "theme": "system",
+    "locale": "system",
+    "defaultImageModel": null,
+    "defaultVideoModel": null,
+    "defaultSpeechModel": null,
+    "defaultOutputDir": null,
+    "generationConcurrency": 2,
+    "keepPromptHistory": true,
+    "openAfterGenerate": false
+  },
+  "providers": {
+    "openai": {},
+    "azure": {},
+    "google": {},
+    "flux-bfl": {},
+    "byteplus": {},
+    "volcengine": {},
+    "xai": {},
+    "minimax": {},
+    "elevenlabs": {},
+    "customOpenAI": {}
+  }
+}
