@@ -2,15 +2,22 @@
 
 ## 0.3.0 - 2026-06-08
 
+This release brings **text-to-speech (TTS)** to both the **desktop app** and the **CLI**, so you can generate speech alongside images and videos from either surface.
+
+### Speech (TTS) in desktop & CLI
+
+- The desktop Studio now includes a speech rail for synthesizing audio, and the CLI gains `imagent speech synthesize` / `imagent speech voices`, so TTS works end-to-end from both the desktop app and the command line.
+
 ### Speech providers
 
-- Added bundled OpenAI speech support for `gpt-4o-mini-tts`, including static voice metadata, steerable `instructions`, codec selection, and provider coverage.
-- Added bundled Google speech support for `gemini-3.1-flash-tts-preview`, including catalog wiring, WAV output handling, and provider coverage.
+- **OpenAI** — `gpt-4o-mini-tts`, with static voice metadata, steerable `instructions`, and codec selection.
+- **Google** — `gemini-3.1-flash-tts-preview`, with catalog wiring and WAV output handling.
+- **ElevenLabs** — `eleven_multilingual_v2`, `eleven_v3`, and `eleven_flash_v2_5`, with dynamic voice discovery.
+- **MiniMax** — `speech-2.8-hd` and `speech-2.8-turbo`, with dynamic voice discovery.
 
-### CLI, desktop & docs
+### Docs
 
-- Updated the CLI speech surfaces and desktop model branding so the new OpenAI and Google speech models appear consistently when listing or selecting speech offerings.
-- Refreshed the provider and model docs with the new speech-model capabilities, voices, and usage examples.
+- Refreshed the provider and model docs with the available speech-model capabilities, voices, and usage examples.
 
 ## 0.2.8 - 2026-06-04
 
