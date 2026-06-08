@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0 - 2026-06-08
+
+### Speech providers
+
+- Added bundled OpenAI speech support for `gpt-4o-mini-tts`, including static voice metadata, steerable `instructions`, codec selection, and provider coverage.
+- Added bundled Google speech support for `gemini-3.1-flash-tts-preview`, including catalog wiring, WAV output handling, and provider coverage.
+
+### CLI, desktop & docs
+
+- Updated the CLI speech surfaces and desktop model branding so the new OpenAI and Google speech models appear consistently when listing or selecting speech offerings.
+- Refreshed the provider and model docs with the new speech-model capabilities, voices, and usage examples.
+
 ## 0.2.8 - 2026-06-04
 
 ### Providers
