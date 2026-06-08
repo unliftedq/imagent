@@ -1,6 +1,6 @@
 import type { Asset, AssetKind, GalleryItem } from "@imagent/core";
 import { Icons } from "@imagent/ui";
-import type { DragEvent, ReactNode } from "react";
+import type { CSSProperties, DragEvent, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useT } from "../../i18n/index.js";
 import { api } from "../../lib/api.js";
@@ -278,6 +278,7 @@ function GalleryThumb({
   onSaveAsAsset: (item: GalleryItem) => void;
 }) {
   const t = useT();
+  const isSpeech = item.kind === "speech";
   const src =
     item.kind === "video"
       ? item.thumbPath
@@ -286,6 +287,7 @@ function GalleryThumb({
       : item.kind === "image"
         ? resolveGalleryUrl(item.relPath)
         : "";
+  const speechTint = isSpeech ? speechTintStyle(item.prompt || item.id) : undefined;
 
   return (
     <div
@@ -300,7 +302,11 @@ function GalleryThumb({
         });
       }}
       title={item.prompt}
-      className="group relative aspect-square w-full overflow-hidden rounded-(--radius-sm) border border-(--border) bg-(--surface-sunken) transition-colors duration-(--motion-fast) hover:border-(--border-strong) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring)"
+      style={speechTint?.container}
+      className={
+        "group relative aspect-square w-full overflow-hidden rounded-(--radius-sm) border border-(--border) transition-colors duration-(--motion-fast) hover:border-(--border-strong) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring) " +
+        (isSpeech ? "" : "bg-(--surface-sunken)")
+      }
     >
       <button
         type="button"
@@ -314,7 +320,22 @@ function GalleryThumb({
         aria-label={item.prompt || `Gallery item ${item.id}`}
         className="block h-full w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring)"
       >
-        {src ? (
+        {isSpeech ? (
+          <span className="flex h-full w-full flex-col gap-1.5 p-2 text-left">
+            <Icons.Waveform
+              weight="duotone"
+              className="size-5 shrink-0"
+              style={{ color: speechTint?.accent }}
+            />
+            {item.prompt ? (
+              <span className="line-clamp-4 text-[10.5px] leading-[1.35] text-(--text)">
+                {item.prompt}
+              </span>
+            ) : (
+              <span className="text-[10.5px] italic text-(--text-muted)">{t("studio.noPrompt")}</span>
+            )}
+          </span>
+        ) : src ? (
           <img
             src={src}
             alt=""
@@ -324,11 +345,7 @@ function GalleryThumb({
           />
         ) : (
           <span className="flex h-full w-full items-center justify-center text-(--text-muted)">
-            {item.kind === "speech" ? (
-              <Icons.Waveform weight="duotone" className="size-8" />
-            ) : (
-              <Icons.FilmReel weight="duotone" className="size-8" />
-            )}
+            <Icons.FilmReel weight="duotone" className="size-8" />
           </span>
         )}
       </button>
@@ -352,10 +369,6 @@ function GalleryThumb({
       {item.kind === "video" ? (
         <Badge className="bottom-1 left-1">
           <Icons.Play weight="fill" className="size-2.5" />
-        </Badge>
-      ) : item.kind === "speech" ? (
-        <Badge className="bottom-1 left-1">
-          <Icons.Waveform weight="bold" className="size-2.5" />
         </Badge>
       ) : null}
       {item.favorited ? (
@@ -412,6 +425,26 @@ function setDragData(event: DragEvent<HTMLElement>, data: StudioReferenceDragDat
   event.dataTransfer.effectAllowed = "copy";
   event.dataTransfer.setData(STUDIO_REFERENCE_MIME, JSON.stringify(data));
   event.dataTransfer.setData("text/plain", data.source === "asset" ? data.id : data.relPath);
+}
+
+/**
+ * Deterministic per-item tint for speech cards so visually identical
+ * waveform thumbs become distinguishable. The hue is derived from the seed
+ * (prompt or id) and blended into the theme surface via `color-mix` so it
+ * stays legible in both light and dark themes.
+ */
+function speechTintStyle(seed: string): { container: CSSProperties; accent: string } {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) | 0;
+  }
+  const hue = Math.abs(hash) % 360;
+  return {
+    container: {
+      backgroundColor: `color-mix(in oklab, hsl(${hue} 70% 55%) 16%, var(--surface))`,
+    },
+    accent: `color-mix(in oklab, hsl(${hue} 70% 50%) 80%, var(--text))`,
+  };
 }
 
 function TabButton({
