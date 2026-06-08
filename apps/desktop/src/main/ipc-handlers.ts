@@ -1530,9 +1530,10 @@ function providerSummaryList(
       id: "openai",
       displayName: "OpenAI",
       configured: !!secrets.openai,
-      kinds: ["image"],
+      // OpenAI spans image (gpt-image) + speech (gpt-4o-mini-tts).
+      kinds: ["image", ...(speechIds("openai").length > 0 ? (["speech"] as const) : [])],
       defaultModel: firstImage("openai"),
-      modelIds: imageIds("openai"),
+      modelIds: [...imageIds("openai"), ...speechIds("openai")],
     },
     {
       id: "azure",
@@ -1546,10 +1547,10 @@ function providerSummaryList(
       id: "google",
       displayName: "Google AI Studio",
       configured: !!secrets.google,
-      // Google AI Studio spans both kinds: Imagen / Nano Banana image + Veo video.
-      kinds: ["image", "video"],
+      // Google AI Studio spans image (Imagen / Nano Banana) + Veo video + Gemini TTS speech.
+      kinds: ["image", "video", ...(speechIds("google").length > 0 ? (["speech"] as const) : [])],
       defaultModel: firstImage("google"),
-      modelIds: [...imageIds("google"), ...videoIds("google")],
+      modelIds: [...imageIds("google"), ...videoIds("google"), ...speechIds("google")],
     },
     {
       id: "flux-bfl",
