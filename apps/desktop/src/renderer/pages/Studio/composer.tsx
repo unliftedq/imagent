@@ -30,11 +30,11 @@ export function StudioModeSwitch({
           {t("studio.modeVideo")}
         </ModeSwitchButton>
         <ModeSwitchButton
-          active={mode === "audio"}
+          active={mode === "speech"}
           icon={<Icons.Waveform weight="duotone" className="size-4" />}
-          onClick={() => onModeChange("audio")}
+          onClick={() => onModeChange("speech")}
         >
-          {t("studio.mode.audio")}
+          {t("studio.mode.speech")}
         </ModeSwitchButton>
       </div>
     </header>
@@ -115,8 +115,8 @@ export function ChatComposerShell({
   const actionLabel =
     mode === "video"
       ? t("studio.composer.submit")
-      : mode === "audio"
-        ? t("studio.audio.generate")
+      : mode === "speech"
+        ? t("studio.speech.generate")
         : t("studio.composer.generate");
 
   return (

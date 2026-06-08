@@ -39,7 +39,7 @@ export function RailVariant({
         className,
       )}
     >
-      {kind === "audio" ? (
+      {kind === "speech" ? (
         <span className="flex h-full w-full flex-col items-center justify-center gap-2 bg-(--surface) p-2 text-(--text-muted)">
           <Waveform weight="duotone" className="size-7" />
           {typeof durationMs === "number" && durationMs > 0 ? (
@@ -59,7 +59,7 @@ export function RailVariant({
       ) : (
         <span aria-hidden="true" className="block h-full w-full" />
       )}
-      {kind === "video" || kind === "audio" ? (
+      {kind === "video" || kind === "speech" ? (
         <span
           aria-hidden="true"
           className={

@@ -88,12 +88,14 @@ function loadBuiltinMigrations(): readonly Migration[] {
   const seaFts = readSeaAsset("002_fts.sql");
   const seaJiebaFts = readSeaAsset("003_jieba_fts.sql");
   const seaAudio = readSeaAsset("004_audio.sql");
-  if (seaInit && seaFts && seaJiebaFts && seaAudio) {
+  const seaSpeech = readSeaAsset("005_speech.sql");
+  if (seaInit && seaFts && seaJiebaFts && seaAudio && seaSpeech) {
     return [
       { version: 1, name: "001_init", sql: seaInit },
       { version: 2, name: "002_fts", sql: seaFts },
       { version: 3, name: "003_jieba_fts", sql: seaJiebaFts },
       { version: 4, name: "004_audio", sql: seaAudio },
+      { version: 5, name: "005_speech", sql: seaSpeech },
     ];
   }
 
@@ -127,11 +129,13 @@ function loadBuiltinMigrations(): readonly Migration[] {
   const fts = readFileSync(path.join(dir, "002_fts.sql"), "utf8");
   const jiebaFts = readFileSync(path.join(dir, "003_jieba_fts.sql"), "utf8");
   const audio = readFileSync(path.join(dir, "004_audio.sql"), "utf8");
+  const speech = readFileSync(path.join(dir, "005_speech.sql"), "utf8");
   return [
     { version: 1, name: "001_init", sql: init },
     { version: 2, name: "002_fts", sql: fts },
     { version: 3, name: "003_jieba_fts", sql: jiebaFts },
     { version: 4, name: "004_audio", sql: audio },
+    { version: 5, name: "005_speech", sql: speech },
   ];
 }
 

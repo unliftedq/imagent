@@ -1,12 +1,12 @@
 ---
-description: Default image, video, and audio model capabilities.
+description: Default image, video, and speech model capabilities.
 ---
 
 # Model capabilities
 
 This page summarizes the bundled default model catalog in `packages/providers/src/catalog.default.json`. Limits are included only when provider documentation or the bundled catalog confirms them.
 
-Use `imagent models --kind audio` to list available TTS offerings, and `imagent options --provider <id> --model <id> --kind audio` to inspect exact `--option key=value` settings.
+Use `imagent models --kind speech` to list available TTS offerings, and `imagent options --provider <id> --model <id> --kind speech` to inspect exact `--option key=value` settings.
 
 ## Reference-image fields
 
@@ -160,7 +160,7 @@ Use `imagent models --kind audio` to list available TTS offerings, and `imagent 
 - **Reference-image support:** First and last frame are supported; multimodal reference images are not supported. Input images must be under 30 MB.
 - **Other capabilities:** Default duration is 5 seconds; default resolution is `720p`.
 
-## Audio models
+## Speech models
 
 ### ElevenLabs: `eleven_multilingual_v2`
 

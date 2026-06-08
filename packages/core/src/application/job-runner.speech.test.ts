@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import type { GalleryItem } from "../domain/gallery.js";
 import type { Job } from "../domain/job.js";
-import type { AudioProvider } from "../ports/audio-provider.js";
+import type { SpeechProvider } from "../ports/speech-provider.js";
 import { JobRunner } from "./job-runner.js";
 
-function makeDeps(audioProvider: AudioProvider) {
+function makeDeps(speechProvider: SpeechProvider) {
   const created: GalleryItem[] = [];
   const jobs = new Map<string, Job>();
   let seq = 0;
@@ -29,7 +29,7 @@ function makeDeps(audioProvider: AudioProvider) {
       },
       imageRegistry: new Map(),
       videoRegistry: new Map(),
-      audioRegistry: new Map([[audioProvider.id, audioProvider]]),
+      speechRegistry: new Map([[speechProvider.id, speechProvider]]),
       writeFile: vi.fn(async () => {}),
       ensureDir: vi.fn(async () => {}),
       idFactory: () => `id-${seq++}`,
@@ -38,9 +38,9 @@ function makeDeps(audioProvider: AudioProvider) {
   };
 }
 
-describe("JobRunner audio", () => {
-  it("generates audio, writes bytes, creates an audio gallery item", async () => {
-    const provider: AudioProvider = {
+describe("JobRunner speech", () => {
+  it("generates speech, writes bytes, creates a speech gallery item", async () => {
+    const provider: SpeechProvider = {
       id: "elevenlabs",
       displayName: "ElevenLabs",
       capabilities: {
@@ -58,19 +58,19 @@ describe("JobRunner audio", () => {
     const runner = new JobRunner(deps as never);
     const completed = new Promise<Job>((res) => runner.once("job.completed", res));
     await runner.start({
-      kind: "audio",
+      kind: "speech",
       request: { prompt: "hi", providerId: "elevenlabs", model: "tts", assetIds: [] },
     });
     const job = await completed;
     expect(job.state).toBe("succeeded");
     expect(created).toHaveLength(1);
-    expect(created[0]?.kind).toBe("audio");
+    expect(created[0]?.kind).toBe("speech");
     expect(created[0]?.durationMs).toBe(900);
     expect(deps.writeFile).toHaveBeenCalledWith("/data/gallery/id-1.mp3", new Uint8Array([1, 2]));
   });
 
   it("maps audio/wav to .wav", async () => {
-    const provider: AudioProvider = {
+    const provider: SpeechProvider = {
       id: "elevenlabs",
       displayName: "ElevenLabs",
       capabilities: {
@@ -86,7 +86,7 @@ describe("JobRunner audio", () => {
     const runner = new JobRunner(deps as never);
     const done = new Promise((res) => runner.once("job.completed", res));
     await runner.start({
-      kind: "audio",
+      kind: "speech",
       request: { prompt: "hi", providerId: "elevenlabs", model: "tts", assetIds: [] },
     });
     await done;
@@ -94,7 +94,7 @@ describe("JobRunner audio", () => {
   });
 
   it("maps audio/x-wav to .wav", async () => {
-    const provider: AudioProvider = {
+    const provider: SpeechProvider = {
       id: "elevenlabs",
       displayName: "ElevenLabs",
       capabilities: {
@@ -110,7 +110,7 @@ describe("JobRunner audio", () => {
     const runner = new JobRunner(deps as never);
     const done = new Promise((res) => runner.once("job.completed", res));
     await runner.start({
-      kind: "audio",
+      kind: "speech",
       request: { prompt: "hi", providerId: "elevenlabs", model: "tts", assetIds: [] },
     });
     await done;

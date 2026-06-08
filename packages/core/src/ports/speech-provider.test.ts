@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { AudioProvider } from "./audio-provider.js";
+import type { SpeechProvider } from "./speech-provider.js";
 
-describe("AudioProvider port", () => {
+describe("SpeechProvider port", () => {
   it("can be implemented as a minimal stub", async () => {
-    const provider: AudioProvider = {
+    const provider: SpeechProvider = {
       id: "stub",
       displayName: "Stub",
       capabilities: {

@@ -1,15 +1,15 @@
 import {
-  type AudioGenerationResult,
-  type AudioModelDef,
-  type AudioRequest,
-  combineAudioFormat,
+  type SpeechGenerationResult,
+  type SpeechModelDef,
+  type SpeechRequest,
+  combineSpeechFormat,
   type Logger,
   ProviderRequestError,
   ProviderResponseError,
   type ProviderTestResult,
   type VoiceInfo,
 } from "@imagent/core";
-import { BaseAudioProvider } from "../common/index.js";
+import { BaseSpeechProvider } from "../common/index.js";
 import { createHttpClient, type HttpClient } from "../http/index.js";
 import {
   assertMiniMaxOk,
@@ -22,12 +22,12 @@ import {
 const T2A_PATH = "/t2a_v2";
 const GET_VOICE_PATH = "/get_voice";
 
-export interface MiniMaxAudioProviderOptions {
+export interface MiniMaxSpeechProviderOptions {
   apiKey: string;
   /** Required for T2A v2 — passed as the GroupId query param. */
   groupId: string | undefined;
   baseUrl?: string | null;
-  models: ReadonlyMap<string, AudioModelDef>;
+  models: ReadonlyMap<string, SpeechModelDef>;
   fetch?: typeof fetch;
   logger?: Logger;
 }
@@ -50,11 +50,11 @@ interface MiniMaxGetVoiceResponse {
   base_resp?: MiniMaxBaseResp | null;
 }
 
-export class MiniMaxAudioProvider extends BaseAudioProvider {
+export class MiniMaxSpeechProvider extends BaseSpeechProvider {
   private readonly http: HttpClient;
   private readonly groupId: string;
 
-  constructor(options: MiniMaxAudioProviderOptions) {
+  constructor(options: MiniMaxSpeechProviderOptions) {
     super({
       providerId: "minimax",
       displayName: "MiniMax",
@@ -63,7 +63,7 @@ export class MiniMaxAudioProvider extends BaseAudioProvider {
     });
     if (!options.groupId) {
       throw new ProviderRequestError(
-        "MiniMax audio requires a groupId. Run `imagent config set minimax.groupId <GroupId>`.",
+        "MiniMax speech requires a groupId. Run `imagent config set minimax.groupId <GroupId>`.",
         { vendorId: "minimax" },
       );
     }
@@ -79,11 +79,11 @@ export class MiniMaxAudioProvider extends BaseAudioProvider {
   }
 
   protected async doSynthesize(
-    merged: AudioRequest,
-    model: AudioModelDef,
+    merged: SpeechRequest,
+    model: SpeechModelDef,
     signal?: AbortSignal,
-  ): Promise<AudioGenerationResult> {
-    const format = combineAudioFormat(merged.codec ?? "mp3", merged.formatQuality);
+  ): Promise<SpeechGenerationResult> {
+    const format = combineSpeechFormat(merged.codec ?? "mp3", merged.formatQuality);
     const voiceSetting: Record<string, unknown> = {};
     if (merged.voice) voiceSetting.voice_id = merged.voice;
     if (merged.speed !== undefined) voiceSetting.speed = merged.speed;
@@ -108,7 +108,7 @@ export class MiniMaxAudioProvider extends BaseAudioProvider {
     assertMiniMaxOk(res.base_resp, this.id);
     const hex = res.data?.audio;
     if (typeof hex !== "string" || hex.length === 0) {
-      throw new ProviderResponseError("MiniMax T2A response contained no audio", {
+      throw new ProviderResponseError("MiniMax T2A response contained no speech", {
         vendorId: this.id,
         bodyExcerpt: JSON.stringify(res).slice(0, 512),
       });

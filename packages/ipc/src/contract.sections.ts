@@ -1,7 +1,7 @@
 import {
   AssetSchema,
-  AudioModelDefSchema,
-  AudioRequestSchema,
+  SpeechModelDefSchema,
+  SpeechRequestSchema,
   BoardSchema,
   GalleryItemSchema,
   GalleryQuerySchema,
@@ -162,8 +162,8 @@ export const generationContract = {
    * Submit a TTS job. Like image.submit it returns `{ jobId }` immediately;
    * the renderer subscribes to job.* push events for completion.
    */
-  "audio.submit": {
-    input: AudioRequestSchema.extend({ parentId: z.string().optional() }),
+  "speech.submit": {
+    input: SpeechRequestSchema.extend({ parentId: z.string().optional() }),
     output: z.object({ jobId: z.string() }),
   },
 } as const;
@@ -191,16 +191,16 @@ export const modelsContract = {
     }),
   },
 
-  "audio.models": {
+  "speech.models": {
     input: z.object({ providerId: ProviderIdSchema }),
     output: z.object({
       providerId: ProviderIdSchema,
       defaultModel: z.string().nullable(),
-      models: z.array(AudioModelDefSchema),
+      models: z.array(SpeechModelDefSchema),
     }),
   },
 
-  "audio.voices": {
+  "speech.voices": {
     input: z.object({ providerId: ProviderIdSchema, modelId: z.string().optional() }),
     output: z.object({ voices: z.array(VoiceInfoSchema) }),
   },
@@ -243,7 +243,7 @@ export const modelsContract = {
           ),
         }),
       ),
-      audio: z.array(
+      speech: z.array(
         z.object({
           id: z.string(),
           displayName: z.string().nullable(),
@@ -436,7 +436,7 @@ export const galleryContract = {
     output: z.discriminatedUnion("kind", [
       z.object({ kind: z.literal("image"), request: ImageRequestSchema }),
       z.object({ kind: z.literal("video"), request: VideoRequestSchema }),
-      z.object({ kind: z.literal("audio"), request: AudioRequestSchema }),
+      z.object({ kind: z.literal("speech"), request: SpeechRequestSchema }),
     ]),
   },
   "gallery.toggleFavorite": {

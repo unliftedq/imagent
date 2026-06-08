@@ -1,5 +1,5 @@
-import type { AudioModelDef, ImageModelDef, VideoModelDef } from "@imagent/core";
-import { combineAudioFormat } from "@imagent/core";
+import type { SpeechModelDef, ImageModelDef, VideoModelDef } from "@imagent/core";
+import { combineSpeechFormat } from "@imagent/core";
 
 import type { OptionDescriptor } from "./shared.js";
 
@@ -65,7 +65,7 @@ export function supportedVideoOptionDescriptors(model: VideoModelDef): OptionDes
   return out;
 }
 
-export function supportedAudioOptionDescriptors(model: AudioModelDef): OptionDescriptor[] {
+export function supportedSpeechOptionDescriptors(model: SpeechModelDef): OptionDescriptor[] {
   const caps = model.capabilities;
   if (!caps) {
     return [
@@ -89,7 +89,7 @@ export function supportedAudioOptionDescriptors(model: AudioModelDef): OptionDes
   if (caps.outputFormats && caps.outputFormats.length > 0) {
     const allowed = caps.outputFormats.flatMap((fmt) =>
       fmt.qualities.length > 0
-        ? fmt.qualities.map((q) => combineAudioFormat(fmt.codec, q))
+        ? fmt.qualities.map((q) => combineSpeechFormat(fmt.codec, q))
         : [fmt.codec],
     );
     out.push({ key: "outputFormat", allowed });
@@ -110,10 +110,10 @@ export function supportedAudioOptionDescriptors(model: AudioModelDef): OptionDes
 type ModelMatch =
   | { kind: "image"; def: ImageModelDef }
   | { kind: "video"; def: VideoModelDef }
-  | { kind: "audio"; def: AudioModelDef };
+  | { kind: "speech"; def: SpeechModelDef };
 
 export function formatReferenceSummary(match: ModelMatch): string | undefined {
-  if (match.kind === "audio") return undefined;
+  if (match.kind === "speech") return undefined;
   const caps = match.def.capabilities;
   if (!caps) return undefined;
   const lines: string[] = [];
@@ -175,7 +175,7 @@ export function buildExamples(providerId: string, match: ModelMatch): string[] {
     if (caps?.voices?.[0]) opts.push(`--option voice=${caps.voices[0].id}`);
     if (caps?.outputFormats?.[0]) {
       const first = caps.outputFormats[0];
-      opts.push(`--option outputFormat=${combineAudioFormat(first.codec, first.qualities[0])}`);
+      opts.push(`--option outputFormat=${combineSpeechFormat(first.codec, first.qualities[0])}`);
     }
     examples.push(
       `imagent speech synthesize "your text" --provider ${providerId} --model ${match.def.id}${opts.length ? ` ${opts.join(" ")}` : ""} --out ./outputs`,

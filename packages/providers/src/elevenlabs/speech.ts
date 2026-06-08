@@ -1,31 +1,31 @@
 import { type ElevenLabs, ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import {
-  type AudioGenerationResult,
-  type AudioModelDef,
-  type AudioRequest,
-  combineAudioFormat,
+  type SpeechGenerationResult,
+  type SpeechModelDef,
+  type SpeechRequest,
+  combineSpeechFormat,
   type Logger,
   ProviderResponseError,
   type ProviderTestResult,
   type VoiceInfo,
 } from "@imagent/core";
-import { BaseAudioProvider } from "../common/index.js";
+import { BaseSpeechProvider } from "../common/index.js";
 
 export const DEFAULT_ELEVENLABS_BASE_URL = "https://api.elevenlabs.io";
 
-export interface ElevenLabsAudioProviderOptions {
+export interface ElevenLabsSpeechProviderOptions {
   apiKey: string;
   baseUrl?: string | null;
-  models: ReadonlyMap<string, AudioModelDef>;
+  models: ReadonlyMap<string, SpeechModelDef>;
   /** Inject a preconfigured client (used in tests). Defaults to a real SDK client. */
   client?: ElevenLabsClient;
   logger?: Logger;
 }
 
-export class ElevenLabsAudioProvider extends BaseAudioProvider {
+export class ElevenLabsSpeechProvider extends BaseSpeechProvider {
   private readonly client: ElevenLabsClient;
 
-  constructor(options: ElevenLabsAudioProviderOptions) {
+  constructor(options: ElevenLabsSpeechProviderOptions) {
     super({
       providerId: "elevenlabs",
       displayName: "ElevenLabs",
@@ -37,17 +37,17 @@ export class ElevenLabsAudioProvider extends BaseAudioProvider {
   }
 
   protected async doSynthesize(
-    merged: AudioRequest,
-    model: AudioModelDef,
+    merged: SpeechRequest,
+    model: SpeechModelDef,
     signal?: AbortSignal,
-  ): Promise<AudioGenerationResult> {
+  ): Promise<SpeechGenerationResult> {
     const voiceId = merged.voice;
     if (!voiceId) {
       throw new ProviderResponseError("ElevenLabs requires a voice id (set --option voice=<id>)", {
         vendorId: this.id,
       });
     }
-    const format = combineAudioFormat(merged.codec ?? "mp3", merged.formatQuality ?? "44100_128");
+    const format = combineSpeechFormat(merged.codec ?? "mp3", merged.formatQuality ?? "44100_128");
     const voiceSettings = buildVoiceSettings(merged);
     const body: ElevenLabs.BodyTextToSpeechFull = {
       text: merged.prompt,
@@ -67,7 +67,7 @@ export class ElevenLabsAudioProvider extends BaseAudioProvider {
     }
     const bytes = await collectStream(stream);
     if (bytes.byteLength === 0) {
-      throw new ProviderResponseError("ElevenLabs returned empty audio", { vendorId: this.id });
+      throw new ProviderResponseError("ElevenLabs returned empty speech", { vendorId: this.id });
     }
     return { output: { bytes, mimeType: mimeForFormat(format), raw: { outputFormat: format } } };
   }
@@ -104,7 +104,7 @@ function normalizeVoice(v: ElevenLabs.Voice): VoiceInfo {
   return voice;
 }
 
-function buildVoiceSettings(merged: AudioRequest): ElevenLabs.VoiceSettings | undefined {
+function buildVoiceSettings(merged: SpeechRequest): ElevenLabs.VoiceSettings | undefined {
   const out: ElevenLabs.VoiceSettings = {};
   const raw = merged.raw;
   if (raw) {

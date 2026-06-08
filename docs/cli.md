@@ -17,8 +17,8 @@ imagent speech synthesize <text> [--provider <id>] [--model <id>] [--option k=v 
 imagent speech voices --provider <id> [--model <id>] [--json]
 imagent gallery {ls|show|remix|rm|favorite}
 imagent asset {add|list|show|rm}
-imagent models [--kind image|video|audio] [--provider <id>] [--configured] [--json]
-imagent options --provider <id> --model <id> [--kind image|video|audio] [--json]
+imagent models [--kind image|video|speech] [--provider <id>] [--configured] [--json]
+imagent options --provider <id> --model <id> [--kind image|video|speech] [--json]
 imagent doctor
 imagent config {get|set|path|reset}
 imagent mcp
@@ -30,7 +30,7 @@ imagent mcp
 imagent doctor
 ```
 
-`doctor` verifies the workspace, database, FTS tables, and config file, and prints each catalog provider with the concrete image/video/audio models it would expose plus a configured/missing-credentials marker. It does not perform provider network calls.
+`doctor` verifies the workspace, database, FTS tables, and config file, and prints each catalog provider with the concrete image/video/speech models it would expose plus a configured/missing-credentials marker. It does not perform provider network calls.
 
 ### Discovery commands
 
@@ -39,7 +39,7 @@ List every provider/model pair the catalog advertises:
 ```bash
 imagent models
 imagent models --kind image
-imagent models --kind audio
+imagent models --kind speech
 imagent models --provider openai --json
 imagent models --configured           # only providers with credentials
 ```
@@ -49,7 +49,7 @@ Inspect the request options, defaults, and reference limits for a specific model
 ```bash
 imagent options --provider openai --model gpt-image-2
 imagent options --provider google --model veo-3.0-generate-001 --kind video --json
-imagent options --provider elevenlabs --model eleven_multilingual_v2 --kind audio
+imagent options --provider elevenlabs --model eleven_multilingual_v2 --kind speech
 ```
 
 Use `imagent options` before crafting an `imagent image`, `imagent video`, or `imagent speech` invocation — it lists the exact `--option key=value` pairs and allowed values for that model.
@@ -215,7 +215,7 @@ imagent speech synthesize "Welcome to imagent" \
   --model eleven_multilingual_v2
 ```
 
-Pass audio options with repeatable `--option key=value` flags or the `-o` alias:
+Pass speech options with repeatable `--option key=value` flags or the `-o` alias:
 
 ```bash
 imagent speech synthesize "Calm product voiceover" \
@@ -224,10 +224,10 @@ imagent speech synthesize "Calm product voiceover" \
   -o voice=presenter_female \
   -o speed=1 \
   -o format=mp3 \
-  --out ./audio
+  --out ./speech
 ```
 
-Common audio options are:
+Common speech options are:
 
 - `voice`
 - `speed`

@@ -1,13 +1,13 @@
-import type { AudioGenerationResult, AudioModelDef, AudioRequest } from "@imagent/core";
+import type { SpeechGenerationResult, SpeechModelDef, SpeechRequest } from "@imagent/core";
 import { describe, expect, it } from "vitest";
-import { BaseAudioProvider } from "./audio-provider.js";
+import { BaseSpeechProvider } from "./speech-provider.js";
 
-class StubAudio extends BaseAudioProvider {
+class StubAudio extends BaseSpeechProvider {
   lastModelId?: string;
   protected async doSynthesize(
-    req: AudioRequest,
-    model: AudioModelDef,
-  ): Promise<AudioGenerationResult> {
+    req: SpeechRequest,
+    model: SpeechModelDef,
+  ): Promise<SpeechGenerationResult> {
     this.lastModelId = model.id;
     return { output: { bytes: new Uint8Array([1]), mimeType: "audio/mpeg" } };
   }
@@ -16,7 +16,7 @@ class StubAudio extends BaseAudioProvider {
   }
 }
 
-const models = new Map<string, AudioModelDef>([
+const models = new Map<string, SpeechModelDef>([
   [
     "m",
     {
@@ -31,7 +31,7 @@ const models = new Map<string, AudioModelDef>([
   ],
 ]);
 
-describe("BaseAudioProvider", () => {
+describe("BaseSpeechProvider", () => {
   it("applies defaults + validates, then calls doSynthesize", async () => {
     const p = new StubAudio({ providerId: "p", displayName: "P", models });
     const res = await p.synthesize({ prompt: "hi", providerId: "p", model: "m", assetIds: [] });

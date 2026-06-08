@@ -52,7 +52,7 @@ export const VideoRequestSchema = z.object({
 });
 export type VideoRequest = z.infer<typeof VideoRequestSchema>;
 
-export const AudioRequestSchema = z.object({
+export const SpeechRequestSchema = z.object({
   /** The text to synthesize. */
   prompt: z.string().min(1),
   providerId: z.string(),
@@ -75,7 +75,7 @@ export const AudioRequestSchema = z.object({
   /** Per-model extra knobs passthrough (stability, emotion, vol, pitch, ...). */
   raw: z.record(z.string(), z.unknown()).optional(),
 });
-export type AudioRequest = z.infer<typeof AudioRequestSchema>;
+export type SpeechRequest = z.infer<typeof SpeechRequestSchema>;
 
 export const GenerationIntentSchema = z.discriminatedUnion("kind", [
   z.object({
@@ -93,8 +93,8 @@ export const GenerationIntentSchema = z.discriminatedUnion("kind", [
     boardId: z.string().optional(),
   }),
   z.object({
-    kind: z.literal("audio"),
-    request: AudioRequestSchema,
+    kind: z.literal("speech"),
+    request: SpeechRequestSchema,
     parentId: z.string().optional(),
     boardId: z.string().optional(),
   }),

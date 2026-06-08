@@ -67,7 +67,7 @@ function makeTransport(
 }
 
 // ----- payload bridge (mirrors apps/desktop/src/main/ipc-handlers.ts) -------
-// Audio provider config slots that are not yet renderer-editable are preserved
+// Speech provider config slots that are not yet renderer-editable are preserved
 // as defaults so this IPC package remains type-compatible with @imagent/config.
 function prefsPayloadFromConfig(p: ProviderPreferences): ProviderPreferencesPayload {
   return {

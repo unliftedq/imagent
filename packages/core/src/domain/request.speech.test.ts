@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { AudioRequestSchema, GenerationIntentSchema } from "./request.js";
+import { SpeechRequestSchema, GenerationIntentSchema } from "./request.js";
 
-describe("AudioRequest", () => {
+describe("SpeechRequest", () => {
   it("requires non-empty prompt and defaults assetIds", () => {
-    const req = AudioRequestSchema.parse({
+    const req = SpeechRequestSchema.parse({
       prompt: "Hello world",
       providerId: "elevenlabs",
       model: "tts-rachel",
@@ -13,15 +13,15 @@ describe("AudioRequest", () => {
 
   it("rejects empty text", () => {
     expect(() =>
-      AudioRequestSchema.parse({ prompt: "", providerId: "elevenlabs", model: "x" }),
+      SpeechRequestSchema.parse({ prompt: "", providerId: "elevenlabs", model: "x" }),
     ).toThrow();
   });
 
-  it("is a valid audio generation intent", () => {
+  it("is a valid speech generation intent", () => {
     const intent = GenerationIntentSchema.parse({
-      kind: "audio",
+      kind: "speech",
       request: { prompt: "hi", providerId: "minimax", model: "speech-02" },
     });
-    expect(intent.kind).toBe("audio");
+    expect(intent.kind).toBe("speech");
   });
 });

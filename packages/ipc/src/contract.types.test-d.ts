@@ -5,8 +5,8 @@
  */
 
 import type {
-  AudioModelDef,
-  AudioRequest,
+  SpeechModelDef,
+  SpeechRequest,
   GalleryItem,
   ImageRequest,
   Job,
@@ -20,22 +20,22 @@ const _imageInput: Input<"image.generate"> = null as unknown as ImageRequest;
 const _imageOutput: Output<"image.generate"> = null as unknown as GalleryItem;
 const _imageSubmitInput: Input<"image.submit"> = null as unknown as ImageRequest;
 const _imageSubmitOutput: Output<"image.submit"> = { jobId: "job-1" };
-const _audioSubmitInput: Input<"audio.submit"> = null as unknown as AudioRequest;
-const _audioSubmitOutput: Output<"audio.submit"> = { jobId: "audio-job-1" };
-const _audioModelsInput: Input<"audio.models"> = { providerId: "elevenlabs" };
-const _audioModelsOutput: Output<"audio.models"> = {
+const _speechSubmitInput: Input<"speech.submit"> = null as unknown as SpeechRequest;
+const _speechSubmitOutput: Output<"speech.submit"> = { jobId: "speech-job-1" };
+const _speechModelsInput: Input<"speech.models"> = { providerId: "elevenlabs" };
+const _speechModelsOutput: Output<"speech.models"> = {
   providerId: "elevenlabs",
   defaultModel: null,
-  models: null as unknown as AudioModelDef[],
+  models: null as unknown as SpeechModelDef[],
 };
-const _audioVoicesInput: Input<"audio.voices"> = { providerId: "elevenlabs", modelId: "m1" };
-const _audioVoicesOutput: Output<"audio.voices"> = {
+const _speechVoicesInput: Input<"speech.voices"> = { providerId: "elevenlabs", modelId: "m1" };
+const _speechVoicesOutput: Output<"speech.voices"> = {
   voices: null as unknown as VoiceInfo[],
 };
 const _modelsListOutput: Output<"models.list"> = {
   image: [],
   video: [],
-  audio: [],
+  speech: [],
 };
 
 // jobs.list accepts JobsQuery, returns Job[].
@@ -52,12 +52,12 @@ export type _ContractTypeProbe = [
   typeof _imageOutput,
   typeof _imageSubmitInput,
   typeof _imageSubmitOutput,
-  typeof _audioSubmitInput,
-  typeof _audioSubmitOutput,
-  typeof _audioModelsInput,
-  typeof _audioModelsOutput,
-  typeof _audioVoicesInput,
-  typeof _audioVoicesOutput,
+  typeof _speechSubmitInput,
+  typeof _speechSubmitOutput,
+  typeof _speechModelsInput,
+  typeof _speechModelsOutput,
+  typeof _speechVoicesInput,
+  typeof _speechVoicesOutput,
   typeof _modelsListOutput,
   typeof _jobsInput,
   typeof _jobsOutput,

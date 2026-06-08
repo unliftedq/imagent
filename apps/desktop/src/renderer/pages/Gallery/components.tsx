@@ -355,7 +355,7 @@ export function LightboxPreview({
                     if (e.target === e.currentTarget) onClose();
                   }}
                 >
-                  {data.item.kind === "audio" ? (
+                  {data.item.kind === "speech" ? (
                     <div className="w-full max-w-[720px] rounded-(--radius-lg) border border-white/10 bg-black/45 p-6 text-white shadow-[0_24px_64px_-16px_rgba(0,0,0,0.65)] backdrop-blur-xl">
                       <div className="mb-4 inline-flex size-12 items-center justify-center rounded-(--radius-md) bg-white/10 text-white/85">
                         <Icons.Waveform weight="duotone" className="size-7" />
@@ -439,7 +439,7 @@ export function LightboxPreview({
                     }
                     onClick={() => void toggleFav(data.item.id)}
                   />
-                  {data.item.kind === "audio" ? null : (
+                  {data.item.kind === "speech" ? null : (
                     <LightboxAction
                       icon={<Icons.StackPlus weight="bold" className="size-4" />}
                       label={t("gallery.preview.saveAsAsset")}
@@ -641,7 +641,7 @@ function LightboxAction({
 
 function LineageTile({ item }: { item: GalleryItem }) {
   const isVideo = item.kind === "video";
-  const isAudio = item.kind === "audio";
+  const isAudio = item.kind === "speech";
   const src = isAudio
     ? ""
     : isVideo

@@ -1,6 +1,6 @@
 import { ProviderRequestError } from "../domain/errors.js";
-import type { AudioModelDef, ImageModelDef, VideoModelDef } from "../domain/model.js";
-import type { AudioRequest, ImageRequest, VideoRequest } from "../domain/request.js";
+import type { SpeechModelDef, ImageModelDef, VideoModelDef } from "../domain/model.js";
+import type { SpeechRequest, ImageRequest, VideoRequest } from "../domain/request.js";
 
 /**
  * Validate an image request against a resolved model's capability surface.
@@ -296,10 +296,10 @@ export function applyVideoDefaults(req: VideoRequest, model: VideoModelDef): Vid
   };
 }
 
-export function validateAudioRequestAgainstModel(
+export function validateSpeechRequestAgainstModel(
   vendorId: string,
-  req: AudioRequest,
-  model: AudioModelDef,
+  req: SpeechRequest,
+  model: SpeechModelDef,
 ): void {
   const caps = model.capabilities;
   if (!caps) return;
@@ -348,7 +348,7 @@ export function validateAudioRequestAgainstModel(
   }
 }
 
-export function applyAudioDefaults(req: AudioRequest, model: AudioModelDef): AudioRequest {
+export function applySpeechDefaults(req: SpeechRequest, model: SpeechModelDef): SpeechRequest {
   const d = (model.defaults ?? {}) as {
     voice?: string;
     codec?: string;
@@ -365,11 +365,11 @@ export function applyAudioDefaults(req: AudioRequest, model: AudioModelDef): Aud
 }
 
 /**
- * Combine an audio codec with an optional sample-rate/bitrate qualifier into
+ * Combine an speech codec with an optional sample-rate/bitrate qualifier into
  * the single format token providers send to their backend (e.g.
  * `mp3` + `44100_128` → `mp3_44100_128`; `mp3` + undefined → `mp3`).
  */
-export function combineAudioFormat(codec: string, quality?: string | null): string {
+export function combineSpeechFormat(codec: string, quality?: string | null): string {
   return quality ? `${codec}_${quality}` : codec;
 }
 
@@ -378,7 +378,7 @@ export function combineAudioFormat(codec: string, quality?: string | null): stri
  * first underscore (e.g. `mp3_44100_128` → `{ codec: "mp3", formatQuality:
  * "44100_128" }`; `mp3` → `{ codec: "mp3" }`).
  */
-export function splitAudioFormat(format: string): { codec: string; formatQuality?: string } {
+export function splitSpeechFormat(format: string): { codec: string; formatQuality?: string } {
   const i = format.indexOf("_");
   if (i === -1) return { codec: format };
   return { codec: format.slice(0, i), formatQuality: format.slice(i + 1) };

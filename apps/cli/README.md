@@ -35,7 +35,7 @@ Generate a video:
 imagent video generate "a slow camera move through a neon city" --provider volcengine
 ```
 
-Generate speech audio:
+Generate speech:
 
 ```bash
 imagent speech synthesize "Welcome to imagent" --provider elevenlabs
@@ -54,8 +54,8 @@ imagent speech synthesize "<text>" [--provider <id>] [--model <id>] [--option k=
 imagent speech voices --provider <id> [--model <id>] [--json]
 imagent gallery {ls|show|remix|rm|favorite}
 imagent asset {add|list|show|rm}
-imagent models [--kind image|video|audio] [--provider <id>] [--configured]
-imagent options --provider <id> --model <id> [--kind image|video|audio]
+imagent models [--kind image|video|speech] [--provider <id>] [--configured]
+imagent options --provider <id> --model <id> [--kind image|video|speech]
 imagent doctor
 imagent config {get|set|path|reset <catalog|secrets|config>}
 imagent mcp
@@ -152,17 +152,17 @@ imagent speech synthesize "Welcome to imagent" \
   --provider elevenlabs \
   --option voice=Rachel \
   --option outputFormat=mp3 \
-  --out ./audio
+  --out ./speech
 ```
 
-Audio (text-to-speech) generation waits for completion and prints the result path. List the voices a provider/model exposes before picking one:
+Speech (text-to-speech) generation waits for completion and prints the result path. List the voices a provider/model exposes before picking one:
 
 ```bash
 imagent speech voices --provider elevenlabs           # list of available voices
 imagent speech voices --provider minimax --json        # machine-readable output
 ```
 
-Common options (validated per model — run `imagent options --provider <id> --model <id> --kind audio` for the exact set): `voice`, `speed`, `outputFormat`. Provider-specific extras are passed through.
+Common options (validated per model — run `imagent options --provider <id> --model <id> --kind speech` for the exact set): `voice`, `speed`, `outputFormat`. Provider-specific extras are passed through.
 
 ## Asset and result management
 

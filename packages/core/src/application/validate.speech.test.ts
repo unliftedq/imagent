@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { AudioModelDef } from "../domain/model.js";
-import type { AudioRequest } from "../domain/request.js";
-import { applyAudioDefaults, validateAudioRequestAgainstModel } from "./validate.js";
+import type { SpeechModelDef } from "../domain/model.js";
+import type { SpeechRequest } from "../domain/request.js";
+import { applySpeechDefaults, validateSpeechRequestAgainstModel } from "./validate.js";
 
-const model: AudioModelDef = {
+const model: SpeechModelDef = {
   id: "tts",
   capabilities: {
     supportsVoiceDiscovery: false,
@@ -17,30 +17,30 @@ const model: AudioModelDef = {
   defaults: { voice: "rachel", codec: "mp3", formatQuality: "44100_128", speed: 1 },
 };
 
-const base: AudioRequest = { prompt: "hi", providerId: "p", model: "tts", assetIds: [] };
+const base: SpeechRequest = { prompt: "hi", providerId: "p", model: "tts", assetIds: [] };
 
-describe("validateAudioRequestAgainstModel", () => {
+describe("validateSpeechRequestAgainstModel", () => {
   it("rejects unsupported codec", () => {
     expect(() =>
-      validateAudioRequestAgainstModel("p", { ...base, codec: "flac" }, model),
+      validateSpeechRequestAgainstModel("p", { ...base, codec: "flac" }, model),
     ).toThrow(/codec/);
   });
 
   it("rejects an unsupported quality for a codec", () => {
     expect(() =>
-      validateAudioRequestAgainstModel("p", { ...base, codec: "mp3", formatQuality: "99999" }, model),
+      validateSpeechRequestAgainstModel("p", { ...base, codec: "mp3", formatQuality: "99999" }, model),
     ).toThrow(/quality/);
   });
 
   it("rejects out-of-range speed", () => {
-    expect(() => validateAudioRequestAgainstModel("p", { ...base, speed: 5 }, model)).toThrow(
+    expect(() => validateSpeechRequestAgainstModel("p", { ...base, speed: 5 }, model)).toThrow(
       /speed/,
     );
   });
 
   it("accepts a valid request", () => {
     expect(() =>
-      validateAudioRequestAgainstModel(
+      validateSpeechRequestAgainstModel(
         "p",
         { ...base, codec: "wav", formatQuality: "44100", speed: 1.2 },
         model,
@@ -50,7 +50,7 @@ describe("validateAudioRequestAgainstModel", () => {
 
   it("rejects an unknown voice for a static (non-discovery) voice list", () => {
     expect(() =>
-      validateAudioRequestAgainstModel("p", { ...base, voice: "not-a-voice" }, model),
+      validateSpeechRequestAgainstModel("p", { ...base, voice: "not-a-voice" }, model),
     ).toThrow(/voice/);
   });
 
@@ -60,14 +60,14 @@ describe("validateAudioRequestAgainstModel", () => {
       capabilities: { ...model.capabilities, supportsVoiceDiscovery: true },
     };
     expect(() =>
-      validateAudioRequestAgainstModel("p", { ...base, voice: "any-id" }, discoveryModel),
+      validateSpeechRequestAgainstModel("p", { ...base, voice: "any-id" }, discoveryModel),
     ).not.toThrow();
   });
 });
 
-describe("applyAudioDefaults", () => {
+describe("applySpeechDefaults", () => {
   it("fills missing voice/format/speed from defaults", () => {
-    const merged = applyAudioDefaults(base, model);
+    const merged = applySpeechDefaults(base, model);
     expect(merged.voice).toBe("rachel");
     expect(merged.codec).toBe("mp3");
     expect(merged.formatQuality).toBe("44100_128");

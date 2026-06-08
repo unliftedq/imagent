@@ -20,7 +20,7 @@ If you later switch back to the CLI or persistence tests, rebuild `better-sqlite
 
 ## Pages
 
-- **Studio**: the main image, video, and audio creation workspace, including prompts, provider/model selection, generation parameters, reference images, and asset slots.
+- **Studio**: the main image, video, and speech creation workspace, including prompts, provider/model selection, generation parameters, reference images, and asset slots.
 - **Gallery**: review generated results with search, favorites, Boards organization, lineage inspection, and remix workflows.
 - **Assets**: manage Characters, Objects, Backgrounds, and Styles, including archive and restore flows.
 - **Models**: inspect and manage the model catalog.

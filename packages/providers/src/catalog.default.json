@@ -695,7 +695,7 @@
         }
       }
     },
-    "audio": {
+    "speech": {
       "eleven_multilingual_v2": {
         "id": "eleven_multilingual_v2",
         "displayName": "ElevenLabs Multilingual v2",
@@ -1043,7 +1043,7 @@
     },
     "elevenlabs": {
       "displayName": "ElevenLabs",
-      "audio": [
+      "speech": [
         {
           "id": "eleven_multilingual_v2",
           "modelId": "eleven_multilingual_v2"
@@ -1072,7 +1072,7 @@
           "modelId": "MiniMax-Hailuo-2.3"
         }
       ],
-      "audio": [
+      "speech": [
         {
           "id": "speech-2.8-hd",
           "modelId": "minimax-speech-2.8-hd",

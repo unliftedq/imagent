@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
-  AudioModelCapsOverrideSchema,
-  AudioModelCapsSchema,
-  AudioModelDefSchema,
-  AudioProviderModelSchema,
+  SpeechModelCapsOverrideSchema,
+  SpeechModelCapsSchema,
+  SpeechModelDefSchema,
+  SpeechProviderModelSchema,
 } from "./model.js";
 
-describe("audio model schemas", () => {
+describe("speech model schemas", () => {
   it("parses full caps with defaults", () => {
-    const caps = AudioModelCapsSchema.parse({
+    const caps = SpeechModelCapsSchema.parse({
       voices: [{ id: "rachel", name: "Rachel" }],
       outputFormats: [{ codec: "mp3", qualities: ["44100_128"] }],
       speedRange: { min: 0.5, max: 2 },
@@ -18,15 +18,15 @@ describe("audio model schemas", () => {
   });
 
   it("override schema leaves all fields optional", () => {
-    expect(AudioModelCapsOverrideSchema.parse({})).toEqual({});
+    expect(SpeechModelCapsOverrideSchema.parse({})).toEqual({});
   });
 
   it("parses model + provider offering defs", () => {
-    expect(AudioModelDefSchema.parse({ id: "eleven_multilingual_v2" }).id).toBe(
+    expect(SpeechModelDefSchema.parse({ id: "eleven_multilingual_v2" }).id).toBe(
       "eleven_multilingual_v2",
     );
     expect(
-      AudioProviderModelSchema.parse({ id: "tts-rachel", modelId: "eleven_multilingual_v2" })
+      SpeechProviderModelSchema.parse({ id: "tts-rachel", modelId: "eleven_multilingual_v2" })
         .modelId,
     ).toBe("eleven_multilingual_v2");
   });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveAudioProviderModels } from "./resolve.js";
+import { resolveSpeechProviderModels } from "./resolve.js";
 import { ModelCatalogSchema } from "./schema.js";
 
 const catalog = ModelCatalogSchema.parse({
@@ -7,7 +7,7 @@ const catalog = ModelCatalogSchema.parse({
   models: {
     image: {},
     video: {},
-    audio: {
+    speech: {
       eleven_multilingual_v2: {
         id: "eleven_multilingual_v2",
         capabilities: {
@@ -20,14 +20,14 @@ const catalog = ModelCatalogSchema.parse({
   },
   providers: {
     elevenlabs: {
-      audio: [{ id: "rachel", modelId: "eleven_multilingual_v2", defaults: { voice: "rachel" } }],
+      speech: [{ id: "rachel", modelId: "eleven_multilingual_v2", defaults: { voice: "rachel" } }],
     },
   },
 });
 
-describe("resolveAudioProviderModels", () => {
-  it("resolves offering → AudioModelDef with merged caps + defaults", () => {
-    const models = resolveAudioProviderModels(catalog, "elevenlabs");
+describe("resolveSpeechProviderModels", () => {
+  it("resolves offering → SpeechModelDef with merged caps + defaults", () => {
+    const models = resolveSpeechProviderModels(catalog, "elevenlabs");
     expect(models).toHaveLength(1);
     expect(models[0]?.id).toBe("rachel");
     expect(models[0]?.capabilities?.supportsVoiceDiscovery).toBe(true);

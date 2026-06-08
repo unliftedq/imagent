@@ -1,11 +1,11 @@
 import {
-  effectiveAudioOfferings,
+  effectiveSpeechOfferings,
   effectiveImageOfferings,
   effectiveProviderDisplayName,
   effectiveVideoOfferings,
-  resolveAudioProviderModel,
+  resolveSpeechProviderModel,
 } from "@imagent/providers";
-import { combineAudioFormat } from "@imagent/core";
+import { combineSpeechFormat } from "@imagent/core";
 import chalk from "chalk";
 
 import { loadCliRuntime } from "../runtime.js";
@@ -41,7 +41,7 @@ export async function runModels(options: ModelsOptions): Promise<void> {
       providerId,
       runtime.imageRegistry,
       runtime.videoRegistry,
-      runtime.audioRegistry,
+      runtime.speechRegistry,
     );
     if (options.configured && !anyConfigured) continue;
 
@@ -52,7 +52,7 @@ export async function runModels(options: ModelsOptions): Promise<void> {
     );
     const includeImage = !kind || kind === "image";
     const includeVideo = !kind || kind === "video";
-    const includeAudio = !kind || kind === "audio";
+    const includeAudio = !kind || kind === "speech";
 
     if (includeImage) {
       for (const offering of effectiveImageOfferings(
@@ -95,21 +95,21 @@ export async function runModels(options: ModelsOptions): Promise<void> {
       }
     }
     if (includeAudio) {
-      for (const offering of effectiveAudioOfferings(
+      for (const offering of effectiveSpeechOfferings(
         runtime.catalog,
         runtime.config.providers,
         providerId,
       )) {
-        const provider = runtime.audioRegistry.get(providerId);
-        const configured = runtime.audioRegistry.has(providerId);
+        const provider = runtime.speechRegistry.get(providerId);
+        const configured = runtime.speechRegistry.has(providerId);
         if (options.configured && !configured) continue;
         const resolved =
           provider?.models.get(offering.id) ??
-          resolveAudioProviderModel(runtime.catalog, providerId, offering);
+          resolveSpeechProviderModel(runtime.catalog, providerId, offering);
         rows.push({
           providerId,
           providerDisplay,
-          kind: "audio",
+          kind: "speech",
           modelId: offering.id,
           baseModelId: offering.modelId !== offering.id ? offering.modelId : undefined,
           displayName: offering.displayName ?? resolved.displayName,
@@ -117,7 +117,7 @@ export async function runModels(options: ModelsOptions): Promise<void> {
           voices: resolved.capabilities?.voices?.map((v) => v.id),
           outputFormats: resolved.capabilities?.outputFormats?.flatMap((fmt) =>
             fmt.qualities.length > 0
-              ? fmt.qualities.map((q) => combineAudioFormat(fmt.codec, q))
+              ? fmt.qualities.map((q) => combineSpeechFormat(fmt.codec, q))
               : [fmt.codec],
           ),
         });
@@ -161,7 +161,7 @@ export async function runModels(options: ModelsOptions): Promise<void> {
 
     const imageRows = list.filter((r) => r.kind === "image");
     const videoRows = list.filter((r) => r.kind === "video");
-    const audioRows = list.filter((r) => r.kind === "audio");
+    const speechRows = list.filter((r) => r.kind === "speech");
     if (imageRows.length > 0) {
       process.stdout.write(`  ${chalk.cyan("image:")}\n`);
       for (const r of imageRows) process.stdout.write(`    ${formatModelLine(r)}\n`);
@@ -170,9 +170,9 @@ export async function runModels(options: ModelsOptions): Promise<void> {
       process.stdout.write(`  ${chalk.magenta("video:")}\n`);
       for (const r of videoRows) process.stdout.write(`    ${formatModelLine(r)}\n`);
     }
-    if (audioRows.length > 0) {
-      process.stdout.write(`  ${chalk.blue("audio:")}\n`);
-      for (const r of audioRows) process.stdout.write(`    ${formatModelLine(r)}\n`);
+    if (speechRows.length > 0) {
+      process.stdout.write(`  ${chalk.blue("speech:")}\n`);
+      for (const r of speechRows) process.stdout.write(`    ${formatModelLine(r)}\n`);
     }
   }
   process.stdout.write(

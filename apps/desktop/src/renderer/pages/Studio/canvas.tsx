@@ -608,7 +608,7 @@ function JobResultsStrip({
               />
             ) : (
               <span className="flex size-full items-center justify-center bg-(--surface-sunken) text-(--text-muted)">
-                {item.kind === "audio" ? (
+                {item.kind === "speech" ? (
                   <Icons.Waveform weight="duotone" className="size-5" />
                 ) : (
                   <Icons.ImageSquare weight="duotone" className="size-5" />
@@ -748,7 +748,7 @@ function CanvasFilmstrip({
               />
             ) : (
               <span className="flex size-full items-center justify-center bg-(--surface-sunken) text-(--text-muted)">
-                {item.kind === "audio" ? (
+                {item.kind === "speech" ? (
                   <Icons.Waveform weight="duotone" className="size-5" />
                 ) : (
                   <Icons.ImageSquare weight="duotone" className="size-5" />
@@ -844,7 +844,7 @@ function CanvasMedia({ item, className = "" }: { item: GalleryItem; className?: 
   const t = useT();
   const url = resolveGalleryUrl(item.relPath);
 
-  if (item.kind === "audio") {
+  if (item.kind === "speech") {
     return (
       <div
         className={
@@ -863,7 +863,7 @@ function CanvasMedia({ item, className = "" }: { item: GalleryItem; className?: 
           </p>
         </div>
         {/* biome-ignore lint/a11y/useMediaCaption: Generated speech has no caption track. */}
-        <audio key={item.id} src={url} controls preload="metadata" className="w-full" />
+        <speech key={item.id} src={url} controls preload="metadata" className="w-full" />
       </div>
     );
   }
@@ -904,14 +904,14 @@ function CanvasMedia({ item, className = "" }: { item: GalleryItem; className?: 
 
 function EmptyCanvas({ mode }: { mode: StudioMode }) {
   const t = useT();
-  const Icon = mode === "video" ? Icons.FilmReel : mode === "audio" ? Icons.Waveform : Icons.Image;
+  const Icon = mode === "video" ? Icons.FilmReel : mode === "speech" ? Icons.Waveform : Icons.Image;
 
   return (
     <div className="flex flex-col items-center gap-2 text-center">
       <Icon weight="duotone" className="size-10 text-(--text-faint)" aria-hidden="true" />
       <p className="text-[12px] text-(--text-muted)">
-        {mode === "audio"
-          ? t("studio.audio.emptyCanvasHint")
+        {mode === "speech"
+          ? t("studio.speech.emptyCanvasHint")
           : t("studio.emptyCanvasHint", {
               mode: studioModeLabel(mode, t).toLowerCase(),
             })}
@@ -926,8 +926,8 @@ function studioModeLabel(mode: StudioMode, t: TFn): string {
   switch (mode) {
     case "video":
       return t("common.video");
-    case "audio":
-      return t("studio.mode.audio");
+    case "speech":
+      return t("studio.mode.speech");
     case "image":
       return t("common.image");
   }

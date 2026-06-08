@@ -22,7 +22,7 @@ export function TermsPage() {
           <h2>Use of the project</h2>
           <p>
             IMAGENT is provided as open-source software and documentation for local image, video,
-            and audio generation workflows. You are responsible for how you install, configure, and
+            and speech generation workflows. You are responsible for how you install, configure, and
             use the project, including any prompts, assets, provider credentials, generated outputs,
             and automation you create with it.
           </p>

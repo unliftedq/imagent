@@ -8,7 +8,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const ENTRY = path.resolve(here, "..", "dist", "cli.js");
 
 function runCli(args: string[], env: NodeJS.ProcessEnv = {}) {
-  const home = path.join(process.cwd(), ".test-home-audio-cli");
+  const home = path.join(process.cwd(), ".test-home-speech-cli");
   rmSync(home, { recursive: true, force: true });
   try {
     const result = spawnSync(process.execPath, [ENTRY, ...args], {
@@ -26,7 +26,7 @@ function runCli(args: string[], env: NodeJS.ProcessEnv = {}) {
   }
 }
 
-describe("CLI speech regressions", () => {
+describe("CLI speech regressions", { timeout: 20_000 }, () => {
   it("speech voices rejects an explicit unknown model", () => {
     const r = runCli(["speech", "voices", "--provider", "elevenlabs", "--model", "typo-model"], {
       ELEVENLABS_API_KEY: "dummy",
@@ -37,7 +37,7 @@ describe("CLI speech regressions", () => {
     expect(r.stdout).not.toContain("no voices available");
   });
 
-  it("config provider add accepts audio routing for built-in audio providers", () => {
+  it("config provider add accepts speech routing for built-in speech providers", () => {
     const r = runCli(
       [
         "config",
@@ -46,7 +46,7 @@ describe("CLI speech regressions", () => {
         "elevenlabs",
         "custom-tts",
         "--kind",
-        "audio",
+        "speech",
         "--model",
         "eleven_multilingual_v2",
       ],
@@ -54,6 +54,6 @@ describe("CLI speech regressions", () => {
     );
 
     expect(r.status, `stderr:\n${r.stderr}`).toBe(0);
-    expect(r.stdout).toContain("elevenlabs audio 'custom-tts'");
+    expect(r.stdout).toContain("elevenlabs speech 'custom-tts'");
   });
 });

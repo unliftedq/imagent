@@ -1,45 +1,45 @@
 import {
-  type AudioCapabilities,
-  type AudioGenerationResult,
-  type AudioModelDef,
-  type AudioProvider,
-  type AudioRequest,
-  applyAudioDefaults,
+  type SpeechCapabilities,
+  type SpeechGenerationResult,
+  type SpeechModelDef,
+  type SpeechProvider,
+  type SpeechRequest,
+  applySpeechDefaults,
   type Logger,
   ProviderRequestError,
   type ProviderTestResult,
   type VoiceInfo,
-  validateAudioRequestAgainstModel,
+  validateSpeechRequestAgainstModel,
 } from "@imagent/core";
-import { aggregateAudioCapabilities } from "./capabilities.js";
+import { aggregateSpeechCapabilities } from "./capabilities.js";
 
-export interface BaseAudioProviderOptions {
+export interface BaseSpeechProviderOptions {
   providerId: string;
   displayName: string;
-  models: ReadonlyMap<string, AudioModelDef>;
+  models: ReadonlyMap<string, SpeechModelDef>;
   logger?: Logger;
 }
 
-export abstract class BaseAudioProvider implements AudioProvider {
+export abstract class BaseSpeechProvider implements SpeechProvider {
   readonly id: string;
   readonly displayName: string;
-  readonly models: ReadonlyMap<string, AudioModelDef>;
-  readonly capabilities: AudioCapabilities;
+  readonly models: ReadonlyMap<string, SpeechModelDef>;
+  readonly capabilities: SpeechCapabilities;
   protected readonly logger?: Logger;
 
-  constructor(options: BaseAudioProviderOptions) {
+  constructor(options: BaseSpeechProviderOptions) {
     this.id = options.providerId;
     this.displayName = options.displayName;
     this.models = options.models;
-    this.capabilities = aggregateAudioCapabilities(options.models);
+    this.capabilities = aggregateSpeechCapabilities(options.models);
     if (options.logger) this.logger = options.logger;
   }
 
-  async synthesize(req: AudioRequest, signal?: AbortSignal): Promise<AudioGenerationResult> {
+  async synthesize(req: SpeechRequest, signal?: AbortSignal): Promise<SpeechGenerationResult> {
     const model = this.models.get(req.model);
     if (!model) throw this.unknownModelError(req.model);
-    const merged = applyAudioDefaults(req, model);
-    validateAudioRequestAgainstModel(this.id, merged, model);
+    const merged = applySpeechDefaults(req, model);
+    validateSpeechRequestAgainstModel(this.id, merged, model);
     return this.doSynthesize(merged, model, signal);
   }
 
@@ -62,10 +62,10 @@ export abstract class BaseAudioProvider implements AudioProvider {
   }
 
   protected abstract doSynthesize(
-    merged: AudioRequest,
-    model: AudioModelDef,
+    merged: SpeechRequest,
+    model: SpeechModelDef,
     signal?: AbortSignal,
-  ): Promise<AudioGenerationResult>;
+  ): Promise<SpeechGenerationResult>;
 
   protected abstract doTest(signal?: AbortSignal): Promise<ProviderTestResult>;
 }

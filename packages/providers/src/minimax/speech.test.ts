@@ -1,8 +1,8 @@
-import type { AudioModelDef } from "@imagent/core";
+import type { SpeechModelDef } from "@imagent/core";
 import { describe, expect, it, vi } from "vitest";
-import { MiniMaxAudioProvider } from "./audio.js";
+import { MiniMaxSpeechProvider } from "./speech.js";
 
-const models = new Map<string, AudioModelDef>([
+const models = new Map<string, SpeechModelDef>([
   [
     "speech-2.8-hd",
     {
@@ -18,14 +18,14 @@ const models = new Map<string, AudioModelDef>([
   ],
 ]);
 
-describe("MiniMaxAudioProvider", () => {
+describe("MiniMaxSpeechProvider", () => {
   it("requires groupId", () => {
-    expect(() => new MiniMaxAudioProvider({ apiKey: "k", models, groupId: undefined })).toThrow(
+    expect(() => new MiniMaxSpeechProvider({ apiKey: "k", models, groupId: undefined })).toThrow(
       /groupId/i,
     );
   });
 
-  it("POSTs t2a_v2 with GroupId query and decodes hex audio", async () => {
+  it("POSTs t2a_v2 with GroupId query and decodes hex speech", async () => {
     // "010203" hex → bytes [1,2,3]
     const fetchMock = vi.fn(
       async () =>
@@ -34,7 +34,7 @@ describe("MiniMaxAudioProvider", () => {
           headers: { "content-type": "application/json" },
         }),
     ) as unknown as typeof fetch;
-    const provider = new MiniMaxAudioProvider({
+    const provider = new MiniMaxSpeechProvider({
       apiKey: "k",
       models,
       groupId: "g1",
@@ -76,7 +76,7 @@ describe("MiniMaxAudioProvider", () => {
           { status: 200, headers: { "content-type": "application/json" } },
         ),
     ) as unknown as typeof fetch;
-    const provider = new MiniMaxAudioProvider({
+    const provider = new MiniMaxSpeechProvider({
       apiKey: "k",
       models,
       groupId: "g1",

@@ -45,7 +45,7 @@ export function ProviderListRow({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-(length:--text-title-sm) font-semibold text-(--text)">{name}</h2>
-          {summary && (summary.kinds.length > 1 || summary.kinds.includes("audio")) ? (
+          {summary && (summary.kinds.length > 1 || summary.kinds.includes("speech")) ? (
             <KindsBadge text={providerKindsLabel(summary.kinds, t)} />
           ) : null}
           {configured ? <ConnectedPill /> : null}
@@ -81,12 +81,12 @@ export function ProviderListRow({
 function providerKindsLabel(kinds: ProviderSummary["kinds"], t: ReturnType<typeof useT>): string {
   const hasImage = kinds.includes("image");
   const hasVideo = kinds.includes("video");
-  const hasAudio = kinds.includes("audio");
-  if (hasImage && hasVideo && hasAudio) return t("common.imagePlusVideoPlusAudio");
+  const hasSpeech = kinds.includes("speech");
+  if (hasImage && hasVideo && hasSpeech) return t("common.imagePlusVideoPlusSpeech");
   if (hasImage && hasVideo) return t("common.imagePlusVideo");
-  if (hasImage && hasAudio) return t("common.imagePlusAudio");
-  if (hasVideo && hasAudio) return t("common.videoPlusAudio");
-  if (hasAudio) return t("common.audio");
+  if (hasImage && hasSpeech) return t("common.imagePlusSpeech");
+  if (hasVideo && hasSpeech) return t("common.videoPlusSpeech");
+  if (hasSpeech) return t("common.speech");
   if (hasVideo) return t("common.video");
   return t("common.image");
 }

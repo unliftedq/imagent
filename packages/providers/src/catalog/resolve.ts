@@ -1,10 +1,10 @@
 import type { ProviderPreferences, ProviderRouting } from "@imagent/config";
 import {
-  AudioModelDefSchema,
+  SpeechModelDefSchema,
   ImageModelDefSchema,
   VideoModelDefSchema,
-  type AudioModelDef,
-  type AudioProviderModel,
+  type SpeechModelDef,
+  type SpeechProviderModel,
   type ImageModelDef,
   type ImageProviderModel,
   type VideoModelDef,
@@ -39,13 +39,13 @@ export function effectiveVideoOfferings(
   return mergeOfferings(catalogList, configList);
 }
 
-export function effectiveAudioOfferings(
+export function effectiveSpeechOfferings(
   catalog: ModelCatalog,
   prefs: ProviderPreferences | undefined,
   providerId: string,
-): AudioProviderModel[] {
-  const catalogList = catalog.providers[providerId]?.audio ?? [];
-  const configList = readRouting(prefs, providerId)?.audio ?? [];
+): SpeechProviderModel[] {
+  const catalogList = catalog.providers[providerId]?.speech ?? [];
+  const configList = readRouting(prefs, providerId)?.speech ?? [];
   return mergeOfferings(catalogList, configList);
 }
 
@@ -89,13 +89,13 @@ export function resolveVideoProviderModels(
   );
 }
 
-export function resolveAudioProviderModels(
+export function resolveSpeechProviderModels(
   catalog: ModelCatalog,
   providerId: string,
   prefs?: ProviderPreferences,
-): AudioModelDef[] {
-  return effectiveAudioOfferings(catalog, prefs, providerId).map((offering) =>
-    resolveAudioProviderModel(catalog, providerId, offering),
+): SpeechModelDef[] {
+  return effectiveSpeechOfferings(catalog, prefs, providerId).map((offering) =>
+    resolveSpeechProviderModel(catalog, providerId, offering),
   );
 }
 
@@ -157,19 +157,19 @@ export function resolveVideoProviderModel(
   });
 }
 
-export function resolveAudioProviderModel(
+export function resolveSpeechProviderModel(
   catalog: ModelCatalog,
   providerId: string,
-  offering: AudioProviderModel,
-): AudioModelDef {
-  const baseModel = catalog.models.audio[offering.modelId];
+  offering: SpeechProviderModel,
+): SpeechModelDef {
+  const baseModel = catalog.models.speech[offering.modelId];
   if (!baseModel) {
     throw new Error(
-      `Provider '${providerId}' audio model '${offering.id}' references unknown canonical model '${offering.modelId}'`,
+      `Provider '${providerId}' speech model '${offering.id}' references unknown canonical model '${offering.modelId}'`,
     );
   }
   const providerOverride = catalog.providers[providerId]?.modelOverrides?.[offering.modelId];
-  return AudioModelDefSchema.parse({
+  return SpeechModelDefSchema.parse({
     id: offering.id,
     baseModelId: offering.modelId,
     displayName: providerDisplayName(offering, baseModel),

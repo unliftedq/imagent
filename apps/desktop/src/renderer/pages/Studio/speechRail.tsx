@@ -1,8 +1,8 @@
 import type {
-  AudioKnob,
-  AudioModelCaps,
-  AudioModelDef,
-  AudioRequest,
+  SpeechKnob,
+  SpeechModelCaps,
+  SpeechModelDef,
+  SpeechRequest,
   VoiceInfo,
 } from "@imagent/core";
 import type { ProviderId } from "@imagent/ipc";
@@ -14,7 +14,7 @@ import { api } from "../../lib/api.js";
 import { useConfigStore } from "../../state/useConfigStore.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
 import { useJobsStore } from "../../state/useJobsStore.js";
-import { type AudioDraft, useUIStore } from "../../state/useUIStore.js";
+import { type SpeechDraft, useUIStore } from "../../state/useUIStore.js";
 import { ChatComposerShell } from "./composer.js";
 import {
   ConfigSection,
@@ -58,9 +58,9 @@ function voiceDescription(voice: VoiceInfo): string | undefined {
   return parts.length > 0 ? parts.join(" · ") : undefined;
 }
 
-export function AudioRail() {
-  const draft = useUIStore((state) => state.studioDraft.audio);
-  const setDraft = useUIStore((state) => state.setAudioDraft);
+export function SpeechRail() {
+  const draft = useUIStore((state) => state.studioDraft.speech);
+  const setDraft = useUIStore((state) => state.setSpeechDraft);
   const openSettings = useUIStore((state) => state.openSettings);
   const pushToast = useUIStore((state) => state.pushToast);
   const t = useT();
@@ -70,14 +70,14 @@ export function AudioRail() {
   const refreshGallery = useGalleryStore((state) => state.refresh);
   const trackStudioJob = useJobsStore((state) => state.trackStudioJob);
 
-  const [modelsByProvider, setModelsByProvider] = useState<Record<string, AudioModelDef[]>>({});
+  const [modelsByProvider, setModelsByProvider] = useState<Record<string, SpeechModelDef[]>>({});
   const [voices, setVoices] = useState<VoiceInfo[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const { favoriteKeys, toggleFavorite } = useModelFavorites();
 
-  const configuredAudioProviders = useMemo(
-    () => summaries.filter((summary) => summary.configured && summary.kinds.includes("audio")),
+  const configuredSpeechProviders = useMemo(
+    () => summaries.filter((summary) => summary.configured && summary.kinds.includes("speech")),
     [summaries],
   );
 
@@ -87,12 +87,12 @@ export function AudioRail() {
   }, [refreshConfig, refreshGallery]);
 
   useEffect(() => {
-    if (configuredAudioProviders.length === 0) return;
-    const first = configuredAudioProviders[0];
+    if (configuredSpeechProviders.length === 0) return;
+    const first = configuredSpeechProviders[0];
     if (!first) return;
     const defaultId =
       draft.providerId &&
-      configuredAudioProviders.some((provider) => provider.id === draft.providerId)
+      configuredSpeechProviders.some((provider) => provider.id === draft.providerId)
         ? (draft.providerId as ProviderId)
         : (first.id as ProviderId);
     if (draft.providerId !== defaultId) {
@@ -101,21 +101,21 @@ export function AudioRail() {
         model: first.defaultModel ?? first.modelIds[0] ?? null,
       });
     }
-  }, [configuredAudioProviders, draft.providerId, setDraft]);
+  }, [configuredSpeechProviders, draft.providerId, setDraft]);
 
   useEffect(() => {
-    if (configuredAudioProviders.length === 0) {
+    if (configuredSpeechProviders.length === 0) {
       setModelsByProvider({});
       return;
     }
     let cancelled = false;
     void (async () => {
-      const nextModels: Record<string, AudioModelDef[]> = {};
+      const nextModels: Record<string, SpeechModelDef[]> = {};
       const failures: string[] = [];
       await Promise.all(
-        configuredAudioProviders.map(async (provider) => {
+        configuredSpeechProviders.map(async (provider) => {
           try {
-            const response = await api["audio.models"]({ providerId: provider.id as ProviderId });
+            const response = await api["speech.models"]({ providerId: provider.id as ProviderId });
             nextModels[provider.id] = response.models;
           } catch (err) {
             failures.push(`${provider.displayName}: ${(err as Error)?.message ?? String(err)}`);
@@ -126,7 +126,7 @@ export function AudioRail() {
       setModelsByProvider(nextModels);
       if (failures.length > 0) {
         pushToast({
-          title: t("studio.audio.couldNotLoadModels"),
+          title: t("studio.speech.couldNotLoadModels"),
           description: failures.slice(0, 2).join("\n"),
           variant: "error",
         });
@@ -135,10 +135,10 @@ export function AudioRail() {
     return () => {
       cancelled = true;
     };
-  }, [configuredAudioProviders, pushToast]);
+  }, [configuredSpeechProviders, pushToast]);
 
   useEffect(() => {
-    const activeProvider = draft.providerId || configuredAudioProviders[0]?.id;
+    const activeProvider = draft.providerId || configuredSpeechProviders[0]?.id;
     if (!activeProvider) return;
     const activeModels = modelsByProvider[activeProvider] ?? [];
     if (activeModels.length === 0 || activeModels.some((model) => model.id === draft.model)) return;
@@ -146,7 +146,7 @@ export function AudioRail() {
     if (fallback) {
       setDraft({ providerId: activeProvider, model: fallback });
     }
-  }, [configuredAudioProviders, draft.model, draft.providerId, modelsByProvider, setDraft]);
+  }, [configuredSpeechProviders, draft.model, draft.providerId, modelsByProvider, setDraft]);
 
   const selectedModel = useMemo(
     () =>
@@ -175,7 +175,7 @@ export function AudioRail() {
     let cancelled = false;
     let request = voiceInflight.get(key);
     if (!request) {
-      request = api["audio.voices"]({
+      request = api["speech.voices"]({
         providerId,
         ...(draft.model ? { modelId: draft.model } : {}),
       }).then((response) => response.voices);
@@ -220,7 +220,7 @@ export function AudioRail() {
   useEffect(() => {
     const formats = caps?.outputFormats ?? [];
     if (formats.length === 0) {
-      const patch: Partial<AudioDraft> = {};
+      const patch: Partial<SpeechDraft> = {};
       if (draft.codec !== null) patch.codec = null;
       if (draft.formatQuality !== null) patch.formatQuality = null;
       if (Object.keys(patch).length > 0) setDraft(patch);
@@ -240,7 +240,7 @@ export function AudioRail() {
       const fallback = readStringDefault(selectedModel, "formatQuality", qualities[0] ?? null);
       nextQuality = fallback && qualities.includes(fallback) ? fallback : (qualities[0] ?? null);
     }
-    const patch: Partial<AudioDraft> = {};
+    const patch: Partial<SpeechDraft> = {};
     if (nextCodec !== draft.codec) patch.codec = nextCodec;
     if (nextQuality !== draft.formatQuality) patch.formatQuality = nextQuality;
     if (Object.keys(patch).length > 0) setDraft(patch);
@@ -256,11 +256,11 @@ export function AudioRail() {
     setValidationError(null);
     const prompt = draft.text.trim();
     if (!draft.providerId || !draft.model || prompt.length === 0) {
-      setValidationError(t("studio.audio.missingFields"));
+      setValidationError(t("studio.speech.missingFields"));
       return;
     }
 
-    const request: AudioRequest = {
+    const request: SpeechRequest = {
       prompt,
       providerId: draft.providerId,
       model: draft.model,
@@ -275,10 +275,10 @@ export function AudioRail() {
 
     setSubmitting(true);
     try {
-      const { jobId } = await api["audio.submit"](request);
+      const { jobId } = await api["speech.submit"](request);
       trackStudioJob({
         id: jobId,
-        kind: "audio",
+        kind: "speech",
         prompt: request.prompt,
         submittedAt: Date.now(),
       });
@@ -287,7 +287,7 @@ export function AudioRail() {
       const message =
         err instanceof IpcClientError ? `${err.message}` : ((err as Error)?.message ?? String(err));
       pushToast({
-        title: t("studio.audio.submitFailed"),
+        title: t("studio.speech.submitFailed"),
         description: message,
         variant: "error",
       });
@@ -296,14 +296,14 @@ export function AudioRail() {
     }
   };
 
-  if (configuredAudioProviders.length === 0) {
+  if (configuredSpeechProviders.length === 0) {
     return (
       <div className="rounded-(--radius-md) border border-(--border) bg-(--surface-raised) p-4 text-center">
         <Icons.Waveform weight="duotone" className="mx-auto size-8 text-(--text-muted)" />
         <h2 className="mt-2 text-[15px] font-semibold tracking-[-0.01em] text-(--text)">
-          {t("studio.audio.noProvider")}
+          {t("studio.speech.noProvider")}
         </h2>
-        <p className="mt-1 text-[12px] text-(--text-muted)">{t("studio.audio.noProviderDesc")}</p>
+        <p className="mt-1 text-[12px] text-(--text-muted)">{t("studio.speech.noProviderDesc")}</p>
         <div className="mt-3 inline-flex">
           <Button size="sm" onClick={() => openSettings("providers")}>
             {t("studio.openProviders")}
@@ -313,21 +313,21 @@ export function AudioRail() {
     );
   }
 
-  const modelOptions = createUnifiedModelOptions(configuredAudioProviders, modelsByProvider);
+  const modelOptions = createUnifiedModelOptions(configuredSpeechProviders, modelsByProvider);
 
   return (
     <ChatComposerShell
-      mode="audio"
+      mode="speech"
       prompt={draft.text}
       onPromptChange={(text) => setDraft({ text })}
       onSubmit={() => void submit()}
-      placeholder={t("studio.audio.placeholder")}
+      placeholder={t("studio.speech.placeholder")}
       submitting={submitting}
       disabled={!draft.text.trim()}
       validationError={validationError}
     >
       <ProviderModelPicker
-        mode="audio"
+        mode="speech"
         options={modelOptions}
         providerId={draft.providerId ?? ""}
         modelId={draft.model ?? ""}
@@ -335,17 +335,17 @@ export function AudioRail() {
         onToggleFavorite={toggleFavorite}
         onChange={(next) => setDraft({ providerId: next.providerId, model: next.modelId })}
       />
-      <AudioVoiceSelect
+      <SpeechVoiceSelect
         voices={voices}
         value={draft.voice}
         onChange={(voice) => setDraft({ voice })}
       />
-      <AudioConfigurationPanel caps={caps} draft={draft} onChange={setDraft} />
+      <SpeechConfigurationPanel caps={caps} draft={draft} onChange={setDraft} />
     </ChatComposerShell>
   );
 }
 
-function AudioVoiceSelect({
+function SpeechVoiceSelect({
   voices,
   value,
   onChange,
@@ -357,10 +357,10 @@ function AudioVoiceSelect({
   const t = useT();
   const [open, setOpen] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const stopPreview = (): void => {
-    const el = audioRef.current;
+    const el = previewAudioRef.current;
     if (el) {
       el.pause();
       el.currentTime = 0;
@@ -373,12 +373,12 @@ function AudioVoiceSelect({
     if (!open) stopPreview();
   }, [open]);
 
-  // Stop + release the audio element on unmount.
+  // Stop + release the speech preview element on unmount.
   useEffect(() => {
     return () => {
-      const el = audioRef.current;
+      const el = previewAudioRef.current;
       if (el) el.pause();
-      audioRef.current = null;
+      previewAudioRef.current = null;
     };
   }, []);
 
@@ -392,11 +392,11 @@ function AudioVoiceSelect({
       stopPreview();
       return;
     }
-    let el = audioRef.current;
+    let el = previewAudioRef.current;
     if (!el) {
       el = new Audio();
       el.onended = () => setPlayingId(null);
-      audioRef.current = el;
+      previewAudioRef.current = el;
     }
     el.src = voice.previewUrl;
     el.currentTime = 0;
@@ -411,7 +411,7 @@ function AudioVoiceSelect({
       <Popover.Trigger asChild>
         <button
           type="button"
-          aria-label={t("studio.audio.voice")}
+          aria-label={t("studio.speech.voice")}
           className={
             "inline-flex h-8 max-w-[180px] items-center gap-1.5 rounded-(--radius-pill) " +
             "bg-(--bg) px-3 text-[12px] text-(--text) hover:bg-(--surface)"
@@ -455,7 +455,7 @@ function AudioVoiceSelect({
                   <button
                     type="button"
                     aria-label={
-                      playing ? t("studio.audio.voiceStop") : t("studio.audio.voicePreview")
+                      playing ? t("studio.speech.voiceStop") : t("studio.speech.voicePreview")
                     }
                     onClick={(event) => {
                       event.stopPropagation();
@@ -482,14 +482,14 @@ function AudioVoiceSelect({
   );
 }
 
-function AudioConfigurationPanel({
+function SpeechConfigurationPanel({
   caps,
   draft,
   onChange,
 }: {
-  caps: AudioModelCaps | undefined;
-  draft: AudioDraft;
-  onChange: (patch: Partial<AudioDraft>) => void;
+  caps: SpeechModelCaps | undefined;
+  draft: SpeechDraft;
+  onChange: (patch: Partial<SpeechDraft>) => void;
 }) {
   const t = useT();
   const formats = caps?.outputFormats ?? [];
@@ -505,7 +505,7 @@ function AudioConfigurationPanel({
   return (
     <Popover.Root>
       <Popover.Trigger asChild>
-        <ConfigurationPopoverButton label={t("studio.audio.config")} />
+        <ConfigurationPopoverButton label={t("studio.speech.config")} />
       </Popover.Trigger>
       <Popover.Content align="start" className="w-[420px] p-0">
         <div className="flex max-h-[70vh] flex-col gap-5 overflow-y-auto p-5">
@@ -514,9 +514,9 @@ function AudioConfigurationPanel({
           </h2>
 
           {codecs.length > 0 ? (
-            <ConfigSection title={t("studio.audio.codec")}>
+            <ConfigSection title={t("studio.speech.codec")}>
               <SegmentedControl
-                ariaLabel={t("studio.audio.codec")}
+                ariaLabel={t("studio.speech.codec")}
                 options={codecs}
                 value={draft.codec ?? codecs[0]}
                 onChange={(codec) => onChange({ codec })}
@@ -525,9 +525,9 @@ function AudioConfigurationPanel({
           ) : null}
 
           {qualities.length > 0 ? (
-            <ConfigSection title={t("studio.audio.formatQuality")}>
+            <ConfigSection title={t("studio.speech.formatQuality")}>
               <SegmentedControl
-                ariaLabel={t("studio.audio.formatQuality")}
+                ariaLabel={t("studio.speech.formatQuality")}
                 options={qualities}
                 value={draft.formatQuality ?? qualities[0]}
                 onChange={(formatQuality) => onChange({ formatQuality })}
@@ -536,7 +536,7 @@ function AudioConfigurationPanel({
           ) : null}
 
           {range ? (
-            <ConfigSection title={t("studio.audio.speed")}>
+            <ConfigSection title={t("studio.speech.speed")}>
               <NumberKnobControl
                 value={draft.speed ?? clampNumber(1, range.min, range.max)}
                 min={range.min}
@@ -548,10 +548,10 @@ function AudioConfigurationPanel({
           ) : null}
 
           {knobEntries.length > 0 ? (
-            <ConfigSection title={t("studio.audio.extraKnobs")}>
+            <ConfigSection title={t("studio.speech.extraKnobs")}>
               <div className="flex flex-col gap-4">
                 {knobEntries.map(([key, knob]) => (
-                  <AudioExtraKnob
+                  <SpeechExtraKnob
                     key={key}
                     name={key}
                     knob={knob}
@@ -568,14 +568,14 @@ function AudioConfigurationPanel({
   );
 }
 
-function AudioExtraKnob({
+function SpeechExtraKnob({
   name,
   knob,
   value,
   onChange,
 }: {
   name: string;
-  knob: AudioKnob;
+  knob: SpeechKnob;
   value: ExtraValue | undefined;
   onChange: (value: ExtraValue) => void;
 }) {
@@ -655,8 +655,8 @@ function NumberKnobControl({
 
 function normalizeExtrasForKnobs(
   current: Record<string, ExtraValue>,
-  knobs: Record<string, AudioKnob>,
-  model: AudioModelDef | null,
+  knobs: Record<string, SpeechKnob>,
+  model: SpeechModelDef | null,
 ): Record<string, ExtraValue> {
   const next: Record<string, ExtraValue> = {};
   for (const [key, knob] of Object.entries(knobs)) {
@@ -682,7 +682,7 @@ function normalizeExtrasForKnobs(
 }
 
 function readStringDefault(
-  model: AudioModelDef | null,
+  model: SpeechModelDef | null,
   key: string,
   fallback: string | null,
 ): string | null {
@@ -690,7 +690,7 @@ function readStringDefault(
   return typeof value === "string" ? value : fallback;
 }
 
-function readNumberDefault(model: AudioModelDef | null, key: string, fallback: number): number {
+function readNumberDefault(model: SpeechModelDef | null, key: string, fallback: number): number {
   const value = model?.defaults?.[key];
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }

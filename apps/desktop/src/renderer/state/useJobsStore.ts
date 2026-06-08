@@ -212,11 +212,11 @@ export const useJobsStore = create<JobsState>((set, get) => ({
       get().trackStudioJob({ id: jobId, kind: "image", prompt, submittedAt: Date.now() });
       return jobId;
     }
-    if (job.kind === "audio") {
-      const { jobId } = await api["audio.submit"](
-        parsed as Parameters<(typeof api)["audio.submit"]>[0],
+    if (job.kind === "speech") {
+      const { jobId } = await api["speech.submit"](
+        parsed as Parameters<(typeof api)["speech.submit"]>[0],
       );
-      get().trackStudioJob({ id: jobId, kind: "audio", prompt, submittedAt: Date.now() });
+      get().trackStudioJob({ id: jobId, kind: "speech", prompt, submittedAt: Date.now() });
       return jobId;
     }
     const { jobId } = await api["video.submit"](

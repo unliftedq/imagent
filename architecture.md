@@ -1,6 +1,6 @@
 # imagent Architecture
 
-imagent is a local-first image, video, and audio generation workspace. It ships two user-facing surfaces from one TypeScript monorepo: an Electron desktop application for visual workflows and a Node CLI for automation. Both surfaces share the same workspace under `~/.imagent/`, including SQLite state, provider configuration, reusable assets, generated files, and gallery history. The project has no remote backend and no multi-user authentication layer.
+imagent is a local-first image, video, and speech generation workspace. It ships two user-facing surfaces from one TypeScript monorepo: an Electron desktop application for visual workflows and a Node CLI for automation. Both surfaces share the same workspace under `~/.imagent/`, including SQLite state, provider configuration, reusable assets, generated files, and gallery history. The project has no remote backend and no multi-user authentication layer.
 
 ## Scope
 
@@ -8,7 +8,7 @@ The application supports:
 
 - Image generation through OpenAI, Azure, Google, Flux/BFL, BytePlus, 火山引擎, xAI, and custom OpenAI-compatible providers.
 - Video generation through BytePlus, 火山引擎, Google, and xAI providers when configured.
-- Audio generation (text-to-speech) through ElevenLabs and MiniMax.
+- Speech generation (text-to-speech) through ElevenLabs and MiniMax.
 - Reusable assets for characters, objects, backgrounds, and styles.
 - Gallery and board-oriented curation in the desktop app.
 - CLI workflows for provider setup, model discovery, generation, video task tracking, gallery inspection, and MCP integration.
@@ -58,17 +58,17 @@ The bundled catalog in `@imagent/providers` is the authoritative base. If `catal
 
 ## Core Domain
 
-The core domain separates image, video, and audio generation because their lifecycles differ:
+The core domain separates image, video, and speech generation because their lifecycles differ:
 
 - Image providers expose a synchronous `generate` operation that returns completed media.
 - Video providers expose `submit`, `poll`, `fetch`, and optional `cancel` operations for asynchronous provider tasks.
-- Audio providers expose text-to-speech `generate` operations that return completed audio files.
+- Speech providers expose text-to-speech `generate` operations that return completed speech files.
 
-The job runner coordinates generation across all three media kinds. It persists state transitions to SQLite, emits progress events, stores completed files, and creates gallery records for image, video, and audio results. Persisted queued/running jobs allow long-running video work to be inspected or resumed by later desktop or CLI sessions.
+The job runner coordinates generation across all three media kinds. It persists state transitions to SQLite, emits progress events, stores completed files, and creates gallery records for image, video, and speech results. Persisted queued/running jobs allow long-running video work to be inspected or resumed by later desktop or CLI sessions.
 
 ## Providers and Model Catalog
 
-Providers are configured at the provider/vendor level, while models are resolved from the catalog. The catalog has canonical image/video/audio model definitions and provider-specific offerings. An offering maps the provider-facing model or deployment ID to a canonical model and may override capabilities or defaults.
+Providers are configured at the provider/vendor level, while models are resolved from the catalog. The catalog has canonical image/video/speech model definitions and provider-specific offerings. An offering maps the provider-facing model or deployment ID to a canonical model and may override capabilities or defaults.
 
 Provider registries are built from three inputs:
 
@@ -108,7 +108,7 @@ imagent config {get|set|path|reset|provider}
 imagent mcp
 ```
 
-Image and audio generation wait for completion and print the completed file path. Video generation submits a provider task and prints tracking commands; `--wait` polls until completion and downloads the result. Submitted video tasks are managed with `imagent video task ...` and completed results are fetched with `imagent video download ...`.
+Image and speech generation wait for completion and print the completed file path. Video generation submits a provider task and prints tracking commands; `--wait` polls until completion and downloads the result. Submitted video tasks are managed with `imagent video task ...` and completed results are fetched with `imagent video download ...`.
 
 ## Security and Data Handling
 

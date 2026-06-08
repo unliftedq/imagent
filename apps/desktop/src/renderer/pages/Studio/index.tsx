@@ -4,7 +4,7 @@ import { useT } from "../../i18n/index.js";
 import type { StudioMode } from "../../state/useUIStore.js";
 import { useUIStore } from "../../state/useUIStore.js";
 import { CanvasArea } from "./canvas.js";
-import { AudioRail } from "./audioRail.js";
+import { SpeechRail } from "./speechRail.js";
 import { StudioModeSwitch } from "./composer.js";
 import { readStudioReferenceDragData, StudioGalleryRail } from "./galleryRail.js";
 import { ImageRail } from "./imageRail.js";
@@ -35,7 +35,7 @@ export function StudioPage() {
   };
 
   const onDrop = (event: DragEvent<HTMLElement>): void => {
-    if (studioMode === "audio") return;
+    if (studioMode === "speech") return;
     const data = readStudioReferenceDragData(event.dataTransfer);
     if (!data) return;
     event.preventDefault();
@@ -113,7 +113,7 @@ export function StudioPage() {
 function StudioComposerDock({ mode }: { mode: StudioMode }) {
   return (
     <div className="shrink-0 bg-(--bg)">
-      {mode === "image" ? <ImageRail /> : mode === "video" ? <VideoRail /> : <AudioRail />}
+      {mode === "image" ? <ImageRail /> : mode === "video" ? <VideoRail /> : <SpeechRail />}
     </div>
   );
 }

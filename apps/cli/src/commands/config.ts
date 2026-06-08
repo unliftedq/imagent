@@ -21,7 +21,7 @@ export function registerConfigCommand(program: Command): void {
     .description(
       [
         "Inspect and edit local provider credentials in ~/.imagent/secrets.json (and the preferences file at ~/.imagent/config.json).",
-        "Recognised dotted keys: <vendor>.apiKey, azure.endpoint, byteplus.endpoint, volcengine.endpoint, minimax.groupId, <vendor>.baseUrl, image.defaultModel, video.defaultModel, audio.defaultModel.",
+        "Recognised dotted keys: <vendor>.apiKey, azure.endpoint, byteplus.endpoint, volcengine.endpoint, minimax.groupId, <vendor>.baseUrl, image.defaultModel, video.defaultModel, speech.defaultModel.",
         "Vendors: openai | azure | google | flux-bfl | byteplus | volcengine | xai | minimax | elevenlabs.",
         "Use `imagent models` and `imagent options` to inspect the model catalog instead of reading catalog.json by hand.",
       ].join("\n"),
@@ -30,7 +30,7 @@ export function registerConfigCommand(program: Command): void {
   config
     .command("set <key> <value>")
     .description(
-      "Set config. Examples: `imagent config set openai.apiKey sk-...`, `imagent config set image.defaultModel openai:gpt-image-2`, `imagent config set audio.defaultModel elevenlabs:eleven_multilingual_v2`, `imagent config set azure.endpoint https://...`.",
+      "Set config. Examples: `imagent config set openai.apiKey sk-...`, `imagent config set image.defaultModel openai:gpt-image-2`, `imagent config set speech.defaultModel elevenlabs:eleven_multilingual_v2`, `imagent config set azure.endpoint https://...`.",
     )
     .action(async (key: string, value: string) => {
       try {
@@ -102,7 +102,7 @@ export function registerConfigCommand(program: Command): void {
       "--model <canonical-id>",
       "Canonical model id (see `imagent models --json`); the offering inherits its capabilities/defaults",
     )
-    .option("--kind <kind>", "image | video | audio (default: image)", "image")
+    .option("--kind <kind>", "image | video | speech (default: image)", "image")
     .option("--display-name <name>", "Optional friendly name shown in `imagent models`")
     .option(
       "--display-name-provider <name>",
@@ -120,7 +120,7 @@ export function registerConfigCommand(program: Command): void {
   provider
     .command("rm <provider> <id>")
     .description("Remove an offering from the provider's routing list.")
-    .option("--kind <kind>", "image | video | audio (default: image)", "image")
+    .option("--kind <kind>", "image | video | speech (default: image)", "image")
     .action(async (providerId: string, offeringId: string, options: { kind?: string }) => {
       try {
         await runProviderRm(providerId, offeringId, options);

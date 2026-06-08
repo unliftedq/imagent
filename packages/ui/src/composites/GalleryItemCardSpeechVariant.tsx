@@ -7,7 +7,7 @@ import { cn } from "../lib/cn.js";
 import { ActionMenuContent, CornerButton, formatVideoDuration } from "./GalleryItemCard.shared.js";
 import type { GalleryItemCardProps } from "./GalleryItemCard.types.js";
 
-export function AudioVariant({
+export function SpeechVariant({
   id,
   src,
   caption,
@@ -28,13 +28,13 @@ export function AudioVariant({
   draggable = true,
   className,
 }: GalleryItemCardProps) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [playing, setPlaying] = useState(false);
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `gallery-item:${id}`,
-    data: { itemId: id, kind: "audio" as const },
+    data: { itemId: id, kind: "speech" as const },
     disabled: !draggable,
   });
 
@@ -42,7 +42,7 @@ export function AudioVariant({
   const hasSrc = typeof src === "string" && src.length > 0;
 
   const togglePlayback = (): void => {
-    const el = audioRef.current;
+    const el = previewAudioRef.current;
     if (!el) return;
     if (playing) {
       el.pause();
@@ -73,7 +73,7 @@ export function AudioVariant({
           isDragging ? "opacity-50" : "",
           className,
         )}
-        aria-label={`Audio gallery item ${id}`}
+        aria-label={`Speech gallery item ${id}`}
       >
         <div
           style={{ aspectRatio: ratio }}
@@ -91,14 +91,14 @@ export function AudioVariant({
           </div>
           <div className="min-w-0">
             <p className="line-clamp-3 text-(length:--text-body-sm) font-medium leading-5 text-(--text)">
-              {caption ?? "Audio"}
+              {caption ?? "Speech"}
             </p>
           </div>
           <div className="flex items-center gap-3">
             <button
               type="button"
               disabled={!hasSrc}
-              aria-label={playing ? "Pause audio" : "Play audio"}
+              aria-label={playing ? "Pause speech" : "Play speech"}
               onClick={(event) => {
                 event.stopPropagation();
                 togglePlayback();
@@ -119,7 +119,7 @@ export function AudioVariant({
             <div className="h-1 flex-1 rounded-(--radius-pill) bg-(--border)" aria-hidden="true" />
           </div>
           <audio
-            ref={audioRef}
+            ref={previewAudioRef}
             src={src}
             preload="metadata"
             onPlay={() => setPlaying(true)}

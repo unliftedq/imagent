@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-  AudioProviderModelSchema,
+  SpeechProviderModelSchema,
   ImageProviderModelSchema,
   VideoProviderModelSchema,
 } from "@imagent/core";
@@ -28,6 +28,30 @@ function renameLegacyByteDance<T extends Record<string, unknown>>(input: unknown
       next.byteplus = next.bytedance;
     }
     delete next.bytedance;
+  }
+  return next;
+}
+
+function renameLegacyAudioRouting<T extends Record<string, unknown>>(input: unknown): unknown {
+  if (input === null || typeof input !== "object" || Array.isArray(input)) return input;
+  const next = { ...(input as T) } as Record<string, unknown>;
+  if ("audio" in next) {
+    if (next.speech === undefined) {
+      next.speech = next.audio;
+    }
+    delete next.audio;
+  }
+  return next;
+}
+
+function renameLegacyDefaultAudioModel<T extends Record<string, unknown>>(input: unknown): unknown {
+  if (input === null || typeof input !== "object" || Array.isArray(input)) return input;
+  const next = { ...(input as T) } as Record<string, unknown>;
+  if ("defaultAudioModel" in next) {
+    if (next.defaultSpeechModel === undefined) {
+      next.defaultSpeechModel = next.defaultAudioModel;
+    }
+    delete next.defaultAudioModel;
   }
   return next;
 }
@@ -87,16 +111,19 @@ export type ProviderSecrets = z.infer<typeof ProviderSecretsSchema>;
  *     `customOpenAI.<id>.baseUrl` + `image[]/video[]`, with the apiKey in
  *     `ProviderSecrets.customOpenAI.<id>`.
  */
-export const ProviderRoutingSchema = z.object({
-  displayName: z.string().optional(),
-  endpoint: z.string().optional(),
-  baseUrl: z.string().optional(),
-  /** MiniMax T2A v2 GroupId — required only for MiniMax audio generation. */
-  groupId: z.string().optional(),
-  image: z.array(ImageProviderModelSchema).optional(),
-  video: z.array(VideoProviderModelSchema).optional(),
-  audio: z.array(AudioProviderModelSchema).optional(),
-});
+export const ProviderRoutingSchema = z.preprocess(
+  renameLegacyAudioRouting,
+  z.object({
+    displayName: z.string().optional(),
+    endpoint: z.string().optional(),
+    baseUrl: z.string().optional(),
+    /** MiniMax T2A v2 GroupId — required only for MiniMax speech generation. */
+    groupId: z.string().optional(),
+    image: z.array(ImageProviderModelSchema).optional(),
+    video: z.array(VideoProviderModelSchema).optional(),
+    speech: z.array(SpeechProviderModelSchema).optional(),
+  }),
+);
 export type ProviderRouting = z.infer<typeof ProviderRoutingSchema>;
 
 /**
@@ -132,22 +159,25 @@ export const DefaultModelPreferenceSchema = z.object({
 });
 export type DefaultModelPreference = z.infer<typeof DefaultModelPreferenceSchema>;
 
-export const AppPreferencesSchema = z.object({
-  theme: z.enum(["light", "dark", "system"]).default("system"),
-  /**
-   * UI display language. `"system"` follows Electron's `app.getLocale()` —
-   * any `zh-*` locale resolves to Chinese, everything else falls back to
-   * English. Explicit `"en"`/`"zh"` overrides the system locale.
-   */
-  locale: z.enum(["system", "en", "zh"]).default("system"),
-  defaultImageModel: DefaultModelPreferenceSchema.nullable().default(null),
-  defaultVideoModel: DefaultModelPreferenceSchema.nullable().default(null),
-  defaultAudioModel: DefaultModelPreferenceSchema.nullable().default(null),
-  defaultOutputDir: z.string().nullable().default(null),
-  generationConcurrency: z.number().int().min(1).max(8).default(2),
-  keepPromptHistory: z.boolean().default(true),
-  openAfterGenerate: z.boolean().default(false),
-});
+export const AppPreferencesSchema = z.preprocess(
+  renameLegacyDefaultAudioModel,
+  z.object({
+    theme: z.enum(["light", "dark", "system"]).default("system"),
+    /**
+     * UI display language. `"system"` follows Electron's `app.getLocale()` —
+     * any `zh-*` locale resolves to Chinese, everything else falls back to
+     * English. Explicit `"en"`/`"zh"` overrides the system locale.
+     */
+    locale: z.enum(["system", "en", "zh"]).default("system"),
+    defaultImageModel: DefaultModelPreferenceSchema.nullable().default(null),
+    defaultVideoModel: DefaultModelPreferenceSchema.nullable().default(null),
+    defaultSpeechModel: DefaultModelPreferenceSchema.nullable().default(null),
+    defaultOutputDir: z.string().nullable().default(null),
+    generationConcurrency: z.number().int().min(1).max(8).default(2),
+    keepPromptHistory: z.boolean().default(true),
+    openAfterGenerate: z.boolean().default(false),
+  }),
+);
 export type AppPreferences = z.infer<typeof AppPreferencesSchema>;
 
 export const ConfigFileSchema = z.object({

@@ -1,9 +1,9 @@
 import type { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
-import type { AudioModelDef } from "@imagent/core";
+import type { SpeechModelDef } from "@imagent/core";
 import { describe, expect, it, vi } from "vitest";
-import { ElevenLabsAudioProvider } from "./audio.js";
+import { ElevenLabsSpeechProvider } from "./speech.js";
 
-const models = new Map<string, AudioModelDef>([
+const models = new Map<string, SpeechModelDef>([
   [
     "eleven_multilingual_v2",
     {
@@ -36,10 +36,10 @@ function makeClient(getAllResult: unknown = { voices: [] }) {
   return { client, convert, getAll };
 }
 
-describe("ElevenLabsAudioProvider", () => {
+describe("ElevenLabsSpeechProvider", () => {
   it("calls textToSpeech.convert with the voice id, model, and output format", async () => {
     const { client, convert } = makeClient();
-    const provider = new ElevenLabsAudioProvider({ apiKey: "k", models, client });
+    const provider = new ElevenLabsSpeechProvider({ apiKey: "k", models, client });
     const res = await provider.synthesize({
       prompt: "hello",
       providerId: "elevenlabs",
@@ -62,7 +62,7 @@ describe("ElevenLabsAudioProvider", () => {
 
   it("forwards speed and voice settings knobs as camelCase voiceSettings", async () => {
     const { client, convert } = makeClient();
-    const provider = new ElevenLabsAudioProvider({ apiKey: "k", models, client });
+    const provider = new ElevenLabsSpeechProvider({ apiKey: "k", models, client });
     await provider.synthesize({
       prompt: "hi",
       providerId: "elevenlabs",
@@ -103,7 +103,7 @@ describe("ElevenLabsAudioProvider", () => {
         { voiceId: "bare" },
       ],
     });
-    const provider = new ElevenLabsAudioProvider({ apiKey: "k", models, client });
+    const provider = new ElevenLabsSpeechProvider({ apiKey: "k", models, client });
     const voices = await provider.listVoices();
     expect(voices).toEqual([
       {

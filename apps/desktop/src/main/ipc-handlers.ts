@@ -13,7 +13,7 @@ import type {
   Asset,
   AssetFile,
   AssetKind,
-  AudioRequest,
+  SpeechRequest,
   Board,
   GalleryItem,
   ImageRequest,
@@ -27,7 +27,7 @@ import {
   capImageReferences,
   capReferencePaths,
   resolveAssetSlots,
-  splitAudioFormat,
+  splitSpeechFormat,
 } from "@imagent/core";
 import type { ProviderPreferencesPayload } from "@imagent/ipc";
 import {
@@ -49,11 +49,11 @@ import {
 } from "@imagent/persistence";
 import {
   configuredProviderCount as _unused,
-  effectiveAudioOfferings,
+  effectiveSpeechOfferings,
   effectiveImageOfferings,
   effectiveProviderDisplayName,
   effectiveVideoOfferings,
-  type AudioRegistry,
+  type SpeechRegistry,
   type ImageRegistry,
   type ModelCatalog,
   saveCatalog,
@@ -440,7 +440,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
         secrets,
         runtime.imageRegistry,
         runtime.videoRegistry,
-        runtime.audioRegistry,
+        runtime.speechRegistry,
         runtime.catalog,
       );
     },
@@ -498,7 +498,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       const provider =
         runtime.imageRegistry.get(id) ??
         runtime.videoRegistry.get(id) ??
-        runtime.audioRegistry.get(id);
+        runtime.speechRegistry.get(id);
       if (!provider) {
         return { ok: false, reason: `provider '${id}' is not configured` };
       }
@@ -678,15 +678,15 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       return { jobId };
     },
 
-    "audio.submit": async (request) => {
+    "speech.submit": async (request) => {
       try {
         const jobId = await runtime.jobRunner.start({
-          kind: "audio",
+          kind: "speech",
           request,
           ...(request.parentId ? { parentId: request.parentId } : {}),
           ...(request.boardId ? { boardId: request.boardId } : {}),
         });
-        // Audio runs asynchronously like video: broadcast gallery.changed on
+        // Speech runs asynchronously like video: broadcast gallery.changed on
         // success so the Studio canvas + gallery pick up the new clip without
         // a manual refresh.
         const onCompleted = (j: Job): void => {
@@ -699,7 +699,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
                 server.emit("gallery.changed", { id: item.id, op: "created", item });
               }
             } catch (err) {
-              logger.warn("gallery.changed (audio) emit failed", { err: String(err) });
+              logger.warn("gallery.changed (speech) emit failed", { err: String(err) });
             }
           }
         };
@@ -714,7 +714,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
         runtime.jobRunner.on("job.failed", onFailed);
         return { jobId };
       } catch (err) {
-        logger.error("audio.submit failed", { err: String(err) });
+        logger.error("speech.submit failed", { err: String(err) });
         throw err;
       }
     },
@@ -769,16 +769,16 @@ export function setupIpc(deps: IpcDeps): IpcServer {
         };
         return { kind: "video" as const, request: req };
       }
-      if (parent.kind === "audio") {
+      if (parent.kind === "speech") {
         const legacy =
-          typeof params.outputFormat === "string" ? splitAudioFormat(params.outputFormat) : null;
+          typeof params.outputFormat === "string" ? splitSpeechFormat(params.outputFormat) : null;
         const codec =
           typeof params.codec === "string" ? params.codec : (legacy?.codec ?? undefined);
         const formatQuality =
           typeof params.formatQuality === "string"
             ? params.formatQuality
             : (legacy?.formatQuality ?? undefined);
-        const req: AudioRequest = {
+        const req: SpeechRequest = {
           prompt: parent.prompt,
           providerId: parent.providerId,
           model: parent.model,
@@ -792,7 +792,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
           assetIds: [],
           parentId: parent.id,
         };
-        return { kind: "audio" as const, request: req };
+        return { kind: "speech" as const, request: req };
       }
       const req: ImageRequest = {
         prompt: parent.prompt,
@@ -939,20 +939,20 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       return { providerId, defaultModel, models };
     },
 
-    "audio.models": async ({ providerId }) => {
+    "speech.models": async ({ providerId }) => {
       const config = await configStore.loadConfig();
-      const provider = runtime.audioRegistry.get(providerId);
+      const provider = runtime.speechRegistry.get(providerId);
       const models = provider ? [...provider.models.values()] : [];
-      const defaultModel = readDefaultAudioModel(
-        config.app.defaultAudioModel,
+      const defaultModel = readDefaultSpeechModel(
+        config.app.defaultSpeechModel,
         providerId,
-        runtime.audioRegistry,
+        runtime.speechRegistry,
       );
       return { providerId, defaultModel, models };
     },
 
-    "audio.voices": async ({ providerId, modelId }) => {
-      const provider = runtime.audioRegistry.get(providerId);
+    "speech.voices": async ({ providerId, modelId }) => {
+      const provider = runtime.speechRegistry.get(providerId);
       if (!provider) return { voices: [] };
       const model = modelId ? provider.models.get(modelId) : provider.models.values().next().value;
       const fallback = model?.capabilities?.voices ?? [];
@@ -960,7 +960,7 @@ export function setupIpc(deps: IpcDeps): IpcServer {
         try {
           return { voices: await provider.listVoices() };
         } catch (err) {
-          logger.warn("audio.voices discovery failed", { providerId, err: String(err) });
+          logger.warn("speech.voices discovery failed", { providerId, err: String(err) });
         }
       }
       return { voices: fallback };
@@ -1437,18 +1437,18 @@ function readDefaultVideoModel(
   return typeof first === "string" ? first : null;
 }
 
-function readDefaultAudioModel(
-  defaultAudioModel: DefaultModelPreference | null,
+function readDefaultSpeechModel(
+  defaultSpeechModel: DefaultModelPreference | null,
   providerId: string,
-  audioRegistry: AudioRegistry,
+  speechRegistry: SpeechRegistry,
 ): string | null {
-  const provider = audioRegistry.get(providerId);
+  const provider = speechRegistry.get(providerId);
   if (!provider) return null;
   if (
-    defaultAudioModel?.providerId === providerId &&
-    provider.models.has(defaultAudioModel.modelId)
+    defaultSpeechModel?.providerId === providerId &&
+    provider.models.has(defaultSpeechModel.modelId)
   ) {
-    return defaultAudioModel.modelId;
+    return defaultSpeechModel.modelId;
   }
   const first = provider.models.keys().next().value;
   return typeof first === "string" ? first : null;
@@ -1485,13 +1485,13 @@ function providerSummaryList(
   secrets: ProviderSecrets,
   imageRegistry: ImageRegistry,
   videoRegistry: VideoRegistry,
-  audioRegistry: AudioRegistry,
+  speechRegistry: SpeechRegistry,
   catalog: ModelCatalog,
 ): Array<{
   id: ProviderId;
   displayName: string;
   configured: boolean;
-  kinds: ("image" | "video" | "audio")[];
+  kinds: ("image" | "video" | "speech")[];
   defaultModel: string | null;
   modelIds: string[];
 }> {
@@ -1506,8 +1506,8 @@ function providerSummaryList(
     const p = videoRegistry.get(id);
     return p ? [...p.models.keys()] : [];
   };
-  const audioIds = (id: string): string[] => {
-    const p = audioRegistry.get(id);
+  const speechIds = (id: string): string[] => {
+    const p = speechRegistry.get(id);
     return p ? [...p.models.keys()] : [];
   };
   const firstImage = (id: string): string | null => {
@@ -1515,14 +1515,14 @@ function providerSummaryList(
     return ids[0] ?? null;
   };
   const firstAudio = (id: string): string | null => {
-    const ids = audioIds(id);
+    const ids = speechIds(id);
     return ids[0] ?? null;
   };
   const wellKnown: Array<{
     id: ProviderId;
     displayName: string;
     configured: boolean;
-    kinds: ("image" | "video" | "audio")[];
+    kinds: ("image" | "video" | "speech")[];
     defaultModel: string | null;
     modelIds: string[];
   }> = [
@@ -1590,18 +1590,18 @@ function providerSummaryList(
       id: "minimax",
       displayName: "MiniMax",
       configured: !!secrets.minimax,
-      // MiniMax TTS is available only when GroupId lets the audio registry build.
-      kinds: ["image", "video", ...(audioIds("minimax").length > 0 ? (["audio"] as const) : [])],
+      // MiniMax TTS is available only when GroupId lets the speech registry build.
+      kinds: ["image", "video", ...(speechIds("minimax").length > 0 ? (["speech"] as const) : [])],
       defaultModel: firstImage("minimax"),
-      modelIds: [...imageIds("minimax"), ...videoIds("minimax"), ...audioIds("minimax")],
+      modelIds: [...imageIds("minimax"), ...videoIds("minimax"), ...speechIds("minimax")],
     },
     {
       id: "elevenlabs",
       displayName: "ElevenLabs",
       configured: !!secrets.elevenlabs,
-      kinds: ["audio"],
+      kinds: ["speech"],
       defaultModel: firstAudio("elevenlabs"),
-      modelIds: audioIds("elevenlabs"),
+      modelIds: speechIds("elevenlabs"),
     },
   ];
   // Custom OpenAI-compatible providers: routing lives in config; catalog may
@@ -1617,7 +1617,7 @@ function providerSummaryList(
     id,
     displayName: effectiveProviderDisplayName(catalog, prefs, id),
     configured: !!prefs.customOpenAI?.[id]?.baseUrl,
-    kinds: ["image"] as ("image" | "video" | "audio")[],
+    kinds: ["image"] as ("image" | "video" | "speech")[],
     defaultModel: firstImage(id),
     modelIds: imageIds(id),
   }));
@@ -1656,7 +1656,7 @@ function buildUnifiedModelList(
       configured: boolean;
     }>;
   }>;
-  audio: Array<{
+  speech: Array<{
     id: string;
     displayName: string | null;
     providers: Array<{
@@ -1667,7 +1667,7 @@ function buildUnifiedModelList(
     }>;
   }>;
 } {
-  const isProviderConfigured = (id: ProviderId, kind: "image" | "video" | "audio"): boolean => {
+  const isProviderConfigured = (id: ProviderId, kind: "image" | "video" | "speech"): boolean => {
     if (id === "azure") {
       return !!(secrets["azure"]?.apiKey && prefs["azure"]?.endpoint);
     }
@@ -1677,7 +1677,7 @@ function buildUnifiedModelList(
     if (id === "volcengine") {
       return !!(secrets.volcengine?.apiKey && prefs.volcengine?.endpoint);
     }
-    if (id === "minimax" && kind === "audio") {
+    if (id === "minimax" && kind === "speech") {
       return !!(secrets.minimax?.apiKey && prefs.minimax?.groupId);
     }
     const custom = prefs.customOpenAI?.[id];
@@ -1686,7 +1686,7 @@ function buildUnifiedModelList(
     return !!b?.apiKey;
   };
   const groupKind = <T extends { id: string; displayName?: string }>(
-    kind: "image" | "video" | "audio",
+    kind: "image" | "video" | "speech",
     canonicalModels: Record<string, T>,
   ): Array<{
     id: string;
@@ -1733,7 +1733,7 @@ function buildUnifiedModelList(
           ? effectiveImageOfferings(catalog, prefs, providerId)
           : kind === "video"
             ? effectiveVideoOfferings(catalog, prefs, providerId)
-            : effectiveAudioOfferings(catalog, prefs, providerId);
+            : effectiveSpeechOfferings(catalog, prefs, providerId);
       for (const offering of offerings) {
         const model = canonicalModels[offering.modelId];
         if (!model) continue;
@@ -1767,7 +1767,7 @@ function buildUnifiedModelList(
   return {
     image: groupKind("image", catalog.models.image),
     video: groupKind("video", catalog.models.video),
-    audio: groupKind("audio", catalog.models.audio),
+    speech: groupKind("speech", catalog.models.speech),
   };
 }
 

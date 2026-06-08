@@ -6,7 +6,7 @@ const base = {
   models: {
     image: {},
     video: {},
-    audio: {
+    speech: {
       eleven_multilingual_v2: {
         id: "eleven_multilingual_v2",
         capabilities: {
@@ -19,31 +19,31 @@ const base = {
   providers: {
     elevenlabs: {
       displayName: "ElevenLabs",
-      audio: [{ id: "rachel", modelId: "eleven_multilingual_v2" }],
+      speech: [{ id: "rachel", modelId: "eleven_multilingual_v2" }],
     },
   },
 };
 
-describe("catalog audio schema", () => {
-  it("parses a catalog with audio models + offerings", () => {
+describe("catalog speech schema", () => {
+  it("parses a catalog with speech models + offerings", () => {
     const parsed = ModelCatalogSchema.parse(base);
-    expect(parsed.models.audio.eleven_multilingual_v2?.id).toBe("eleven_multilingual_v2");
+    expect(parsed.models.speech.eleven_multilingual_v2?.id).toBe("eleven_multilingual_v2");
   });
 
-  it("defaults models.audio to {} when omitted", () => {
+  it("defaults models.speech to {} when omitted", () => {
     const parsed = ModelCatalogSchema.parse({
       version: 2,
       models: { image: {}, video: {} },
       providers: {},
     });
-    expect(parsed.models.audio).toEqual({});
+    expect(parsed.models.speech).toEqual({});
   });
 
-  it("rejects an audio offering referencing an unknown model", () => {
+  it("rejects an speech offering referencing an unknown model", () => {
     expect(() =>
       ModelCatalogSchema.parse({
         ...base,
-        providers: { elevenlabs: { audio: [{ id: "x", modelId: "nope" }] } },
+        providers: { elevenlabs: { speech: [{ id: "x", modelId: "nope" }] } },
       }),
     ).toThrow();
   });

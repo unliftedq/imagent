@@ -139,10 +139,10 @@ export const VideoProviderModelSchema = z.object({
 });
 export type VideoProviderModel = z.infer<typeof VideoProviderModelSchema>;
 
-// ---- Audio ----------------------------------------------------------------
+// ---- Speech ----------------------------------------------------------------
 
 /**
- * Normalized, provider-agnostic voice descriptor. Every audio provider maps its
+ * Normalized, provider-agnostic voice descriptor. Every speech provider maps its
  * own voice payload into this shape so the business layer (CLI, desktop, IPC)
  * can treat voices uniformly. `id`, `name`, `description`, and `previewUrl` are
  * always present; provider-specific differences live in `category`/`labels`.
@@ -154,7 +154,7 @@ export const VoiceInfoSchema = z.object({
   name: z.string(),
   /** Short description; empty string when the provider exposes none. */
   description: z.string().default(""),
-  /** Sample audio URL, or `null` when the provider exposes none. */
+  /** Sample speech URL, or `null` when the provider exposes none. */
   previewUrl: z.string().nullable().default(null),
   /** Coarse provider grouping (e.g. "premade", "cloned", "professional", "system"). */
   category: z.string().optional(),
@@ -164,17 +164,17 @@ export const VoiceInfoSchema = z.object({
 export type VoiceInfo = z.infer<typeof VoiceInfoSchema>;
 
 /** Declares an extra per-model knob (e.g. ElevenLabs stability). */
-export const AudioKnobSchema = z.object({
+export const SpeechKnobSchema = z.object({
   /** number ⇒ numeric range; enum ⇒ one of `values`. */
   type: z.enum(["number", "enum"]),
   min: z.number().optional(),
   max: z.number().optional(),
   values: z.array(z.string()).optional(),
 });
-export type AudioKnob = z.infer<typeof AudioKnobSchema>;
+export type SpeechKnob = z.infer<typeof SpeechKnobSchema>;
 
 /** A supported output codec plus its sample-rate/bitrate qualifiers. */
-export const AudioOutputFormatSchema = z.object({
+export const SpeechOutputFormatSchema = z.object({
   /** Codec / container (e.g. "mp3", "pcm", "ulaw", "wav"). */
   codec: z.string(),
   /**
@@ -183,43 +183,43 @@ export const AudioOutputFormatSchema = z.object({
    */
   qualities: z.array(z.string()).default([]),
 });
-export type AudioOutputFormat = z.infer<typeof AudioOutputFormatSchema>;
+export type SpeechOutputFormat = z.infer<typeof SpeechOutputFormatSchema>;
 
-export const AudioModelCapsSchema = z.object({
+export const SpeechModelCapsSchema = z.object({
   /** Static fallback voices when the provider has no list API. */
   voices: z.array(VoiceInfoSchema).optional(),
   /** Provider exposes a live voice-list endpoint. */
   supportsVoiceDiscovery: z.boolean().default(false),
-  outputFormats: z.array(AudioOutputFormatSchema).optional(),
+  outputFormats: z.array(SpeechOutputFormatSchema).optional(),
   speedRange: z.object({ min: z.number(), max: z.number() }).optional(),
   /** Extra knobs keyed by request `raw` key (e.g. stability, emotion). */
-  extraKnobs: z.record(z.string(), AudioKnobSchema).optional(),
+  extraKnobs: z.record(z.string(), SpeechKnobSchema).optional(),
 });
-export type AudioModelCaps = z.infer<typeof AudioModelCapsSchema>;
+export type SpeechModelCaps = z.infer<typeof SpeechModelCapsSchema>;
 
-export const AudioModelCapsOverrideSchema = z.object({
+export const SpeechModelCapsOverrideSchema = z.object({
   voices: z.array(VoiceInfoSchema).optional(),
   supportsVoiceDiscovery: z.boolean().optional(),
-  outputFormats: z.array(AudioOutputFormatSchema).optional(),
+  outputFormats: z.array(SpeechOutputFormatSchema).optional(),
   speedRange: z.object({ min: z.number(), max: z.number() }).optional(),
-  extraKnobs: z.record(z.string(), AudioKnobSchema).optional(),
+  extraKnobs: z.record(z.string(), SpeechKnobSchema).optional(),
 });
-export type AudioModelCapsOverride = z.infer<typeof AudioModelCapsOverrideSchema>;
+export type SpeechModelCapsOverride = z.infer<typeof SpeechModelCapsOverrideSchema>;
 
-export const AudioModelDefSchema = z.object({
+export const SpeechModelDefSchema = z.object({
   id: z.string(),
   baseModelId: z.string().optional(),
   displayName: z.string().optional(),
-  capabilities: AudioModelCapsSchema.optional(),
+  capabilities: SpeechModelCapsSchema.optional(),
   defaults: z.record(z.string(), z.unknown()).optional(),
 });
-export type AudioModelDef = z.infer<typeof AudioModelDefSchema>;
+export type SpeechModelDef = z.infer<typeof SpeechModelDefSchema>;
 
-export const AudioProviderModelSchema = z.object({
+export const SpeechProviderModelSchema = z.object({
   id: z.string(),
   modelId: z.string(),
   displayName: z.string().optional(),
-  capabilities: AudioModelCapsOverrideSchema.optional(),
+  capabilities: SpeechModelCapsOverrideSchema.optional(),
   defaults: z.record(z.string(), z.unknown()).optional(),
 });
-export type AudioProviderModel = z.infer<typeof AudioProviderModelSchema>;
+export type SpeechProviderModel = z.infer<typeof SpeechProviderModelSchema>;

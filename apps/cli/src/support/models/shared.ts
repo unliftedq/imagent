@@ -18,22 +18,22 @@ export interface OptionDescriptor {
   note?: string;
 }
 
-export type ModelKind = "image" | "video" | "audio";
+export type ModelKind = "image" | "video" | "speech";
 
 export function isProviderConfigured(
   providerId: string,
   imageRegistry: ReadonlyMap<string, unknown>,
   videoRegistry: ReadonlyMap<string, unknown>,
-  audioRegistry: ReadonlyMap<string, unknown>,
+  speechRegistry: ReadonlyMap<string, unknown>,
 ): boolean {
-  return imageRegistry.has(providerId) || videoRegistry.has(providerId) || audioRegistry.has(providerId);
+  return imageRegistry.has(providerId) || videoRegistry.has(providerId) || speechRegistry.has(providerId);
 }
 
 export function normalizeKind(kind: string | undefined): ModelKind | undefined {
   if (!kind) return undefined;
   const lower = kind.toLowerCase();
-  if (lower !== "image" && lower !== "video" && lower !== "audio") {
-    throw new Error(`--kind must be 'image', 'video', or 'audio' (got '${kind}')`);
+  if (lower !== "image" && lower !== "video" && lower !== "speech") {
+    throw new Error(`--kind must be 'image', 'video', or 'speech' (got '${kind}')`);
   }
   return lower;
 }
