@@ -40,6 +40,7 @@ export function SpeechVariant({
 
   const ratio = width && height && width > 0 && height > 0 ? `${width} / ${height}` : "1 / 1";
   const hasSrc = typeof src === "string" && src.length > 0;
+  const tint = speechTintStyle(caption ?? id);
 
   const togglePlayback = (): void => {
     const el = previewAudioRef.current;
@@ -76,11 +77,14 @@ export function SpeechVariant({
         aria-label={`Speech gallery item ${id}`}
       >
         <div
-          style={{ aspectRatio: ratio }}
-          className="relative flex min-h-[156px] flex-col justify-between bg-(--surface) p-4"
+          style={{ aspectRatio: ratio, backgroundColor: tint.background }}
+          className="relative flex min-h-[156px] flex-col justify-between p-4"
         >
           <div className="flex items-start justify-between gap-3">
-            <div className="inline-flex size-11 shrink-0 items-center justify-center rounded-(--radius-md) bg-(--accent-soft) text-(--accent)">
+            <div
+              className="inline-flex size-11 shrink-0 items-center justify-center rounded-(--radius-md) bg-(--accent-soft) text-(--accent)"
+              style={{ backgroundColor: tint.iconBg, color: tint.accent }}
+            >
               <Waveform weight="duotone" className="size-6" />
             </div>
             {typeof durationMs === "number" && durationMs > 0 ? (
@@ -90,7 +94,10 @@ export function SpeechVariant({
             ) : null}
           </div>
           <div className="min-w-0">
-            <p className="line-clamp-3 text-(length:--text-body-sm) font-medium leading-5 text-(--text)">
+            <p
+              title={caption ?? undefined}
+              className="line-clamp-3 text-(length:--text-body-sm) font-medium leading-5 text-(--text)"
+            >
               {caption ?? "Speech"}
             </p>
           </div>
@@ -169,4 +176,23 @@ export function SpeechVariant({
       />
     </DropdownMenu.Root>
   );
+}
+
+/**
+ * Deterministic per-item tint for speech cards so visually identical waveform
+ * cards become distinguishable. The hue is derived from the seed (caption or
+ * id) and blended into the theme surface via `color-mix` so it stays legible
+ * in both light and dark themes.
+ */
+function speechTintStyle(seed: string): { background: string; iconBg: string; accent: string } {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) | 0;
+  }
+  const hue = Math.abs(hash) % 360;
+  return {
+    background: `color-mix(in oklab, hsl(${hue} 70% 55%) 14%, var(--surface))`,
+    iconBg: `color-mix(in oklab, hsl(${hue} 70% 55%) 28%, var(--surface))`,
+    accent: `color-mix(in oklab, hsl(${hue} 70% 50%) 80%, var(--text))`,
+  };
 }

@@ -863,7 +863,7 @@ function CanvasMedia({ item, className = "" }: { item: GalleryItem; className?: 
           </p>
         </div>
         {/* biome-ignore lint/a11y/useMediaCaption: Generated speech has no caption track. */}
-        <speech key={item.id} src={url} controls preload="metadata" className="w-full" />
+        <audio key={item.id} src={url} controls preload="metadata" className="w-full" />
       </div>
     );
   }
