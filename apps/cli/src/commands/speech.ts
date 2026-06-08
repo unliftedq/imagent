@@ -46,7 +46,7 @@ export function registerSpeechCommand(program: Command): void {
     .command("synthesize <text>")
     .summary("Synthesize speech from text")
     .description("Synthesize text to speech. Waits for completion and prints the result path.")
-    .option("--provider <id>", "Provider id (elevenlabs | minimax). See `imagent doctor`.")
+    .option("--provider <id>", "Provider id (openai | google | elevenlabs | minimax). See `imagent doctor`.")
     .option("--model <id>", "Model/offering id (see `imagent models --kind speech --provider <id>`)")
     .option(
       "-o, --option <key=value>",
@@ -70,7 +70,7 @@ export function registerSpeechCommand(program: Command): void {
     .description(
       "List voices from the provider's voice-list API when available, falling back to the model's static catalog voices.",
     )
-    .requiredOption("--provider <id>", "Provider id (elevenlabs | minimax)")
+    .requiredOption("--provider <id>", "Provider id (openai | google | elevenlabs | minimax)")
     .option("--model <id>", "Model/offering id (defaults to the provider's first speech model)")
     .option("--json", "Emit JSON instead of a human-readable list", false)
     .action(async (options: SpeechVoicesOptions) => {

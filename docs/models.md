@@ -162,6 +162,19 @@ Use `imagent models --kind speech` to list available TTS offerings, and `imagent
 
 ## Speech models
 
+### OpenAI: `gpt-4o-mini-tts`
+
+- **Provider-facing id:** `gpt-4o-mini-tts` (OpenAI's steerable mini text-to-speech model).
+- **Voice support:** Static catalog voices (no live discovery): `alloy`, `ash`, `ballad`, `coral`, `echo`, `fable`, `onyx`, `nova`, `sage`, `shimmer`, `verse`, `marin`, `cedar`; default `alloy`.
+- **Output controls:** `outputFormat` (codec): `mp3`, `opus`, `aac`, `flac`, `wav`, `pcm`; default `mp3`. `speed` ranges from 0.25 to 4; default 1.
+- **Extra controls:** `instructions` — free-form text that steers tone, accent, and delivery (e.g. `--option instructions="speak cheerfully"`).
+
+### Google: `gemini-3.1-flash-tts-preview`
+
+- **Provider-facing id:** `gemini-3.1-flash-tts-preview` (Gemini single-speaker text-to-speech preview).
+- **Voice support:** Static catalog voices (no live discovery): 30 prebuilt voices including `Zephyr`, `Puck`, `Charon`, `Kore`, `Fenrir`, `Leda`, `Orus`, `Aoede`, and more; default `Zephyr`.
+- **Output controls:** Always returns 24 kHz mono PCM, wrapped in a WAV container (`outputFormat`: `wav`). `speed` is not supported.
+
 ### ElevenLabs: `eleven_multilingual_v2`
 
 - **Provider-facing id:** `eleven_multilingual_v2`.

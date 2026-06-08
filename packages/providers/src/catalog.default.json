@@ -696,6 +696,91 @@
       }
     },
     "speech": {
+      "gpt-4o-mini-tts": {
+        "id": "gpt-4o-mini-tts",
+        "displayName": "GPT-4o mini TTS",
+        "capabilities": {
+          "supportsVoiceDiscovery": false,
+          "outputFormats": [
+            { "codec": "mp3", "qualities": [] },
+            { "codec": "opus", "qualities": [] },
+            { "codec": "aac", "qualities": [] },
+            { "codec": "flac", "qualities": [] },
+            { "codec": "wav", "qualities": [] },
+            { "codec": "pcm", "qualities": [] }
+          ],
+          "speedRange": {
+            "min": 0.25,
+            "max": 4
+          },
+          "voices": [
+            { "id": "alloy", "name": "Alloy" },
+            { "id": "ash", "name": "Ash" },
+            { "id": "ballad", "name": "Ballad" },
+            { "id": "coral", "name": "Coral" },
+            { "id": "echo", "name": "Echo" },
+            { "id": "fable", "name": "Fable" },
+            { "id": "onyx", "name": "Onyx" },
+            { "id": "nova", "name": "Nova" },
+            { "id": "sage", "name": "Sage" },
+            { "id": "shimmer", "name": "Shimmer" },
+            { "id": "verse", "name": "Verse" },
+            { "id": "marin", "name": "Marin" },
+            { "id": "cedar", "name": "Cedar" }
+          ],
+          "extraKnobs": {}
+        },
+        "defaults": {
+          "codec": "mp3",
+          "voice": "alloy",
+          "speed": 1
+        }
+      },
+      "gemini-3.1-flash-tts-preview": {
+        "id": "gemini-3.1-flash-tts-preview",
+        "displayName": "Gemini 3.1 Flash TTS (preview)",
+        "capabilities": {
+          "supportsVoiceDiscovery": false,
+          "outputFormats": [{ "codec": "wav", "qualities": [] }],
+          "voices": [
+            { "id": "Zephyr", "name": "Zephyr" },
+            { "id": "Puck", "name": "Puck" },
+            { "id": "Charon", "name": "Charon" },
+            { "id": "Kore", "name": "Kore" },
+            { "id": "Fenrir", "name": "Fenrir" },
+            { "id": "Leda", "name": "Leda" },
+            { "id": "Orus", "name": "Orus" },
+            { "id": "Aoede", "name": "Aoede" },
+            { "id": "Callirrhoe", "name": "Callirrhoe" },
+            { "id": "Autonoe", "name": "Autonoe" },
+            { "id": "Enceladus", "name": "Enceladus" },
+            { "id": "Iapetus", "name": "Iapetus" },
+            { "id": "Umbriel", "name": "Umbriel" },
+            { "id": "Algieba", "name": "Algieba" },
+            { "id": "Despina", "name": "Despina" },
+            { "id": "Erinome", "name": "Erinome" },
+            { "id": "Algenib", "name": "Algenib" },
+            { "id": "Rasalgethi", "name": "Rasalgethi" },
+            { "id": "Laomedeia", "name": "Laomedeia" },
+            { "id": "Achernar", "name": "Achernar" },
+            { "id": "Alnilam", "name": "Alnilam" },
+            { "id": "Schedar", "name": "Schedar" },
+            { "id": "Gacrux", "name": "Gacrux" },
+            { "id": "Pulcherrima", "name": "Pulcherrima" },
+            { "id": "Achird", "name": "Achird" },
+            { "id": "Zubenelgenubi", "name": "Zubenelgenubi" },
+            { "id": "Vindemiatrix", "name": "Vindemiatrix" },
+            { "id": "Sadachbia", "name": "Sadachbia" },
+            { "id": "Sadaltager", "name": "Sadaltager" },
+            { "id": "Sulafat", "name": "Sulafat" }
+          ],
+          "extraKnobs": {}
+        },
+        "defaults": {
+          "codec": "wav",
+          "voice": "Zephyr"
+        }
+      },
       "eleven_multilingual_v2": {
         "id": "eleven_multilingual_v2",
         "displayName": "ElevenLabs Multilingual v2",
@@ -890,6 +975,12 @@
           "id": "gpt-image-1-mini",
           "modelId": "gpt-image-1-mini"
         }
+      ],
+      "speech": [
+        {
+          "id": "gpt-4o-mini-tts",
+          "modelId": "gpt-4o-mini-tts"
+        }
       ]
     },
     "azure": {
@@ -936,6 +1027,12 @@
         {
           "id": "veo-3.0-fast-generate-001",
           "modelId": "veo-3.0-fast-generate-001"
+        }
+      ],
+      "speech": [
+        {
+          "id": "gemini-3.1-flash-tts-preview",
+          "modelId": "gemini-3.1-flash-tts-preview"
         }
       ]
     },

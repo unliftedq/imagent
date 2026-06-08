@@ -5,6 +5,18 @@ import { createSpeechRegistry } from "./registry.js";
 describe("createSpeechRegistry", () => {
   const catalog = getBundledCatalog();
 
+  it("includes openai speech when its secret is set", () => {
+    const reg = createSpeechRegistry({ openai: { apiKey: "k" } }, { openai: {} } as never, catalog);
+    expect(reg.has("openai")).toBe(true);
+    expect(reg.get("openai")?.models.has("gpt-4o-mini-tts")).toBe(true);
+  });
+
+  it("includes google speech when its secret is set", () => {
+    const reg = createSpeechRegistry({ google: { apiKey: "k" } }, { google: {} } as never, catalog);
+    expect(reg.has("google")).toBe(true);
+    expect(reg.get("google")?.models.has("gemini-3.1-flash-tts-preview")).toBe(true);
+  });
+
   it("includes elevenlabs when its secret is set", () => {
     const reg = createSpeechRegistry(
       { elevenlabs: { apiKey: "k" } },

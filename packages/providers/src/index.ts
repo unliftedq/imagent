@@ -11,8 +11,10 @@ export * from "./common/index.js";
 // (Per-vendor catalog files were deleted in Phase 2 — canonical models and
 // provider offerings now live in `catalog.default.json` and load via `loadCatalog()`.)
 export * from "./openai/image.js";
+export * from "./openai/speech.js";
 export * from "./azure/image.js";
 export * from "./google/image.js";
+export * from "./google/speech.js";
 export * from "./google/video.js";
 export * from "./flux/image.js";
 export * from "./bytedance/image.js";

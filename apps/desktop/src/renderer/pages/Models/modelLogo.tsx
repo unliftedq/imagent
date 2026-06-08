@@ -30,6 +30,9 @@ export function pickModelLogo(modelId: string): ModelLogo | undefined {
   if (modelId.startsWith("gpt-image")) {
     return { src: openaiUrl, alt: "OpenAI" };
   }
+  if (modelId.startsWith("gpt-") || modelId.startsWith("tts-")) {
+    return { src: openaiUrl, alt: "OpenAI" };
+  }
   if (modelId.startsWith("MAI-Image")) {
     return { src: microsoftUrl, alt: "Microsoft" };
   }

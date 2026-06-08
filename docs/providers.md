@@ -8,9 +8,9 @@ imagent supports nine built-in provider IDs:
 
 | Provider ID | Display name | Images | Videos | Speech | Required secret fields |
 | --- | --- | --- | --- | --- | --- |
-| `openai` | OpenAI | Yes | No | No | `apiKey` |
+| `openai` | OpenAI | Yes | No | Yes | `apiKey` |
 | `azure` | Azure Foundry | Yes | No | No | `endpoint`, `apiKey` |
-| `google` | Google AI Studio | Yes | Yes | No | `apiKey` |
+| `google` | Google AI Studio | Yes | Yes | Yes | `apiKey` |
 | `flux-bfl` | Black Forest Labs | Yes | No | No | `apiKey` |
 | `byteplus` | BytePlus ModelArk (international) | Yes | Yes | No | `endpoint`, `apiKey` |
 | `volcengine` | 火山引擎 (Volcano Ark, mainland China) | Yes | Yes | No | `endpoint`, `apiKey` |
@@ -33,6 +33,8 @@ API keys are stored in the local workspace `secrets.json` file. Non-sensitive en
 ### OpenAI (`openai`)
 
 Use OpenAI image models from the model catalog.
+
+OpenAI also provides text-to-speech via `gpt-4o-mini-tts` (`imagent speech synthesize ... --provider openai`). The same `openai.apiKey` secret covers both image and speech.
 
 CLI setup:
 
@@ -61,6 +63,16 @@ imagent image generate "clean product render on white background" \
   --provider openai \
   --model gpt-image-2 \
   --option size=1024x1024
+```
+
+Speech example:
+
+```bash
+imagent speech synthesize "Welcome to imagent" \
+  --provider openai \
+  --model gpt-4o-mini-tts \
+  --option voice=alloy \
+  --option instructions="speak warmly and clearly"
 ```
 
 ### Azure (`azure`)
@@ -133,7 +145,7 @@ imagent image generate "obsidian glass cathedral on a wind-swept cliff" \
 
 ### Google AI Studio (`google`)
 
-Google uses one API key for configured image models and Veo video models.
+Google uses one API key for configured image models, Veo video models, and Gemini text-to-speech.
 
 CLI setup:
 
@@ -169,6 +181,15 @@ imagent video generate "a gentle tracking shot through a flower market" \
   --provider google \
   --model veo-3.0-generate-001 \
   --option duration=8
+```
+
+Speech example:
+
+```bash
+imagent speech synthesize "Welcome to imagent" \
+  --provider google \
+  --model gemini-3.1-flash-tts-preview \
+  --option voice=Zephyr
 ```
 
 ### Black Forest Labs / Flux (`flux-bfl`)

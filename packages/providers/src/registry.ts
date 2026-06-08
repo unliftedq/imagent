@@ -15,11 +15,13 @@ import { ElevenLabsSpeechProvider } from "./elevenlabs/speech.js";
 import type { ModelCatalog } from "./catalog/schema.js";
 import { FluxImageProvider } from "./flux/image.js";
 import { GoogleImageProvider } from "./google/image.js";
+import { GoogleSpeechProvider } from "./google/speech.js";
 import { GoogleVideoProvider } from "./google/video.js";
 import { MiniMaxSpeechProvider } from "./minimax/speech.js";
 import { MiniMaxImageProvider } from "./minimax/image.js";
 import { MiniMaxVideoProvider } from "./minimax/video.js";
 import { OpenAIImageProvider } from "./openai/image.js";
+import { OpenAISpeechProvider } from "./openai/speech.js";
 import { XaiImageProvider } from "./xai/image.js";
 import { XaiVideoProvider } from "./xai/video.js";
 
@@ -261,6 +263,26 @@ export function createSpeechRegistry(
   catalog: ModelCatalog,
 ): SpeechRegistry {
   const out = new Map<string, SpeechProvider>();
+
+  if (secrets.openai) {
+    const opts: ConstructorParameters<typeof OpenAISpeechProvider>[0] = {
+      apiKey: secrets.openai.apiKey,
+      models: mapFromList(resolveSpeechProviderModels(catalog, "openai", prefs)),
+    };
+    const baseUrl = prefs.openai?.baseUrl;
+    if (baseUrl) opts.baseUrl = baseUrl;
+    if (opts.models.size > 0) out.set("openai", new OpenAISpeechProvider(opts));
+  }
+
+  if (secrets.google) {
+    const opts: ConstructorParameters<typeof GoogleSpeechProvider>[0] = {
+      apiKey: secrets.google.apiKey,
+      models: mapFromList(resolveSpeechProviderModels(catalog, "google", prefs)),
+    };
+    const baseUrl = prefs.google?.baseUrl;
+    if (baseUrl) opts.baseUrl = baseUrl;
+    if (opts.models.size > 0) out.set("google", new GoogleSpeechProvider(opts));
+  }
 
   if (secrets.elevenlabs) {
     const opts: ConstructorParameters<typeof ElevenLabsSpeechProvider>[0] = {
