@@ -326,13 +326,16 @@ function StudioJobsRail({
     const optNum = (v: unknown): number | undefined => (typeof v === "number" ? v : undefined);
     const parentId = optStr(parsed.parentId);
     const references = Array.isArray(parsed.references)
-      ? (parsed.references as Array<Record<string, unknown>>)
-          .filter((ref) => typeof ref.path === "string")
+      ? parsed.references
+          .filter(
+            (ref): ref is { path: string; role?: unknown } =>
+              !!ref &&
+              typeof ref === "object" &&
+              typeof (ref as { path?: unknown }).path === "string",
+          )
           .map((ref) => ({
-            path: ref.path as string,
-            ...(typeof ref.role === "string"
-              ? { role: ref.role as StudioReferenceRole }
-              : {}),
+            path: ref.path,
+            ...(typeof ref.role === "string" ? { role: ref.role as StudioReferenceRole } : {}),
           }))
       : [];
     const base = {
