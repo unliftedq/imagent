@@ -391,7 +391,7 @@ export interface RemixPayloadImage {
     aspectRatio?: string;
     references: { path: string; role?: StudioReferenceRole }[];
   };
-  parentId: string;
+  parentId?: string;
 }
 
 export interface RemixPayloadVideo {
@@ -408,7 +408,7 @@ export interface RemixPayloadVideo {
     lastFrame?: string;
     references: { path: string; role?: StudioReferenceRole }[];
   };
-  parentId: string;
+  parentId?: string;
 }
 
 export interface RemixPayloadSpeech {
@@ -423,7 +423,7 @@ export interface RemixPayloadSpeech {
     formatQuality?: string;
     raw?: Record<string, unknown>;
   };
-  parentId: string;
+  parentId?: string;
 }
 
 export type RemixPayload = RemixPayloadImage | RemixPayloadVideo | RemixPayloadSpeech;
@@ -583,10 +583,9 @@ export const useUIStore = create<UIState>((set, get) => ({
       persistRoute("studio");
     } else if (payload.kind === "speech") {
       const r = payload.request;
+      const legacyFormat = (r as { outputFormat?: unknown }).outputFormat;
       const legacy =
-        typeof (r as { outputFormat?: unknown }).outputFormat === "string"
-          ? splitSpeechFormat((r as { outputFormat: string }).outputFormat)
-          : null;
+        typeof legacyFormat === "string" ? splitSpeechFormat(legacyFormat) : null;
       const next: SpeechDraft = {
         ...get().studioDraft.speech,
         text: r.prompt,

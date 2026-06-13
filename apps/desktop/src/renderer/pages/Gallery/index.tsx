@@ -174,8 +174,9 @@ export function GalleryPage() {
             model: result.request.model,
             ...(typeof result.request.voice === "string" ? { voice: result.request.voice } : {}),
             ...(typeof result.request.speed === "number" ? { speed: result.request.speed } : {}),
-            ...(typeof result.request.outputFormat === "string"
-              ? { outputFormat: result.request.outputFormat }
+            ...(typeof result.request.codec === "string" ? { codec: result.request.codec } : {}),
+            ...(typeof result.request.formatQuality === "string"
+              ? { formatQuality: result.request.formatQuality }
               : {}),
             ...(result.request.raw ? { raw: result.request.raw } : {}),
           },

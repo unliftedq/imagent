@@ -93,6 +93,11 @@ export const systemContract = {
   // System (shell + dialogs)
   "system.openExternal": { input: z.object({ url: z.string() }), output: z.void() },
   "system.openPath": { input: z.object({ path: z.string() }), output: z.void() },
+  /**
+   * Copy an image file (dataDir-relative or absolute, but always resolved
+   * and gated inside dataDir) into the system clipboard as a native image.
+   */
+  "system.copyImage": { input: z.object({ path: z.string() }), output: z.void() },
   "system.chooseDirectory": {
     input: z.object({ defaultPath: z.string().optional() }).optional(),
     output: z.object({ path: z.string().nullable() }),
