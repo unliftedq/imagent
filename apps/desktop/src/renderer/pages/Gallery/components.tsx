@@ -6,6 +6,7 @@ import { type CSSProperties, useEffect, useState } from "react";
 import { useT } from "../../i18n/index.js";
 import { api } from "../../lib/api.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
+import { useUIStore } from "../../state/useUIStore.js";
 import { resolveGalleryUrl } from "../Studio";
 import { ZoomableImage } from "../../components/ZoomableImage.js";
 
@@ -172,6 +173,7 @@ export function LightboxPreview({
   const removeItem = useGalleryStore((s) => s.remove);
   const toggleFav = useGalleryStore((s) => s.toggleFavorite);
   const items = useGalleryStore((s) => s.items);
+  const pushToast = useUIStore((s) => s.pushToast);
   const cachedItem = useGalleryStore((s) => s.items.find((it) => it.id === itemId) ?? null);
   const mediaPreviewStyle = data ? getMediaPreviewStyle(data.item) : undefined;
   const t = useT();
@@ -253,6 +255,19 @@ export function LightboxPreview({
       setTimeout(() => setCopied(false), 1400);
     } catch {
       /* ignore */
+    }
+  };
+
+  const copyImage = async (relPath: string): Promise<void> => {
+    try {
+      await api["system.copyImage"]({ path: relPath });
+      pushToast({ title: t("common.imageCopied"), variant: "success" });
+    } catch (err) {
+      pushToast({
+        title: t("common.copyImageFailed"),
+        description: (err as Error)?.message ?? String(err),
+        variant: "error",
+      });
     }
   };
 
@@ -457,6 +472,13 @@ export function LightboxPreview({
                     label={copied ? t("common.copied") : t("gallery.preview.copyPrompt")}
                     onClick={() => void copyPrompt(data.item.prompt)}
                   />
+                  {data.item.kind === "image" ? (
+                    <LightboxAction
+                      icon={<Icons.Copy weight="bold" className="size-4" />}
+                      label={t("common.copyImage")}
+                      onClick={() => void copyImage(data.item.relPath)}
+                    />
+                  ) : null}
                   <LightboxAction
                     icon={<Icons.Folder weight="bold" className="size-4" />}
                     label={t("gallery.preview.reveal")}

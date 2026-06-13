@@ -1,12 +1,16 @@
-import type { GalleryItem, Job } from "@imagent/core";
-import { Button, Dialog, Icons } from "@imagent/ui";
+import type { AssetKind, GalleryItem, Job } from "@imagent/core";
+import { Button, Dialog, Icons, Tooltip } from "@imagent/ui";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { useT } from "../../i18n/index.js";
 import { ZoomableImage } from "../../components/ZoomableImage.js";
+import { api } from "../../lib/api.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
 import { useJobsStore } from "../../state/useJobsStore.js";
-import type { StudioMode } from "../../state/useUIStore.js";
+import type { StudioTrackedJob } from "../../state/useJobsStore.js";
+import type { StudioMode, StudioReferenceRole } from "../../state/useUIStore.js";
 import { useUIStore } from "../../state/useUIStore.js";
+import { CreateAssetDialog } from "../Assets/CreateAssetDialog.js";
 import { resolveGalleryUrl } from "./utils.js";
 
 const MAX_GENERATING_LABEL_PROMPT_LENGTH = 80;
@@ -52,6 +56,10 @@ export function CanvasArea({ mode }: { mode: StudioMode }) {
 
   const [pinnedId, setPinnedId] = useState<string | null>(null);
   const [pinnedFallback, setPinnedFallback] = useState<GalleryItem | null>(null);
+  const [assetDialogItem, setAssetDialogItem] = useState<GalleryItem | null>(null);
+  const [assetDialogKind, setAssetDialogKind] = useState<AssetKind>("character");
+  const pushToast = useUIStore((state) => state.pushToast);
+  const t = useT();
   const pinItem = useCallback((id: string): void => {
     setPinnedId(id);
     setPinnedFallback(null);
@@ -101,6 +109,36 @@ export function CanvasArea({ mode }: { mode: StudioMode }) {
       .sort((a, b) => a.createdAt - b.createdAt);
   }, [items, display, mode]);
 
+  const openSaveAsAssetDialog = useCallback(
+    (item: GalleryItem): void => {
+      if (item.kind === "video" && !item.thumbPath) {
+        pushToast({
+          title: t("gallery.toast.thumbnailUnavailable"),
+          description: t("gallery.toast.thumbnailUnavailableDesc"),
+          variant: "warning",
+        });
+        return;
+      }
+      setAssetDialogItem(item);
+    },
+    [pushToast, t],
+  );
+
+  const assetDialogSource = useMemo(() => {
+    if (!assetDialogItem) return null;
+    const relPath =
+      assetDialogItem.kind === "video"
+        ? (assetDialogItem.thumbPath ?? assetDialogItem.relPath)
+        : assetDialogItem.relPath;
+    return {
+      itemId: assetDialogItem.id,
+      itemKind: assetDialogItem.kind,
+      prompt: assetDialogItem.prompt,
+      previewUrl: resolveGalleryUrl(relPath),
+      relPath,
+    };
+  }, [assetDialogItem]);
+
   return (
     <section className="flex h-full min-h-0 flex-col overflow-hidden bg-(--bg)">
       <div className="flex min-h-0 flex-1 flex-col items-stretch gap-3 overflow-hidden p-6">
@@ -115,8 +153,9 @@ export function CanvasArea({ mode }: { mode: StudioMode }) {
           </div>
         ) : display ? (
           <>
-            <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden">
+            <div className="group/canvas relative flex min-h-0 flex-1 items-center justify-center overflow-hidden">
               <CanvasMedia item={display} />
+              <CanvasActionBar item={display} onSaveAsAsset={openSaveAsAssetDialog} />
             </div>
             {siblings.length > 1 ? (
               <div className="flex shrink-0 items-center justify-center">
@@ -131,6 +170,21 @@ export function CanvasArea({ mode }: { mode: StudioMode }) {
         )}
       </div>
       <StudioJobsRail mode={mode} pinnedItemId={display?.id ?? null} onPinItem={pinItem} />
+      <CreateAssetDialog
+        open={assetDialogItem !== null}
+        kind={assetDialogKind}
+        onKindChange={setAssetDialogKind}
+        onClose={() => setAssetDialogItem(null)}
+        onCreated={(asset) => {
+          setAssetDialogItem(null);
+          pushToast({
+            title: t("gallery.toast.assetSaved"),
+            description: t("gallery.toast.assetSavedDesc", { name: asset.name }),
+            variant: "success",
+          });
+        }}
+        gallerySource={assetDialogSource}
+      />
     </section>
   );
 }
@@ -202,6 +256,7 @@ function StudioJobsRail({
   const retryJob = useJobsStore((state) => state.retry);
   const galleryItems = useGalleryStore((state) => state.items);
   const pushToast = useUIStore((state) => state.pushToast);
+  const applyRemix = useUIStore((state) => state.applyRemix);
 
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
@@ -251,6 +306,103 @@ function StudioJobsRail({
     } finally {
       setRetryingId(null);
     }
+  };
+
+  // "Edit" — instead of resubmitting blindly (retry), refill the composer
+  // with the failed job's original request so the user can tweak anything
+  // before generating again. Re-uses the persisted, fully-resolved request.
+  const edit = (trackedJob: StudioTrackedJob): void => {
+    const job = jobs[trackedJob.id];
+    if (!job) return;
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(job.requestJson) as Record<string, unknown>;
+    } catch {
+      pushToast({ title: t("studio.retryFailed"), variant: "error" });
+      return;
+    }
+    const str = (v: unknown): string => (typeof v === "string" ? v : "");
+    const optStr = (v: unknown): string | undefined => (typeof v === "string" ? v : undefined);
+    const optNum = (v: unknown): number | undefined => (typeof v === "number" ? v : undefined);
+    const parentId = optStr(parsed.parentId);
+    const references = Array.isArray(parsed.references)
+      ? parsed.references
+          .filter(
+            (ref): ref is { path: string; role?: unknown } =>
+              !!ref &&
+              typeof ref === "object" &&
+              typeof (ref as { path?: unknown }).path === "string",
+          )
+          .map((ref) => ({
+            path: ref.path,
+            ...(typeof ref.role === "string" ? { role: ref.role as StudioReferenceRole } : {}),
+          }))
+      : [];
+    const base = {
+      prompt: str(parsed.prompt),
+      providerId: str(parsed.providerId),
+      model: str(parsed.model),
+    };
+
+    if (job.kind === "video") {
+      applyRemix({
+        kind: "video",
+        parentId,
+        request: {
+          ...base,
+          ...(optNum(parsed.durationSec) !== undefined
+            ? { durationSec: optNum(parsed.durationSec) }
+            : {}),
+          ...(optNum(parsed.fps) !== undefined ? { fps: optNum(parsed.fps) } : {}),
+          ...(optStr(parsed.resolution) !== undefined
+            ? { resolution: optStr(parsed.resolution) }
+            : {}),
+          ...(optStr(parsed.aspectRatio) !== undefined
+            ? { aspectRatio: optStr(parsed.aspectRatio) }
+            : {}),
+          ...(optStr(parsed.firstFrame) !== undefined
+            ? { firstFrame: optStr(parsed.firstFrame) }
+            : {}),
+          ...(optStr(parsed.lastFrame) !== undefined
+            ? { lastFrame: optStr(parsed.lastFrame) }
+            : {}),
+          references,
+        },
+      });
+      return;
+    }
+    if (job.kind === "speech") {
+      applyRemix({
+        kind: "speech",
+        parentId,
+        request: {
+          ...base,
+          ...(optStr(parsed.voice) !== undefined ? { voice: optStr(parsed.voice) } : {}),
+          ...(optNum(parsed.speed) !== undefined ? { speed: optNum(parsed.speed) } : {}),
+          ...(optStr(parsed.codec) !== undefined ? { codec: optStr(parsed.codec) } : {}),
+          ...(optStr(parsed.formatQuality) !== undefined
+            ? { formatQuality: optStr(parsed.formatQuality) }
+            : {}),
+          ...(parsed.raw && typeof parsed.raw === "object"
+            ? { raw: parsed.raw as Record<string, unknown> }
+            : {}),
+        },
+      });
+      return;
+    }
+    applyRemix({
+      kind: "image",
+      parentId,
+      request: {
+        ...base,
+        count: optNum(parsed.count) ?? 1,
+        ...(optStr(parsed.size) !== undefined ? { size: optStr(parsed.size) } : {}),
+        ...(optStr(parsed.aspectRatio) !== undefined
+          ? { aspectRatio: optStr(parsed.aspectRatio) }
+          : {}),
+        references,
+      },
+    });
   };
 
   const copyError = async (message: string): Promise<void> => {
@@ -420,6 +572,21 @@ function StudioJobsRail({
                       </button>
                     ) : (
                       <>
+                        {isFailed || isCancelled ? (
+                          <button
+                            type="button"
+                            onClick={() => edit(trackedJob)}
+                            aria-label={t("studio.editJobAria", { prompt: trackedJob.prompt })}
+                            className={
+                              "inline-flex h-7 items-center gap-1 rounded-(--radius-pill) px-2.5 " +
+                              "text-[11px] font-medium text-(--accent) " +
+                              "hover:bg-(--accent)/10 disabled:opacity-60"
+                            }
+                          >
+                            <Icons.Pencil weight="bold" className="size-3" aria-hidden="true" />
+                            {t("common.edit")}
+                          </button>
+                        ) : null}
                         {isFailed || isCancelled ? (
                           <button
                             type="button"
@@ -899,6 +1066,239 @@ function CanvasMedia({ item, className = "" }: { item: GalleryItem; className?: 
         className
       }
     />
+  );
+}
+
+/**
+ * Floating action toolbar over the focused canvas media — mirrors the
+ * Gallery lightbox affordances (remix, favorite, save as asset, copy
+ * prompt, copy image, reveal, delete) so Studio and Library stay in sync.
+ * Revealed on hover / focus to keep the canvas uncluttered.
+ */
+function CanvasActionBar({
+  item,
+  onSaveAsAsset,
+}: {
+  item: GalleryItem;
+  onSaveAsAsset: (item: GalleryItem) => void;
+}) {
+  const t = useT();
+  const toggleFav = useGalleryStore((state) => state.toggleFavorite);
+  const removeItem = useGalleryStore((state) => state.remove);
+  const applyRemix = useUIStore((state) => state.applyRemix);
+  const pushToast = useUIStore((state) => state.pushToast);
+  const [copied, setCopied] = useState(false);
+
+  const copyPrompt = async (): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(item.prompt);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1400);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const copyImage = async (): Promise<void> => {
+    try {
+      await api["system.copyImage"]({ path: item.relPath });
+      pushToast({ title: t("common.imageCopied"), variant: "success" });
+    } catch (err) {
+      pushToast({
+        title: t("common.copyImageFailed"),
+        description: (err as Error)?.message ?? String(err),
+        variant: "error",
+      });
+    }
+  };
+
+  const remix = async (): Promise<void> => {
+    try {
+      const result = await api["gallery.remix"]({ itemId: item.id });
+      if (result.kind === "video") {
+        applyRemix({
+          kind: "video",
+          parentId: item.id,
+          request: {
+            prompt: result.request.prompt,
+            providerId: result.request.providerId,
+            model: result.request.model,
+            ...(typeof result.request.durationSec === "number"
+              ? { durationSec: result.request.durationSec }
+              : {}),
+            ...(typeof result.request.fps === "number" ? { fps: result.request.fps } : {}),
+            ...(typeof result.request.resolution === "string"
+              ? { resolution: result.request.resolution }
+              : {}),
+            ...(typeof result.request.aspectRatio === "string"
+              ? { aspectRatio: result.request.aspectRatio }
+              : {}),
+            references: result.request.references.map((r) => ({ path: r.path })),
+          },
+        });
+        return;
+      }
+      if (result.kind === "speech") {
+        applyRemix({
+          kind: "speech",
+          parentId: item.id,
+          request: {
+            prompt: result.request.prompt,
+            providerId: result.request.providerId,
+            model: result.request.model,
+            ...(typeof result.request.voice === "string" ? { voice: result.request.voice } : {}),
+            ...(typeof result.request.speed === "number" ? { speed: result.request.speed } : {}),
+            ...(typeof result.request.codec === "string" ? { codec: result.request.codec } : {}),
+            ...(typeof result.request.formatQuality === "string"
+              ? { formatQuality: result.request.formatQuality }
+              : {}),
+            ...(result.request.raw ? { raw: result.request.raw } : {}),
+          },
+        });
+        return;
+      }
+      applyRemix({
+        kind: "image",
+        parentId: item.id,
+        request: {
+          prompt: result.request.prompt,
+          providerId: result.request.providerId,
+          model: result.request.model,
+          count: result.request.count,
+          ...(result.request.size !== undefined ? { size: result.request.size } : {}),
+          ...(result.request.aspectRatio !== undefined
+            ? { aspectRatio: result.request.aspectRatio }
+            : {}),
+          references: result.request.references.map((r) => ({ path: r.path })),
+        },
+      });
+    } catch (err) {
+      pushToast({
+        title: t("gallery.toast.remixFailed"),
+        description: (err as Error)?.message ?? String(err),
+        variant: "error",
+      });
+    }
+  };
+
+  return (
+    <div
+      className={
+        "pointer-events-none absolute right-3 top-1/2 z-10 -translate-y-1/2 " +
+        "opacity-0 transition-opacity duration-(--motion-fast) " +
+        "group-hover/canvas:opacity-100 focus-within:opacity-100"
+      }
+    >
+      <div
+        className={
+          "pointer-events-auto flex flex-col items-center gap-0.5 rounded-(--radius-lg) " +
+          "border border-(--border-faint) bg-(--surface-raised)/90 p-1 " +
+          "shadow-[0_8px_32px_-12px_rgba(0,0,0,0.35)] backdrop-blur"
+        }
+      >
+        <CanvasAction
+          icon={<Icons.MagicWand weight="bold" className="size-4" />}
+          label={t("gallery.preview.remix")}
+          accent
+          onClick={() => void remix()}
+        />
+        <span className="my-0.5 h-px w-5 bg-(--border-faint)" aria-hidden="true" />
+        <CanvasAction
+          icon={
+            <Icons.Heart
+              weight={item.favorited ? "fill" : "regular"}
+              className={item.favorited ? "size-4 text-(--danger)" : "size-4"}
+            />
+          }
+          label={item.favorited ? t("gallery.preview.unfavorite") : t("gallery.preview.favorite")}
+          active={item.favorited}
+          onClick={() => void toggleFav(item.id)}
+        />
+        {item.kind === "speech" ? null : (
+          <CanvasAction
+            icon={<Icons.StackPlus weight="bold" className="size-4" />}
+            label={t("gallery.preview.saveAsAsset")}
+            onClick={() => onSaveAsAsset(item)}
+          />
+        )}
+        <CanvasAction
+          icon={
+            copied ? (
+              <Icons.Check weight="bold" className="size-4 text-(--success)" />
+            ) : (
+              <Icons.Paperclip weight="bold" className="size-4" />
+            )
+          }
+          label={copied ? t("common.copied") : t("gallery.preview.copyPrompt")}
+          onClick={() => void copyPrompt()}
+        />
+        {item.kind === "image" ? (
+          <CanvasAction
+            icon={<Icons.Copy weight="bold" className="size-4" />}
+            label={t("common.copyImage")}
+            onClick={() => void copyImage()}
+          />
+        ) : null}
+        <CanvasAction
+          icon={<Icons.Folder weight="bold" className="size-4" />}
+          label={t("gallery.preview.reveal")}
+          onClick={() => {
+            void api["system.openPath"]({ path: item.relPath });
+          }}
+        />
+        <span className="my-0.5 h-px w-5 bg-(--border-faint)" aria-hidden="true" />
+        <CanvasAction
+          icon={<Icons.Trash weight="bold" className="size-4" />}
+          label={t("common.delete")}
+          danger
+          onClick={() => {
+            if (window.confirm(t("gallery.preview.deleteConfirm"))) {
+              void removeItem(item.id);
+            }
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function CanvasAction({
+  icon,
+  label,
+  onClick,
+  active,
+  accent,
+  danger,
+}: {
+  icon: ReactNode;
+  label: string;
+  onClick: () => void;
+  active?: boolean;
+  accent?: boolean;
+  danger?: boolean;
+}) {
+  return (
+    <Tooltip content={label} side="left">
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={label}
+        className={
+          "inline-flex size-9 items-center justify-center rounded-(--radius-md) " +
+          "transition-colors duration-(--motion-fast) " +
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring) " +
+          (danger
+            ? "text-(--text-muted) hover:bg-(--danger) hover:text-white "
+            : accent
+              ? "text-(--accent) hover:bg-(--accent) hover:text-(--accent-fg) "
+              : active
+                ? "bg-(--surface) text-(--text) hover:bg-(--surface) "
+                : "text-(--text-muted) hover:bg-(--surface) hover:text-(--text) ")
+        }
+      >
+        {icon}
+      </button>
+    </Tooltip>
   );
 }
 

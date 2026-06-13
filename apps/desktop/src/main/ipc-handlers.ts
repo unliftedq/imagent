@@ -59,7 +59,15 @@ import {
   saveCatalog,
   type VideoRegistry,
 } from "@imagent/providers";
-import { app, type BrowserWindow, dialog, type IpcMain, shell } from "electron";
+import {
+  app,
+  type BrowserWindow,
+  clipboard,
+  dialog,
+  type IpcMain,
+  nativeImage,
+  shell,
+} from "electron";
 import sharp from "sharp";
 import type { RuntimeServices } from "./job-runner-bootstrap.js";
 import type { Updater } from "./updater.js";
@@ -602,6 +610,31 @@ export function setupIpc(deps: IpcDeps): IpcServer {
       }
       const reason = await shell.openPath(abs);
       if (reason) throw new IpcHandlerError("internal", `openPath failed: ${reason}`);
+    },
+
+    "system.copyImage": async ({ path: target }) => {
+      // Mirror `system.openPath`'s resolution + dataDir gate so the renderer
+      // can only ask us to copy files we manage.
+      const dataDir = path.resolve(paths.dataDir);
+      const abs = path.isAbsolute(target) ? path.resolve(target) : path.resolve(dataDir, target);
+      const rel = path.relative(dataDir, abs);
+      if (rel.startsWith("..") || path.isAbsolute(rel)) {
+        throw new IpcHandlerError("validation_failed", `Refusing to copy path outside dataDir`);
+      }
+      let buffer: Buffer;
+      try {
+        buffer = await fs.readFile(abs);
+      } catch (err) {
+        throw new IpcHandlerError(
+          "internal",
+          `copyImage failed to read file: ${(err as Error)?.message ?? String(err)}`,
+        );
+      }
+      const image = nativeImage.createFromBuffer(buffer);
+      if (image.isEmpty()) {
+        throw new IpcHandlerError("validation_failed", `Not a copyable image: ${target}`);
+      }
+      clipboard.writeImage(image);
     },
 
     "system.chooseDirectory": async (input) => {
