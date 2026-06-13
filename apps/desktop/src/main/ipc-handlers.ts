@@ -615,10 +615,10 @@ export function setupIpc(deps: IpcDeps): IpcServer {
     "system.copyImage": async ({ path: target }) => {
       // Mirror `system.openPath`'s resolution + dataDir gate so the renderer
       // can only ask us to copy files we manage.
-      const abs = path.isAbsolute(target)
-        ? path.resolve(target)
-        : path.resolve(paths.dataDir, target);
-      if (!abs.startsWith(path.resolve(paths.dataDir))) {
+      const dataDir = path.resolve(paths.dataDir);
+      const abs = path.isAbsolute(target) ? path.resolve(target) : path.resolve(dataDir, target);
+      const rel = path.relative(dataDir, abs);
+      if (rel.startsWith("..") || path.isAbsolute(rel)) {
         throw new IpcHandlerError("validation_failed", `Refusing to copy path outside dataDir`);
       }
       let buffer: Buffer;
