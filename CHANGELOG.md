@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.1 - 2026-06-13
+
+### Desktop app
+
+- Added image copy actions in Studio and Gallery so generated assets can be copied directly to the clipboard without leaving the app.
+- Expanded the Studio canvas action set and related UI state handling to make common image actions easier to access during editing and review.
+- Updated Gallery action surfaces, IPC wiring, and localized copy strings to support the new image-copy workflow end to end.
+
 ## 0.3.0 - 2026-06-08
 
 This release brings **text-to-speech (TTS)** to both the **desktop app** and the **CLI**, so you can generate speech alongside images and videos from either surface.
