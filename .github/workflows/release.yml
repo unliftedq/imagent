@@ -71,7 +71,7 @@ jobs:
           test "$(find desktop-release-assets -type f | wc -l)" -gt 0
 
       - name: Upload desktop artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: desktop-${{ matrix.name }}
           path: desktop-release-assets/*
@@ -83,14 +83,14 @@ jobs:
     needs: desktop
     steps:
       - name: Download desktop artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: desktop-*
           path: release-assets
           merge-multiple: true
 
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: release-assets/*
           fail_on_unmatched_files: true
