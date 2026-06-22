@@ -4,6 +4,7 @@ import {
   BracketsCurly,
   Command,
   Database,
+  GithubLogo,
   SquaresFour,
   Terminal,
 } from "@phosphor-icons/react";
@@ -17,22 +18,22 @@ gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 const workflowItems = [
   {
-    icon: Database,
-    title: "One local workspace",
-    copy: "State, configuration, assets, thumbnails, and generated outputs live under the shared IMAGENT workspace.",
-  },
-  {
-    icon: SquaresFour,
-    title: "Reusable creative assets",
-    copy: "Characters, objects, backgrounds, styles, and references can be named once and reused in later jobs.",
+    icon: Command,
+    title: "Generation as an agent capability",
+    copy: "The bundled skill lets any compatible agent call the IMAGENT CLI to generate images, video, and speech as a native workflow step — no per-tool integration, no one-off glue code.",
   },
   {
     icon: BracketsCurly,
-    title: "Provider choice stays explicit",
-    copy: "OpenAI, Azure, Google, Flux/BFL, BytePlus, 火山引擎, and xAI provider IDs can be configured side by side.",
+    title: "One interface, every provider and model",
+    copy: "OpenAI, Azure, Google, Flux/BFL, BytePlus, 火山引擎, xAI, MiniMax, and ElevenLabs sit behind a single interface. Swap providers or models without rewriting prompts, parameters, or calls.",
   },
   {
-    icon: Command,
+    icon: Database,
+    title: "Assets that outlive the prompt",
+    copy: "Every image, video, and clip — plus reusable characters, styles, and references — is captured in a managed local library to curate, search, and reuse instead of regenerate.",
+  },
+  {
+    icon: SquaresFour,
     title: "Desktop and terminal together",
     copy: "Run repeatable CLI jobs, review them in the desktop gallery, and keep the same history available to both.",
   },
@@ -40,16 +41,16 @@ const workflowItems = [
 
 const workflowPreviewItems = [
   {
-    label: "Collect context",
-    detail: "Name characters, objects, backgrounds, styles, and references once so later generations can reuse them.",
+    label: "Hand generation to the agent",
+    detail: "Let any compatible agent call the IMAGENT CLI to produce images, video, and speech as a native step in its workflow.",
   },
   {
-    label: "Generate anywhere",
-    detail: "Use the desktop studio for visual work or the CLI when an agent, script, or repeatable job needs control.",
+    label: "Unify every provider",
+    detail: "Reach OpenAI, Azure, Google, Flux/BFL, BytePlus, 火山引擎, xAI, MiniMax, and ElevenLabs through one consistent interface.",
   },
   {
-    label: "Keep the lineage",
-    detail: "Generated outputs, favorites, boards, config, and provider routing stay available in the same local workspace.",
+    label: "Keep every asset",
+    detail: "Generated outputs, favorites, boards, and reusable assets stay in the same local library, ready to reuse across projects.",
   },
 ];
 
@@ -133,18 +134,19 @@ export function HomePage() {
     <div ref={root}>
       <section className="hero section-gap" data-reveal>
         <div className="hero-copyblock">
-          <p className="eyebrow">Imagine agent, kept local</p>
-          <h1>The local agent that turns imagination into work.</h1>
+          <p className="eyebrow">Imagine agent</p>
+          <h1>Give your agents the power to create.</h1>
           <p className="hero-copy">
-            IMAGENT gives image, video, and speech creation a local operating layer: a visual studio
-            for human taste, a CLI for agentic work, and one shared memory for every result.
+            IMAGENT lets AI agents generate images, video, and speech as a native step in their
+            workflow — behind one interface that hides every provider and model difference, with
+            every result kept in a local library for reuse instead of thrown away.
           </p>
           <div className="hero-actions">
             <SiteLink className="btn btn-solid" to="/docs/quick-start">
               Quick Start
             </SiteLink>
-            <a className="text-link" href={githubUrl} target="_blank" rel="noreferrer">
-              View repository <ArrowRight size={17} />
+            <a className="btn btn-ghost" href={githubUrl} target="_blank" rel="noreferrer">
+              <GithubLogo size={17} weight="bold" /> View on GitHub
             </a>
           </div>
         </div>
@@ -153,7 +155,7 @@ export function HomePage() {
 
       <section className="setup-strip section-gap" data-reveal>
         <div className="section-head">
-          <h2>From idea to reusable context.</h2>
+          <h2>From prompt to reusable asset.</h2>
         </div>
         <div className="setup-steps">
           {workflowPreviewItems.map((step, index) => (

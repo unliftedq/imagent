@@ -4,9 +4,9 @@
 
 <p align="center"><a href="./README.md">English</a> · 简体中文</p>
 
-**Imagent** 取自 **Imagine agent**：它是一个本地优先的图像、视频与语音生成工作台，面向独立创作者、高度自动化的创作流程，以及需要稳定调用生成能力的 AI Agent。
+**Imagent** 取自 **Imagine agent**：它让 AI Agent 在工作流中具备生成图像、视频与语音的能力，并用一套统一的接口抹平不同 Provider 和模型之间的差异——同时把每一份生成的资产有序地管理起来供后续复用，而不是用完即丢。
 
-它同时提供桌面应用、命令行工具和可安装的 Agent Skill。不同入口共享同一个本地工作区：Provider 配置、素材库、生成结果、项目资产与历史记录都保存在一起，方便在桌面整理、在终端自动化，或交给 Agent 调用。
+它同时提供命令行工具和桌面应用。不同入口共享同一个本地工作区：统一的 Provider 接口、素材库、生成结果、项目资产与历史记录都保存在一起，方便在桌面整理、在终端自动化，或交给 Agent 调用。
 
 [文档](https://unliftedq.github.io/imagent/docs) · [桌面应用](./apps/desktop/README.md) · [CLI](./apps/cli/README.md) · [架构](./architecture.md)
 
@@ -18,13 +18,13 @@
 
 ## 为什么选择 imagent？
 
-| 能力 | 价值 |
+大多数 Agent 能推理、能写代码，却无法真正“创作”图像、视频或音频；而为此临时拼接的脚本往往用完即丢、绑定单一 Provider，且运行结束后就遗忘了所有产出。imagent 一次解决三个问题：
+
+| | 价值 |
 | --- | --- |
-| **本地优先的工作区** | SQLite 状态、配置、素材和生成结果默认保存在 `~/.imagent/`，不依赖远程账号或后端服务。 |
-| **多个入口，共用一个素材库** | 桌面应用、CLI 和 Agent 集成使用同一套图库、看板、收藏与可复用素材。 |
-| **多 Provider 生成** | 可同时配置 OpenAI、Azure OpenAI、Google Imagen/Gemini、Flux/BFL、BytePlus / 火山引擎 Seedream/Seedance、xAI Grok、MiniMax TTS 和 ElevenLabs TTS。 |
-| **以素材驱动创作** | 角色、物体、背景、风格和参考图可以长期复用，帮助系列项目保持视觉一致性。 |
-| **为 Agent 自动化准备** | 内置 Skill 让兼容的 Agent 直接调用 `imagent` CLI，而不是临时接入零散的图像、视频或语音工具。 |
+| **多媒体生成作为 Agent 的原生能力** | 内置 Skill 让任何兼容的 Agent 直接调用 `imagent` CLI，把生成图像、视频和语音作为工作流中的原生一步——无需为每个工具单独接入，也无需一次性的胶水代码。 |
+| **一套接口，贯通所有 Provider 与模型** | OpenAI、Azure OpenAI、Google Imagen/Gemini、Flux/BFL、BytePlus / 火山引擎 Seedream/Seedance、xAI Grok、MiniMax TTS 和 ElevenLabs TTS 都隐藏在同一套一致的接口之后。用户和 Agent 切换 Provider 或模型时，无需重写提示词、参数或调用方式。 |
+| **资产不随提示词消失** | 每一张生成的图像、视频和片段——以及可复用的角色、物体、背景、风格和参考图——都被纳入受管理的本地素材库。可以跨项目整理、检索和复用产出，而不是从头重新生成。 |
 
 ## 快速开始
 
@@ -70,11 +70,11 @@ Claude Code、Codex、OpenClaw、Hermes 或其他兼容 Agent 都可以使用同
 
 ## 典型工作流
 
-- 为个人创作搭建本地 AI 视觉生成流程。
-- 对比不同图像、视频与语音生成 Provider 的输出效果。
-- 长期维护可复用的角色、风格和参考图素材。
-- 用终端自动化批量生成，再通过桌面应用审阅、整理和收藏结果。
-- 让编程 Agent 通过同一套可审计的 CLI 流程生成创意资产。
+- 让编程或自动化 Agent 在任务过程中通过同一套可审计的 CLI 产出视觉与音频资产。
+- 对同一个提示词在不同 Provider 和模型间切换，而无需改变调用方式。
+- 逐步沉淀出可复用的角色、风格和参考素材库，在多个项目间持续复利。
+- 随时整理和回顾 Agent 生成的一切，而不是在脚本退出后就丢失。
+- 在共享的本地工作区上，把终端自动化与桌面端的审阅、整理结合起来。
 
 ## 项目结构
 

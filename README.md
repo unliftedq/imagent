@@ -4,9 +4,9 @@
 
 <p align="center">English · <a href="./README.zh-CN.md">简体中文</a></p>
 
-**Imagent** means **Imagine agent**: a local-first image, video, and speech generation workspace for individual creators, automation-heavy workflows, and AI agents.
+**Imagent** means **Imagine agent**: it gives AI agents the ability to generate images, video, and speech as a first-class step in their workflows, behind a single interface that hides the differences between providers and models — and it keeps every generated asset organized for reuse instead of throwing it away.
 
-It ships as a desktop application, a command-line tool, and an installable agent skill. All surfaces share the same local workspace, provider configuration, asset library, generated outputs, and result history.
+It ships as a command-line tool and a desktop application. All surfaces share the same local workspace, unified provider interface, asset library, generated outputs, and result history.
 
 [Documentation](https://unliftedq.github.io/imagent/docs) · [Desktop app](./apps/desktop/README.md) · [CLI](./apps/cli/README.md) · [Architecture](./architecture.md)
 
@@ -18,13 +18,13 @@ It ships as a desktop application, a command-line tool, and an installable agent
 
 ## Why imagent?
 
-| Capability | What it gives you |
+Most agents can reason and write code, but they can't *create* images, video, or audio — and the ad-hoc scripts people wire up for it are throwaway, provider-locked, and forget every asset the moment they finish. Imagent solves three problems at once:
+
+| | What it gives you |
 | --- | --- |
-| **Local-first workspace** | Data lives under `~/.imagent/`, including SQLite state, configuration, assets, and generated outputs. No remote account or backend is required. |
-| **One library across interfaces** | The desktop app, CLI, and agent integrations work against the same gallery, boards, favorites, and reusable assets. |
-| **Multi-provider generation** | OpenAI, Azure OpenAI, Google Imagen/Gemini, Flux/BFL, BytePlus / 火山引擎 Seedream/Seedance, xAI Grok, MiniMax TTS, and ElevenLabs TTS can be configured side by side. |
-| **Asset-driven creation** | Reusable characters, objects, backgrounds, styles, and references help keep ongoing projects visually consistent. |
-| **Agent-ready automation** | The bundled skill lets compatible agents call the `imagent` CLI instead of using a one-off image, video, or speech tool. |
+| **Generation as an agent capability** | The bundled skill lets any compatible agent call the `imagent` CLI to generate images, video, and speech as a native step in its workflow — no bespoke per-tool integration, no one-off glue code. |
+| **One interface, every provider and model** | OpenAI, Azure OpenAI, Google Imagen/Gemini, Flux/BFL, BytePlus / 火山引擎 Seedream/Seedance, xAI Grok, MiniMax TTS, and ElevenLabs TTS sit behind a single, consistent interface. Users and agents swap providers or models without rewriting prompts, parameters, or calling conventions. |
+| **Assets that outlive the prompt** | Every generated image, video, and clip — plus reusable characters, objects, backgrounds, styles, and references — is captured in a managed local library. Curate, search, and reuse outputs across projects instead of regenerating them from scratch. |
 
 ## Quick start
 
@@ -70,11 +70,11 @@ Use the same install flow for Claude Code, Codex, OpenClaw, Hermes, or other com
 
 ## Typical workflows
 
-- Build a local AI-assisted visual creation workflow for individual use.
-- Compare image, video, and speech outputs across multiple generation providers.
-- Maintain reusable characters, styles, and reference-image assets over time.
-- Combine terminal automation with desktop-based review and curation.
-- Let coding agents generate creative assets through the same audited CLI workflow.
+- Give a coding or automation agent the ability to produce visual and audio assets mid-task, through one audited CLI.
+- Switch between providers and models for the same prompt without changing how you call them.
+- Build up a reusable library of characters, styles, and reference assets that compounds across projects.
+- Curate and revisit everything an agent generated, instead of losing it once the script exits.
+- Combine terminal automation with desktop-based review and curation over a shared local workspace.
 
 ## Project structure
 

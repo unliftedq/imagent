@@ -1,4 +1,4 @@
-import { BookOpenText, GitBranch, GithubLogo, House } from "@phosphor-icons/react";
+import { GithubLogo } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { githubUrl } from "../lib/constants";
 import { SiteLink } from "../lib/site-link";
@@ -23,50 +23,40 @@ export function Shell({
       </a>
 
       <header className="nav-wrap">
-        <nav className="nav-shell" aria-label="Primary">
+        <div className="nav-bar">
           <SiteLink className="brand" to="/" aria-label="IMAGENT home">
             IMAGENT
           </SiteLink>
-          <div className="nav-links">
-            <SiteLink
-              aria-label="Home"
-              className={route.name === "home" ? "active" : undefined}
-              to="/"
-            >
-              <House size={16} weight="duotone" />
-              <span>Home</span>
-            </SiteLink>
-            <SiteLink
-              aria-label="Documentation"
-              className={route.name === "docs" || route.name === "doc" ? "active" : undefined}
-              to="/docs"
-            >
-              <BookOpenText size={16} weight="duotone" />
-              <span>Docs</span>
-            </SiteLink>
-            <SiteLink
-              aria-label="Changelogs"
-              className={route.name === "changelogs" ? "active" : undefined}
-              to="/changelogs"
-            >
-              <GitBranch size={16} weight="duotone" />
-              <span>Changelogs</span>
-            </SiteLink>
-          </div>
-          <div className="nav-actions">
-            <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+          <nav className="nav-right" aria-label="Primary">
+            <div className="nav-links">
+              <SiteLink className={route.name === "home" ? "active" : undefined} to="/">
+                Home
+              </SiteLink>
+              <SiteLink
+                className={route.name === "docs" || route.name === "doc" ? "active" : undefined}
+                to="/docs"
+              >
+                Docs
+              </SiteLink>
+              <SiteLink
+                className={route.name === "changelogs" ? "active" : undefined}
+                to="/changelogs"
+              >
+                Changelogs
+              </SiteLink>
+            </div>
             <a
               aria-label="Open IMAGENT on GitHub"
-              className="github-link"
+              className="icon-btn"
               href={githubUrl}
               target="_blank"
               rel="noreferrer"
             >
-              <GithubLogo size={18} weight="duotone" />
-              <span>GitHub</span>
+              <GithubLogo size={17} weight="bold" />
             </a>
-          </div>
-        </nav>
+            <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+          </nav>
+        </div>
       </header>
 
       <main className="site-main" id="content">
@@ -76,7 +66,7 @@ export function Shell({
       <footer className="footer">
         <div>
           <strong>IMAGENT</strong>
-          <p>Local image, video, and speech generation for human curation and agent automation.</p>
+          <p>Image, video, and speech generation for agents — one interface across every provider, with every asset kept for reuse.</p>
         </div>
         <nav aria-label="Footer">
           <SiteLink to="/">Home</SiteLink>

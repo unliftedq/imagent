@@ -6,13 +6,12 @@ export function ThemeToggle({ theme, onToggle }: { theme: Theme; onToggle: () =>
 
   return (
     <button
-      className="theme-toggle"
+      className="icon-btn"
       type="button"
       onClick={onToggle}
       aria-label={`Switch to ${nextTheme} theme`}
     >
-      {theme === "light" ? <Moon size={18} weight="duotone" /> : <Sun size={18} weight="duotone" />}
-      <span>{nextTheme === "dark" ? "Dark" : "Light"}</span>
+      {theme === "light" ? <Moon size={17} weight="bold" /> : <Sun size={17} weight="bold" />}
     </button>
   );
 }
