@@ -76,7 +76,7 @@ export function Shell({
       <footer className="footer">
         <div>
           <strong>IMAGENT</strong>
-          <p>Local image, video, and speech generation for human curation and agent automation.</p>
+          <p>Image, video, and speech generation for agents — one interface across every provider, with every asset kept for reuse.</p>
         </div>
         <nav aria-label="Footer">
           <SiteLink to="/">Home</SiteLink>
