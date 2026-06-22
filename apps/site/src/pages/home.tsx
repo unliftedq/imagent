@@ -4,6 +4,7 @@ import {
   BracketsCurly,
   Command,
   Database,
+  GithubLogo,
   SquaresFour,
   Terminal,
 } from "@phosphor-icons/react";
@@ -144,8 +145,8 @@ export function HomePage() {
             <SiteLink className="btn btn-solid" to="/docs/quick-start">
               Quick Start
             </SiteLink>
-            <a className="text-link" href={githubUrl} target="_blank" rel="noreferrer">
-              View repository <ArrowRight size={17} />
+            <a className="btn btn-ghost" href={githubUrl} target="_blank" rel="noreferrer">
+              <GithubLogo size={17} weight="bold" /> View on GitHub
             </a>
           </div>
         </div>
