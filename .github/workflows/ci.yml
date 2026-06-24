@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Unit tests & coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.12
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build workspace packages
+        run: bun run build
+
+      - name: Run unit tests with coverage
+        run: bun run test:coverage
+
+      - name: Write coverage summary
+        if: always()
+        run: |
+          {
+            echo "## Unit test coverage"
+            echo ""
+            if [ -f coverage/coverage-summary.json ]; then
+              echo "| Metric | Coverage | Covered / Total |"
+              echo "| --- | --- | --- |"
+              node -e '
+                const t = require("./coverage/coverage-summary.json").total;
+                for (const k of ["statements", "branches", "functions", "lines"]) {
+                  const m = t[k];
+                  console.log(`| ${k} | ${m.pct}% | ${m.covered} / ${m.total} |`);
+                }
+              '
+            else
+              echo "Coverage summary was not generated."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-report
+          path: coverage
+          if-no-files-found: warn
