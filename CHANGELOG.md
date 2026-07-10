@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.2 - 2026-07-10
+
+### Image references
+
+- Expanded Studio reference workflows so prompts can be grounded with library assets more reliably, with updated picker behavior and reference state handling across image-generation flows.
+- Added stronger reference resolution and validation in the shared core runtime so reference-slot inputs are normalized consistently before provider requests are sent.
+
+### CLI & docs
+
+- Improved CLI asset/reference ergonomics around generation and gallery workflows so saved assets are easier to reuse as reference inputs from the terminal.
+- Refreshed user-facing docs and release metadata for the 0.3.2 release so reference and library improvements are documented end to end.
+
 ## 0.3.1 - 2026-06-13
 
 ### Desktop app
