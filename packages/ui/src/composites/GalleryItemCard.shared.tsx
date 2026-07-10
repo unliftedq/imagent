@@ -1,14 +1,15 @@
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import {
   ArrowSquareOut,
   CaretRight,
   Folder,
   Heart,
   MagicWand,
+  Pencil,
   Plus,
   StackPlus,
   Trash,
 } from "@phosphor-icons/react";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import type { ButtonHTMLAttributes, MouseEvent, ReactNode } from "react";
 
 import { cn } from "../lib/cn.js";
@@ -65,6 +66,7 @@ function Item({
 export function ActionMenuContent({
   favorited,
   boards,
+  onEdit,
   onRemix,
   onSaveAsAsset,
   onToggleFavorite,
@@ -74,6 +76,7 @@ export function ActionMenuContent({
 }: {
   favorited?: boolean;
   boards?: ReadonlyArray<GalleryItemCardBoardOption>;
+  onEdit?: () => void;
   onRemix?: () => void;
   onSaveAsAsset?: () => void;
   onToggleFavorite?: () => void;
@@ -95,6 +98,11 @@ export function ActionMenuContent({
             "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
         )}
       >
+        {onEdit ? (
+          <Item icon={<Pencil weight="bold" className="size-4" />} onSelect={onEdit}>
+            Edit
+          </Item>
+        ) : null}
         <Item icon={<MagicWand weight="bold" className="size-4" />} onSelect={onRemix}>
           Remix
         </Item>

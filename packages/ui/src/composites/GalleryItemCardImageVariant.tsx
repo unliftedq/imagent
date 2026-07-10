@@ -1,6 +1,6 @@
 import { useDraggable } from "@dnd-kit/core";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { DotsThree, Heart } from "@phosphor-icons/react";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useState } from "react";
 
 import { cn } from "../lib/cn.js";
@@ -18,6 +18,7 @@ export function ImageVariant({
   boards,
   onSelect,
   onOpen,
+  onEdit,
   onRemix,
   onSaveAsAsset,
   onToggleFavorite,
@@ -114,6 +115,7 @@ export function ImageVariant({
       <ActionMenuContent
         favorited={favorited}
         boards={boards}
+        onEdit={onEdit}
         onRemix={onRemix}
         onSaveAsAsset={onSaveAsAsset}
         onToggleFavorite={onToggleFavorite}

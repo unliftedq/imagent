@@ -9,6 +9,7 @@ import { useGalleryStore } from "../../state/useGalleryStore.js";
 import { useUIStore } from "../../state/useUIStore.js";
 import { CreateAssetDialog } from "../Assets/CreateAssetDialog.js";
 import { resolveGalleryUrl } from "../Studio";
+import { resolveGalleryAbsolutePath } from "../Studio/utils.js";
 import { BoardRow, LightboxPreview } from "./components.js";
 import {
   BOARD_ALL,
@@ -38,9 +39,12 @@ export function GalleryPage() {
   const addItem = useBoardsStore((s) => s.addItem);
 
   const applyRemix = useUIStore((s) => s.applyRemix);
+  const openImageEditor = useUIStore((s) => s.openImageEditor);
   const pushToast = useUIStore((s) => s.pushToast);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(() => new Set());
+  const [bulkActionPending, setBulkActionPending] = useState(false);
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<string>(BOARD_ALL);
   const [creatingBoard, setCreatingBoard] = useState(false);
@@ -90,6 +94,14 @@ export function GalleryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchInput]);
 
+  useEffect(() => {
+    const itemIds = new Set(items.map((item) => item.id));
+    setSelectedItemIds((current) => {
+      const next = new Set([...current].filter((id) => itemIds.has(id)));
+      return next.size === current.size ? current : next;
+    });
+  }, [items]);
+
   // Auto-load more when the sentinel near the bottom scrolls into view.
   useEffect(() => {
     if (items.length >= total) return;
@@ -135,6 +147,45 @@ export function GalleryPage() {
         description: (err as Error)?.message ?? String(err),
         variant: "error",
       });
+    }
+  };
+
+  const toggleItemSelection = (id: string): void => {
+    setSelectedItemIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAllItems = (): void => setSelectedItemIds(new Set(items.map((item) => item.id)));
+
+  const runBulkAction = async (
+    action: (id: string) => Promise<void>,
+    successTitle: string,
+    failureTitle: string,
+  ): Promise<void> => {
+    const itemIds = [...selectedItemIds];
+    if (itemIds.length === 0 || bulkActionPending) return;
+    setBulkActionPending(true);
+    try {
+      const results = await Promise.allSettled(itemIds.map(action));
+      const failedCount = results.filter((result) => result.status === "rejected").length;
+      if (failedCount > 0) {
+        pushToast({
+          title: failureTitle,
+          description: t("gallery.bulk.failedDescription", { count: failedCount }),
+          variant: "error",
+        });
+      } else {
+        pushToast({ title: successTitle, variant: "success" });
+      }
+      setSelectedItemIds(new Set());
+      await refresh();
+      await refreshBoards();
+    } finally {
+      setBulkActionPending(false);
     }
   };
 
@@ -201,6 +252,18 @@ export function GalleryPage() {
     } catch (err) {
       pushToast({
         title: t("gallery.toast.remixFailed"),
+        description: (err as Error)?.message ?? String(err),
+        variant: "error",
+      });
+    }
+  };
+
+  const handleEditImage = async (item: GalleryItem): Promise<void> => {
+    try {
+      openImageEditor(await resolveGalleryAbsolutePath(item.relPath));
+    } catch (err) {
+      pushToast({
+        title: t("studio.referenceFailed"),
         description: (err as Error)?.message ?? String(err),
         variant: "error",
       });
@@ -412,6 +475,92 @@ export function GalleryPage() {
               </span>
             ) : null}
           </div>
+          {selectedItemIds.size > 0 ? (
+            <div className="mb-4 flex flex-wrap items-center gap-2 rounded-(--radius-md) border border-(--border) bg-(--surface-raised) p-1.5 shadow-[0_8px_24px_-18px_rgba(0,0,0,0.35)]">
+              <span className="inline-flex h-8 items-center rounded-(--radius-sm) bg-(--accent-soft) px-2.5 text-(length:--text-body-sm) font-semibold text-(--accent)">
+                {t("gallery.bulk.selected", { count: selectedItemIds.size })}
+              </span>
+              <span aria-hidden className="h-5 w-px bg-(--border)" />
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={bulkActionPending}
+                onClick={() =>
+                  void runBulkAction(
+                    (id) => toggleFav(id),
+                    t("gallery.bulk.favoriteSuccess"),
+                    t("gallery.bulk.favoriteFailed"),
+                  )
+                }
+                leadingIcon={<Icons.Heart weight="bold" className="size-4" />}
+              >
+                {t("gallery.bulk.favorite")}
+              </Button>
+              {boards.length > 0 ? (
+                <select
+                  aria-label={t("gallery.bulk.addToBoard")}
+                  disabled={bulkActionPending}
+                  defaultValue=""
+                  onChange={(event) => {
+                    const boardId = event.target.value;
+                    if (!boardId) return;
+                    event.currentTarget.value = "";
+                    void runBulkAction(
+                      (id) => addItem(boardId, id),
+                      t("gallery.bulk.addedToBoard"),
+                      t("gallery.bulk.addToBoardFailed"),
+                    );
+                  }}
+                  className="h-8 rounded-(--radius-sm) border border-(--border) bg-(--bg) px-2.5 text-(length:--text-body-sm) font-semibold text-(--text) outline-none transition-colors focus:border-(--accent) disabled:opacity-50"
+                >
+                  <option value="" disabled>
+                    {t("gallery.bulk.addToBoard")}
+                  </option>
+                  {boards.map((board) => (
+                    <option key={board.id} value={board.id}>
+                      {board.name}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={bulkActionPending}
+                onClick={() => setSelectedItemIds(new Set())}
+                leadingIcon={<Icons.X weight="bold" className="size-4" />}
+              >
+                {t("gallery.bulk.clearSelection")}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={bulkActionPending}
+                onClick={() =>
+                  void runBulkAction(
+                    (id) => removeItem(id),
+                    t("gallery.bulk.deleted"),
+                    t("gallery.bulk.deleteFailed"),
+                  )
+                }
+                className="text-(--danger) hover:bg-(--danger-soft) hover:text-(--danger)"
+                leadingIcon={<Icons.Trash weight="bold" className="size-4" />}
+              >
+                {t("common.delete")}
+              </Button>
+            </div>
+          ) : items.length > 0 ? (
+            <div className="mb-4 flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={selectAllItems}
+                leadingIcon={<Icons.Check weight="bold" className="size-4" />}
+              >
+                {t("gallery.bulk.selectAll")}
+              </Button>
+            </div>
+          ) : null}
           {items.length === 0 ? (
             <GalleryEmptyState
               hasSearch={Boolean(query.search)}
@@ -441,39 +590,72 @@ export function GalleryPage() {
                     : ""
                   : resolveGalleryUrl(it.relPath);
                 return (
-                  <GalleryItemCard
-                    id={it.id}
-                    kind={it.kind}
-                    src={src}
-                    caption={it.prompt}
-                    width={it.width ?? null}
-                    height={it.height ?? null}
-                    durationMs={it.durationMs ?? null}
-                    favorited={it.favorited}
-                    selected={selectedId === it.id}
-                    boards={boards.map((b) => ({ id: b.id, name: b.name }))}
-                    onSelect={() => {
-                      setSelectedId(it.id);
-                      setPreviewId(it.id);
-                    }}
-                    onOpen={() => setPreviewId(it.id)}
-                    onRemix={() => void handleRemix(it.id)}
-                    onSaveAsAsset={it.kind === "speech" ? undefined : () => openSaveAsAssetDialog(it)}
-                    onToggleFavorite={() => void toggleFav(it.id)}
-                    onAddToBoard={(boardId) => void addItem(boardId, it.id)}
-                    onOpenFileLocation={() => {
-                      void api["system.openPath"]({ path: it.relPath });
-                    }}
-                    onDelete={() => void removeItem(it.id)}
-                  />
+                  <div
+                    key={it.id}
+                    className={
+                      "group relative rounded-(--radius-sm) transition-shadow duration-(--duration-fast) " +
+                      (selectedItemIds.has(it.id)
+                        ? "ring-2 ring-(--accent) ring-offset-2 ring-offset-(--bg)"
+                        : "hover:shadow-[0_8px_20px_-16px_rgba(0,0,0,0.45)]")
+                    }
+                  >
+                    <button
+                      type="button"
+                      aria-label={
+                        selectedItemIds.has(it.id)
+                          ? t("gallery.bulk.deselectItem")
+                          : t("gallery.bulk.selectItem")
+                      }
+                      aria-pressed={selectedItemIds.has(it.id)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        toggleItemSelection(it.id);
+                      }}
+                      className={
+                        "absolute left-2 top-2 z-10 inline-flex size-6 items-center justify-center " +
+                        "rounded-(--radius-sm) border shadow-[0_2px_5px_rgba(0,0,0,0.16)] transition-all duration-(--duration-fast) " +
+                        (selectedItemIds.has(it.id)
+                          ? "border-(--accent) bg-(--accent) text-white"
+                          : "border-white/80 bg-(--bg)/90 text-transparent opacity-0 backdrop-blur-sm group-hover:opacity-100 hover:border-(--accent) hover:bg-(--accent-soft) hover:text-(--accent) focus-visible:border-(--accent) focus-visible:text-(--accent) focus-visible:opacity-100")
+                      }
+                    >
+                      <Icons.Check weight="bold" className="size-4" />
+                    </button>
+                    <GalleryItemCard
+                      id={it.id}
+                      kind={it.kind}
+                      src={src}
+                      caption={it.prompt}
+                      width={it.width ?? null}
+                      height={it.height ?? null}
+                      durationMs={it.durationMs ?? null}
+                      favorited={it.favorited}
+                      selected={selectedId === it.id}
+                      boards={boards.map((b) => ({ id: b.id, name: b.name }))}
+                      onSelect={() => {
+                        setSelectedId(it.id);
+                        setPreviewId(it.id);
+                      }}
+                      onOpen={() => setPreviewId(it.id)}
+                      onEdit={it.kind === "image" ? () => void handleEditImage(it) : undefined}
+                      onRemix={() => void handleRemix(it.id)}
+                      onSaveAsAsset={
+                        it.kind === "speech" ? undefined : () => openSaveAsAssetDialog(it)
+                      }
+                      onToggleFavorite={() => void toggleFav(it.id)}
+                      onAddToBoard={(boardId) => void addItem(boardId, it.id)}
+                      onOpenFileLocation={() => {
+                        void api["system.openPath"]({ path: it.relPath });
+                      }}
+                      onDelete={() => void removeItem(it.id)}
+                    />
+                  </div>
                 );
               }}
             />
           )}
 
-          {items.length < total ? (
-            <div ref={sentinelRef} aria-hidden className="h-8" />
-          ) : null}
+          {items.length < total ? <div ref={sentinelRef} aria-hidden className="h-8" /> : null}
         </section>
 
         {previewId ? (
@@ -484,6 +666,7 @@ export function GalleryPage() {
               setPreviewId(null);
               void handleRemix(id);
             }}
+            onEdit={(item) => void handleEditImage(item)}
             onSaveAsAsset={(item) => {
               setPreviewId(null);
               openSaveAsAssetDialog(item);

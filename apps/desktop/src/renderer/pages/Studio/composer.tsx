@@ -84,6 +84,7 @@ export function ChatComposerShell({
   validationError,
   remixId,
   onClearRemix,
+  attachments,
   children,
 }: {
   mode: StudioMode;
@@ -96,6 +97,7 @@ export function ChatComposerShell({
   validationError: string | null;
   remixId?: string;
   onClearRemix?: () => void;
+  attachments?: ReactNode;
   children: ReactNode;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -147,6 +149,12 @@ export function ChatComposerShell({
                 {t("common.clear")}
               </button>
             ) : null}
+          </div>
+        ) : null}
+
+        {attachments ? (
+          <div className="flex max-h-[76px] items-center gap-2 overflow-x-auto px-4 pt-3">
+            {attachments}
           </div>
         ) : null}
 

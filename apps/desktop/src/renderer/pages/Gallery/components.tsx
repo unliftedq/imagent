@@ -3,12 +3,12 @@ import { BoardSidebarItem, Icons } from "@imagent/ui";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { type CSSProperties, useEffect, useState } from "react";
+import { ZoomableImage } from "../../components/ZoomableImage.js";
 import { useT } from "../../i18n/index.js";
 import { api } from "../../lib/api.js";
 import { useGalleryStore } from "../../state/useGalleryStore.js";
 import { useUIStore } from "../../state/useUIStore.js";
 import { resolveGalleryUrl } from "../Studio";
-import { ZoomableImage } from "../../components/ZoomableImage.js";
 
 export function BoardRow({
   board,
@@ -141,12 +141,14 @@ export function BoardRow({
 export function LightboxPreview({
   itemId,
   onClose,
+  onEdit,
   onRemix,
   onSaveAsAsset,
   onNavigate,
 }: {
   itemId: string;
   onClose: () => void;
+  onEdit: (item: GalleryItem) => void;
   onRemix: (id: string) => void;
   onSaveAsAsset: (item: GalleryItem) => void;
   /**
@@ -185,9 +187,7 @@ export function LightboxPreview({
   const currentIndex = items.findIndex((it) => it.id === itemId);
   const prevItem = currentIndex > 0 ? (items[currentIndex - 1] ?? null) : null;
   const nextItem =
-    currentIndex >= 0 && currentIndex < items.length - 1
-      ? (items[currentIndex + 1] ?? null)
-      : null;
+    currentIndex >= 0 && currentIndex < items.length - 1 ? (items[currentIndex + 1] ?? null) : null;
 
   // Arrow-key navigation. Bound at the window because Radix Dialog already
   // owns Escape, and the lightbox has no form controls that would swallow
@@ -435,6 +435,13 @@ export function LightboxPreview({
                     "backdrop-blur-xl"
                   }
                 >
+                  {data.item.kind === "image" ? (
+                    <LightboxAction
+                      icon={<Icons.Pencil weight="bold" className="size-4" />}
+                      label={t("common.edit")}
+                      onClick={() => onEdit(data.item)}
+                    />
+                  ) : null}
                   <LightboxAction
                     icon={<Icons.MagicWand weight="bold" className="size-4" />}
                     label={t("gallery.preview.remix")}

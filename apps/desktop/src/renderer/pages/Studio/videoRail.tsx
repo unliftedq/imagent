@@ -23,7 +23,7 @@ import {
   ProviderModelPicker,
   useModelFavorites,
 } from "./modelPicker.js";
-import { ReferencePicker } from "./referencePicker.js";
+import { ReferencePicker, ReferenceThumbnails } from "./referencePicker.js";
 import { nearestNumber, pruneReferenceRoles } from "./utils.js";
 import { FrameToolbarPicker } from "./videoFramePicker.js";
 
@@ -261,6 +261,32 @@ export function VideoRail() {
       disabled={!draft.prompt.trim()}
       validationError={validationError}
       {...(draft.parentId ? { remixId: draft.parentId, onClearRemix: resetDraft } : {})}
+      attachments={
+        draft.references.length > 0 ||
+        Object.values(draft.assetIds).some((assetIds) => assetIds.length > 0) ? (
+          <ReferenceThumbnails
+            assetIds={draft.assetIds}
+            assetsByKind={assetsByKind}
+            references={draft.references}
+            thumbnailUrl={resolveAssetThumbnailUrl}
+            onRemoveAsset={(kind, id) => {
+              setDraft({
+                assetIds: {
+                  ...draft.assetIds,
+                  [kind]: draft.assetIds[kind].filter((assetId) => assetId !== id),
+                },
+              });
+            }}
+            onRemoveReference={(path) => {
+              const references = draft.references.filter((reference) => reference !== path);
+              setDraft({
+                references,
+                referenceRoles: pruneReferenceRoles(draft.referenceRoles, references),
+              });
+            }}
+          />
+        ) : null
+      }
     >
       <ProviderModelPicker
         mode="video"
@@ -298,7 +324,11 @@ export function VideoRail() {
           value={draft.firstFrame ?? null}
           onChange={(value) => setDraft({ firstFrame: value ?? undefined })}
           onError={(message) =>
-            pushToast({ title: t("studio.referenceFailed"), description: message, variant: "error" })
+            pushToast({
+              title: t("studio.referenceFailed"),
+              description: message,
+              variant: "error",
+            })
           }
         />
       ) : null}
@@ -309,7 +339,11 @@ export function VideoRail() {
           value={draft.lastFrame ?? null}
           onChange={(value) => setDraft({ lastFrame: value ?? undefined })}
           onError={(message) =>
-            pushToast({ title: t("studio.referenceFailed"), description: message, variant: "error" })
+            pushToast({
+              title: t("studio.referenceFailed"),
+              description: message,
+              variant: "error",
+            })
           }
         />
       ) : null}

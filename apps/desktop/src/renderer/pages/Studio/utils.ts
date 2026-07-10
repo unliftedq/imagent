@@ -1,5 +1,5 @@
-import type { StudioReferenceRoles } from "../../state/useUIStore.js";
 import { api } from "../../lib/api.js";
+import type { StudioReferenceRoles } from "../../state/useUIStore.js";
 
 export function autosizeComposer(el: HTMLTextAreaElement | null): void {
   if (!el) return;
@@ -37,6 +37,13 @@ export function resolveGalleryUrl(relPath: string): string {
   return `imagent://local/${segments}`;
 }
 
+export function resolveReferenceUrl(referencePath: string): string {
+  if (/^(?:[a-zA-Z]:[\\/]|[\\/])/.test(referencePath)) {
+    return `imagent://external/${encodeURIComponent(referencePath)}`;
+  }
+  return resolveGalleryUrl(referencePath);
+}
+
 let dataDirPromise: Promise<string> | null = null;
 function getDataDir(): Promise<string> {
   if (!dataDirPromise) {
@@ -56,9 +63,7 @@ export async function resolveGalleryAbsolutePath(relPath: string): Promise<strin
   const usesBackslash = dataDir.includes("\\") && !/^[a-zA-Z]+:\//.test(dataDir);
   const sep = usesBackslash ? "\\" : "/";
   const trimmed = dataDir.endsWith("/") || dataDir.endsWith("\\") ? dataDir.slice(0, -1) : dataDir;
-  const normalizedRel = usesBackslash
-    ? relPath.replace(/\//g, "\\")
-    : relPath.replace(/\\/g, "/");
+  const normalizedRel = usesBackslash ? relPath.replace(/\//g, "\\") : relPath.replace(/\\/g, "/");
   const cleanedRel = normalizedRel.replace(/^[/\\]+/, "");
   return `${trimmed}${sep}${cleanedRel}`;
 }

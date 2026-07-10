@@ -9,7 +9,7 @@ import { type StudioMode, useUIStore } from "../../state/useUIStore.js";
 import { resolveAssetThumbnailUrl } from "../Assets";
 import { CreateAssetDialog } from "../Assets/CreateAssetDialog.js";
 import { ASSET_REFERENCE_KINDS } from "./types.js";
-import { resolveGalleryUrl } from "./utils.js";
+import { resolveGalleryAbsolutePath, resolveGalleryUrl } from "./utils.js";
 
 export const STUDIO_REFERENCE_MIME = "application/x-imagent-studio-reference";
 
@@ -73,6 +73,7 @@ export function StudioGalleryRail({
   const assetsByKind = useAssetsStore((state) => state.byKind);
   const refreshAssets = useAssetsStore((state) => state.refresh);
   const pushToast = useUIStore((state) => state.pushToast);
+  const openImageEditor = useUIStore((state) => state.openImageEditor);
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
   const [tab, setTab] = useState<RailTab>("gallery");
   const [galleryFilter, setGalleryFilter] = useState<GalleryFilter>("all");
@@ -127,6 +128,18 @@ export function StudioGalleryRail({
       return;
     }
     setAssetDialogItem(item);
+  };
+
+  const openImageEditorWithReference = async (item: GalleryItem): Promise<void> => {
+    try {
+      openImageEditor(await resolveGalleryAbsolutePath(item.relPath));
+    } catch (err) {
+      pushToast({
+        title: t("studio.referenceFailed"),
+        description: (err as Error)?.message ?? String(err),
+        variant: "error",
+      });
+    }
   };
 
   const assetDialogSource = useMemo(() => {
@@ -215,7 +228,12 @@ export function StudioGalleryRail({
             ) : (
               <div className="grid grid-cols-2 gap-2">
                 {filteredGallery.map((item) => (
-                  <GalleryThumb key={item.id} item={item} onSaveAsAsset={openSaveAsAssetDialog} />
+                  <GalleryThumb
+                    key={item.id}
+                    item={item}
+                    onSaveAsAsset={openSaveAsAssetDialog}
+                    onEdit={(image) => void openImageEditorWithReference(image)}
+                  />
                 ))}
               </div>
             )}
@@ -273,9 +291,11 @@ export function StudioGalleryRail({
 function GalleryThumb({
   item,
   onSaveAsAsset,
+  onEdit,
 }: {
   item: GalleryItem;
   onSaveAsAsset: (item: GalleryItem) => void;
+  onEdit: (item: GalleryItem) => void;
 }) {
   const t = useT();
   const isSpeech = item.kind === "speech";
@@ -332,7 +352,9 @@ function GalleryThumb({
                 {item.prompt}
               </span>
             ) : (
-              <span className="text-[10.5px] italic text-(--text-muted)">{t("studio.noPrompt")}</span>
+              <span className="text-[10.5px] italic text-(--text-muted)">
+                {t("studio.noPrompt")}
+              </span>
             )}
           </span>
         ) : src ? (
@@ -364,6 +386,23 @@ function GalleryThumb({
           }
         >
           <Icons.StackPlus weight="bold" className="size-3.5" />
+        </button>
+      ) : null}
+      {item.kind === "image" ? (
+        <button
+          type="button"
+          aria-label={t("common.edit")}
+          title={t("common.edit")}
+          onClick={() => onEdit(item)}
+          className={
+            "absolute left-8 top-1 inline-flex size-6 items-center justify-center " +
+            "rounded-(--radius-sm) border border-white/20 bg-black/55 text-white opacity-0 " +
+            "backdrop-blur transition-opacity duration-(--motion-fast) hover:bg-black/70 " +
+            "focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring) " +
+            "group-hover:opacity-100"
+          }
+        >
+          <Icons.Pencil weight="bold" className="size-3.5" />
         </button>
       ) : null}
       {item.kind === "video" ? (
