@@ -1,4 +1,4 @@
-import { splitSpeechFormat, type ImageReference } from "@imagent/core";
+import { type ImageReference, splitSpeechFormat } from "@imagent/core";
 import type { ThemePref } from "@imagent/ui";
 import { create } from "zustand";
 
@@ -448,6 +448,8 @@ interface UIState {
   setImageDraft: (patch: Partial<ImageDraft>) => void;
   setVideoDraft: (patch: Partial<VideoDraft>) => void;
   setSpeechDraft: (patch: Partial<SpeechDraft>) => void;
+  /** Open the image editor with one image replacing the current references. */
+  openImageEditor: (referencePath: string) => void;
   /** Convenience used from M5/M6 callsites — proxies to setImageDraft. */
   setStudioDraft: (patch: Partial<ImageDraft>) => void;
   resetDraft: (mode: StudioMode) => void;
@@ -509,6 +511,21 @@ export const useUIStore = create<UIState>((set, get) => ({
     const next: SpeechDraft = { ...get().studioDraft.speech, ...patch };
     set((s) => ({ studioDraft: { ...s.studioDraft, speech: next } }));
     scheduleSpeechDraftFlush(next);
+  },
+  openImageEditor: (referencePath) => {
+    const next: ImageDraft = {
+      ...get().studioDraft.image,
+      references: [referencePath],
+      referenceRoles: { [referencePath]: "freeform" },
+    };
+    set((s) => ({
+      route: "studio",
+      studioMode: "image",
+      studioDraft: { ...s.studioDraft, image: next },
+    }));
+    persistRoute("studio");
+    persistMode("image");
+    scheduleImageDraftFlush(next);
   },
   setStudioDraft: (patch) => {
     // Back-compat alias used by M5/M6 callsites that still expect the
@@ -584,8 +601,7 @@ export const useUIStore = create<UIState>((set, get) => ({
     } else if (payload.kind === "speech") {
       const r = payload.request;
       const legacyFormat = (r as { outputFormat?: unknown }).outputFormat;
-      const legacy =
-        typeof legacyFormat === "string" ? splitSpeechFormat(legacyFormat) : null;
+      const legacy = typeof legacyFormat === "string" ? splitSpeechFormat(legacyFormat) : null;
       const next: SpeechDraft = {
         ...get().studioDraft.speech,
         text: r.prompt,

@@ -24,7 +24,7 @@ import {
   ProviderModelPicker,
   useModelFavorites,
 } from "./modelPicker.js";
-import { ReferencePicker } from "./referencePicker.js";
+import { ReferencePicker, ReferenceThumbnails } from "./referencePicker.js";
 import { pruneReferenceRoles } from "./utils.js";
 
 export function ImageRail() {
@@ -309,6 +309,32 @@ export function ImageRail() {
       disabled={!draft.prompt.trim()}
       validationError={validationError}
       {...(draft.parentId ? { remixId: draft.parentId, onClearRemix: resetDraft } : {})}
+      attachments={
+        draft.references.length > 0 ||
+        Object.values(draft.assetIds).some((assetIds) => assetIds.length > 0) ? (
+          <ReferenceThumbnails
+            assetIds={draft.assetIds}
+            assetsByKind={assetsByKind}
+            references={draft.references}
+            thumbnailUrl={resolveAssetThumbnailUrl}
+            onRemoveAsset={(kind, id) => {
+              setDraft({
+                assetIds: {
+                  ...draft.assetIds,
+                  [kind]: draft.assetIds[kind].filter((assetId) => assetId !== id),
+                },
+              });
+            }}
+            onRemoveReference={(path) => {
+              const references = draft.references.filter((reference) => reference !== path);
+              setDraft({
+                references,
+                referenceRoles: pruneReferenceRoles(draft.referenceRoles, references),
+              });
+            }}
+          />
+        ) : null
+      }
     >
       <ProviderModelPicker
         mode="image"

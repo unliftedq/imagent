@@ -33,6 +33,8 @@ export interface GalleryItemCardProps {
   boards?: ReadonlyArray<GalleryItemCardBoardOption>;
   onSelect?: () => void;
   onOpen?: () => void;
+  /** Open this image in Studio with it set as the reference. */
+  onEdit?: () => void;
   onRemix?: () => void;
   onSaveAsAsset?: () => void;
   onToggleFavorite?: () => void;

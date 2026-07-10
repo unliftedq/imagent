@@ -5,7 +5,13 @@ import { useEffect, useState } from "react";
 import { useT } from "../../i18n/index.js";
 import { api } from "../../lib/api.js";
 import { ASSET_REFERENCE_KINDS, IMAGE_FILE_FILTERS } from "./types.js";
-import { fileName, resolveGalleryAbsolutePath, resolveGalleryUrl, uniqueStrings } from "./utils.js";
+import {
+  fileName,
+  resolveGalleryAbsolutePath,
+  resolveGalleryUrl,
+  resolveReferenceUrl,
+  uniqueStrings,
+} from "./utils.js";
 
 type ActiveView = { type: "kind"; kind: AssetKind } | { type: "gallery" };
 
@@ -52,10 +58,6 @@ export function ReferencePicker({
     } catch (err) {
       onError((err as Error)?.message ?? String(err));
     }
-  };
-
-  const removeReference = (path: string): void => {
-    onReferencesChange(references.filter((ref) => ref !== path));
   };
 
   const toggleAsset = (kind: AssetKind, assetId: string): void => {
@@ -147,28 +149,27 @@ export function ReferencePicker({
               ))}
               <ReferenceMenuButton
                 icon={
-                  <Icons.ImageSquare weight="duotone" className="size-4 shrink-0 text-(--text-muted)" />
+                  <Icons.ImageSquare
+                    weight="duotone"
+                    className="size-4 shrink-0 text-(--text-muted)"
+                  />
                 }
                 label={t("studio.pickFromGallery")}
                 count={0}
                 onClick={() => setActiveView({ type: "gallery" })}
               />
               <ReferenceMenuButton
-                icon={<Icons.UploadSimple weight="duotone" className="size-4 shrink-0 text-(--text-muted)" />}
+                icon={
+                  <Icons.UploadSimple
+                    weight="duotone"
+                    className="size-4 shrink-0 text-(--text-muted)"
+                  />
+                }
                 label={t("studio.uploadLocalImage")}
                 count={references.length}
                 onClick={() => void chooseLocalImages()}
               />
             </div>
-            {totalReferences > 0 ? (
-              <SelectedReferences
-                assetIds={assetIds}
-                assetsByKind={assetsByKind}
-                references={references}
-                onRemoveAsset={(kind, id) => toggleAsset(kind, id)}
-                onRemoveReference={removeReference}
-              />
-            ) : null}
           </div>
         )}
       </Popover.Content>
@@ -418,7 +419,9 @@ function GalleryPickerPanel({
             >
               {loadingMore
                 ? t("common.loading")
-                : t("gallery.loadMore", { remaining: String((total ?? items.length) - items.length) })}
+                : t("gallery.loadMore", {
+                    remaining: String((total ?? items.length) - items.length),
+                  })}
             </button>
           ) : null}
         </div>
@@ -430,11 +433,7 @@ function GalleryPickerPanel({
             ? t("studio.gallerySelectedCount", { count: String(selected.length) })
             : t("studio.gallerySelectHint")}
         </span>
-        <Button
-          size="sm"
-          onClick={() => void confirm()}
-          disabled={selected.length === 0 || adding}
-        >
+        <Button size="sm" onClick={() => void confirm()} disabled={selected.length === 0 || adding}>
           {t("studio.addToReferences")}
         </Button>
       </div>
@@ -477,16 +476,18 @@ function ReferenceMenuButton({
   );
 }
 
-function SelectedReferences({
+export function ReferenceThumbnails({
   assetIds,
   assetsByKind,
   references,
+  thumbnailUrl,
   onRemoveAsset,
   onRemoveReference,
 }: {
   assetIds: Record<AssetKind, string[]>;
   assetsByKind: Record<AssetKind, Asset[]>;
   references: string[];
+  thumbnailUrl: (asset: Asset) => string | null | undefined;
   onRemoveAsset: (kind: AssetKind, id: string) => void;
   onRemoveReference: (path: string) => void;
 }) {
@@ -499,33 +500,56 @@ function SelectedReferences({
   );
 
   return (
-    <div className="flex flex-wrap gap-1.5 border-t border-(--border-faint) pt-3">
+    <div className="flex shrink-0 gap-2">
       {selectedAssets.map(({ kind, id, asset }) => (
-        <ReferenceChip
+        <ReferenceThumbnail
           key={`${kind}:${id}`}
           label={asset?.name ?? id}
+          src={asset ? thumbnailUrl(asset) : null}
           onRemove={() => onRemoveAsset(kind, id)}
         />
       ))}
       {references.map((path) => (
-        <ReferenceChip key={path} label={fileName(path)} onRemove={() => onRemoveReference(path)} />
+        <ReferenceThumbnail
+          key={path}
+          label={fileName(path)}
+          src={resolveReferenceUrl(path)}
+          onRemove={() => onRemoveReference(path)}
+        />
       ))}
     </div>
   );
 }
 
-function ReferenceChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+function ReferenceThumbnail({
+  label,
+  src,
+  onRemove,
+}: {
+  label: string;
+  src: string | null | undefined;
+  onRemove: () => void;
+}) {
   const t = useT();
   return (
-    <span className="inline-flex max-w-[180px] items-center gap-1 rounded-(--radius-pill) border border-(--border) bg-(--bg) px-2 py-1 text-[11px] text-(--text)">
-      <span className="truncate">{label}</span>
+    <span
+      title={label}
+      className="group relative inline-flex size-12 shrink-0 overflow-hidden rounded-(--radius-sm) border border-(--border) bg-(--surface-sunken)"
+    >
+      {src ? (
+        <img src={src} alt={label} className="h-full w-full object-cover" />
+      ) : (
+        <span className="flex h-full w-full items-center justify-center text-[16px] font-semibold text-(--text-muted)">
+          {label.charAt(0).toUpperCase()}
+        </span>
+      )}
       <button
         type="button"
         onClick={onRemove}
         aria-label={t("studio.removeReference", { label })}
-        className="text-(--text-muted) hover:text-(--danger)"
+        className="absolute right-1 top-1 inline-flex size-5 items-center justify-center rounded-(--radius-pill) bg-black/65 text-white opacity-0 transition-opacity duration-(--motion-fast) hover:bg-(--danger) focus-visible:opacity-100 group-hover:opacity-100"
       >
-        <Icons.X weight="bold" className="size-3" />
+        <Icons.X weight="bold" className="size-3.5" />
       </button>
     </span>
   );

@@ -122,18 +122,26 @@ async function createWindow() {
 }
 
 /**
- * Wire `imagent://local/<relPath>` to a path inside the data dir. The
- * normalized absolute path is whitelisted against the data dir prefix so a
- * renderer-side `..` in the rel path can't escape and read e.g. `secrets.json`.
+ * Wire `imagent://local/<relPath>` to a path inside the data dir, and
+ * `imagent://external/<absolutePath>` to a user-selected local reference image.
  */
 function registerImagentProtocol(dataDir: string): void {
   const dataDirAbs = path.normalize(dataDir);
   protocol.handle("imagent", async (request) => {
     try {
       const url = new URL(request.url);
-      const relPath = decodeURIComponent(url.pathname.replace(/^\/+/, ""));
-      const absPath = path.normalize(path.join(dataDirAbs, relPath));
-      if (!absPath.startsWith(dataDirAbs)) {
+      const requestPath = decodeURIComponent(url.pathname.replace(/^\/+/, ""));
+      const absPath =
+        url.hostname === "local"
+          ? path.normalize(path.join(dataDirAbs, requestPath))
+          : url.hostname === "external"
+            ? path.normalize(requestPath)
+            : null;
+      if (
+        !absPath ||
+        (url.hostname === "local" && !absPath.startsWith(dataDirAbs)) ||
+        (url.hostname === "external" && !path.isAbsolute(absPath))
+      ) {
         return new Response("forbidden", { status: 403 });
       }
       return net.fetch(pathToFileURL(absPath).toString());
