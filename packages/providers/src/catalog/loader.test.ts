@@ -28,9 +28,7 @@ describe("loadCatalog", () => {
       "4k",
     );
     expect(
-      loaded.providers.google?.video?.some(
-        (entry) => entry.id === "veo-3.1-lite-generate-preview",
-      ),
+      loaded.providers.google?.video?.some((entry) => entry.id === "veo-3.1-lite-generate-preview"),
     ).toBe(true);
 
     await expect(fs.stat(userPath)).rejects.toBeTruthy();
