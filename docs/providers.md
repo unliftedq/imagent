@@ -264,7 +264,7 @@ imagent video generate "a sweeping shot over a cyberpunk street" \
 
 ### 火山引擎 / Volcano Ark (`volcengine`)
 
-火山引擎 is the mainland China ByteDance Ark endpoint. It serves the same Seedream and Seedance models, but exposes them under `doubao-`-prefixed model ids (e.g. `doubao-seedream-4-0-250828`, `doubao-seedance-2-0-260128`). Requires an endpoint and an API key.
+火山引擎 is the mainland China ByteDance Ark endpoint. It serves the same Seedream and Seedance models, but exposes them under `doubao-`-prefixed model ids (e.g. `doubao-seedream-5-0-pro-260628`, `doubao-seedance-2-5-260628`). Requires an endpoint and an API key.
 
 CLI setup:
 
@@ -286,7 +286,7 @@ Image example:
 ```bash
 imagent image generate "polished character key art" \
   --provider volcengine \
-  --model doubao-seedream-4-0-250828 \
+  --model doubao-seedream-5-0-pro-260628 \
   --option size=2K \
   --option count=2
 ```
@@ -296,7 +296,7 @@ Video example:
 ```bash
 imagent video generate "a sweeping shot over a cyberpunk street" \
   --provider volcengine \
-  --model doubao-seedance-2-0-260128 \
+  --model doubao-seedance-2-5-260628 \
   --option duration=5 \
   --option resolution=720p
 ```
@@ -339,7 +339,7 @@ Video example:
 ```bash
 imagent video generate "a dramatic hero shot with drifting fog" \
   --provider xai \
-  --model grok-imagine-video-1.5-preview \
+  --model grok-imagine-video-1.5 \
   --option duration=10
 ```
 

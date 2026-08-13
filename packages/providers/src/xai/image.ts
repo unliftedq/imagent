@@ -45,7 +45,7 @@ export interface XaiImageProviderOptions {
 
 /**
  * xAI image provider — uses the Vercel AI SDK (`@ai-sdk/xai` + `ai`) to call
- * Grok Imagine. Default catalog model is `grok-imagine-image`.
+ * Grok Imagine. Default catalog model is `grok-imagine-image-quality`.
  */
 export class XaiImageProvider extends BaseImageProvider {
   private readonly modelFactory: XaiImageModelFactory;

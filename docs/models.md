@@ -71,15 +71,9 @@ Use `imagent models --kind speech` to list available TTS offerings, and `imagent
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Supported; max 4 input images.
 
-### xAI: `grok-imagine-image-quality` / `grok-imagine-image-pro`
+### xAI: `grok-imagine-image-quality`
 
 - **Size / ratio controls:** Aspect ratios: `1:1`, `16:9`, `9:16`, `4:3`, `3:4`, `3:2`, `2:3`, `2:1`, `1:2`, `19.5:9`, `9:19.5`, `20:9`, `9:20`, `auto`; resolutions `1k`, `2k`.
-- **Output controls:** Max outputs 10.
-- **Reference-image support:** Supported; max 5 images. Official per-image size limit was not found.
-
-### xAI: `grok-imagine-image`
-
-- **Size / ratio controls:** Same aspect ratios as the newer Grok Imagine image models; resolution `1k`.
 - **Output controls:** Max outputs 10.
 - **Reference-image support:** Supported; max 5 images. Official per-image size limit was not found.
 
@@ -90,9 +84,9 @@ Use `imagent models --kind speech` to list available TTS offerings, and `imagent
 - **Output controls:** Max outputs 9.
 - **Reference-image support:** Supported; max 1 image (mapped to a `character` subject reference).
 
-### BytePlus: `dola-seedream-5-0-pro-260628`
+### BytePlus / Volcano Ark: `dola-seedream-5-0-pro-260628`
 
-- **Provider-facing id:** `dola-seedream-5-0-pro-260628`.
+- **Provider-facing ids:** BytePlus uses `dola-seedream-5-0-pro-260628`; 火山引擎 uses `doubao-seedream-5-0-pro-260628`.
 - **Size / ratio controls:** Aspect ratios `auto`, `1:1`, `2:3`, `3:2`, `3:4`, `4:3`, `16:9`, `9:16`, `21:9`; `1k` or `2k`.
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Supported; max 10 images; each image under 30 MB.
@@ -148,7 +142,7 @@ Use `imagent models --kind speech` to list available TTS offerings, and `imagent
 - **Reference-image support:** Not enabled in the default catalog.
 - **Other capabilities:** Max outputs 1.
 
-### xAI: `grok-imagine-video-1.5-preview`
+### xAI: `grok-imagine-video-1.5`
 
 - **Duration / FPS:** 1–15 seconds; the catalog default is 8 seconds at 24 FPS.
 - **Resolution / aspect ratio:** `480p`, `720p`, `1080p`; `1:1`, `16:9`, `9:16`, `4:3`, `3:4`, `3:2`, `2:3`. Native `1080p` applies to text-to-video and image-to-video.
@@ -170,9 +164,9 @@ Use `imagent models --kind speech` to list available TTS offerings, and `imagent
 - **Reference-image support:** First-frame image is supported; multimodal reference images are not.
 - **Other capabilities:** Default resolution is `1080P`.
 
-### BytePlus: `dreamina-seedance-2-5-260628`
+### BytePlus / Volcano Ark: `dreamina-seedance-2-5-260628`
 
-- **Provider-facing id:** `dreamina-seedance-2-5-260628`.
+- **Provider-facing ids:** BytePlus uses `dreamina-seedance-2-5-260628`; 火山引擎 uses `doubao-seedance-2-5-260628`.
 - **Duration:** 4–30 seconds.
 - **Resolution / aspect ratio:** `480p`, `720p`; `16:9`, `9:16`, `1:1`, `4:3`, `3:4`, `21:9`, or `adaptive`.
 - **Reference-image support:** First frame, last frame, and reference images are supported; max 30 images; each image under 30 MB.

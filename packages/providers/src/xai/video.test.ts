@@ -197,7 +197,9 @@ describe("XaiVideoProvider", () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValue(
-        jsonResponse(200, { data: [{ id: "grok-imagine-video" }, { id: "grok-imagine-image" }] }),
+        jsonResponse(200, {
+          data: [{ id: "grok-imagine-video" }, { id: "grok-imagine-image-quality" }],
+        }),
       );
     const factory = vi.fn((id: string) => makeFakeModel(id));
     const p = makeProvider(factory, { fetch: fetchMock as unknown as typeof fetch });

@@ -63,7 +63,7 @@ function makeProvider(factory: (modelId: string) => ImageModel): XaiImageProvide
 const baseRequest: ImageRequest = {
   prompt: "a cat in a top hat, photo",
   providerId: "xai",
-  model: "grok-imagine-image",
+  model: "grok-imagine-image-quality",
   count: 1,
   aspectRatio: "1:1",
   references: [],
@@ -78,7 +78,7 @@ describe("XaiImageProvider", () => {
     expect(r.outputs).toHaveLength(1);
     expect(r.outputs[0]!.mimeType).toMatch(/^image\//);
     expect(r.outputs[0]!.bytes.byteLength).toBe(PNG_BYTES.byteLength);
-    expect(factory).toHaveBeenCalledWith("grok-imagine-image");
+    expect(factory).toHaveBeenCalledWith("grok-imagine-image-quality");
   });
 
   it("happy path n=4: returns four outputs", async () => {

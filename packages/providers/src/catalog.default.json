@@ -386,68 +386,6 @@
           "count": 1
         }
       },
-      "grok-imagine-image": {
-        "id": "grok-imagine-image",
-        "displayName": "Grok Imagine",
-        "capabilities": {
-          "aspectRatios": [
-            "1:1",
-            "16:9",
-            "9:16",
-            "4:3",
-            "3:4",
-            "3:2",
-            "2:3",
-            "2:1",
-            "1:2",
-            "19.5:9",
-            "9:19.5",
-            "20:9",
-            "9:20",
-            "auto"
-          ],
-          "qualities": ["1k"],
-          "maxReferences": 5,
-          "maxOutputs": 10,
-          "supportsStyleRef": true
-        },
-        "defaults": {
-          "aspectRatio": "1:1",
-          "quality": "1k",
-          "count": 1
-        }
-      },
-      "grok-imagine-image-pro": {
-        "id": "grok-imagine-image-pro",
-        "displayName": "Grok Imagine Pro",
-        "capabilities": {
-          "aspectRatios": [
-            "1:1",
-            "16:9",
-            "9:16",
-            "4:3",
-            "3:4",
-            "3:2",
-            "2:3",
-            "2:1",
-            "1:2",
-            "19.5:9",
-            "9:19.5",
-            "20:9",
-            "9:20",
-            "auto"
-          ],
-          "qualities": ["1k", "2k"],
-          "maxReferences": 5,
-          "maxOutputs": 10,
-          "supportsStyleRef": true
-        },
-        "defaults": {
-          "aspectRatio": "1:1",
-          "quality": "2k",
-          "count": 1
-        }
-      },
       "grok-imagine-image-quality": {
         "id": "grok-imagine-image-quality",
         "displayName": "Grok Imagine Quality",
@@ -731,9 +669,9 @@
           "aspectRatio": "16:9"
         }
       },
-      "grok-imagine-video-1.5-preview": {
-        "id": "grok-imagine-video-1.5-preview",
-        "displayName": "Grok Imagine Video 1.5 (preview)",
+      "grok-imagine-video-1.5": {
+        "id": "grok-imagine-video-1.5",
+        "displayName": "Grok Imagine Video 1.5",
         "capabilities": {
           "durationsSec": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
           "maxDurationSec": 15,
@@ -1268,6 +1206,10 @@
       "displayName": "Volcengine",
       "image": [
         {
+          "id": "doubao-seedream-5-0-pro-260628",
+          "modelId": "dola-seedream-5-0-pro-260628"
+        },
+        {
           "id": "doubao-seedream-5-0-260128",
           "modelId": "seedream-5-0-260128"
         },
@@ -1281,6 +1223,10 @@
         }
       ],
       "video": [
+        {
+          "id": "doubao-seedance-2-5-260628",
+          "modelId": "dreamina-seedance-2-5-260628"
+        },
         {
           "id": "doubao-seedance-2-0-260128",
           "modelId": "dreamina-seedance-2-0-260128"
@@ -1301,20 +1247,12 @@
         {
           "id": "grok-imagine-image-quality",
           "modelId": "grok-imagine-image-quality"
-        },
-        {
-          "id": "grok-imagine-image-pro",
-          "modelId": "grok-imagine-image-pro"
-        },
-        {
-          "id": "grok-imagine-image",
-          "modelId": "grok-imagine-image"
         }
       ],
       "video": [
         {
-          "id": "grok-imagine-video-1.5-preview",
-          "modelId": "grok-imagine-video-1.5-preview"
+          "id": "grok-imagine-video-1.5",
+          "modelId": "grok-imagine-video-1.5"
         },
         {
           "id": "grok-imagine-video",

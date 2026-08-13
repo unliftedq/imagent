@@ -30,9 +30,11 @@ describe("loadCatalog", () => {
     expect(
       loaded.providers.google?.video?.some((entry) => entry.id === "veo-3.1-lite-generate-preview"),
     ).toBe(true);
-    expect(loaded.models.image["grok-imagine-image-pro"]?.capabilities?.qualities).toContain("2k");
+    expect(loaded.models.image["grok-imagine-image-quality"]?.capabilities?.qualities).toContain("2k");
+    expect(loaded.models.image["grok-imagine-image"]).toBeUndefined();
+    expect(loaded.models.image["grok-imagine-image-pro"]).toBeUndefined();
     expect(
-      loaded.models.video["grok-imagine-video-1.5-preview"]?.capabilities?.resolutions,
+      loaded.models.video["grok-imagine-video-1.5"]?.capabilities?.resolutions,
     ).toContain("1080p");
     expect(loaded.models.image["dola-seedream-5-0-pro-260628"]?.capabilities?.maxReferences).toBe(
       10,
@@ -43,6 +45,16 @@ describe("loadCatalog", () => {
     expect(
       loaded.providers.byteplus?.video?.some(
         (entry) => entry.id === "dreamina-seedance-2-5-260628",
+      ),
+    ).toBe(true);
+    expect(
+      loaded.providers.volcengine?.image?.some(
+        (entry) => entry.id === "doubao-seedream-5-0-pro-260628",
+      ),
+    ).toBe(true);
+    expect(
+      loaded.providers.volcengine?.video?.some(
+        (entry) => entry.id === "doubao-seedance-2-5-260628",
       ),
     ).toBe(true);
 
