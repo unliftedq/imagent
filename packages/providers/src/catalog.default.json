@@ -406,7 +406,7 @@
             "9:20",
             "auto"
           ],
-          "qualities": ["1k", "2k"],
+          "qualities": ["1k"],
           "maxReferences": 5,
           "maxOutputs": 10,
           "supportsStyleRef": true
@@ -414,6 +414,85 @@
         "defaults": {
           "aspectRatio": "1:1",
           "quality": "1k",
+          "count": 1
+        }
+      },
+      "grok-imagine-image-pro": {
+        "id": "grok-imagine-image-pro",
+        "displayName": "Grok Imagine Pro",
+        "capabilities": {
+          "aspectRatios": [
+            "1:1",
+            "16:9",
+            "9:16",
+            "4:3",
+            "3:4",
+            "3:2",
+            "2:3",
+            "2:1",
+            "1:2",
+            "19.5:9",
+            "9:19.5",
+            "20:9",
+            "9:20",
+            "auto"
+          ],
+          "qualities": ["1k", "2k"],
+          "maxReferences": 5,
+          "maxOutputs": 10,
+          "supportsStyleRef": true
+        },
+        "defaults": {
+          "aspectRatio": "1:1",
+          "quality": "2k",
+          "count": 1
+        }
+      },
+      "grok-imagine-image-quality": {
+        "id": "grok-imagine-image-quality",
+        "displayName": "Grok Imagine Quality",
+        "capabilities": {
+          "aspectRatios": [
+            "1:1",
+            "16:9",
+            "9:16",
+            "4:3",
+            "3:4",
+            "3:2",
+            "2:3",
+            "2:1",
+            "1:2",
+            "19.5:9",
+            "9:19.5",
+            "20:9",
+            "9:20",
+            "auto"
+          ],
+          "qualities": ["1k", "2k"],
+          "maxReferences": 5,
+          "maxOutputs": 10,
+          "supportsStyleRef": true
+        },
+        "defaults": {
+          "aspectRatio": "1:1",
+          "quality": "2k",
+          "count": 1
+        }
+      },
+      "dola-seedream-5-0-pro-260628": {
+        "id": "dola-seedream-5-0-pro-260628",
+        "displayName": "Seedream 5.0 Pro",
+        "capabilities": {
+          "aspectRatios": ["auto", "1:1", "2:3", "3:2", "3:4", "4:3", "16:9", "9:16", "21:9"],
+          "qualities": ["1k", "2k"],
+          "maxReferences": 10,
+          "maxReferenceSizeMb": 30,
+          "maxOutputs": 1,
+          "supportsStyleRef": true
+        },
+        "defaults": {
+          "quality": "2k",
+          "aspectRatio": "auto",
           "count": 1
         }
       },
@@ -648,8 +727,49 @@
         "defaults": {
           "durationSec": 8,
           "fps": 24,
-          "resolution": "720p",
+          "resolution": "480p",
           "aspectRatio": "16:9"
+        }
+      },
+      "grok-imagine-video-1.5-preview": {
+        "id": "grok-imagine-video-1.5-preview",
+        "displayName": "Grok Imagine Video 1.5 (preview)",
+        "capabilities": {
+          "durationsSec": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+          "maxDurationSec": 15,
+          "resolutions": ["480p", "720p", "1080p"],
+          "supportsFirstFrame": false,
+          "supportsLastFrame": false,
+          "supportsRefImages": false,
+          "aspectRatios": ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"]
+        },
+        "defaults": {
+          "durationSec": 8,
+          "fps": 24,
+          "resolution": "480p",
+          "aspectRatio": "16:9"
+        }
+      },
+      "dreamina-seedance-2-5-260628": {
+        "id": "dreamina-seedance-2-5-260628",
+        "displayName": "Dreamina Seedance 2.5",
+        "capabilities": {
+          "durationsSec": [
+            4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
+            27, 28, 29, 30
+          ],
+          "maxDurationSec": 30,
+          "resolutions": ["480p", "720p"],
+          "supportsFirstFrame": true,
+          "supportsLastFrame": true,
+          "supportsRefImages": true,
+          "aspectRatios": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive"],
+          "maxReferenceSizeMb": 30,
+          "maxReferences": 30
+        },
+        "defaults": {
+          "durationSec": 5,
+          "resolution": "720p"
         }
       },
       "dreamina-seedance-2-0-260128": {
@@ -1109,6 +1229,10 @@
       "displayName": "BytePlus",
       "image": [
         {
+          "id": "dola-seedream-5-0-pro-260628",
+          "modelId": "dola-seedream-5-0-pro-260628"
+        },
+        {
           "id": "seedream-5-0-260128",
           "modelId": "seedream-5-0-260128"
         },
@@ -1122,6 +1246,10 @@
         }
       ],
       "video": [
+        {
+          "id": "dreamina-seedance-2-5-260628",
+          "modelId": "dreamina-seedance-2-5-260628"
+        },
         {
           "id": "dreamina-seedance-2-0-260128",
           "modelId": "dreamina-seedance-2-0-260128"
@@ -1171,11 +1299,23 @@
       "displayName": "xAI",
       "image": [
         {
+          "id": "grok-imagine-image-quality",
+          "modelId": "grok-imagine-image-quality"
+        },
+        {
+          "id": "grok-imagine-image-pro",
+          "modelId": "grok-imagine-image-pro"
+        },
+        {
           "id": "grok-imagine-image",
           "modelId": "grok-imagine-image"
         }
       ],
       "video": [
+        {
+          "id": "grok-imagine-video-1.5-preview",
+          "modelId": "grok-imagine-video-1.5-preview"
+        },
         {
           "id": "grok-imagine-video",
           "modelId": "grok-imagine-video"

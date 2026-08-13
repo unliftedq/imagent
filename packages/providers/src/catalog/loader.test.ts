@@ -30,6 +30,21 @@ describe("loadCatalog", () => {
     expect(
       loaded.providers.google?.video?.some((entry) => entry.id === "veo-3.1-lite-generate-preview"),
     ).toBe(true);
+    expect(loaded.models.image["grok-imagine-image-pro"]?.capabilities?.qualities).toContain("2k");
+    expect(
+      loaded.models.video["grok-imagine-video-1.5-preview"]?.capabilities?.resolutions,
+    ).toContain("1080p");
+    expect(loaded.models.image["dola-seedream-5-0-pro-260628"]?.capabilities?.maxReferences).toBe(
+      10,
+    );
+    expect(loaded.models.video["dreamina-seedance-2-5-260628"]?.capabilities?.maxDurationSec).toBe(
+      30,
+    );
+    expect(
+      loaded.providers.byteplus?.video?.some(
+        (entry) => entry.id === "dreamina-seedance-2-5-260628",
+      ),
+    ).toBe(true);
 
     await expect(fs.stat(userPath)).rejects.toBeTruthy();
   });
