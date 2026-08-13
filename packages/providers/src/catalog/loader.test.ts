@@ -24,6 +24,39 @@ describe("loadCatalog", () => {
     expect(loaded.providers.openai?.image?.length).toBeGreaterThan(0);
     expect(loaded.models.image["MAI-Image-2"]?.capabilities?.minWidth).toBe(768);
     expect(loaded.models.image["flux-2-pro"]?.capabilities?.maxWidth).toBe(2048);
+    expect(loaded.models.video["veo-3.1-generate-preview"]?.capabilities?.resolutions).toContain(
+      "4k",
+    );
+    expect(
+      loaded.providers.google?.video?.some((entry) => entry.id === "veo-3.1-lite-generate-preview"),
+    ).toBe(true);
+    expect(loaded.models.image["grok-imagine-image-quality"]?.capabilities?.qualities).toContain("2k");
+    expect(loaded.models.image["grok-imagine-image"]).toBeUndefined();
+    expect(loaded.models.image["grok-imagine-image-pro"]).toBeUndefined();
+    expect(
+      loaded.models.video["grok-imagine-video-1.5"]?.capabilities?.resolutions,
+    ).toContain("1080p");
+    expect(loaded.models.image["dola-seedream-5-0-pro-260628"]?.capabilities?.maxReferences).toBe(
+      10,
+    );
+    expect(loaded.models.video["dreamina-seedance-2-5-260628"]?.capabilities?.maxDurationSec).toBe(
+      30,
+    );
+    expect(
+      loaded.providers.byteplus?.video?.some(
+        (entry) => entry.id === "dreamina-seedance-2-5-260628",
+      ),
+    ).toBe(true);
+    expect(
+      loaded.providers.volcengine?.image?.some(
+        (entry) => entry.id === "doubao-seedream-5-0-pro-260628",
+      ),
+    ).toBe(true);
+    expect(
+      loaded.providers.volcengine?.video?.some(
+        (entry) => entry.id === "doubao-seedance-2-5-260628",
+      ),
+    ).toBe(true);
 
     await expect(fs.stat(userPath)).rejects.toBeTruthy();
   });

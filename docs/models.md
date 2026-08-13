@@ -71,7 +71,7 @@ Use `imagent models --kind speech` to list available TTS offerings, and `imagent
 - **Output controls:** Max outputs 1.
 - **Reference-image support:** Supported; max 4 input images.
 
-### xAI: `grok-imagine-image`
+### xAI: `grok-imagine-image-quality`
 
 - **Size / ratio controls:** Aspect ratios: `1:1`, `16:9`, `9:16`, `4:3`, `3:4`, `3:2`, `2:3`, `2:1`, `1:2`, `19.5:9`, `9:19.5`, `20:9`, `9:20`, `auto`; resolutions `1k`, `2k`.
 - **Output controls:** Max outputs 10.
@@ -83,6 +83,13 @@ Use `imagent models --kind speech` to list available TTS offerings, and `imagent
 - **Size / ratio controls:** Aspect ratios `1:1`, `16:9`, `4:3`, `3:2`, `2:3`, `3:4`, `9:16`, `21:9`; or explicit width/height from 512–2048 pixels per edge in multiples of 8.
 - **Output controls:** Max outputs 9.
 - **Reference-image support:** Supported; max 1 image (mapped to a `character` subject reference).
+
+### BytePlus / Volcano Ark: `dola-seedream-5-0-pro-260628`
+
+- **Provider-facing ids:** BytePlus uses `dola-seedream-5-0-pro-260628`; 火山引擎 uses `doubao-seedream-5-0-pro-260628`.
+- **Size / ratio controls:** Aspect ratios `auto`, `1:1`, `2:3`, `3:2`, `3:4`, `4:3`, `16:9`, `9:16`, `21:9`; `1k` or `2k`.
+- **Output controls:** Max outputs 1.
+- **Reference-image support:** Supported; max 10 images; each image under 30 MB.
 
 ### BytePlus / Volcano Ark: `seedream-5-0-260128`
 
@@ -107,6 +114,20 @@ Use `imagent models --kind speech` to list available TTS offerings, and `imagent
 
 ## Video models
 
+### Google AI Studio: `veo-3.1-generate-preview`
+
+- **Duration / FPS:** 4, 6, or 8 seconds.
+- **Resolution / aspect ratio:** `720p`, `1080p`, `4k`; `16:9`, `9:16`. The `4k` resolution is available for 8-second generations.
+- **Reference-image support:** Not enabled in the default catalog because the current provider adapter does not yet serialize first/last-frame or ingredient inputs.
+- **Other capabilities:** Preview model; max outputs 1. The catalog defaults to 8 seconds at `1080p`.
+
+### Google AI Studio: `veo-3.1-lite-generate-preview`
+
+- **Duration / FPS:** 4, 6, or 8 seconds.
+- **Resolution / aspect ratio:** `720p`, `1080p`; `16:9`, `9:16`.
+- **Reference-image support:** Not enabled in the default catalog.
+- **Other capabilities:** Preview model; max outputs 1. The catalog defaults to 8 seconds at `720p`.
+
 ### Google AI Studio: `veo-3.0-generate-001`
 
 - **Duration / FPS:** 8 seconds; 24 FPS.
@@ -121,12 +142,19 @@ Use `imagent models --kind speech` to list available TTS offerings, and `imagent
 - **Reference-image support:** Not enabled in the default catalog.
 - **Other capabilities:** Max outputs 1.
 
+### xAI: `grok-imagine-video-1.5`
+
+- **Duration / FPS:** 1–15 seconds; the catalog default is 8 seconds at 24 FPS.
+- **Resolution / aspect ratio:** `480p`, `720p`, `1080p`; `1:1`, `16:9`, `9:16`, `4:3`, `3:4`, `3:2`, `2:3`. Native `1080p` applies to text-to-video and image-to-video.
+- **Reference-image support:** xAI supports image-to-video and reference-to-video, but the current imagent adapter does not send those inputs.
+- **Other capabilities:** Default resolution is `480p`; xAI caps reference-to-video at `720p`.
+
 ### xAI: `grok-imagine-video`
 
 - **Duration / FPS:** 1–15 seconds; the catalog default is 8 seconds at 24 FPS.
 - **Resolution / aspect ratio:** `480p`, `720p`; `1:1`, `16:9`, `9:16`, `4:3`, `3:4`, `3:2`, `2:3`.
 - **Reference-image support:** Not enabled in the default catalog.
-- **Other capabilities:** Default resolution is `720p`.
+- **Other capabilities:** Default resolution is `480p`.
 
 ### MiniMax: `MiniMax-Hailuo-2.3`
 
@@ -135,6 +163,14 @@ Use `imagent models --kind speech` to list available TTS offerings, and `imagent
 - **Resolution / aspect ratio:** `768P`, `1080P`; aspect ratio is controlled by the prompt/first frame rather than a dedicated parameter.
 - **Reference-image support:** First-frame image is supported; multimodal reference images are not.
 - **Other capabilities:** Default resolution is `1080P`.
+
+### BytePlus / Volcano Ark: `dreamina-seedance-2-5-260628`
+
+- **Provider-facing ids:** BytePlus uses `dreamina-seedance-2-5-260628`; 火山引擎 uses `doubao-seedance-2-5-260628`.
+- **Duration:** 4–30 seconds.
+- **Resolution / aspect ratio:** `480p`, `720p`; `16:9`, `9:16`, `1:1`, `4:3`, `3:4`, `21:9`, or `adaptive`.
+- **Reference-image support:** First frame, last frame, and reference images are supported; max 30 images; each image under 30 MB.
+- **Other capabilities:** The BytePlus model also accepts reference video/audio and can generate audio, but the current imagent adapter only sends text and image inputs. Default duration is 5 seconds; default resolution is `720p`.
 
 ### BytePlus / Volcano Ark: `dreamina-seedance-2-0-260128`
 
@@ -216,7 +252,9 @@ Use `imagent models --kind speech` to list available TTS offerings, and `imagent
 - Black Forest Labs API skill and model guides: <https://github.com/black-forest-labs/skills>
 - ByteDance / Volcano Ark image generation API: <https://www.volcengine.com/docs/82379/1541523>
 - ByteDance / Volcano Ark video generation API: <https://www.volcengine.com/docs/82379>
-- xAI image/video generation docs: <https://docs.x.ai/developers/model-capabilities/images/generation>
+- BytePlus Seedream 5.0 model card: <https://ai.byteplus.com/ark/region:ap-southeast-1/model/detail?Id=seedream-5-0>
+- BytePlus Seedance 2.5 model card: <https://ai.byteplus.com/ark/region:ap-southeast-1/model/detail?Id=dreamina-seedance-2-5>
+- xAI Imagine model capabilities: <https://docs.x.ai/developers/model-capabilities/imagine>
 - xAI Python SDK: <https://github.com/xai-org/xai-sdk-python>
 - MiniMax image generation guide: <https://platform.minimax.io/docs/guides/image-generation>
 - MiniMax video generation guide: <https://platform.minimax.io/docs/guides/video-generation>

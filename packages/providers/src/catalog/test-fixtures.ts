@@ -280,9 +280,9 @@ export const XAI_VIDEO_MODELS: Record<string, VideoModelDef> = {
 };
 
 export const XAI_IMAGE_MODELS: Record<string, ImageModelDef> = {
-  "grok-imagine-image": {
-    id: "grok-imagine-image",
-    displayName: "Grok Imagine",
+  "grok-imagine-image-quality": {
+    id: "grok-imagine-image-quality",
+    displayName: "Grok Imagine Quality",
     capabilities: {
       aspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
       qualities: ["1k", "2k"],

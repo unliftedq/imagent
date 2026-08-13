@@ -179,7 +179,7 @@ Video example:
 ```bash
 imagent video generate "a gentle tracking shot through a flower market" \
   --provider google \
-  --model veo-3.0-generate-001 \
+  --model veo-3.1-generate-preview \
   --option duration=8
 ```
 
@@ -225,7 +225,7 @@ imagent image generate "high-detail fantasy landscape, morning mist" \
 
 ### BytePlus ModelArk (`byteplus`)
 
-BytePlus is the international ByteDance ModelArk endpoint. It serves Seedream image models and Seedance video models on un-prefixed model ids (e.g. `seedream-4-0-250828`, `dreamina-seedance-2-0-260128`). Requires an endpoint and an API key.
+BytePlus is the international ByteDance ModelArk endpoint. It serves Seedream image models and Seedance video models (e.g. `dola-seedream-5-0-pro-260628`, `dreamina-seedance-2-5-260628`). Requires an endpoint and an API key.
 
 CLI setup:
 
@@ -247,9 +247,9 @@ Image example:
 ```bash
 imagent image generate "polished character key art" \
   --provider byteplus \
-  --model seedream-4-0-250828 \
+  --model dola-seedream-5-0-pro-260628 \
   --option size=2K \
-  --option count=2
+  --option count=1
 ```
 
 Video example:
@@ -257,14 +257,14 @@ Video example:
 ```bash
 imagent video generate "a sweeping shot over a cyberpunk street" \
   --provider byteplus \
-  --model dreamina-seedance-2-0-260128 \
+  --model dreamina-seedance-2-5-260628 \
   --option duration=5 \
   --option resolution=720p
 ```
 
 ### 火山引擎 / Volcano Ark (`volcengine`)
 
-火山引擎 is the mainland China ByteDance Ark endpoint. It serves the same Seedream and Seedance models, but exposes them under `doubao-`-prefixed model ids (e.g. `doubao-seedream-4-0-250828`, `doubao-seedance-2-0-260128`). Requires an endpoint and an API key.
+火山引擎 is the mainland China ByteDance Ark endpoint. It serves the same Seedream and Seedance models, but exposes them under `doubao-`-prefixed model ids (e.g. `doubao-seedream-5-0-pro-260628`, `doubao-seedance-2-5-260628`). Requires an endpoint and an API key.
 
 CLI setup:
 
@@ -286,7 +286,7 @@ Image example:
 ```bash
 imagent image generate "polished character key art" \
   --provider volcengine \
-  --model doubao-seedream-4-0-250828 \
+  --model doubao-seedream-5-0-pro-260628 \
   --option size=2K \
   --option count=2
 ```
@@ -296,7 +296,7 @@ Video example:
 ```bash
 imagent video generate "a sweeping shot over a cyberpunk street" \
   --provider volcengine \
-  --model doubao-seedance-2-0-260128 \
+  --model doubao-seedance-2-5-260628 \
   --option duration=5 \
   --option resolution=720p
 ```
@@ -330,7 +330,7 @@ Image example:
 ```bash
 imagent image generate "retro sci-fi explorer poster" \
   --provider xai \
-  --model grok-imagine-image \
+  --model grok-imagine-image-quality \
   --option aspect=3:4
 ```
 
@@ -339,7 +339,7 @@ Video example:
 ```bash
 imagent video generate "a dramatic hero shot with drifting fog" \
   --provider xai \
-  --model grok-imagine-video \
+  --model grok-imagine-video-1.5 \
   --option duration=10
 ```
 
