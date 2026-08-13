@@ -24,6 +24,14 @@ describe("loadCatalog", () => {
     expect(loaded.providers.openai?.image?.length).toBeGreaterThan(0);
     expect(loaded.models.image["MAI-Image-2"]?.capabilities?.minWidth).toBe(768);
     expect(loaded.models.image["flux-2-pro"]?.capabilities?.maxWidth).toBe(2048);
+    expect(loaded.models.video["veo-3.1-generate-preview"]?.capabilities?.resolutions).toContain(
+      "4k",
+    );
+    expect(
+      loaded.providers.google?.video?.some(
+        (entry) => entry.id === "veo-3.1-lite-generate-preview",
+      ),
+    ).toBe(true);
 
     await expect(fs.stat(userPath)).rejects.toBeTruthy();
   });

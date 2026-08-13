@@ -557,6 +557,42 @@
       }
     },
     "video": {
+      "veo-3.1-generate-preview": {
+        "id": "veo-3.1-generate-preview",
+        "displayName": "Veo 3.1 (preview)",
+        "capabilities": {
+          "durationsSec": [4, 6, 8],
+          "resolutions": ["720p", "1080p", "4k"],
+          "supportsFirstFrame": false,
+          "supportsLastFrame": false,
+          "supportsRefImages": false,
+          "aspectRatios": ["16:9", "9:16"]
+        },
+        "defaults": {
+          "durationSec": 8,
+          "resolution": "1080p",
+          "aspectRatio": "16:9",
+          "count": 1
+        }
+      },
+      "veo-3.1-lite-generate-preview": {
+        "id": "veo-3.1-lite-generate-preview",
+        "displayName": "Veo 3.1 Lite (preview)",
+        "capabilities": {
+          "durationsSec": [4, 6, 8],
+          "resolutions": ["720p", "1080p"],
+          "supportsFirstFrame": false,
+          "supportsLastFrame": false,
+          "supportsRefImages": false,
+          "aspectRatios": ["16:9", "9:16"]
+        },
+        "defaults": {
+          "durationSec": 8,
+          "resolution": "720p",
+          "aspectRatio": "16:9",
+          "count": 1
+        }
+      },
       "veo-3.0-generate-001": {
         "id": "veo-3.0-generate-001",
         "displayName": "Veo 3",
@@ -1020,6 +1056,14 @@
         }
       ],
       "video": [
+        {
+          "id": "veo-3.1-generate-preview",
+          "modelId": "veo-3.1-generate-preview"
+        },
+        {
+          "id": "veo-3.1-lite-generate-preview",
+          "modelId": "veo-3.1-lite-generate-preview"
+        },
         {
           "id": "veo-3.0-generate-001",
           "modelId": "veo-3.0-generate-001"

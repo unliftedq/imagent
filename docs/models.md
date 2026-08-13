@@ -107,6 +107,20 @@ Use `imagent models --kind speech` to list available TTS offerings, and `imagent
 
 ## Video models
 
+### Google AI Studio: `veo-3.1-generate-preview`
+
+- **Duration / FPS:** 4, 6, or 8 seconds.
+- **Resolution / aspect ratio:** `720p`, `1080p`, `4k`; `16:9`, `9:16`. The `4k` resolution is available for 8-second generations.
+- **Reference-image support:** Not enabled in the default catalog because the current provider adapter does not yet serialize first/last-frame or ingredient inputs.
+- **Other capabilities:** Preview model; max outputs 1. The catalog defaults to 8 seconds at `1080p`.
+
+### Google AI Studio: `veo-3.1-lite-generate-preview`
+
+- **Duration / FPS:** 4, 6, or 8 seconds.
+- **Resolution / aspect ratio:** `720p`, `1080p`; `16:9`, `9:16`.
+- **Reference-image support:** Not enabled in the default catalog.
+- **Other capabilities:** Preview model; max outputs 1. The catalog defaults to 8 seconds at `720p`.
+
 ### Google AI Studio: `veo-3.0-generate-001`
 
 - **Duration / FPS:** 8 seconds; 24 FPS.

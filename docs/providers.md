@@ -179,7 +179,7 @@ Video example:
 ```bash
 imagent video generate "a gentle tracking shot through a flower market" \
   --provider google \
-  --model veo-3.0-generate-001 \
+  --model veo-3.1-generate-preview \
   --option duration=8
 ```
 
