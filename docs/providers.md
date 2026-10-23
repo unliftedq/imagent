@@ -145,7 +145,7 @@ imagent image generate "obsidian glass cathedral on a wind-swept cliff" \
 
 ### Google AI Studio (`google`)
 
-Google uses one API key for configured image models, Veo video models, and Gemini text-to-speech.
+Google uses one API key for Nano Banana image models, Omni / Veo video models, and Gemini text-to-speech. Current image and speech models and Omni video use the Interactions API; Veo retains its long-running operations API.
 
 CLI setup:
 
@@ -170,7 +170,7 @@ Image example:
 ```bash
 imagent image generate "storybook illustration of a floating library" \
   --provider google \
-  --model gemini-2.5-flash-image \
+  --model gemini-nano-banana-2.1 \
   --option aspect=16:9
 ```
 
@@ -188,7 +188,7 @@ Speech example:
 ```bash
 imagent speech synthesize "Welcome to imagent" \
   --provider google \
-  --model gemini-3.1-flash-tts-preview \
+  --model gemini-3.8-flash-tts \
   --option voice=Zephyr
 ```
 
@@ -330,7 +330,7 @@ Image example:
 ```bash
 imagent image generate "retro sci-fi explorer poster" \
   --provider xai \
-  --model grok-imagine-image-quality \
+  --model grok-imagine-image-2.0 \
   --option aspect=3:4
 ```
 

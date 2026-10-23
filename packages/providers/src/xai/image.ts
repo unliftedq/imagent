@@ -8,6 +8,7 @@ import {
   type Logger,
   ProviderError,
   ProviderHttpError,
+  ProviderRequestError,
   ProviderResponseError,
   type ProviderTestResult,
 } from "@imagent/core";
@@ -45,7 +46,7 @@ export interface XaiImageProviderOptions {
 
 /**
  * xAI image provider — uses the Vercel AI SDK (`@ai-sdk/xai` + `ai`) to call
- * Grok Imagine. Default catalog model is `grok-imagine-image-quality`.
+ * Grok Imagine. Default catalog model is `grok-imagine-image-2.0`.
  */
 export class XaiImageProvider extends BaseImageProvider {
   private readonly modelFactory: XaiImageModelFactory;
@@ -103,20 +104,32 @@ export class XaiImageProvider extends BaseImageProvider {
     // (forwarded by `@ai-sdk/xai` as `aspect_ratio`). We also surface `quality`
     // ("1k"/"2k") to users and route it through `providerOptions.xai.resolution`,
     // which is the SDK's xAI-specific resolution enum.
-    if (merged.aspectRatio && /^[\w.]+:[\w.]+$/.test(merged.aspectRatio)) {
+    if (merged.aspectRatio && merged.aspectRatio !== "auto") {
       args.aspectRatio = merged.aspectRatio as `${number}:${number}`;
     }
-    const xaiOpts: Record<string, unknown> = {};
+    const xaiOpts: Record<string, string> = {};
     if (merged.quality) xaiOpts.resolution = merged.quality;
+    if (merged.raw?.quality !== undefined) {
+      if (
+        (modelDef.baseModelId ?? modelDef.id) !== "grok-imagine-image-2.0" ||
+        (merged.raw.quality !== "low" && merged.raw.quality !== "medium")
+      ) {
+        throw new ProviderRequestError(
+          "xAI raw.quality must be low or medium and requires grok-imagine-image-2.0",
+          { vendorId: this.id },
+        );
+      }
+      xaiOpts.quality = merged.raw.quality;
+    }
     if (merged.references.length > 0) {
       const dataUrls = (await loadImageReferences(merged.references, this.id)).map(imageDataUrl);
-      xaiOpts.referenceImages = dataUrls;
+      args.prompt = {
+        text: appendImageReferenceInstructions(merged.prompt, merged.references),
+        images: dataUrls,
+      };
     }
     if (Object.keys(xaiOpts).length > 0) {
-      (args as Record<string, unknown>).providerOptions = {
-        ...((args as { providerOptions?: Record<string, unknown> }).providerOptions ?? {}),
-        xai: xaiOpts,
-      };
+      args.providerOptions = { xai: xaiOpts };
     }
     if (signal) args.abortSignal = signal;
 

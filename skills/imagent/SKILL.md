@@ -30,7 +30,7 @@ imagent models --kind video --configured                # video providers with c
 imagent models --kind speech --configured                # speech (TTS) providers with credentials
 
 imagent options --provider openai --model gpt-image-2                       # image model options
-imagent options --provider google --model veo-3.0-generate-001 --kind video # video model options
+imagent options --provider google --model gemini-omni-1.1-flash --kind video # video model options
 imagent options --provider elevenlabs --model <id> --kind speech             # speech model options
 ```
 
@@ -82,7 +82,7 @@ Only pick a provider/model and pass options when the request requires non-defaul
 ```bash
 imagent video generate "a crane shot over a futuristic coastline" \
   --provider google \
-  --model veo-3.0-generate-001 \
+  --model gemini-omni-1.1-flash \
   --option durationSec=8 \
   --option resolution=720p
 ```

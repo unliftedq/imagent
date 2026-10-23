@@ -30,12 +30,14 @@ describe("loadCatalog", () => {
     expect(
       loaded.providers.google?.video?.some((entry) => entry.id === "veo-3.1-lite-generate-preview"),
     ).toBe(true);
-    expect(loaded.models.image["grok-imagine-image-quality"]?.capabilities?.qualities).toContain("2k");
+    expect(loaded.models.image["grok-imagine-image-quality"]?.capabilities?.qualities).toContain(
+      "2k",
+    );
     expect(loaded.models.image["grok-imagine-image"]).toBeUndefined();
     expect(loaded.models.image["grok-imagine-image-pro"]).toBeUndefined();
-    expect(
-      loaded.models.video["grok-imagine-video-1.5"]?.capabilities?.resolutions,
-    ).toContain("1080p");
+    expect(loaded.models.video["grok-imagine-video-1.5"]?.capabilities?.resolutions).toContain(
+      "1080p",
+    );
     expect(loaded.models.image["dola-seedream-5-0-pro-260628"]?.capabilities?.maxReferences).toBe(
       10,
     );
@@ -127,7 +129,7 @@ describe("loadCatalog", () => {
           },
         },
         video: {
-          "veo-3.0-generate-001": {
+          "veo-3.1-generate-preview": {
             capabilities: { resolutions: ["720p"] },
           },
         },
@@ -141,10 +143,9 @@ describe("loadCatalog", () => {
     expect(imageCaps?.supportsStyleRef).toBe(true);
     expect(imageCaps?.maxOutputs).toBe(10);
 
-    const videoCaps = loaded.models.video["veo-3.0-generate-001"]?.capabilities;
+    const videoCaps = loaded.models.video["veo-3.1-generate-preview"]?.capabilities;
     expect(videoCaps?.resolutions).toEqual(["720p"]);
-    // Bundled defaults for Veo 3 stable: first/last frame are not wired through
-    // the provider and not supported by the stable model (Veo 3.1 preview only).
+    // The adapter does not serialize Veo frame inputs.
     expect(videoCaps?.supportsFirstFrame).toBe(false);
     expect(videoCaps?.supportsLastFrame).toBe(false);
   });

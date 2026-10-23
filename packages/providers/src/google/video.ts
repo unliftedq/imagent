@@ -1,8 +1,9 @@
+import { GoogleGenAI, type Interactions } from "@google/genai";
 import {
+  type Logger,
   ProviderError,
   ProviderHttpError,
   ProviderResponseError,
-  type Logger,
   type ProviderTestResult,
   type VideoGenerationResult,
   type VideoJobHandle,
@@ -11,7 +12,6 @@ import {
   type VideoOutput,
   type VideoRequest,
 } from "@imagent/core";
-import { GoogleGenAI } from "@google/genai";
 import {
   BaseVideoProvider,
   coerceMimeType,
@@ -23,9 +23,14 @@ import {
 import { createHttpClient, type HttpClient } from "../http/index.js";
 import {
   DEFAULT_GOOGLE_BASE_URL,
-  listGoogleModelIds,
   type GoogleGenAIClientLike,
+  listGoogleModelIds,
 } from "./image.js";
+import {
+  assertInteractionCompleted,
+  createInteraction,
+  interactionContent,
+} from "./interactions.js";
 
 /**
  * Minimal SDK surface used by `GoogleVideoProvider`. Tests inject a fake.
@@ -45,9 +50,7 @@ export interface GoogleGenAIVideoClientLike extends GoogleGenAIClientLike {
     }>;
   };
   operations: {
-    getVideosOperation: (params: {
-      operation: { name?: string };
-    }) => Promise<{
+    getVideosOperation: (params: { operation: { name?: string } }) => Promise<{
       name?: string;
       done?: boolean;
       response?: unknown;
@@ -118,6 +121,33 @@ export class GoogleVideoProvider extends BaseVideoProvider {
   }
 
   protected async doSubmit(merged: VideoRequest, model: VideoModelDef): Promise<VideoJobHandle> {
+    if ((model.baseModelId ?? model.id).startsWith("gemini-omni-")) {
+      const generationConfig: Interactions.GenerationConfig = {};
+      mergeRawOptions(generationConfig, merged.raw);
+      const response = await createInteraction(this.client.interactions, {
+        model: model.id,
+        input: merged.prompt,
+        background: true,
+        store: true,
+        generation_config: generationConfig,
+        response_format: {
+          type: "video",
+          delivery: "uri",
+          ...(merged.aspectRatio ? { aspect_ratio: merged.aspectRatio } : {}),
+          ...(merged.durationSec !== undefined ? { duration: `${merged.durationSec}s` } : {}),
+          ...(merged.resolution ? { resolution: merged.resolution } : {}),
+        },
+      });
+      if (!response.id) {
+        throw new ProviderResponseError("Omni submit response missing interaction id", {
+          vendorId: this.id,
+        });
+      }
+      if (response.status !== "queued" && response.status !== "in_progress") {
+        assertInteractionCompleted(response);
+      }
+      return { providerId: this.id, providerJobId: `interaction:${response.id}` };
+    }
     const config: Record<string, unknown> = {};
     if (merged.aspectRatio) config.aspectRatio = merged.aspectRatio;
     if (merged.durationSec !== undefined) config.durationSeconds = merged.durationSec;
@@ -137,7 +167,9 @@ export class GoogleVideoProvider extends BaseVideoProvider {
       });
     }
 
-    let op: Awaited<ReturnType<NonNullable<GoogleGenAIVideoClientLike["models"]["generateVideos"]>>>;
+    let op: Awaited<
+      ReturnType<NonNullable<GoogleGenAIVideoClientLike["models"]["generateVideos"]>>
+    >;
     try {
       op = await this.client.models.generateVideos({
         model: model.id,
@@ -156,6 +188,31 @@ export class GoogleVideoProvider extends BaseVideoProvider {
   }
 
   async poll(handle: VideoJobHandle): Promise<VideoJobStatus> {
+    if (handle.providerJobId.startsWith("interaction:")) {
+      const response = await this.fetchInteraction(
+        handle.providerJobId.slice("interaction:".length),
+      );
+      switch (response.status) {
+        case "queued":
+          return { state: "queued" };
+        case "in_progress":
+          return { state: "running" };
+        case "completed":
+          return { state: "succeeded" };
+        case "cancelled":
+          return { state: "cancelled" };
+        default:
+          return {
+            state: "failed",
+            errorMessage: `Google interaction ${response.status}: ${
+              response.errors
+                ?.map((e) => e.message)
+                .filter(Boolean)
+                .join("; ") || "video generation did not complete"
+            }`,
+          };
+      }
+    }
     const op = await this.fetchOperation(handle.providerJobId);
     if (op.done !== true) {
       return { state: "running" };
@@ -169,6 +226,36 @@ export class GoogleVideoProvider extends BaseVideoProvider {
   }
 
   async fetch(handle: VideoJobHandle): Promise<VideoGenerationResult> {
+    if (handle.providerJobId.startsWith("interaction:")) {
+      const response = await this.fetchInteraction(
+        handle.providerJobId.slice("interaction:".length),
+      );
+      assertInteractionCompleted(response);
+      const video = interactionContent(response).find((part) => part.type === "video");
+      if (!video || video.type !== "video") {
+        throw new ProviderResponseError("Omni response missing video", { vendorId: this.id });
+      }
+      if (video.data) {
+        return {
+          output: { bytes: decodeBase64(video.data), mimeType: video.mime_type ?? "video/mp4" },
+        };
+      }
+      if (!video.uri) {
+        throw new ProviderResponseError("Omni response missing video uri", { vendorId: this.id });
+      }
+      const url = new URL(video.uri, `${this.baseUrl}/`);
+      const isApiUrl = url.origin === new URL(this.baseUrl).origin;
+      if (isApiUrl) url.searchParams.set("alt", "media");
+      const result = await this.http.getBytes(
+        isApiUrl ? appendApiKey(url.toString(), this.apiKey) : url.toString(),
+      );
+      return {
+        output: {
+          bytes: result.bytes,
+          mimeType: coerceMimeType(result.mimeType, "video/", "video/mp4"),
+        },
+      };
+    }
     const op = await this.fetchOperation(handle.providerJobId);
     if (op.done !== true) {
       throw new ProviderError("fetch() called before operation done", { vendorId: this.id });
@@ -211,6 +298,19 @@ export class GoogleVideoProvider extends BaseVideoProvider {
    * raw HTTP and surface "not supported" on 404/405.
    */
   async cancel(handle: VideoJobHandle): Promise<void> {
+    if (handle.providerJobId.startsWith("interaction:")) {
+      if (!this.client.interactions?.cancel) {
+        throw new ProviderError("SDK does not expose interaction cancellation", {
+          vendorId: this.id,
+        });
+      }
+      try {
+        await this.client.interactions.cancel(handle.providerJobId.slice("interaction:".length));
+      } catch (err) {
+        rethrowGenericSdkError(err, this.id);
+      }
+      return;
+    }
     const opName = handle.providerJobId.replace(/^\/+/, "");
     const url = `${this.baseUrl}/${opName}?key=${encodeURIComponent(this.apiKey)}`;
     try {
@@ -250,6 +350,19 @@ export class GoogleVideoProvider extends BaseVideoProvider {
   }> {
     try {
       return await this.client.operations.getVideosOperation({ operation: { name: opName } });
+    } catch (err) {
+      rethrowGenericSdkError(err, this.id);
+    }
+  }
+
+  private async fetchInteraction(id: string): Promise<Interactions.Interaction> {
+    if (!this.client.interactions?.get) {
+      throw new ProviderResponseError("SDK does not expose interaction retrieval", {
+        vendorId: this.id,
+      });
+    }
+    try {
+      return await this.client.interactions.get(id);
     } catch (err) {
       rethrowGenericSdkError(err, this.id);
     }

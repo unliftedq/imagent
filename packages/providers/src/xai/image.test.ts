@@ -1,16 +1,29 @@
-import { describe, expect, it, vi } from "vitest";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { createXai } from "@ai-sdk/xai";
 import {
+  type ImageRequest,
   ProviderAbortError,
   ProviderError,
   ProviderHttpError,
-  type ImageRequest,
 } from "@imagent/core";
 import type { ImageModel } from "ai";
-import { XaiImageProvider } from "./image.js";
+import { describe, expect, it, vi } from "vitest";
+import { getBundledCatalog } from "../catalog/loader.js";
+import { resolveImageProviderModels } from "../catalog/resolve.js";
 import { XAI_IMAGE_MODELS } from "../catalog/test-fixtures.js";
+import { XaiImageProvider } from "./image.js";
 
 const PNG_BYTES = new Uint8Array([
-  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, // PNG header
+  0x89,
+  0x50,
+  0x4e,
+  0x47,
+  0x0d,
+  0x0a,
+  0x1a,
+  0x0a, // PNG header
 ]);
 
 interface FakeModelOptions {
@@ -71,6 +84,54 @@ const baseRequest: ImageRequest = {
 };
 
 describe("XaiImageProvider", () => {
+  it("Grok 2.0 sends real SDK image edits, resolution and generation quality", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "imagent-xai-ref-"));
+    try {
+      const file = path.join(dir, "ref.png");
+      await writeFile(file, PNG_BYTES);
+      const fetch = vi
+        .fn()
+        .mockResolvedValue(
+          new Response(
+            JSON.stringify({ data: [{ b64_json: Buffer.from(PNG_BYTES).toString("base64") }] }),
+            { headers: { "content-type": "application/json" } },
+          ),
+        );
+      const xai = createXai({ apiKey: "test", fetch });
+      const provider = new XaiImageProvider({
+        apiKey: "test",
+        models: new Map(
+          resolveImageProviderModels(getBundledCatalog(), "xai").map((model) => [model.id, model]),
+        ),
+        modelFactory: (id) => xai.image(id),
+      });
+      await provider.generate({
+        ...baseRequest,
+        model: "grok-imagine-image-2.0",
+        quality: "2k",
+        raw: { quality: "low" },
+        references: [{ path: file, role: "character" }],
+      });
+      expect(String(fetch.mock.calls[0]?.[0])).toContain("/images/edits");
+      const body = JSON.parse(String(fetch.mock.calls[0]?.[1]?.body));
+      expect(body).toMatchObject({
+        model: "grok-imagine-image-2.0",
+        resolution: "2k",
+        quality: "low",
+        image: { url: expect.stringContaining("data:image/png;base64,") },
+      });
+      expect(body.prompt).toContain("role: character");
+      await expect(
+        provider.generate({
+          ...baseRequest,
+          model: "grok-imagine-image-2.0",
+          raw: { quality: "high" },
+        }),
+      ).rejects.toThrow(/low or medium/);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
   it("happy path n=1: invokes Vercel AI SDK image model with correct id", async () => {
     const factory = vi.fn((id: string) => makeFakeModel(id));
     const p = makeProvider(factory);
@@ -169,9 +230,7 @@ describe("XaiImageProvider", () => {
     // ImageModelV3.doGenerate as a single options object. We assert the
     // SDK sees both knobs.
     expect(capturedArgs?.aspectRatio).toBe("16:9");
-    const opts = capturedArgs?.providerOptions as
-      | { xai?: { resolution?: string } }
-      | undefined;
+    const opts = capturedArgs?.providerOptions as { xai?: { resolution?: string } } | undefined;
     expect(opts?.xai?.resolution).toBe("2k");
   });
 
@@ -191,9 +250,7 @@ describe("XaiImageProvider", () => {
     );
     const p = makeProvider(factory);
     await p.generate(baseRequest);
-    const opts = capturedArgs?.providerOptions as
-      | { xai?: { resolution?: string } }
-      | undefined;
+    const opts = capturedArgs?.providerOptions as { xai?: { resolution?: string } } | undefined;
     expect(opts?.xai?.resolution).toBe("1k");
   });
 });

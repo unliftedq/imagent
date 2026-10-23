@@ -83,7 +83,7 @@ const MCP_TOOLS: McpTool[] = [
   subcommandTool(
     "imagent_options",
     "options",
-    'Show the request options, capabilities, defaults, and reference-image limits for a specific provider/model. Use this before calling `imagent image|video generate` to know exactly which `--option key=value` pairs (size, aspectRatio, quality, durationSec, ...) the model accepts and what values are valid. Add --json for machine-readable output. Required args: --provider <id> --model <id>. Example args: ["--provider", "openai", "--model", "gpt-image-2"] or ["--provider", "google", "--model", "veo-3.0-generate-001", "--kind", "video", "--json"].',
+    'Show the request options, capabilities, defaults, and reference-image limits for a specific provider/model. Use this before calling `imagent image|video generate` to know exactly which `--option key=value` pairs (size, aspectRatio, quality, durationSec, ...) the model accepts and what values are valid. Add --json for machine-readable output. Required args: --provider <id> --model <id>. Example args: ["--provider", "openai", "--model", "gpt-image-2"] or ["--provider", "google", "--model", "gemini-omni-1.1-flash", "--kind", "video", "--json"].',
   ),
   subcommandTool(
     "imagent_image",
@@ -93,7 +93,7 @@ const MCP_TOOLS: McpTool[] = [
   subcommandTool(
     "imagent_video",
     "video",
-    'Submit, track, and download video jobs. First run `imagent_models --kind video` and `imagent_options --provider <id> --model <id> --kind video` to learn which models are available and which `--option key=value` keys they accept (durationSec, resolution, aspectRatio, fps, firstFrame, ...). `generate` defaults to async submission; pass `--wait` to poll until completion and download into the gallery, plus `--out <dir>` to copy the downloaded file. Use `task ls`, `task get --id <jobId>`, and `task cancel --id <jobId>` for async jobs; running tasks refresh remote provider status before returning. Download with `download --id <jobId>`. Args go after `imagent video`, e.g. ["generate", "a camera orbit around a glass sculpture", "--provider", "google", "--model", "veo-3.0-generate-001", "--option", "durationSec=8", "--wait", "--out", "./outputs"].',
+    'Submit, track, and download video jobs. First run `imagent_models --kind video` and `imagent_options --provider <id> --model <id> --kind video` to learn which models are available and which `--option key=value` keys they accept (durationSec, resolution, aspectRatio, fps, firstFrame, ...). `generate` defaults to async submission; pass `--wait` to poll until completion and download into the gallery, plus `--out <dir>` to copy the downloaded file. Use `task ls`, `task get --id <jobId>`, and `task cancel --id <jobId>` for async jobs; running tasks refresh remote provider status before returning. Download with `download --id <jobId>`. Args go after `imagent video`, e.g. ["generate", "a camera orbit around a glass sculpture", "--provider", "google", "--model", "gemini-omni-1.1-flash", "--option", "durationSec=8", "--wait", "--out", "./outputs"].',
   ),
   subcommandTool(
     "imagent_config",

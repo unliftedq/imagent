@@ -2,6 +2,60 @@
   "version": 2,
   "models": {
     "image": {
+      "gpt-image-2.5-sunburst": {
+        "id": "gpt-image-2.5-sunburst",
+        "displayName": "GPT Image 2.5 Sunburst",
+        "capabilities": {
+          "sizes": ["1024x1024", "1536x1024", "1024x1536", "2048x2048", "3840x2160", "2160x3840"],
+          "qualities": ["low", "medium", "high", "xhigh", "max"],
+          "outputFormats": ["png", "jpeg", "webp"],
+          "maxReferences": 16,
+          "maxOutputs": 10,
+          "supportsStyleRef": true,
+          "maxReferenceSizeMb": 50,
+          "supportsArbitrarySize": true,
+          "maxWidth": 3840,
+          "maxHeight": 3840,
+          "maxPixels": 8294400,
+          "widthMultiple": 16,
+          "heightMultiple": 16,
+          "minAspectRatio": 0.3333333333333333,
+          "maxAspectRatio": 3
+        },
+        "defaults": {
+          "size": "1024x1024",
+          "quality": "medium",
+          "outputFormat": "png",
+          "count": 1
+        }
+      },
+      "gpt-image-2.5-flare": {
+        "id": "gpt-image-2.5-flare",
+        "displayName": "GPT Image 2.5 Flare",
+        "capabilities": {
+          "sizes": ["1024x1024", "1536x1024", "1024x1536", "2048x2048", "3840x2160", "2160x3840"],
+          "qualities": ["low", "medium", "high", "xhigh", "max"],
+          "outputFormats": ["png", "jpeg", "webp"],
+          "maxReferences": 16,
+          "maxOutputs": 10,
+          "supportsStyleRef": true,
+          "maxReferenceSizeMb": 50,
+          "supportsArbitrarySize": true,
+          "maxWidth": 3840,
+          "maxHeight": 3840,
+          "maxPixels": 8294400,
+          "widthMultiple": 16,
+          "heightMultiple": 16,
+          "minAspectRatio": 0.3333333333333333,
+          "maxAspectRatio": 3
+        },
+        "defaults": {
+          "size": "1024x1024",
+          "quality": "medium",
+          "outputFormat": "png",
+          "count": 1
+        }
+      },
       "gpt-image-2": {
         "id": "gpt-image-2",
         "displayName": "GPT Image 2",
@@ -180,23 +234,25 @@
           "count": 1
         }
       },
-      "gemini-2.5-flash-image": {
-        "id": "gemini-2.5-flash-image",
-        "displayName": "Nano Banana (Gemini 2.5 Flash Image)",
+      "gemini-3.1-flash-lite-image": {
+        "id": "gemini-3.1-flash-lite-image",
+        "displayName": "Nano Banana 2 Lite",
         "capabilities": {
           "aspectRatios": ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"],
+          "qualities": ["512", "1K"],
           "maxReferences": 3,
           "maxOutputs": 1,
           "supportsStyleRef": true
         },
         "defaults": {
           "aspectRatio": "1:1",
+          "quality": "1K",
           "count": 1
         }
       },
-      "gemini-3.1-flash-image-preview": {
-        "id": "gemini-3.1-flash-image-preview",
-        "displayName": "Nano Banana 2 (preview)",
+      "gemini-nano-banana-2.1": {
+        "id": "gemini-nano-banana-2.1",
+        "displayName": "Nano Banana 2.1",
         "capabilities": {
           "aspectRatios": [
             "1:1",
@@ -214,7 +270,7 @@
             "16:9",
             "21:9"
           ],
-          "qualities": ["512", "1K", "2K", "4K"],
+          "qualities": ["1K", "2K", "4K"],
           "maxReferences": 14,
           "maxOutputs": 1,
           "supportsStyleRef": true
@@ -225,11 +281,26 @@
           "count": 1
         }
       },
-      "gemini-3-pro-image-preview": {
-        "id": "gemini-3-pro-image-preview",
-        "displayName": "Nano Banana Pro (preview)",
+      "gemini-3-pro-image": {
+        "id": "gemini-3-pro-image",
+        "displayName": "Nano Banana Pro",
         "capabilities": {
-          "aspectRatios": ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"],
+          "aspectRatios": [
+            "1:1",
+            "2:3",
+            "3:2",
+            "3:4",
+            "4:3",
+            "4:5",
+            "5:4",
+            "9:16",
+            "16:9",
+            "21:9",
+            "1:4",
+            "4:1",
+            "1:8",
+            "8:1"
+          ],
           "qualities": ["1K", "2K", "4K"],
           "maxReferences": 14,
           "maxOutputs": 1,
@@ -386,6 +457,37 @@
           "count": 1
         }
       },
+      "grok-imagine-image-2.0": {
+        "id": "grok-imagine-image-2.0",
+        "displayName": "Grok Imagine Image 2.0",
+        "capabilities": {
+          "aspectRatios": [
+            "1:1",
+            "16:9",
+            "9:16",
+            "4:3",
+            "3:4",
+            "3:2",
+            "2:3",
+            "2:1",
+            "1:2",
+            "19.5:9",
+            "9:19.5",
+            "20:9",
+            "9:20",
+            "auto"
+          ],
+          "qualities": ["1k", "2k"],
+          "maxReferences": 5,
+          "maxOutputs": 10,
+          "supportsStyleRef": true
+        },
+        "defaults": {
+          "aspectRatio": "1:1",
+          "quality": "2k",
+          "count": 1
+        }
+      },
       "grok-imagine-image-quality": {
         "id": "grok-imagine-image-quality",
         "displayName": "Grok Imagine Quality",
@@ -473,84 +575,6 @@
           "count": 1
         }
       },
-      "seedream-4-5-251128": {
-        "id": "seedream-4-5-251128",
-        "displayName": "Seedream 4.5",
-        "capabilities": {
-          "supportsArbitrarySize": true,
-          "minWidth": 256,
-          "maxWidth": 8192,
-          "minHeight": 256,
-          "maxHeight": 8192,
-          "widthMultiple": 1,
-          "heightMultiple": 1,
-          "maxPixels": 16777216,
-          "minAspectRatio": 0.0625,
-          "maxAspectRatio": 16,
-          "aspectRatios": [
-            "auto",
-            "1:1",
-            "2:3",
-            "3:2",
-            "3:4",
-            "4:3",
-            "4:5",
-            "5:4",
-            "16:9",
-            "9:16",
-            "21:9"
-          ],
-          "maxReferences": 10,
-          "maxReferenceSizeMb": 30,
-          "maxOutputs": 15,
-          "supportsStyleRef": true,
-          "qualities": ["2k", "4k"]
-        },
-        "defaults": {
-          "quality": "2k",
-          "aspectRatio": "auto",
-          "count": 1
-        }
-      },
-      "seedream-4-0-250828": {
-        "id": "seedream-4-0-250828",
-        "displayName": "Seedream 4.0",
-        "capabilities": {
-          "supportsArbitrarySize": true,
-          "minWidth": 256,
-          "maxWidth": 8192,
-          "minHeight": 256,
-          "maxHeight": 8192,
-          "widthMultiple": 1,
-          "heightMultiple": 1,
-          "maxPixels": 16777216,
-          "minAspectRatio": 0.0625,
-          "maxAspectRatio": 16,
-          "aspectRatios": [
-            "auto",
-            "1:1",
-            "2:3",
-            "3:2",
-            "3:4",
-            "4:3",
-            "4:5",
-            "5:4",
-            "16:9",
-            "9:16",
-            "21:9"
-          ],
-          "maxReferences": 10,
-          "maxReferenceSizeMb": 30,
-          "maxOutputs": 15,
-          "supportsStyleRef": true,
-          "qualities": ["1k", "2k", "4k"]
-        },
-        "defaults": {
-          "quality": "2k",
-          "aspectRatio": "auto",
-          "count": 1
-        }
-      },
       "minimax-image-01": {
         "id": "minimax-image-01",
         "displayName": "MiniMax Image 01",
@@ -574,6 +598,24 @@
       }
     },
     "video": {
+      "gemini-omni-1.1-flash": {
+        "id": "gemini-omni-1.1-flash",
+        "displayName": "Gemini Omni 1.1 Flash",
+        "capabilities": {
+          "durationsSec": [3, 4, 5, 6, 7, 8, 9, 10],
+          "maxDurationSec": 10,
+          "resolutions": ["360p", "720p", "1080p", "4k"],
+          "supportsFirstFrame": false,
+          "supportsLastFrame": false,
+          "supportsRefImages": false,
+          "aspectRatios": ["16:9", "9:16"]
+        },
+        "defaults": {
+          "durationSec": 5,
+          "resolution": "720p",
+          "aspectRatio": "16:9"
+        }
+      },
       "veo-3.1-generate-preview": {
         "id": "veo-3.1-generate-preview",
         "displayName": "Veo 3.1 (preview)",
@@ -610,12 +652,11 @@
           "count": 1
         }
       },
-      "veo-3.0-generate-001": {
-        "id": "veo-3.0-generate-001",
-        "displayName": "Veo 3",
+      "veo-3.1-fast-generate-preview": {
+        "id": "veo-3.1-fast-generate-preview",
+        "displayName": "Veo 3.1 Fast (preview)",
         "capabilities": {
-          "durationsSec": [8],
-          "fpsOptions": [24],
+          "durationsSec": [4, 6, 8],
           "resolutions": ["720p", "1080p"],
           "supportsFirstFrame": false,
           "supportsLastFrame": false,
@@ -624,27 +665,6 @@
         },
         "defaults": {
           "durationSec": 8,
-          "fps": 24,
-          "resolution": "720p",
-          "aspectRatio": "16:9",
-          "count": 1
-        }
-      },
-      "veo-3.0-fast-generate-001": {
-        "id": "veo-3.0-fast-generate-001",
-        "displayName": "Veo 3 Fast",
-        "capabilities": {
-          "durationsSec": [8],
-          "fpsOptions": [24],
-          "resolutions": ["720p", "1080p"],
-          "supportsFirstFrame": false,
-          "supportsLastFrame": false,
-          "supportsRefImages": false,
-          "aspectRatios": ["16:9", "9:16"]
-        },
-        "defaults": {
-          "durationSec": 8,
-          "fps": 24,
           "resolution": "720p",
           "aspectRatio": "16:9",
           "count": 1
@@ -752,26 +772,6 @@
           "resolution": "720p"
         }
       },
-      "seedance-1-5-pro-251215": {
-        "id": "seedance-1-5-pro-251215",
-        "displayName": "Seedance 1.5 Pro",
-        "capabilities": {
-          "durationsSec": [4, 5, 6, 7, 8, 9, 10, 11, 12],
-          "maxDurationSec": 12,
-          "fpsOptions": [24],
-          "resolutions": ["480p", "720p", "1080p"],
-          "supportsFirstFrame": true,
-          "supportsLastFrame": true,
-          "supportsRefImages": false,
-          "aspectRatios": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"],
-          "maxReferenceSizeMb": 30
-        },
-        "defaults": {
-          "durationSec": 5,
-          "fps": 24,
-          "resolution": "720p"
-        }
-      },
       "MiniMax-Hailuo-2.3": {
         "id": "MiniMax-Hailuo-2.3",
         "displayName": "MiniMax Hailuo 2.3",
@@ -830,9 +830,9 @@
           "speed": 1
         }
       },
-      "gemini-3.1-flash-tts-preview": {
-        "id": "gemini-3.1-flash-tts-preview",
-        "displayName": "Gemini 3.1 Flash TTS (preview)",
+      "gemini-3.8-flash-tts": {
+        "id": "gemini-3.8-flash-tts",
+        "displayName": "Gemini 3.8 Flash TTS",
         "capabilities": {
           "supportsVoiceDiscovery": false,
           "outputFormats": [{ "codec": "wav", "qualities": [] }],
@@ -869,6 +869,50 @@
             { "id": "Sulafat", "name": "Sulafat" }
           ],
           "extraKnobs": {}
+        },
+        "defaults": {
+          "codec": "wav",
+          "voice": "Zephyr"
+        }
+      },
+      "gemini-3.8-flash-lite-tts": {
+        "id": "gemini-3.8-flash-lite-tts",
+        "displayName": "Gemini 3.8 Flash Lite TTS",
+        "capabilities": {
+          "supportsVoiceDiscovery": false,
+          "outputFormats": [{ "codec": "wav", "qualities": [] }],
+          "voices": [
+            { "id": "Zephyr", "name": "Zephyr" },
+            { "id": "Puck", "name": "Puck" },
+            { "id": "Charon", "name": "Charon" },
+            { "id": "Kore", "name": "Kore" },
+            { "id": "Fenrir", "name": "Fenrir" },
+            { "id": "Leda", "name": "Leda" },
+            { "id": "Orus", "name": "Orus" },
+            { "id": "Aoede", "name": "Aoede" },
+            { "id": "Callirrhoe", "name": "Callirrhoe" },
+            { "id": "Autonoe", "name": "Autonoe" },
+            { "id": "Enceladus", "name": "Enceladus" },
+            { "id": "Iapetus", "name": "Iapetus" },
+            { "id": "Umbriel", "name": "Umbriel" },
+            { "id": "Algieba", "name": "Algieba" },
+            { "id": "Despina", "name": "Despina" },
+            { "id": "Erinome", "name": "Erinome" },
+            { "id": "Algenib", "name": "Algenib" },
+            { "id": "Rasalgethi", "name": "Rasalgethi" },
+            { "id": "Laomedeia", "name": "Laomedeia" },
+            { "id": "Achernar", "name": "Achernar" },
+            { "id": "Alnilam", "name": "Alnilam" },
+            { "id": "Schedar", "name": "Schedar" },
+            { "id": "Gacrux", "name": "Gacrux" },
+            { "id": "Pulcherrima", "name": "Pulcherrima" },
+            { "id": "Achird", "name": "Achird" },
+            { "id": "Zubenelgenubi", "name": "Zubenelgenubi" },
+            { "id": "Vindemiatrix", "name": "Vindemiatrix" },
+            { "id": "Sadachbia", "name": "Sadachbia" },
+            { "id": "Sadaltager", "name": "Sadaltager" },
+            { "id": "Sulafat", "name": "Sulafat" }
+          ]
         },
         "defaults": {
           "codec": "wav",
@@ -914,7 +958,7 @@
       },
       "eleven_v3": {
         "id": "eleven_v3",
-        "displayName": "ElevenLabs v3 (alpha)",
+        "displayName": "ElevenLabs v3",
         "capabilities": {
           "supportsVoiceDiscovery": true,
           "outputFormats": [
@@ -1058,6 +1102,14 @@
       "displayName": "OpenAI",
       "image": [
         {
+          "id": "gpt-image-2.5-sunburst",
+          "modelId": "gpt-image-2.5-sunburst"
+        },
+        {
+          "id": "gpt-image-2.5-flare",
+          "modelId": "gpt-image-2.5-flare"
+        },
+        {
           "id": "gpt-image-2",
           "modelId": "gpt-image-2"
         },
@@ -1101,19 +1153,23 @@
       "displayName": "Google AI Studio",
       "image": [
         {
-          "id": "gemini-2.5-flash-image",
-          "modelId": "gemini-2.5-flash-image"
+          "id": "gemini-nano-banana-2.1",
+          "modelId": "gemini-nano-banana-2.1"
         },
         {
-          "id": "gemini-3.1-flash-image-preview",
-          "modelId": "gemini-3.1-flash-image-preview"
+          "id": "gemini-3-pro-image",
+          "modelId": "gemini-3-pro-image"
         },
         {
-          "id": "gemini-3-pro-image-preview",
-          "modelId": "gemini-3-pro-image-preview"
+          "id": "gemini-3.1-flash-lite-image",
+          "modelId": "gemini-3.1-flash-lite-image"
         }
       ],
       "video": [
+        {
+          "id": "gemini-omni-1.1-flash",
+          "modelId": "gemini-omni-1.1-flash"
+        },
         {
           "id": "veo-3.1-generate-preview",
           "modelId": "veo-3.1-generate-preview"
@@ -1123,18 +1179,18 @@
           "modelId": "veo-3.1-lite-generate-preview"
         },
         {
-          "id": "veo-3.0-generate-001",
-          "modelId": "veo-3.0-generate-001"
-        },
-        {
-          "id": "veo-3.0-fast-generate-001",
-          "modelId": "veo-3.0-fast-generate-001"
+          "id": "veo-3.1-fast-generate-preview",
+          "modelId": "veo-3.1-fast-generate-preview"
         }
       ],
       "speech": [
         {
-          "id": "gemini-3.1-flash-tts-preview",
-          "modelId": "gemini-3.1-flash-tts-preview"
+          "id": "gemini-3.8-flash-tts",
+          "modelId": "gemini-3.8-flash-tts"
+        },
+        {
+          "id": "gemini-3.8-flash-lite-tts",
+          "modelId": "gemini-3.8-flash-lite-tts"
         }
       ]
     },
@@ -1173,14 +1229,6 @@
         {
           "id": "seedream-5-0-260128",
           "modelId": "seedream-5-0-260128"
-        },
-        {
-          "id": "seedream-4-5-251128",
-          "modelId": "seedream-4-5-251128"
-        },
-        {
-          "id": "seedream-4-0-250828",
-          "modelId": "seedream-4-0-250828"
         }
       ],
       "video": [
@@ -1195,10 +1243,6 @@
         {
           "id": "dreamina-seedance-2-0-fast-260128",
           "modelId": "dreamina-seedance-2-0-fast-260128"
-        },
-        {
-          "id": "seedance-1-5-pro-251215",
-          "modelId": "seedance-1-5-pro-251215"
         }
       ]
     },
@@ -1212,14 +1256,6 @@
         {
           "id": "doubao-seedream-5-0-260128",
           "modelId": "seedream-5-0-260128"
-        },
-        {
-          "id": "doubao-seedream-4-5-251128",
-          "modelId": "seedream-4-5-251128"
-        },
-        {
-          "id": "doubao-seedream-4-0-250828",
-          "modelId": "seedream-4-0-250828"
         }
       ],
       "video": [
@@ -1234,16 +1270,16 @@
         {
           "id": "doubao-seedance-2-0-fast-260128",
           "modelId": "dreamina-seedance-2-0-fast-260128"
-        },
-        {
-          "id": "doubao-seedance-1-5-pro-251215",
-          "modelId": "seedance-1-5-pro-251215"
         }
       ]
     },
     "xai": {
       "displayName": "xAI",
       "image": [
+        {
+          "id": "grok-imagine-image-2.0",
+          "modelId": "grok-imagine-image-2.0"
+        },
         {
           "id": "grok-imagine-image-quality",
           "modelId": "grok-imagine-image-quality"

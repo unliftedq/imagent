@@ -1,6 +1,6 @@
 {
   "name": "imagent",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "private": true,
   "license": "Apache-2.0",
   "type": "module",
@@ -16,7 +16,7 @@
       "@dnd-kit/core": "^6.3.1",
       "@electron/rebuild": "^4.0.4",
       "@elevenlabs/elevenlabs-js": "^2.51.0",
-      "@google/genai": "^1.51.0",
+      "@google/genai": "^2.31.0",
       "@node-rs/jieba": "^2.0.1",
       "@phosphor-icons/react": "^2.1.10",
       "@radix-ui/react-dialog": "^1.1.15",
