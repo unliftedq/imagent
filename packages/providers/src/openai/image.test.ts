@@ -8,7 +8,9 @@ import {
   ProviderRequestError,
 } from "@imagent/core";
 import { APIError } from "openai";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, type Mock, vi } from "vitest";
+import { getBundledCatalog } from "../catalog/loader.js";
+import { resolveImageProviderModels } from "../catalog/resolve.js";
 import { OPENAI_IMAGE_MODELS } from "../catalog/test-fixtures.js";
 import { type OpenAIClientLike, OpenAIImageProvider } from "./image.js";
 
@@ -16,8 +18,11 @@ const PNG_B64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkAAIAAAoAAv/lxKUAAAAASUVORK5CYII=";
 
 interface FakeClient {
-  images: { generate: ReturnType<typeof vi.fn>; edit: ReturnType<typeof vi.fn> };
-  models: { list: ReturnType<typeof vi.fn> };
+  images: {
+    generate: Mock<OpenAIClientLike["images"]["generate"]>;
+    edit: Mock<NonNullable<OpenAIClientLike["images"]["edit"]>>;
+  };
+  models: { list: Mock<OpenAIClientLike["models"]["list"]> };
 }
 
 function makeFakeClient(): FakeClient {
@@ -31,7 +36,7 @@ function makeProvider(client: FakeClient): OpenAIImageProvider {
   return new OpenAIImageProvider({
     apiKey: "sk-test",
     models: new Map(Object.entries(OPENAI_IMAGE_MODELS)),
-    client: client as unknown as OpenAIClientLike,
+    client,
   });
 }
 
@@ -50,6 +55,30 @@ const baseRequest: ImageRequest = {
 };
 
 describe("OpenAIImageProvider", () => {
+  it.each([
+    "gpt-image-2.5-sunburst",
+    "gpt-image-2.5-flare",
+  ])("%s forwards extended quality and arbitrary sizes without legacy response_format", async (model) => {
+    const client = makeFakeClient();
+    client.images.generate.mockResolvedValue({ data: [{ b64_json: PNG_B64 }] });
+    const provider = new OpenAIImageProvider({
+      apiKey: "test",
+      models: new Map(
+        resolveImageProviderModels(getBundledCatalog(), "openai").map((m) => [m.id, m]),
+      ),
+      client,
+    });
+    await provider.generate({ ...baseRequest, model, size: "1536x864", quality: "xhigh" });
+    expect(client.images.generate.mock.calls[0]?.[0]).toMatchObject({
+      model,
+      size: "1536x864",
+      quality: "xhigh",
+      output_format: "png",
+    });
+    expect(client.images.generate.mock.calls[0]?.[0]).not.toHaveProperty("response_format");
+    await expect(provider.generate({ ...baseRequest, model, size: "3840x3840" })).rejects.toThrow();
+    await expect(provider.generate({ ...baseRequest, model, size: "1025x1024" })).rejects.toThrow();
+  });
   it("happy path: invokes SDK images.generate with correct params and decodes b64", async () => {
     const client = makeFakeClient();
     client.images.generate.mockResolvedValue({ data: [{ b64_json: PNG_B64 }] });
@@ -136,7 +165,7 @@ describe("OpenAIImageProvider", () => {
       expect(client.images.generate).not.toHaveBeenCalled();
       expect(client.images.edit).toHaveBeenCalledTimes(1);
       const [body] = client.images.edit.mock.calls[0] ?? [];
-      expect(body).toBeDefined();
+      if (!body) throw new Error("images.edit was not called");
       expect(body.prompt).toContain("Reference image 1 (attached image 1) — role: character.");
       expect(body.prompt).toContain("attached image 1");
       expect(body.prompt).toContain("Reference image 2 (attached image 2) — role: style.");

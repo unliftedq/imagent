@@ -14,7 +14,9 @@ describe("createSpeechRegistry", () => {
   it("includes google speech when its secret is set", () => {
     const reg = createSpeechRegistry({ google: { apiKey: "k" } }, { google: {} } as never, catalog);
     expect(reg.has("google")).toBe(true);
-    expect(reg.get("google")?.models.has("gemini-3.1-flash-tts-preview")).toBe(true);
+    expect(reg.get("google")?.models.has("gemini-3.8-flash-tts")).toBe(true);
+    expect(reg.get("google")?.models.has("gemini-3.8-flash-lite-tts")).toBe(true);
+    expect(reg.get("google")?.models.has("gemini-3.1-flash-tts-preview")).toBe(false);
   });
 
   it("includes elevenlabs when its secret is set", () => {

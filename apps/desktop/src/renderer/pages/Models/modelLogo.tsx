@@ -37,9 +37,8 @@ export function pickModelLogo(modelId: string): ModelLogo | undefined {
     return { src: microsoftUrl, alt: "Microsoft" };
   }
   if (
-    modelId === "gemini-2.5-flash-image" ||
-    modelId === "gemini-3.1-flash-image-preview" ||
-    modelId === "gemini-3-pro-image-preview"
+    (modelId.startsWith("gemini-") && modelId.includes("-image")) ||
+    modelId.startsWith("gemini-nano-banana-")
   ) {
     return { src: nanoBananaUrl, alt: "Nano Banana" };
   }
@@ -51,6 +50,7 @@ export function pickModelLogo(modelId: string): ModelLogo | undefined {
   }
   if (
     modelId.startsWith("doubao-") ||
+    modelId.startsWith("dola-") ||
     modelId.startsWith("seedream-") ||
     modelId.startsWith("seedance-") ||
     modelId.startsWith("dreamina-")

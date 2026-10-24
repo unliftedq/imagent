@@ -48,7 +48,7 @@ Inspect the request options, defaults, and reference limits for a specific model
 
 ```bash
 imagent options --provider openai --model gpt-image-2
-imagent options --provider google --model veo-3.0-generate-001 --kind video --json
+imagent options --provider google --model gemini-omni-1.1-flash --kind video --json
 imagent options --provider elevenlabs --model eleven_multilingual_v2 --kind speech
 ```
 
@@ -103,7 +103,7 @@ Select provider and model:
 ```bash
 imagent image generate "editorial fashion portrait" \
   --provider google \
-  --model gemini-2.5-flash-image
+  --model gemini-nano-banana-2.1
 ```
 
 Pass model options with repeatable `--option key=value` flags:
@@ -157,7 +157,7 @@ Select provider, model, and options:
 ```bash
 imagent video generate "a crane shot over a futuristic coastline" \
   --provider google \
-  --model veo-3.0-generate-001 \
+  --model gemini-omni-1.1-flash \
   --option durationSec=8 \
   --option resolution=720p
 ```

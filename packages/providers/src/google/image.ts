@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, type Interactions } from "@google/genai";
 import {
   appendImageReferenceInstructions,
   type ImageGenerationResult,
@@ -17,6 +17,12 @@ import {
   runListProbe,
 } from "../common/index.js";
 import { loadImageReferences } from "../reference-images.js";
+import {
+  assertInteractionCompleted,
+  createInteraction,
+  type GoogleInteractionsClientLike,
+  interactionContent,
+} from "./interactions.js";
 
 /** Canonical Google generative-language base URL (used as fallback HttpOptions). */
 export const DEFAULT_GOOGLE_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
@@ -26,6 +32,7 @@ export const DEFAULT_GOOGLE_BASE_URL = "https://generativelanguage.googleapis.co
  * inject a fake; production constructs `new GoogleGenAI({ apiKey })`.
  */
 export interface GoogleGenAIClientLike {
+  interactions?: GoogleInteractionsClientLike;
   models: {
     generateImages?: (params: {
       model: string;
@@ -66,9 +73,8 @@ export interface GoogleImageProviderOptions {
  *    in the config; the response carries the PNG bytes inside
  *    `candidates[0].content.parts[*].inlineData.data` (base64).
  *
- * Branch on `req.model`. The id pattern is stable: anything matching
- * `/^gemini-.*-(flash-)?image/` goes through `generateContent`; everything
- * else uses `generateImages`.
+ * Current Nano Banana models use Interactions. Legacy user-catalog Gemini
+ * models retain generateContent; Imagen uses generateImages.
  */
 export class GoogleImageProvider extends BaseImageProvider {
   protected readonly client: GoogleGenAIClientLike;
@@ -99,10 +105,55 @@ export class GoogleImageProvider extends BaseImageProvider {
     if (signal?.aborted) {
       throw new ProviderError("request aborted", { vendorId: this.id });
     }
+    if (usesImageInteractions(model.baseModelId ?? model.id)) {
+      return this.generateViaInteractions(merged, model.id, signal);
+    }
     if (isNanoBananaModel(model.id)) {
       return this.generateViaContent(merged, model.id, signal);
     }
     return this.generateViaImages(merged, model.id, signal);
+  }
+
+  private async generateViaInteractions(
+    merged: ImageRequest,
+    modelId: string,
+    signal?: AbortSignal,
+  ): Promise<ImageGenerationResult> {
+    const input: Interactions.Content[] = [
+      { type: "text", text: appendImageReferenceInstructions(merged.prompt, merged.references) },
+      ...(await loadImageReferences(merged.references, this.id)).map((ref) => ({
+        type: "image" as const,
+        data: ref.base64,
+        mime_type: ref.mimeType,
+      })),
+    ];
+    const response = await createInteraction(
+      this.client.interactions,
+      {
+        model: modelId,
+        input,
+        store: false,
+        response_format: {
+          type: "image",
+          delivery: "inline",
+          ...(merged.aspectRatio ? { aspect_ratio: merged.aspectRatio } : {}),
+          ...(merged.quality ? { image_size: merged.quality } : {}),
+        },
+      },
+      signal,
+    );
+    assertInteractionCompleted(response);
+    const outputs: ImageOutput[] = interactionContent(response).flatMap((part) =>
+      part.type === "image" && part.data
+        ? [{ bytes: decodeBase64(part.data), mimeType: part.mime_type ?? "image/png" }]
+        : [],
+    );
+    if (outputs.length === 0) {
+      throw new ProviderResponseError("Gemini interaction carried no image bytes", {
+        vendorId: this.id,
+      });
+    }
+    return { outputs };
   }
 
   private async generateViaImages(
@@ -250,7 +301,15 @@ export class GoogleImageProvider extends BaseImageProvider {
  * ids (`imagen-*`) take the `generateImages` path.
  */
 export function isNanoBananaModel(modelId: string): boolean {
-  return /^gemini-.*-image/i.test(modelId);
+  return /^gemini-.*-image/i.test(modelId) || /^gemini-nano-banana-/i.test(modelId);
+}
+
+function usesImageInteractions(modelId: string): boolean {
+  return (
+    /^gemini-nano-banana-/i.test(modelId) ||
+    modelId === "gemini-3-pro-image" ||
+    modelId === "gemini-3.1-flash-lite-image"
+  );
 }
 
 /**

@@ -2,20 +2,22 @@ import { GoogleGenAI } from "@google/genai";
 import {
   type Logger,
   ProviderResponseError,
+  type ProviderTestResult,
   type SpeechGenerationResult,
   type SpeechModelDef,
   type SpeechRequest,
-  type ProviderTestResult,
 } from "@imagent/core";
 import { BaseSpeechProvider, decodeBase64, rethrowGenericSdkError } from "../common/index.js";
-import { DEFAULT_GOOGLE_BASE_URL, type GoogleGenAIClientLike } from "./image.js";
+import type { GoogleGenAIClientLike } from "./image.js";
+import {
+  assertInteractionCompleted,
+  createInteraction,
+  interactionContent,
+} from "./interactions.js";
 
 /**
- * Google Gemini text-to-speech provider — `models.generateContent` with
- * `responseModalities: ["AUDIO"]` and a single-speaker `speechConfig`. The
- * backend always returns 16-bit signed little-endian PCM (mono, 24 kHz) inside
- * `candidates[0].content.parts[*].inlineData.data` (base64). We wrap it in a
- * WAV container so the saved asset is directly playable.
+ * Current TTS uses Interactions with native WAV or explicit PCM output.
+ * Legacy user-catalog models retain the generateContent / PCM path.
  */
 export class GoogleSpeechProvider extends BaseSpeechProvider {
   protected readonly client: GoogleGenAIClientLike;
@@ -49,6 +51,51 @@ export class GoogleSpeechProvider extends BaseSpeechProvider {
     model: SpeechModelDef,
     signal?: AbortSignal,
   ): Promise<SpeechGenerationResult> {
+    const modelId = model.baseModelId ?? model.id;
+    if (/^gemini-3\.8-.*tts$/.test(modelId)) {
+      const response = await createInteraction(
+        this.client.interactions,
+        {
+          model: model.id,
+          input: merged.prompt,
+          store: false,
+          response_format: { type: "audio" },
+          generation_config: {
+            speech_config: merged.voice ? [{ voice: merged.voice }] : [],
+          },
+        },
+        signal,
+      );
+      assertInteractionCompleted(response);
+      const audio = interactionContent(response).find((part) => part.type === "audio" && part.data);
+      if (!audio || audio.type !== "audio" || !audio.data) {
+        throw new ProviderResponseError("Gemini interaction carried no audio bytes", {
+          vendorId: this.id,
+        });
+      }
+      const bytes = decodeBase64(audio.data);
+      const mime = audio.mime_type?.toLowerCase();
+      if (mime === "audio/wav" || mime === "audio/x-wav") {
+        return { output: { bytes, mimeType: "audio/wav" } };
+      }
+      if (mime?.startsWith("audio/l16") || mime?.startsWith("audio/pcm")) {
+        if (audio.channels !== undefined && audio.channels !== 1) {
+          throw new ProviderResponseError("Gemini returned unsupported multichannel PCM", {
+            vendorId: this.id,
+          });
+        }
+        const rate = audio.sample_rate ?? sampleRateFromMime(mime) ?? 24000;
+        if (!Number.isSafeInteger(rate) || rate <= 0) {
+          throw new ProviderResponseError("Gemini returned an invalid PCM sample rate", {
+            vendorId: this.id,
+          });
+        }
+        return { output: { bytes: pcmToWav(bytes, rate), mimeType: "audio/wav" } };
+      }
+      throw new ProviderResponseError(`Gemini returned unsupported audio format '${mime}'`, {
+        vendorId: this.id,
+      });
+    }
     if (!this.client.models.generateContent) {
       throw new ProviderResponseError("SDK does not expose generateContent", { vendorId: this.id });
     }

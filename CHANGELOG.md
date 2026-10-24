@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.4.0 - 2026-10-23
+
+### Models and providers
+
+- Added GPT Image 2.5 Sunburst / Flare with extended quality and arbitrary-size controls, Nano Banana 2.1 / Pro / 2 Lite, Gemini Omni 1.1 Flash video, Veo 3.1 Fast, Gemini 3.8 Flash / Flash Lite TTS, and Grok Imagine Image 2.0.
+- Upgraded the Google GenAI SDK and routed current Gemini image / speech models through Interactions. Native WAV responses are no longer wrapped twice. Omni video supports persisted background jobs, polling, download and cancellation; frame/reference inputs remain disabled until their Files API workflow is implemented.
+- Fixed xAI image references to use the SDK's image-edit inputs and added validated Image 2.0 generation-quality forwarding.
+- Removed the stale Eleven v3 alpha label and refreshed model logos, CLI/MCP/agent examples, and provider documentation.
+
+### Breaking catalog changes
+
+- Removed Gemini 2.5 Flash Image, Nano Banana 2 / Pro preview IDs, Gemini 3.1 Flash TTS preview, Veo 3.0 / Fast, Seedream 4.0 / 4.5, and Seedance 1.5 Pro canonical entries and regional offerings.
+- Saved defaults, scripts and provider mappings using those IDs must be updated; see `docs/models.md` for exact replacement IDs and the official-source review. Existing gallery assets and historical job records are preserved.
+- Removal from the curated catalog does not imply upstream shutdown. Models still documented as active (including GPT Image 1.5 / Mini, xAI Quality and ElevenLabs Multilingual v2) remain available.
+
 ## 0.3.2 - 2026-07-10
 
 ### Image references
